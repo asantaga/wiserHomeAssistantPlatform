@@ -32,7 +32,7 @@ DATA_KEY = 'wiser'
 PLATFORM_SCHEMA = vol.Schema({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PASSWORD): cv.string,
-    vol.Optional(CONF_SCAN_INTERVAL, default=120): cv.time_period,
+    vol.Optional(CONF_SCAN_INTERVAL, default=300): cv.time_period,
 })
 
 
