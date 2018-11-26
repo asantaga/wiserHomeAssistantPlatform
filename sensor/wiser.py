@@ -63,7 +63,7 @@ class WiserDevice(Entity):
     @property
     def icon(self):
         iconList={
-                'Poor':'wifi-strength-alert-outline',
+                'Poor':'mdi:wifi-strength-alert-outline',
                 'Medium':'mdi:wifi-strength-2',
                 'Good':'mdi:wifi-strength-3',
                 'VeryGood':'mdi:wifi-strength-4'
