@@ -45,6 +45,8 @@ For components which arent part of the official release yet (i said yet) you can
 
 ## 4. Copy files 
 From github to your Home Assistant custom_components directory. Easiest way is to issue a git clone to your local directory and then copy all the files to the custom_components directory
+e.g. 
+    ```git clone git@github.com:asantaga/wiserHomeAssistantPlatform.git```
 
 ## 5. Add references to Home Assistant `Configuration.yaml` file 
 
@@ -59,7 +61,7 @@ wiser:
 
 I dont recommend you set the scan_interval too low, after all temperatures dont change that often and 300 seconds(5mins) is probably plenty.
 
-##6 Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
+## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 
 Thanks!
 
