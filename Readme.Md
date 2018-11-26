@@ -48,6 +48,8 @@ From github to your Home Assistant custom_components directory. Easiest way is t
 e.g. 
     ```git clone git@github.com:asantaga/wiserHomeAssistantPlatform.git```
 
+This will usually create a directory called "wiserHomeAssistantPlatform", copy all the files in this directory to your custom_components directory.
+
 ## 5. Add references to Home Assistant `Configuration.yaml` file 
 
 Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
