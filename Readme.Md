@@ -23,7 +23,7 @@ Currently the Component/Platform is read only, I do plan to add the ability to s
 
 ## Sample Image
 
-![](Y:\dockerData\devhomeassistant\custom_components\docs\homeassistant_sample.jpg)
+![](https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/docs/homeassistant_sample.jpg)
 
 
 # Installation
