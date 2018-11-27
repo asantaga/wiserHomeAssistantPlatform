@@ -118,7 +118,7 @@ class WiserDevice(Entity):
             attrs['device_reception_LQI'] = deviceData.get("ReceptionOfDevice").get("Lqi")
             
         
-        if deviceData.get("ReceptionOfDevice")!=None:
+        if deviceData.get("ReceptionOfController")!=None:
             attrs['controller_reception_RSSI'] = deviceData.get("ReceptionOfController").get("Rssi")
             attrs['device_reception_LQI'] = deviceData.get("ReceptionOfDevice").get("Lqi")
             
