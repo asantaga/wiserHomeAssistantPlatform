@@ -40,7 +40,7 @@ def setup(hass, config):
     hubHost=config[DOMAIN][0][CONF_HOST]
     password=config[DOMAIN][0][CONF_PASSWORD]
     scan_interval=    config[DOMAIN][0][CONF_SCAN_INTERVAL].total_seconds()
-    _LOGGER.error("Wiser Component setup with HubIp =  {}".format(hubHost))
+    _LOGGER.info("Wiser Component setup with HubIp =  {}".format(hubHost))
     hass.data[DATA_KEY] = WiserHubHandle(hubHost, password, scan_interval)
 
     _LOGGER.info("Wiser Component Setup Completed")
@@ -70,10 +70,10 @@ class WiserHubHandle:
         return self.wiserHub
 
     def update(self):
-        _LOGGER.error("Component Wiser : Update Requested")
+        _LOGGER.info("Component Wiser : Update Requested")
         with self.mutex:
             if (time.time() - self._updatets) >= self.scan_interval:
-                _LOGGER.debug("Updating Wiser Data Set")
+                _LOGGER.info("Updating Wiser Data Set")
                 try:
                     self.wiserHub.refreshData()
                 except timeout as timeoutex:
@@ -87,5 +87,5 @@ class WiserHubHandle:
                 self._updatets = time.time()
                 return True
             else:
-                _LOGGER.debug("Component Wiser : Skipping update (data already gotten within scan interval)")
+                _LOGGER.info("Component Wiser : Skipping update (data already gotten within scan interval)")
 

@@ -21,7 +21,6 @@ class wiserHub():
 
     def __init__(self,hubIP,secret):
         _LOGGER.info("WiserHub API Init")
-        _LOGGER.setLevel(logging.DEBUG)
         self.wiserHubData=None
         self.hubIP=hubIP
         self.hubSecret=secret

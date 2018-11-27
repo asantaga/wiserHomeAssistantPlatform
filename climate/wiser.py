@@ -70,7 +70,12 @@ class WiserRoom(ClimateDevice):
 
     @property
     def current_temperature(self):
-        return self.handler.getHubData().getRoom(self.roomId).get("CalculatedTemperature")/10
+        temp=self.handler.getHubData().getRoom(self.roomId).get("CalculatedTemperature")/10
+        if temp<-20:
+            # Sometimes we get really low temps (like -3000!), not sure why, if we do then just set it to -20 for now till i debug this.
+            temp=-20
+
+        return temp 
 
     @property
     def icon(self):
@@ -86,6 +91,6 @@ class WiserRoom(ClimateDevice):
 
    
     def update(self):
-        _LOGGER.error("Component Wiser Climate : Update called for room {}".format(self.roomId))
+        _LOGGER.info("Component Wiser Climate : Update called for room {}".format(self.roomId))
         self.handler.update()
 
