@@ -34,7 +34,7 @@ Look for the Wi-Fi network (SSID) called **‘WiserHeatXXX’** where XXX is ran
 2. Connect to the network from a Windows/Linux/Mac machine
 3. Execute the secret url :-)
    * For Windows use `Invoke-RestMethod -Method Get -UseBasicParsing -Uri http://192.168.8.1/secret/` 
-   * For Linux (or Windows WSL) use `curl http://192.168.8.1`
+   * For Linux (or Windows WSL) use `curl http://192.168.8.1/secret`
 
    This will return a string which is your system secret
 
