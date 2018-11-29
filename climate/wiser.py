@@ -71,10 +71,9 @@ class WiserRoom(ClimateDevice):
     @property
     def current_temperature(self):
         temp=self.handler.getHubData().getRoom(self.roomId).get("CalculatedTemperature")/10
-        if temp<-20:
+        if temp< self.handler.getMinimumTemp():
             # Sometimes we get really low temps (like -3000!), not sure why, if we do then just set it to -20 for now till i debug this.
-            temp=-20
-
+            temp= self.handler.getMinimumTemp()
         return temp 
 
     @property

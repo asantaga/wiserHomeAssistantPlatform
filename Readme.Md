@@ -64,9 +64,11 @@ wiser:
   host: <ENTER YOUR HEATHUB IP HERE>
   password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
   scan_interval: 300
+  minimum: -5
 ```
 
 I dont recommend you set the scan_interval too low, after all temperatures dont change that often and 300 seconds(5mins) is probably plenty.
+```minimum``` is the bottom minimum temperature to be recorded.
 
 ## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 
