@@ -29,6 +29,7 @@ class wiserHub():
         self.refreshData()          # Issue first refresh in init
         
     def refreshData(self):
+        smartValves=[]
         _LOGGER.info("Updating Wiser Hub Data")
         self.wiserHubData = requests.get(WISERHUBURL.format(
             self.hubIP), headers=self.headers).json()
@@ -39,8 +40,11 @@ class wiserHub():
                 #RoomStat found add it to the list
                 self.device2roomMap[roomStatId]={"roomId":room.get("id"), "roomName":room.get("Name")}
             smartValves=room.get("SmartValveIds")
-            for valveId in smartValves:
-                    self.device2roomMap[valveId]={"roomId":room.get("id"), "roomName":room.get("Name")}
+            if smartValves!=None:
+                for valveId in smartValves:
+                        self.device2roomMap[valveId]={"roomId":room.get("id"), "roomName":room.get("Name")}
+                else:
+                    _LOGGER.warning(" Room doesnt contain any smart valves, maybe an error/corruption ")
         _LOGGER.debug(" valve2roomMap{} ".format(self.device2roomMap))
         return self.wiserHubData
 
