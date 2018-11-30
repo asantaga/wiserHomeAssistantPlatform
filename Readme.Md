@@ -1,6 +1,6 @@
 # Wiser Home Assistant Platform
 
-This repository contains a Hmoe Assistant component + platforms, for the Drayton Wiser Heating solution.
+This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
 This component provides the following functionality
 -Climate platforms
@@ -17,7 +17,7 @@ This component provides the following functionality
         - Nice to know when the heating is on/off. This is nice to use in conjunction with the Climate platform when graphing data using grafana
     - Hot Water relay status
         - Nice to know when the hot water is on/off. 
-    - Full access to the JSON payload from the HeatHub, for those things I didnt think of... 
+    - Full access to the JSON payload from the HeatHub, for those things I didn't think of... 
 
 Currently the Component/Platform is read only, I do plan to add the ability to set the setpoints in the near future
 
@@ -67,8 +67,8 @@ wiser:
   minimum: -5
 ```
 
-I dont recommend you set the scan_interval too low, after all temperatures dont change that often and 300 seconds(5mins) is probably plenty.
-```minimum``` is the bottom minimum temperature to be recorded.
+I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty.
+```minimum``` is the bottom minimum temperature to be recorded, the default is -5
 
 ## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 

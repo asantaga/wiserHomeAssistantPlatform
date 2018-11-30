@@ -123,8 +123,8 @@ class WiserDevice(Entity):
             attrs['device_reception_LQI'] = deviceData.get("ReceptionOfController").get("Lqi")
             
         if self.sensorType in ['RoomStat','iTRV','SmartPlug']:
-            attrs['batery_voltage']=deviceData.get("BatteryVoltage")
-            attrs['batery_level']=deviceData.get("BatteryLevel")
+            attrs['battery_voltage']=deviceData.get("BatteryVoltage")
+            attrs['battery_level']=deviceData.get("BatteryLevel")
             attrs['serial_number']=deviceData.get("SerialNumber")
 
         if self.sensorType=='RoomStat':

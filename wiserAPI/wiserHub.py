@@ -34,18 +34,21 @@ class wiserHub():
         self.wiserHubData = requests.get(WISERHUBURL.format(
             self.hubIP), headers=self.headers).json()
         _LOGGER.debug("Wiser Hub Data received {} ".format(self.wiserHubData))
-        for room in self.getRooms():
-            roomStatId=room.get("RoomStatId")
-            if roomStatId!=None:
-                #RoomStat found add it to the list
-                self.device2roomMap[roomStatId]={"roomId":room.get("id"), "roomName":room.get("Name")}
-            smartValves=room.get("SmartValveIds")
-            if smartValves!=None:
-                for valveId in smartValves:
-                        self.device2roomMap[valveId]={"roomId":room.get("id"), "roomName":room.get("Name")}
-                else:
-                    _LOGGER.warning(" Room doesnt contain any smart valves, maybe an error/corruption ")
-        _LOGGER.debug(" valve2roomMap{} ".format(self.device2roomMap))
+        if self.getRooms()!=None:
+            for room in self.getRooms():
+                roomStatId=room.get("RoomStatId")
+                if roomStatId!=None:
+                    #RoomStat found add it to the list
+                    self.device2roomMap[roomStatId]={"roomId":room.get("id"), "roomName":room.get("Name")}
+                smartValves=room.get("SmartValveIds")
+                if smartValves!=None:
+                    for valveId in smartValves:
+                            self.device2roomMap[valveId]={"roomId":room.get("id"), "roomName":room.get("Name")}
+                    else:
+                        _LOGGER.warning(" Room doesnt contain any smart valves, maybe an error/corruption ")
+            _LOGGER.debug(" valve2roomMap{} ".format(self.device2roomMap))
+        else:
+            _LOGGER.warning("Wiser found no rooms")
         return self.wiserHubData
 
         
@@ -63,6 +66,9 @@ class wiserHub():
     def getRoom(self,roomId):
         if (self.wiserHubData==None):
             self.refreshData()
+        if (self.wiserHubData.get("Room")==None):
+            _LOGGER.warning("getRoom called but no rooms found")
+            return None
         for room in (self.wiserHubData.get("Room")):
             if (room.get("id")==roomId):
                 return room
@@ -86,6 +92,9 @@ class wiserHub():
     def getDevice(self,deviceId):
         if (self.wiserHubData==None):
             self.refreshData()
+        if (self.wiserHubData.get("Device")==None):
+            _LOGGER.warning("getRoom called but no rooms found")
+            return None
         for device in (self.wiserHubData.get("Device")):
             if (device.get("id")==deviceId):
                 return device
@@ -118,6 +127,9 @@ class wiserHub():
     def getRoomStatData(self,deviceId):
         if (self.wiserHubData==None):
             self.refreshData()
+        if (self.wiserHubData['RoomStat']==None):
+                _LOGGER.warning("getRoom called but no rooms found")
+                return None
         for roomStat in self.wiserHubData['RoomStat']:
             if roomStat.get("id")==deviceId:
                 return roomStat
