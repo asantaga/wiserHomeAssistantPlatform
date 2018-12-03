@@ -135,8 +135,6 @@ class WiserDevice(Entity):
     def state(self):
         return self.handler.getHubData().getDevice(self.deviceId).get("DisplayedSignalStrength")
     
-    def force_update(self):
-        return True # Force state changes even if data not changed
 
 """ 
 Specific Sensor to display the status of heating or water circuit
@@ -188,9 +186,7 @@ class WiserSystemCircuitState(Entity):
             return self.handler.getHubData().getHeatingRelayStatus()
         else:
             return self.handler.getHubData().getHotwaterRelayStatus()        
-    def force_update(self):
-        return True # Force state changes even if data not changed
-
+  
 
 """
 Sensor to display the status of the Wiser Cloud
@@ -227,5 +223,4 @@ class WiserSystemCloudSensor(Entity):
     def state(self):
         return self.cloudStatus
     
-    def force_update(self):
-        return True # Force state changes even if data not changed
+  
