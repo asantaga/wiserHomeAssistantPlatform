@@ -86,7 +86,9 @@ class WiserHubHandle:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
             if (time.time() - self._updatets) >= self.scan_interval:
-                _LOGGER.info("Updating Wiser DataSet")
+                _LOGGER.debug("*********************************************************************")
+                _LOGGER.info("Scan Interval exceeeded, updating Wiser DataSet from hub")
+                _LOGGER.debug("*********************************************************************")
                 try:
                     self.wiserHubInstance.refreshData()
                 except timeout as timeoutex:
