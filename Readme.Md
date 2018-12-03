@@ -12,7 +12,7 @@ This component provides the following functionality
     - **Room Thermostats** displayed as sensors
         - Additonal attributes include battery levels, humidity etc
     - Drayton **Wiser Cloud** Status
-        - Nice to be able to have automation when things arent working
+        - Nice to be able to have automation when things aren't working
     - Heating Relay status
         - Nice to know when the heating is on/off. This is nice to use in conjunction with the Climate platform when graphing data using grafana
     - Hot Water relay status

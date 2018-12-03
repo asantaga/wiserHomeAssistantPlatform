@@ -58,6 +58,7 @@ class WiserDevice(Entity):
         self.sensorType=sensorType
 
     def update(self):
+        _LOGGER.debug('Wiser Cloud Device Update requested')
         self.handler.update()
 
     @property
@@ -101,7 +102,7 @@ class WiserDevice(Entity):
     
     @property
     def device_state_attributes(self):
-        _LOGGER.debug('Wiser Sensor : state attributes for {} {}'.format(self.deviceId,self.sensorType))
+        _LOGGER.debug('State attributes for {} {}'.format(self.deviceId,self.sensorType))
 
         attrs={}
         deviceData=self.handler.getHubData().getDevice(self.deviceId)
@@ -133,7 +134,9 @@ class WiserDevice(Entity):
     @property
     def state(self):
         return self.handler.getHubData().getDevice(self.deviceId).get("DisplayedSignalStrength")
-
+    
+    def force_update(self):
+        return True # Force state changes even if data not changed
 
 """ 
 Specific Sensor to display the status of heating or water circuit
@@ -143,11 +146,12 @@ class WiserSystemCircuitState(Entity):
     def __init__(self,handler,circuitType):
             
         """Initialize the sensor."""
-        _LOGGER.info('Wiser System  Circuit Sensor Init')
+        _LOGGER.info('Wiser Circuit Sensor Init')
         self.handler=handler
         self.circuitType=circuitType
 
     def update(self):
+        _LOGGER.debug('Wiser Cloud Circut status Update requested')
         self.handler.update()
 
     @property
@@ -184,7 +188,8 @@ class WiserSystemCircuitState(Entity):
             return self.handler.getHubData().getHeatingRelayStatus()
         else:
             return self.handler.getHubData().getHotwaterRelayStatus()        
-
+    def force_update(self):
+        return True # Force state changes even if data not changed
 
 
 """
@@ -194,11 +199,12 @@ class WiserSystemCloudSensor(Entity):
     def __init__(self,handler):
             
         """Initialize the sensor."""
-        _LOGGER.info('Wiser Cloud Sensor Initi')
+        _LOGGER.info('Wiser Cloud Sensor Init')
         self.handler=handler
         self.cloudStatus=self.handler.getHubData().getSystem().get("CloudConnectionStatus")
       
     def update(self):
+        _LOGGER.debug('Wiser Cloud Sensor Update requested')
         self.handler.update()
         self.cloudStatus=self.handler.getHubData().getSystem().get("CloudConnectionStatus")
 
@@ -220,3 +226,6 @@ class WiserSystemCloudSensor(Entity):
     @property
     def state(self):
         return self.cloudStatus
+    
+    def force_update(self):
+        return True # Force state changes even if data not changed

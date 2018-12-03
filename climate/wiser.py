@@ -90,6 +90,9 @@ class WiserRoom(ClimateDevice):
 
    
     def update(self):
-        _LOGGER.info("Component Wiser Climate : Update called for room {}".format(self.roomId))
+        _LOGGER.debug('Wiser Device Update requested')
         self.handler.update()
+    
+    def force_update(self):
+        return True # Force state changes even if data not changed
 
