@@ -39,13 +39,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     
 
 """ 
-Definition of WiserRoom, which corresponds to a room  
-Sensor type=
-      Controller
-       RoomStat
-       iTRV
-       SmartPlug
-
+Definition of Wiser Device
 """
 class WiserDevice(Entity):
     def __init__(self, deviceId,handler,sensorType):
@@ -58,7 +52,9 @@ class WiserDevice(Entity):
         self.sensorType=sensorType
 
     def update(self):
-        _LOGGER.debug('Wiser Cloud Device Update requested')
+        _LOGGER.debug('**********************************')
+        _LOGGER.debug('Wiser Device Update requested')
+        _LOGGER.debug('**********************************')
         self.handler.update()
 
     @property
@@ -133,8 +129,11 @@ class WiserDevice(Entity):
         return attrs
     @property
     def state(self):
+        _LOGGER.debug('**********************************')
+        _LOGGER.debug('Wiser Device state requested deviceId : %s',self.deviceId)
+        _LOGGER.debug('**********************************')
         return self.handler.getHubData().getDevice(self.deviceId).get("DisplayedSignalStrength")
-    
+        
 
 """ 
 Specific Sensor to display the status of heating or water circuit
@@ -149,9 +148,10 @@ class WiserSystemCircuitState(Entity):
         self.circuitType=circuitType
 
     def update(self):
+        _LOGGER.debug('**********************************')
         _LOGGER.debug('Wiser Cloud Circut status Update requested')
+        _LOGGER.debug('**********************************')
         self.handler.update()
-
     @property
     def icon(self):
         if self.circuitType=='HEATING':
@@ -182,6 +182,9 @@ class WiserSystemCircuitState(Entity):
     
     @property
     def state(self):
+        _LOGGER.debug('**********************************')
+        _LOGGER.debug('Wiser Cloud Circut STATE requested')
+        _LOGGER.debug('**********************************')
         if self.circuitType=="HEATING":
             return self.handler.getHubData().getHeatingRelayStatus()
         else:
@@ -221,6 +224,9 @@ class WiserSystemCloudSensor(Entity):
         return True
     @property
     def state(self):
+        _LOGGER.debug('**********************************')
+        _LOGGER.debug('Wiser Cloud  status Update requested')
+        _LOGGER.debug('**********************************')
         return self.cloudStatus
     
   

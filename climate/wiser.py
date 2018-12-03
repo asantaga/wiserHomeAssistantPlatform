@@ -59,6 +59,7 @@ class WiserRoom(ClimateDevice):
         return True
     @property
     def state(self):
+        _LOGGER.info('State requested for room %s',self.roomId)
         return self.handler.getHubData().getRoom(self.roomId).get("Mode")
     @property
     def name(self):
@@ -90,6 +91,8 @@ class WiserRoom(ClimateDevice):
 
    
     def update(self):
-        _LOGGER.debug('Wiser Device Update requested')
+        _LOGGER.debug('*******************************************')
+        _LOGGER.debug('WiserRoom Update requested')
+        _LOGGER.debug('*******************************************')
         self.handler.update()
     
