@@ -63,7 +63,6 @@ class WiserHubHandle:
         self.scan_interval = scan_interval
         self.ip = ip
         self.secret = secret
-        self.scan_interval
         self.wiserHubInstance=None
         self.mutex = Lock()
         self.minimum_temp=minimum_temp
