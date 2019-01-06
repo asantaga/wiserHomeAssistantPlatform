@@ -35,6 +35,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     wiserDevices.append(WiserSystemCircuitState(handler,"HEATING")   )
     wiserDevices.append(WiserSystemCircuitState(handler,"HOTWATER")   )
     wiserDevices.append(WiserSystemCloudSensor(handler))
+    wiserDevices.append(WiserSystemOperationModeSensor(handler))
     add_devices(wiserDevices)
     
 
@@ -230,3 +231,60 @@ class WiserSystemCloudSensor(Entity):
         return self.cloudStatus
     
   
+"""
+Sensor to display the status of the Wiser Operation Mode (Away/Normal etc)
+"""
+class WiserSystemOperationModeSensor(Entity):
+    def __init__(self,handler):
+            
+        """Initialize the sensor."""
+        _LOGGER.info('Wiser Operation  Mode Sensor Init')
+        self.handler=handler
+        self.overrideType=self.handler.getHubData().getSystem().get("OverrideType")
+        self.awayTemperature=self.handler.getHubData().getSystem().get("AwayModeSetPointLimit")
+      
+    def update(self):
+        _LOGGER.debug('Wiser Operation Mode Sensor Update requested')
+        self.handler.update()
+        self.overrideType=self.handler.getHubData().getSystem().get("OverrideType")
+        self.awayTemperature=self.handler.getHubData().getSystem().get("AwayModeSetPointLimit")
+
+    def mode(self):
+        if self.overrideType and self.overrideType == "Away":
+            return "Away"
+        else:
+            return "Normal"
+
+    @property
+    def icon(self):
+        if self.mode() == "Normal":
+            return "mdi:check"
+        else:
+            return "mdi:alert"
+
+    @property
+    def name(self):
+        """Return the name of the Device """
+        return ("Wiser Operation Mode")
+
+    @property
+    def should_poll(self):
+        """Return the polling state."""
+        return True
+
+    @property
+    def state(self):
+        return self.mode()
+
+    @property
+    def device_state_attributes(self):
+        """Return the device state attributes."""
+        attrs = { "AwayModeTemperature": -1.0 }
+        if self.awayTemperature:
+            try:
+                attrs["AwayModeTemperature"] = int(self.awayTemperature)/10.0
+                _LOGGER.debug("Used value for awayTemperature", self.awayTemperature)
+            except:
+                _LOGGER.debug("Unexpected value for awayTemperature", self.awayTemperature)
+        return attrs
+
