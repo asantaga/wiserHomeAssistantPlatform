@@ -32,8 +32,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     # Process  general devices
     for device in handler.getHubData().getDevices():
         wiserDevices.append(WiserDevice(device.get('id'),handler,device.get("ProductType")))
+
     wiserDevices.append(WiserSystemCircuitState(handler,"HEATING")   )
-    wiserDevices.append(WiserSystemCircuitState(handler,"HOTWATER")   )
+    # Dont display Hotwater if hotwater not supported
+    # https://github.com/asantaga/wiserHomeAssistantPlatform/issues/8
+    if hubData.getHotwater()!=None:
+        wiserDevices.append(WiserSystemCircuitState(handler,"HOTWATER")   )
+
     wiserDevices.append(WiserSystemCloudSensor(handler))
     add_devices(wiserDevices)
     
