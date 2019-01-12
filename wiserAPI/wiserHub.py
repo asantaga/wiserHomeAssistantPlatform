@@ -118,7 +118,13 @@ class wiserHub():
     def getHeatingRelayStatus(self):
         if (self.wiserHubData==None):
             self.refreshData()
-        return self.wiserHubData.get("HeatingChannel")[0].get("HeatingRelayState")
+        heatingRelayStatus="Off"
+        # There could be multiple heating channels, 
+        heatingChannels=self.getHeatingChannels()
+        for heatingChannel in heatingChannels:
+            if heatingChannel.get("HeatingRelayState")=="On":
+                heatingRelayStatus="On"
+        return heatingRelayStatus
     
     # Get hot water status (On/Off)
     def getHotwaterRelayStatus(self):
