@@ -38,8 +38,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     # https://github.com/asantaga/wiserHomeAssistantPlatform/issues/8
     if hubData.getHotwater()!=None:
         wiserDevices.append(WiserSystemCircuitState(handler,"HOTWATER")   )
-
     wiserDevices.append(WiserSystemCloudSensor(handler))
+
     add_devices(wiserDevices)
     
 
