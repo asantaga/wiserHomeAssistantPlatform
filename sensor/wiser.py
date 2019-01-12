@@ -194,9 +194,11 @@ class WiserSystemCircuitState(Entity):
            for heatingChannel in heatingChannels:
                channelName=heatingChannel.get("Name")
                channelPctDmd=heatingChannel.get("PercentageDemand")
+               channelRoomIds=heatingChannel.get("RoomIds")
                attrName="percentage_demand_{}".format(channelName)
                attrs[attrName]=channelPctDmd
-               
+               attrName2="room_ids_{}".format(channelName)
+               attrs[attrName2]=channelRoomIds
         return attrs
            
     
