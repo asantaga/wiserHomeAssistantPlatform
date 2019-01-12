@@ -83,4 +83,4 @@ Angelo
 # Contributors
 
 - @angrycamel  : Home/Away Sensor
-
+- @jchasey     : Doc changes

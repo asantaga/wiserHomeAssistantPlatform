@@ -185,6 +185,20 @@ class WiserSystemCircuitState(Entity):
         """Return the polling state."""
         return True
 
+    @property
+    def device_state_attributes(self):
+        """ returns additional info"""
+        attrs={}
+        if self.circuitType=="HEATING":
+           heatingChannels= self.handler.getHubData().getHeatingChannels()
+           for heatingChannel in heatingChannels:
+               channelName=heatingChannel.get("Name")
+               channelPctDmd=heatingChannel.get("PercentageDemand")
+               attrName="percentage_demand_{}".format(channelName)
+               attrs[attrName]=channelPctDmd
+               
+        return attrs
+           
     
     @property
     def state(self):
@@ -236,8 +250,6 @@ class WiserSystemCloudSensor(Entity):
         return self.cloudStatus
     
   
-<<<<<<< HEAD
-=======
 """
 Sensor to display the status of the Wiser Operation Mode (Away/Normal etc)
 """
@@ -294,5 +306,3 @@ class WiserSystemOperationModeSensor(Entity):
             except:
                 _LOGGER.debug("Unexpected value for awayTemperature", self.awayTemperature)
         return attrs
-
->>>>>>> 0a8d783f105da29c6333af647f89c634c4c0c99a

@@ -96,3 +96,18 @@ class WiserRoom(ClimateDevice):
         _LOGGER.debug('*******************************************')
         self.handler.update()
     
+#    https://github.com/asantaga/wiserHomeAssistantPlatform/issues/13
+    @property
+    def state_attributes(self):
+        # Generic attributes
+        attrs={}
+        attrs['percentage_demand'] = self.handler.getHubData().getRoom(self.roomId).get("PercentageDemand")
+        attrs['heating_rate'] = self.handler.getHubData().getRoom(self.roomId).get("HeatingRate")
+        attrs['window_state'] = self.handler.getHubData().getRoom(self.roomId).get("WindowState")
+        attrs['window_detection_active']= self.handler.getHubData().getRoom(self.roomId).get("WindowDetectionActive")
+        attrs['away_mode_supressed']= self.handler.getHubData().getRoom(self.roomId).get("AwayModeSuppressed")
+
+
+
+
+        return attrs 

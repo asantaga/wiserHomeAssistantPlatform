@@ -83,6 +83,10 @@ class wiserHub():
             self.refreshData()
         return self.wiserHubData.get("HotWater")
 
+    def getHeatingChannels(self):
+        if (self.wiserHubData==None):
+            self.refreshData()
+        return self.wiserHubData.get("HeatingChannel")
 
     def getDevices(self):
         if (self.wiserHubData==None):
