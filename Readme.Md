@@ -1,4 +1,5 @@
-# Wiser Home Assistant Platform
+# Wiser Home Assistant Platform (v1.1)
+
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
@@ -18,6 +19,8 @@ This component provides the following functionality
     - Hot Water relay status
         - Nice to know when the hot water is on/off. 
     - Full access to the JSON payload from the HeatHub, for those things I didn't think of... 
+    - Support for Heathubs with No Hot Water Control (added 1.1)
+    - Support for Home/Away Sensor (added v1.1)
 
 Currently the Component/Platform is read only, I do plan to add the ability to set the setpoints in the near future
 
@@ -72,9 +75,12 @@ I don't recommend you set the scan_interval too low, after all temperatures do n
 
 ## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 
+Special thanks for contributors 
 Thanks!
 
 Angelo
 
+# Contributors
 
+- @angrycamel  : Home/Away Sensor
 
