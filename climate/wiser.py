@@ -106,6 +106,10 @@ class WiserRoom(ClimateDevice):
         attrs['window_state'] = self.handler.getHubData().getRoom(self.roomId).get("WindowState")
         attrs['window_detection_active']= self.handler.getHubData().getRoom(self.roomId).get("WindowDetectionActive")
         attrs['away_mode_supressed']= self.handler.getHubData().getRoom(self.roomId).get("AwayModeSuppressed")
+	attrs['target_temperature']= self.handler.getHubData().getRoom(self.roomId).get("CurrentSetPoint")/10
+    	attrs['current_temperature']= self.handler.getHubData().getRoom(self.roomId).get("CalculatedTemperature")/10
+
+
 
 
 
