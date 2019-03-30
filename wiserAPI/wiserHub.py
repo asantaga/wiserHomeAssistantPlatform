@@ -13,7 +13,8 @@ import requests
 
 _LOGGER = logging.getLogger(__name__)
 WISERHUBURL = "http://{}/data/domain/"
-
+WISERMODEURL= "http://{}/data/domain/System/RequestOverride"
+WISERSETROOMTEMP= "http://{}//data/domain/Room/{}"
 
 
 class wiserHub():
@@ -24,7 +25,7 @@ class wiserHub():
         self.wiserHubData=None
         self.hubIP=hubIP
         self.hubSecret=secret
-        self.headers = {'SECRET': self.hubSecret}
+        self.headers = {'SECRET': self.hubSecret,'Content-Type': 'application/json;charset=UTF-8'}
         self.device2roomMap={}      # Dict holding Valve2Room mapping convinience variable
         self.refreshData()          # Issue first refresh in init
         
@@ -144,6 +145,37 @@ class wiserHub():
             if roomStat.get("id")==deviceId:
                 return roomStat
         return None 
-        
-  
 
+    # Set HomeAwayMode
+    def setHomeAwayMode(self,mode,temperature=10):
+        _LOGGER.info("Setting Home/Away mode to : {} {} C".format(mode,temperature/100))
+        self.response=""
+        self.patchData={}
+        if (mode not in ['HOME','AWAY']):
+            raise Exception("setAwayHome can only be HOME or AWAY")
+        if (mode=="AWAY" and temperature!=None and (temperature <0 or temperature>400)):
+              raise Exception("setAwayHome temperature can only be between 0 and 400 (100=10C)")
+        print("Setting Home/Away : {}".format(mode))
+        if (mode=="AWAY"):
+            self.patchData={"type":2,"setPoint":temperature}
+        else:
+            self.patchData={"type":0,"setPoint":0}
+        _LOGGER.debug ("patchdata {} ".format(self.patchData))
+        self.response = requests.patch(url=WISERMODEURL.format(self.hubIP), headers=self.headers,json =self.patchData )
+        # Strangely the response is always 403, but it works.. very strange..
+        if (self.response.status_code!=403):
+            _LOGGER.debug("Set Home/Away Response code = {}".format(self.response.status_code))
+            raise Exception("Error setting Home/Away , error {} ".format(self.response.text))
+
+    # Set Room Temperature
+    def setRoomTemperature(self, roomId,temperature):
+        print("Set Room {} Temperature to = {} ".format(roomId,temperature))
+        if (temperature<0 or temperature>400):
+            raise Exception("SetRoomTemperature : value of temperature must be between 0 and 400")
+        patchData={"RequestOverride":{"Type":"Manual","SetPoint":temperature}}
+        self.response = requests.patch(WISERSETROOMTEMP.format(
+            self.hubIP,roomId), headers=self.headers,json=patchData)
+        print (self.response.status_code)
+#        if (self.response.status_code!=403):
+#            _LOGGER.debug("Set Room {} Temperature to = {} resulted in {}".format(roomId,temperature,self.response.status_code))
+#            raise Exception("Erorr setting Home/Away , error {} ".format(self.response.text))
