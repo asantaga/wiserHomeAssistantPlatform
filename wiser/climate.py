@@ -3,7 +3,7 @@ Climate Platform Device for Wiser Rooms
 
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
-Angelo.santagata@gmail.com
+Angelosantagata@gmail.com
 
 """
 import logging
@@ -13,11 +13,14 @@ import voluptuous as vol
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (STATE_AUTO, SUPPORT_OPERATION_MODE, SUPPORT_TARGET_TEMPERATURE)
 import homeassistant.helpers.config_validation as cv
-from homeassistant.const import TEMP_CELSIUS,ATTR_BATTERY_LEVEL
+from homeassistant.const import ATTR_TEMPERATURE,TEMP_CELSIUS,ATTR_BATTERY_LEVEL
 from homeassistant.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = "wiser"
+
+STATE_MANUAL = 'manual'
+STATE_BOOST = 'Boost'
 
 
 
@@ -47,6 +50,8 @@ class WiserRoom(ClimateDevice):
         self._operation_list = [STATE_AUTO]
         self.handler=handler
         self.roomId=roomId
+        self._operation_list = [STATE_AUTO, STATE_MANUAL, STATE_BOOST ] 
+
 
     @property
     def supported_features(self):
@@ -87,7 +92,11 @@ class WiserRoom(ClimateDevice):
     @property
     def target_temperature(self):
           return self.handler.getHubData().getRoom(self.roomId).get("CurrentSetPoint")/10
-
+    
+    @property
+    def operation_list(self):
+        """Return the list of available operation modes."""
+        return self._operation_list
    
     def update(self):
         _LOGGER.debug('*******************************************')
@@ -106,3 +115,20 @@ class WiserRoom(ClimateDevice):
         attrs['window_detection_active']= self.handler.getHubData().getRoom(self.roomId).get("WindowDetectionActive")
         attrs['away_mode_supressed']= self.handler.getHubData().getRoom(self.roomId).get("AwayModeSuppressed")
         return attrs 
+
+    # Set temperature
+    def set_temperature(self, **kwargs):
+        """Set new target temperatures."""
+        if kwargs.get(ATTR_TEMPERATURE) is None:
+            return False
+        target_temperature = kwargs.get(ATTR_TEMPERATURE)
+        _LOGGER.debug("Setting Device Temperature for roomId {}, temperature {}".format(self.roomId,target_temperature))
+        _LOGGER.debug("Value of wiserhub {}".format(self.handler))
+        self.handler.setRoomTemperature(self.roomId,target_temperature)
+        
+    def set_operation_mode(self, operation_mode):
+        """Set new operation mode."""
+        _LOGGER.debug("*******Setting Device Operation {} for roomId {}".format(operation_mode,self.roomId))
+        return True
+
+

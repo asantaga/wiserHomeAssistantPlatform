@@ -3,7 +3,7 @@ Sensor Platform Device for Wiser System
 
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
-Angelo.santagata@gmail.com
+Angelosantagata@gmail.com
 
 """
 import logging

@@ -4,7 +4,7 @@ Wiser API Facade
 Currently embedded in the Home Assistant API but will be split into PyPi
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
-Angelo.santagata@gmail.com
+Angelosantagata@gmail.com
 
 """
 
@@ -168,14 +168,19 @@ class wiserHub():
             raise Exception("Error setting Home/Away , error {} ".format(self.response.text))
 
     # Set Room Temperature
-    def setRoomTemperature(self, roomId,temperature):
-        print("Set Room {} Temperature to = {} ".format(roomId,temperature))
+    def setRoomTemperature(self, roomId, temperature):
+        _LOGGER.info("Set Room {} Temperature to = {} ".format(roomId,temperature))
         if (temperature<0 or temperature>400):
             raise Exception("SetRoomTemperature : value of temperature must be between 0 and 400")
         patchData={"RequestOverride":{"Type":"Manual","SetPoint":temperature}}
         self.response = requests.patch(WISERSETROOMTEMP.format(
             self.hubIP,roomId), headers=self.headers,json=patchData)
-        print (self.response.status_code)
+        _LOGGER.info (self.response.status_code)
 #        if (self.response.status_code!=403):
 #            _LOGGER.debug("Set Room {} Temperature to = {} resulted in {}".format(roomId,temperature,self.response.status_code))
 #            raise Exception("Erorr setting Home/Away , error {} ".format(self.response.text))
+
+    def setBoost(self,roomId, duration,temperature):
+        # TODO
+        print("Set Boost for a room {}  duration={} time={} ** NOT IMPLEMENTED YET **".format(roomId,duration,temperature))
+        
