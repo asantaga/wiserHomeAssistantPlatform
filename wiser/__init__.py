@@ -103,3 +103,12 @@ class WiserHubHandle:
             else:
                 _LOGGER.info("Skipping update (data already gotten within scan interval)")
 
+    def setRoomTemperature(self, roomId, target_temperature):
+        _LOGGER.info("set {} to {}".format(roomId, target_temperature))
+        from .wiserAPI import wiserHub
+        if (self.wiserHubInstance==None):
+            self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
+        with self.mutex:
+            self.wiserHubInstance.setRoomTemperature(roomId, target_temperature)
+            return True
+        return False
