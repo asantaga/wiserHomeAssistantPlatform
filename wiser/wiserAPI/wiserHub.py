@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 WISERHUBURL = "http://{}/data/domain/"
 WISERMODEURL= "http://{}/data/domain/System/RequestOverride"
 WISERSETROOMTEMP= "http://{}//data/domain/Room/{}"
+WISERROOM="http://{}//data/domain/Room/{}"
 
 
 class wiserHub():
@@ -184,7 +185,38 @@ class wiserHub():
             raise Exception("Error setting temperature, error {} ".format(self.response.text))
         _LOGGER.debug("Set room Temp, error {} ({})".format(self.response.status_code, self.response.text))
 
-    def setBoost(self,roomId, duration,temperature):
+    #Set Room Mode (Manual, Boost or Auto)
+    def setRoomMode(self,roomId, mode,boost_temp=20):
         # TODO
-        print("Set Boost for a room {}  duration={} time={} ** NOT IMPLEMENTED YET **".format(roomId,duration,temperature))
+        _LOGGER.debug("Set Mode {} for a room {} ".format(mode,roomId))
+        if (mode.lower()=="auto"):
+            #Do Auto
+            patchData= {"Mode":"Auto"}
+        elif (mode.lower()=="boost"):
+            temp=boost_temp*10
+            _LOGGER.debug("Setting Boost Temp to {}".format(temp))
+            patchData={"RequestOverride":{"Type":"Manual","DurationMinutes": 30, "SetPoint":temp, "Originator":"App"}}
+        elif (mode.lower()=="manual"):
+            patchData={"Mode":"Manual"} 
+        else:
+            raise Exception("Error setting setting room mode, received  {} but should be auto,boost or manual ".format(mode))
+        
+        # if not a boost operation cancel any current boost
+        if (mode.lower()!="boost"):
+            cancelBoostPostData={"RequestOverride":{"Type":"None","DurationMinutes": 0, "SetPoint":0, "Originator":"App"}}
+            
+            self.response = requests.patch(WISERROOM.format(self.hubIP,roomId), headers=self.headers,json=cancelBoostPostData)
+            if (self.response.status_code != 200):
+                _LOGGER.error("Cancelling boostresulted in {}".format(self.response.status_code))
+                raise Exception("Error cancelling boost {} ".format(mode))
+        # Set new mode
+        self.response = requests.patch(WISERROOM.format(
+            self.hubIP,roomId), headers=self.headers,json=patchData)        
+        if self.response.status_code != 200:
+            _LOGGER.error("Set Room mode to {} resulted in {}".format(mode,self.response.status_code))
+            raise Exception("Error setting mode to error {} ".format(mode))
+        
+
+    
+    
 

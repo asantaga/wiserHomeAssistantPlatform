@@ -129,6 +129,7 @@ class WiserRoom(ClimateDevice):
     def set_operation_mode(self, operation_mode):
         """Set new operation mode."""
         _LOGGER.debug("*******Setting Device Operation {} for roomId {}".format(operation_mode,self.roomId))
+        self.handler.setRoomMode(self.roomId,operation_mode)
         return True
 
 
