@@ -75,7 +75,9 @@ wiser:
 
 I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty.
 ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
+
 ```boost_temp``` is the temperature the radiator should be set to when boosted, default is 20
+
 ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
 ## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
@@ -91,8 +93,8 @@ Angelo
 - @jchasey     : Doc changes
 - @sjtbham     : Debugging
 
-#Change log
+# Change log
 1.3     Added ability to set temperature
         Added ability to set room mode (auto,boost,manual)
-        
+
 
