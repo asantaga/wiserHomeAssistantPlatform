@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.2)
+# Wiser Home Assistant Platform (v1.3)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -21,6 +21,7 @@ This component provides the following functionality
     - Full access to the JSON payload from the HeatHub, for those things I didn't think of... 
     - Support for Heathubs with No Hot Water Control (added 1.1)
     - Support for Home/Away Sensor (added v1.1)
+    - Support for setting room mode (boost/manual/auto) (added in 1.3)
 
 Currently the Component/Platform is read only, I do plan to add the ability to set the setpoints in the near future
 
@@ -68,10 +69,14 @@ wiser:
   password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
   scan_interval: 300
   minimum: -5
+  boost_temp: 20
+  boost_time: 30
 ```
 
 I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty.
 ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
+```boost_temp``` is the temperature the radiator should be set to when boosted, default is 20
+```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
 ## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 
@@ -84,3 +89,10 @@ Angelo
 
 - @angrycamel  : Home/Away Sensor
 - @jchasey     : Doc changes
+- @sjtbham     : Debugging
+
+#Change log
+1.3     Added ability to set temperature
+        Added ability to set room mode (auto,boost,manual)
+        
+

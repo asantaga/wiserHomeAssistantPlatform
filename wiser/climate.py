@@ -47,7 +47,6 @@ class WiserRoom(ClimateDevice):
     def __init__(self, roomId,handler):
         """Initialize the sensor."""
         _LOGGER.info('Wiser Room Initialisation')
-        self._operation_list = [STATE_AUTO]
         self.handler=handler
         self.roomId=roomId
         self._operation_list = [STATE_AUTO, STATE_MANUAL, STATE_BOOST ] 

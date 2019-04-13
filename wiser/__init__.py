@@ -27,6 +27,7 @@ NOTIFICATION_ID = 'wiser_notification'
 NOTIFICATION_TITLE = 'Wiser Component Setup'
 CONF_BOOST_TEMP_DEFAULT ="20"
 CONF_BOOST_TEMP="boost_temp"
+CONF_BOOST_TEMP_TIME="boost_temp_time"
 
 DOMAIN = 'wiser'
 DATA_KEY = 'wiser'
@@ -36,7 +37,8 @@ PLATFORM_SCHEMA = vol.Schema({
     vol.Optional(CONF_PASSWORD): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default=300): cv.time_period,
     vol.Optional(CONF_MINIMUM, default=-5): vol.All(vol.Coerce(int)),
-    vol.Optional(CONF_BOOST_TEMP, default=20): vol.All(vol.Coerce(int))
+    vol.Optional(CONF_BOOST_TEMP, default=20): vol.All(vol.Coerce(int)),
+    vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int))
 })
 
 
@@ -46,9 +48,10 @@ def setup(hass, config):
     scan_interval= config[DOMAIN][0][CONF_SCAN_INTERVAL].total_seconds()
     minimum_temp= config[DOMAIN][0][CONF_MINIMUM]
     boost_temp= config[DOMAIN][0][CONF_BOOST_TEMP]
-    
+    boost_temp_time= config[DOMAIN][0][CONF_BOOST_TEMP_TIME]
+
     _LOGGER.info("Wiser setup with HubIp =  {}".format(hubHost))
-    hass.data[DATA_KEY] = WiserHubHandle(hubHost, password, scan_interval,minimum_temp,boost_temp)
+    hass.data[DATA_KEY] = WiserHubHandle(hubHost, password, scan_interval,minimum_temp,boost_temp,boost_temp_time)
 
     _LOGGER.info("Wiser Component Setup Completed")
 
@@ -62,7 +65,7 @@ Single parent class to coordindate the rest calls to teh Heathub
 class WiserHubHandle:
     
 
-    def __init__(self, ip, secret, scan_interval,minimum_temp,boost_temp):
+    def __init__(self, ip, secret, scan_interval,minimum_temp,boost_temp,boost_temp_time):
         self.scan_interval = scan_interval
         self.ip = ip
         self.secret = secret
@@ -71,6 +74,8 @@ class WiserHubHandle:
         self.minimum_temp=minimum_temp
         self._updatets = time.time()
         self.boost_temp=boost_temp
+        self.boost_temp_time=boost_temp_time
+
         _LOGGER.info("min temp = {}".format(self.minimum_temp))
 
     def getHubData(self):
@@ -122,6 +127,6 @@ class WiserHubHandle:
         if (self.wiserHubInstance==None):
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
-            self.wiserHubInstance.setRoomMode(roomId,mode,self.boost_temp)
+            self.wiserHubInstance.setRoomMode(roomId,mode,self.boost_temp,self.boost_temp_time)
             return True
         return False

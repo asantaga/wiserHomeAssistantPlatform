@@ -186,7 +186,7 @@ class wiserHub():
         _LOGGER.debug("Set room Temp, error {} ({})".format(self.response.status_code, self.response.text))
 
     #Set Room Mode (Manual, Boost or Auto)
-    def setRoomMode(self,roomId, mode,boost_temp=20):
+    def setRoomMode(self,roomId, mode,boost_temp=20,boost_temp_time=30):
         # TODO
         _LOGGER.debug("Set Mode {} for a room {} ".format(mode,roomId))
         if (mode.lower()=="auto"):
@@ -195,7 +195,7 @@ class wiserHub():
         elif (mode.lower()=="boost"):
             temp=boost_temp*10
             _LOGGER.debug("Setting Boost Temp to {}".format(temp))
-            patchData={"RequestOverride":{"Type":"Manual","DurationMinutes": 30, "SetPoint":temp, "Originator":"App"}}
+            patchData={"RequestOverride":{"Type":"Manual","DurationMinutes": boost_temp_time, "SetPoint":temp, "Originator":"App"}}
         elif (mode.lower()=="manual"):
             patchData={"Mode":"Manual"} 
         else:
