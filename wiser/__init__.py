@@ -29,6 +29,7 @@ CONF_BOOST_TEMP_DEFAULT ="20"
 CONF_BOOST_TEMP="boost_temp"
 CONF_BOOST_TEMP_TIME="boost_time"
 
+VERSION = '1.3.1'
 DOMAIN = 'wiser'
 DATA_KEY = 'wiser'
 
