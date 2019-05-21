@@ -80,7 +80,18 @@ I don't recommend you set the scan_interval too low, after all temperatures do n
 
 ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
-## 6. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
+## 6. Supports custom_updater
+
+We now support [custom_updater](https://github.com/custom-components/custom_updater).
+
+Add this to your configuration:
+```yaml
+custom_updater:
+  component_urls:
+    - https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components.json
+```
+
+## 7. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
 
 Special thanks for contributors 
 Thanks!
