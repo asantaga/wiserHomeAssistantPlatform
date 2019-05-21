@@ -1,0 +1,15 @@
+{
+    "wiser": {
+        "version": "1.3.1",
+        "local_location": "/custom_components/wiser/__init__.py",
+        "remote_location": "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/__init__.py",
+        "visit_repo": "https://github.com/asantaga/wiserHomeAssistantPlatform",
+        "changelog": "https://github.com/asantaga/wiserHomeAssistantPlatform",
+        "resources": [
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/climate.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/sensor.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/wiserAPI/__init__.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/wiserAPI/wiserHub.py",
+        ]
+    }
+}
