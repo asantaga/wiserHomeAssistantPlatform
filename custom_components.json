@@ -9,7 +9,7 @@
             "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/climate.py",
             "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/sensor.py",
             "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/wiserAPI/__init__.py",
-            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/wiserAPI/wiserHub.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/wiser/wiserAPI/wiserHub.py"
         ]
     }
 }
