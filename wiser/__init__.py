@@ -7,17 +7,18 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelo.santagata@gmail.com
 """
 
+import json
 import logging
 import time
-import requests
 from socket import timeout
 from threading import Lock
-import json
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL,CONF_MINIMUM
 
+
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.const import (CONF_HOST, CONF_MINIMUM, CONF_PASSWORD,
+                                 CONF_SCAN_INTERVAL)
+from homeassistant.helpers.discovery import load_platform
 
 # TODO : Once the core library is added to PyPi will modify this
 #REQUIREMENTS = ['package name'']
@@ -59,12 +60,13 @@ def setup(hass, config):
     load_platform(hass, 'sensor', DOMAIN, {}, config)
     return True
 
+
 """
 Single parent class to coordindate the rest calls to teh Heathub
 """
-class WiserHubHandle:
-    
 
+
+class WiserHubHandle:
     def __init__(self, ip, secret, scan_interval,minimum_temp,boost_temp,boost_time):
         self.scan_interval = scan_interval
         self.ip = ip
@@ -75,12 +77,11 @@ class WiserHubHandle:
         self._updatets = time.time()
         self.boost_temp=boost_temp
         self.boost_time=boost_time
-
         _LOGGER.info("min temp = {}".format(self.minimum_temp))
 
     def getHubData(self):
         from .wiserAPI import wiserHub
-        if (self.wiserHubInstance==None):
+        if self.wiserHubInstance is None:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         return self.wiserHubInstance
 
@@ -90,7 +91,7 @@ class WiserHubHandle:
     def update(self):
         _LOGGER.info("Update Requested")
         from .wiserAPI import wiserHub
-        if (self.wiserHubInstance==None):
+        if self.wiserHubInstance is None:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
             if (time.time() - self._updatets) >= self.scan_interval:
@@ -115,18 +116,16 @@ class WiserHubHandle:
     def setRoomTemperature(self, roomId, target_temperature):
         _LOGGER.info("set {} to {}".format(roomId, target_temperature))
         from .wiserAPI import wiserHub
-        if (self.wiserHubInstance==None):
+        if self.wiserHubInstance is None:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
             self.wiserHubInstance.setRoomTemperature(roomId, target_temperature)
             return True
-        return False
-    
-    def setRoomMode(self,roomId,mode):
+
+    def setRoomMode(self, roomId, mode):
         from .wiserAPI import wiserHub
-        if (self.wiserHubInstance==None):
+        if self.wiserHubInstance is None:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
             self.wiserHubInstance.setRoomMode(roomId,mode,self.boost_temp,self.boost_time)
             return True
-        return False
