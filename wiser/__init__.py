@@ -25,9 +25,9 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL,CON
 _LOGGER = logging.getLogger(__name__)
 NOTIFICATION_ID = 'wiser_notification'
 NOTIFICATION_TITLE = 'Wiser Component Setup'
-CONF_BOOST_TEMP_DEFAULT ="20"
-CONF_BOOST_TEMP="boost_temp"
-CONF_BOOST_TEMP_TIME="boost_time"
+CONF_BOOST_TEMP_DEFAULT ='20'
+CONF_BOOST_TEMP='boost_temp'
+CONF_BOOST_TEMP_TIME='boost_time'
 
 DOMAIN = 'wiser'
 DATA_KEY = 'wiser'
@@ -43,7 +43,7 @@ PLATFORM_SCHEMA = vol.Schema({
 
 
 def setup(hass, config):
-    hubHost= config[DOMAIN][0][CONF_HOST]
+    hubHost = config[DOMAIN][0][CONF_HOST]
     password= config[DOMAIN][0][CONF_PASSWORD]
     scan_interval= config[DOMAIN][0][CONF_SCAN_INTERVAL].total_seconds()
     minimum_temp= config[DOMAIN][0][CONF_MINIMUM]

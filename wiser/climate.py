@@ -17,7 +17,7 @@ from homeassistant.const import ATTR_TEMPERATURE,TEMP_CELSIUS,ATTR_BATTERY_LEVEL
 from homeassistant.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = "wiser"
+DOMAIN = 'wiser'
 
 STATE_MANUAL = 'manual'
 STATE_BOOST = 'Boost'
@@ -46,7 +46,7 @@ class WiserRoom(ClimateDevice):
 
     def __init__(self, roomId,handler):
         """Initialize the sensor."""
-        _LOGGER.info('Wiser Room Initialisation')
+        _LOGGER.info("Wiser Room Initialisation")
         self.handler=handler
         self.roomId=roomId
         self._operation_list = [STATE_AUTO, STATE_MANUAL, STATE_BOOST ] 
@@ -63,10 +63,10 @@ class WiserRoom(ClimateDevice):
     @property
     def state(self):
         _LOGGER.info('State requested for room %s',self.roomId)
-        return self.handler.getHubData().getRoom(self.roomId).get("Mode")
+        return self.handler.getHubData().getRoom(self.roomId).get('Mode')
     @property
     def name(self):
-        return "Wiser "+self.handler.getHubData().getRoom(self.roomId).get("Name")
+        return "Wiser "+self.handler.getHubData().getRoom(self.roomId).get('Name')
 
     @property
     def temperature_unit(self):
@@ -74,7 +74,7 @@ class WiserRoom(ClimateDevice):
 
     @property
     def current_temperature(self):
-        temp=self.handler.getHubData().getRoom(self.roomId).get("CalculatedTemperature")/10
+        temp=self.handler.getHubData().getRoom(self.roomId).get('CalculatedTemperature')/10
         if temp< self.handler.getMinimumTemp():
             # Sometimes we get really low temps (like -3000!), not sure why, if we do then just set it to -20 for now till i debug this.
             temp= self.handler.getMinimumTemp()
@@ -86,11 +86,11 @@ class WiserRoom(ClimateDevice):
 
     @property
     def current_operation(self):
-        return self.handler.getHubData().getRoom(self.roomId).get("Mode")
+        return self.handler.getHubData().getRoom(self.roomId).get('Mode')
 
     @property
     def target_temperature(self):
-          return self.handler.getHubData().getRoom(self.roomId).get("CurrentSetPoint")/10
+          return self.handler.getHubData().getRoom(self.roomId).get('CurrentSetPoint')/10
     
     @property
     def operation_list(self):
@@ -98,21 +98,21 @@ class WiserRoom(ClimateDevice):
         return self._operation_list
    
     def update(self):
-        _LOGGER.debug('*******************************************')
-        _LOGGER.debug('WiserRoom Update requested')
-        _LOGGER.debug('*******************************************')
+        _LOGGER.debug("*******************************************")
+        _LOGGER.debug("WiserRoom Update requested")
+        _LOGGER.debug("*******************************************")
         self.handler.update()
     
 #    https://github.com/asantaga/wiserHomeAssistantPlatform/issues/13
     @property
     def state_attributes(self):
         # Generic attributes
-        attrs= super().state_attributes
-        attrs['percentage_demand'] = self.handler.getHubData().getRoom(self.roomId).get("PercentageDemand")
-        attrs['heating_rate'] = self.handler.getHubData().getRoom(self.roomId).get("HeatingRate")
-        attrs['window_state'] = self.handler.getHubData().getRoom(self.roomId).get("WindowState")
-        attrs['window_detection_active']= self.handler.getHubData().getRoom(self.roomId).get("WindowDetectionActive")
-        attrs['away_mode_supressed']= self.handler.getHubData().getRoom(self.roomId).get("AwayModeSuppressed")
+        attrs = super().state_attributes
+        attrs['percentage_demand'] = self.handler.getHubData().getRoom(self.roomId).get('PercentageDemand')
+        attrs['heating_rate'] = self.handler.getHubData().getRoom(self.roomId).get('HeatingRate')
+        attrs['window_state'] = self.handler.getHubData().getRoom(self.roomId).get('WindowState')
+        attrs['window_detection_active']= self.handler.getHubData().getRoom(self.roomId).get('WindowDetectionActive')
+        attrs['away_mode_supressed']= self.handler.getHubData().getRoom(self.roomId).get('AwayModeSuppressed')
         return attrs 
 
     # Set temperature
