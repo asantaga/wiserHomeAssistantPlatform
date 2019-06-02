@@ -1,8 +1,8 @@
 {
-  "domain": "wiser_heating",
+  "domain": "wiser",
   "name": "Drayton Wiser Heating ",
   "documentation": "https://github.com/asantaga/drayton_wiser",
   "codeowners": ["@asantaga"],
-  "requirements": ["wiser-heating-api"]
+  "requirements": ["wiser-heating-api==1.0.0"]
 }
 
