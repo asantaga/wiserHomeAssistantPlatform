@@ -163,10 +163,9 @@ class wiserHub():
             self.patchData={"type":0,"setPoint":0}
         _LOGGER.debug ("patchdata {} ".format(self.patchData))
         self.response = requests.patch(url=WISERMODEURL.format(self.hubIP), headers=self.headers,json =self.patchData )
-        # Strangely the response is always 403, but it works.. very strange..
-        if (self.response.status_code!=403):
+        if (self.response.status_code!=200):
             _LOGGER.debug("Set Home/Away Response code = {}".format(self.response.status_code))
-            raise Exception("Error setting Home/Away , error {} ".format(self.response.text))
+            raise Exception("Error setting Home/Away , error {} {}".format(self.response.status_code, self.response.text))
 
     # Set Room Temperature
     def setRoomTemperature(self, roomId, temperature):
