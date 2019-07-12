@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.31)
+# Wiser Home Assistant Platform (v1.3.1)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -103,12 +103,12 @@ Angelo
 # Contributors
 
 - @angrycamel  : Home/Away Sensor
-- @jchasey     : Doc changes
+- @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
 - @djbanks     : Home/Away switch (v 1.31)
 
 # Change log
-- 1.31    Merged djbanks Home/Away switch
+- 1.3.1    Merged djbanks Home/Away switch
 - 1.3     Added ability to set temperature
         Added ability to set room mode (auto,boost,manual)
 
