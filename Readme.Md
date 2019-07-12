@@ -1,11 +1,13 @@
-# Wiser Home Assistant Platform (v1.3)
+# Wiser Home Assistant Platform (v1.3.1)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
 This component provides the following functionality
--Climate platforms
+- Climate platforms
     - List of climate entities for each Room. The state is the current temperature and the target temperature.  
+- Switch platform
+   - Allows the switching of Home/Away mode via a switch which means it can now be controlled by HA
 - Sensor Platforms
     - Each **TRV** is representated by a Sensor. The sensor attributes include extensive information about the device, such as WIFI Signal strength, firmware version, battery levels etc
     - **Heathub** displayed as a sensor, firmware version etc
@@ -101,11 +103,13 @@ Angelo
 # Contributors
 
 - @angrycamel  : Home/Away Sensor
-- @jchasey     : Doc changes
+- @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
+- @djbanks     : Home/Away switch (v 1.31)
 
 # Change log
-1.3     Added ability to set temperature
+- 1.3.1    Merged djbanks Home/Away switch
+- 1.3     Added ability to set temperature
         Added ability to set room mode (auto,boost,manual)
 
 

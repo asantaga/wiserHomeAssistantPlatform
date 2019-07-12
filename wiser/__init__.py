@@ -59,6 +59,7 @@ def setup(hass, config):
 
     load_platform(hass, 'climate', DOMAIN, {}, config)
     load_platform(hass, 'sensor', DOMAIN, {}, config)
+    load_platform(hass, 'switch', DOMAIN, {}, config)
     return True
 
 
@@ -129,4 +130,12 @@ class WiserHubHandle:
             self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
         with self.mutex:
             self.wiserHubInstance.setRoomMode(roomId,mode,self.boost_temp,self.boost_time)
+            return True
+    def setAwayMode(self, away, awayTemperature):
+        from .wiserAPI import wiserHub
+        if self.wiserHubInstance is None:
+            self.wiserHubInstance=wiserHub.wiserHub(self.ip,self.secret)
+        mode = 'AWAY' if away else 'HOME'
+        with self.mutex:
+            self.wiserHubInstance.setHomeAwayMode(mode, awayTemperature)
             return True
