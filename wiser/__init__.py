@@ -74,7 +74,7 @@ class WiserHubHandle:
         self.wiserHubInstance = None
         self.mutex = Lock()
         self.minimum_temp = minimum_temp
-        self._updatets = time.time()
+        self.last_updated = time.time()
         self.boost_temp = boost_temp
         self.boost_time = boost_time
         _LOGGER.info("min temp = {}".format(self.minimum_temp))
@@ -88,13 +88,19 @@ class WiserHubHandle:
     def get_minimum_temp(self):
         return self.minimum_temp
 
+    def force_next_scan(self):
+        # When this function is called, the last_updated variable is forced
+        # back so that we force a refresh
+        _LOGGER.debug("force_next_scan requested")
+        self.last_updated=self.last_updated - self.scan_interval*2
+
     def update(self):
         _LOGGER.info("Update Requested")
         from wiserHeatingAPI import wiserHub
         if self.wiserHubInstance is None:
             self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
         with self.mutex:
-            if (time.time() - self._updatets) >= self.scan_interval:
+            if (time.time() - self.last_updated) >= self.scan_interval:
                 _LOGGER.debug("**********************************************")
                 _LOGGER.info("Scan Interval exceeeded, updating Wiser " +
                              " DataSet from hub")
@@ -121,7 +127,7 @@ class WiserHubHandle:
                         " after fixing.".format(ex), title=NOTIFICATION_TITLE,
                         notification_id=NOTIFICATION_ID)
                     return False
-                self._updatets = time.time()
+                self.last_updated = time.time()
                 return True
             else:
                 _LOGGER.info("Skipping update (data already gotten within " +
@@ -135,6 +141,7 @@ class WiserHubHandle:
         with self.mutex:
             self.wiserHubInstance.setRoomTemperature(room_id,
                                                        target_temperature)
+            self.force_next_scan()
             return True
 
     def set_room_mode(self, room_id, mode):
@@ -144,6 +151,7 @@ class WiserHubHandle:
         with self.mutex:
             self.wiserHubInstance.setRoomMode(room_id, mode, self.boost_temp,
                                                 self.boost_time)
+            self.force_next_scan()
             return True
 
     def set_away_mode(self, away, away_temperature):
@@ -153,4 +161,5 @@ class WiserHubHandle:
         mode = 'AWAY' if away else 'HOME'
         with self.mutex:
             self.wiserHubInstance.setHomeAwayMode(mode, away_temperature)
+            self.force_next_scan()
             return True

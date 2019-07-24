@@ -67,9 +67,9 @@ class WiserRoom(ClimateDevice):
         _LOGGER.info('State requested for room %s, state=%s', self.roomId,state)
         # TODO :  State can be Manual, Auto or Boost.. Need to see how to deal with boost
         if (state.lower() == "manual"):
-            state="heat_cool"
+            state = HVAC_MODE_HEAT_COOL
         else:
-            state="auto"
+            state = HVAC_MODE_AUTO
         return state
 
     @property
@@ -100,11 +100,11 @@ class WiserRoom(ClimateDevice):
     @property
     def hvac_mode(self):
         state = self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
-        _LOGGER.debug('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!__________________________________#################################################HVAC MODE=state=%s', )
-
-        if (state == "manual"):
+        if (state.lower() == "manual"):
             state = HVAC_MODE_HEAT_COOL
-        return HVAC_MODE_AUTO
+        if (state.lower()== "auto"):
+            state=HVAC_MODE_AUTO
+        return state
 
     def set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
@@ -114,6 +114,7 @@ class WiserRoom(ClimateDevice):
         if (hvac_mode == "heat_cool"):
             hvac_mode = "manual"
         self.handler.set_room_mode(self.roomId, hvac_mode)
+
         return True
 
     @property
@@ -162,17 +163,6 @@ class WiserRoom(ClimateDevice):
             "Setting Device Temperature for roomId {}, temperature {}".
                 format(self.roomId, target_temperature))
         _LOGGER.debug("Value of wiserhub {}".format(self.handler))
+
         self.handler.set_room_temperature(self.roomId, target_temperature)
 
-    # TODO
-    #@property
-    #def preset_modes(self):
-    #    """Return available preset modes."""
-    #    return [
-    #        PRESET_BOOST,
-    #        PRESET_MANUAL,
-    #    ]
-    #@property
-    #def preset_mode(self):
-    #    """Return the current preset mode."""
-    #    return
