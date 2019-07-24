@@ -9,9 +9,12 @@ import logging
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.components.climate import ClimateDevice
-from homeassistant.components.climate.const import (STATE_AUTO,
-                                                    SUPPORT_OPERATION_MODE,
-                                                    SUPPORT_TARGET_TEMPERATURE)
+#from homeassistant.components.climate.const import (STATE_AUTO,
+#                                                    SUPPORT_OPERATION_MODE,
+#                                                    SUPPORT_TARGET_TEMPERATURE,
+#                                                    HVAC_MODE_HEAT_COOL)
+#
+from homeassistant.components.climate.const import (HVAC_MODE_AUTO, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE,HVAC_MODE_HEAT_COOL)
 from homeassistant.const import (ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE,
                                  TEMP_CELSIUS)
 from homeassistant.helpers.entity import Entity
@@ -19,11 +22,10 @@ from homeassistant.helpers.entity import Entity
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = 'wiser'
 
-STATE_MANUAL = 'manual'
-STATE_BOOST = 'Boost'
+PRESET_MANUAL = 'manual'
+PRESET_BOOST = 'boost'
 
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE
-
+SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Setup the sensor platform."""
@@ -48,7 +50,7 @@ class WiserRoom(ClimateDevice):
         _LOGGER.info("Wiser Room Initialisation")
         self.handler = handler
         self.roomId = room_id
-        self._operation_list = [STATE_AUTO, STATE_MANUAL, STATE_BOOST]
+        self._hvac_modes_list = [HVAC_MODE_AUTO, HVAC_MODE_HEAT_COOL]
 
     @property
     def supported_features(self):
@@ -61,8 +63,14 @@ class WiserRoom(ClimateDevice):
 
     @property
     def state(self):
-        _LOGGER.info('State requested for room %s', self.roomId)
-        return self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
+        state=self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
+        _LOGGER.info('State requested for room %s, state=%s', self.roomId,state)
+        # TODO :  State can be Manual, Auto or Boost.. Need to see how to deal with boost
+        if (state.lower() == "manual"):
+            state="heat_cool"
+        else:
+            state="auto"
+        return state
 
     @property
     def name(self):
@@ -90,18 +98,33 @@ class WiserRoom(ClimateDevice):
         return "mdi:oil-temperature"
 
     @property
-    def current_operation(self):
-        return self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
+    def hvac_mode(self):
+        state = self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
+        _LOGGER.debug('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!__________________________________#################################################HVAC MODE=state=%s', )
+
+        if (state == "manual"):
+            state = HVAC_MODE_HEAT_COOL
+        return HVAC_MODE_AUTO
+
+    def set_hvac_mode(self, hvac_mode):
+        """Set new operation mode."""
+        _LOGGER.debug("*******Setting Device Operation {} for roomId {}".
+                      format(hvac_mode, self.roomId))
+        # Convert HA heat_cool to manual as required by api
+        if (hvac_mode == "heat_cool"):
+            hvac_mode = "manual"
+        self.handler.set_room_mode(self.roomId, hvac_mode)
+        return True
+
+    @property
+    def hvac_modes(self):
+        """Return the list of available operation modes."""
+        return self._hvac_modes_list
 
     @property
     def target_temperature(self):
         return self.handler.get_hub_data().getRoom(self.roomId). \
                    get('CurrentSetPoint') / 10
-
-    @property
-    def operation_list(self):
-        """Return the list of available operation modes."""
-        return self._operation_list
 
     def update(self):
         _LOGGER.debug("*******************************************")
@@ -125,6 +148,7 @@ class WiserRoom(ClimateDevice):
             getRoom(self.roomId).get('WindowDetectionActive')
         attrs['away_mode_supressed'] = self.handler.get_hub_data(). \
             getRoom(self.roomId).get('AwayModeSuppressed')
+
         return attrs
 
     """ Set temperature """
@@ -140,9 +164,15 @@ class WiserRoom(ClimateDevice):
         _LOGGER.debug("Value of wiserhub {}".format(self.handler))
         self.handler.set_room_temperature(self.roomId, target_temperature)
 
-    def set_operation_mode(self, operation_mode):
-        """Set new operation mode."""
-        _LOGGER.debug("*******Setting Device Operation {} for roomId {}".
-                      format(operation_mode, self.roomId))
-        self.handler.set_room_mode(self.roomId, operation_mode)
-        return True
+    # TODO
+    #@property
+    #def preset_modes(self):
+    #    """Return available preset modes."""
+    #    return [
+    #        PRESET_BOOST,
+    #        PRESET_MANUAL,
+    #    ]
+    #@property
+    #def preset_mode(self):
+    #    """Return the current preset mode."""
+    #    return
