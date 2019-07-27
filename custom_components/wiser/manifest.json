@@ -1,0 +1,8 @@
+{
+  "domain": "wiser",
+  "name": "Wiser Heating Component for Home Assistant",
+  "documentation": "https://www.tbd.com",
+  "dependencies": [],
+  "codeowners": ["@asantaga"],
+  "requirements": ["wiser-heating-api>=1.0.0"]
+}

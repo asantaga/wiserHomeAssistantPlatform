@@ -1,0 +1,16 @@
+{
+    "wiser": {
+        "version": "1.4.0",
+        "local_location": "/custom_components/wiser/__init__.py",
+        "remote_location": "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/__init__.py",
+        "visit_repo": "https://github.com/asantaga/wiserHomeAssistantPlatform",
+        "changelog": "https://github.com/asantaga/wiserHomeAssistantPlatform",
+        "resources": [
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/__init__.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/climate.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/manifest.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/sensor.py",
+            "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/switch.py"
+        ]
+    }
+}
