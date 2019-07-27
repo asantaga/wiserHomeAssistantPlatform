@@ -1,9 +1,11 @@
-# Wiser Home Assistant Platform (v1.4.0)
+# Wiser Home Assistant Platform (v1.5.0)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
-This component provides the following functionality
+This component provides the following functionality :
+
+- Support for Custom components and HACS!!
 - Climate platforms
     - List of climate entities for each Room. The state is the current temperature and the target temperature.  
 - Switch platform
@@ -25,14 +27,42 @@ This component provides the following functionality
     - Support for Home/Away Sensor (added v1.1)
     - Support for setting room mode (boost/manual/auto) (added in 1.3)
 
-Currently the Component/Platform is read only, I do plan to add the ability to set the setpoints in the near future
 
-## Sample Image
+
+## Sample Images
 
 ![](https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/docs/homeassistant_sample.jpg)
 
 
-# Installation
+# Code Installation
+
+For the software side of things we now support  [custom_updater](https://github.com/custom-components/custom_updater)  updater OR [HACS](https://custom-components.github.io/hacs/). 
+Use either one to install the component the go for configuration. using HACS or Custom Updater means you will automagically get updates when I release them.
+
+## For custom_updater
+
+Add this to your configuration:
+```yaml
+custom_updater:
+  component_urls:
+    - https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components.json
+```
+
+## For HACS
+Install via dashboard or add github repository manually
+
+
+## Manual Code Installation
+
+
+1. Create a `custom_components` directory within your Home Assistant directory
+2. In a different directory clone the git repositry https://github.com/asantaga/wiserHomeAssistantPlatform.git
+3. Within this directory copy the wiser folder (within custom_components) to your installations ```custom components``` directory
+
+
+# Configuration
+
+
 ## 1. Find your HeatHub Secret key
 Reference https://it.knightnet.org.uk/kb/nr-qa/drayton-wiser-heating-control/#controlling-the-system
 1. Press the setup button on your HeatHub, the light will start flashing
@@ -46,25 +76,12 @@ Look for the Wi-Fi network (SSID) called **‘WiserHeatXXX’** where XXX is ran
 
 4. Press the setup button on the HeatHub again and it will go back to normal operations
 5. Copy the secret and save it somewhere.
-## 3. Find Your HEATHUB IP
-
+6. Find Your HEATHUB IP
 Using your router, or something else, identify the IP address of your HeatHub, it usually identifies itself as the same ID as the ``WiserHeatXXXXXX`` 
 
-## 3. Create a `custom_components` directory within your Home Assistant directory
-
-For components which arent part of the official release yet (i said yet) you can put them into a directory called  custom components
-
-## 4. Copy files 
-From github to your Home Assistant custom_components directory. Easiest way is to issue a git clone to your local directory and then copy all the files to the custom_components directory
-e.g. 
-    ```git clone git@github.com:asantaga/wiserHomeAssistantPlatform.git```
-
-This will usually create a directory called "wiserHomeAssistantPlatform", once done then copy the ```wiser``` directory into the custom_components directory
-
-## 5. Add references to Home Assistant `Configuration.yaml` file 
+7. Add references to Home Assistant `Configuration.yaml` file 
 
 Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
-
 ```
 wiser:
   host: <ENTER YOUR HEATHUB IP HERE>
@@ -82,18 +99,9 @@ I don't recommend you set the scan_interval too low, after all temperatures do n
 
 ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
-## 6. Supports custom_updater
+------
 
-We now support [custom_updater](https://github.com/custom-components/custom_updater).
-
-Add this to your configuration:
-```yaml
-custom_updater:
-  component_urls:
-    - https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components.json
-```
-
-## 7. Run, Play and let me know if there are any bugs, enhancements etc via the github issues system
+***Run, Play*** and let me know if there are any bugs, enhancements etc via the github issues system
 
 Special thanks for contributors 
 Thanks!
@@ -108,6 +116,7 @@ Angelo
 - @djbanks     : Home/Away switch (v 1.31)
 
 # Change log
+- 1.5 	   Now supports HACS
 - 1.4      Major changes. Now uses pypi library 
            Uses new Climate Model (see https://developers.home-assistant.io/blog/2019/07/03/climate-cleanup.html)
            Fix bug where updates werent seen till new refresh cycle
