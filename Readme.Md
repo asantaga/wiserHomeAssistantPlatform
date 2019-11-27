@@ -50,8 +50,8 @@ custom_updater:
     - https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components.json
 ```
 
-## For HACS
-Install via dashboard or add github repository manually
+## For HACS (Recommended)
+See installation instructions at the HACS documentation website https://hacs.xyz/
 
 
 ## Manual Code Installation
