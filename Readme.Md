@@ -36,8 +36,10 @@ This component provides the following functionality :
 
 # Code Installation
 
-For the software side of things we now support  [custom_updater](https://github.com/custom-components/custom_updater)  updater OR [HACS](https://custom-components.github.io/hacs/). 
+For the software side of things we now support  [custom_updater](https://github.com/custom-components/custom_updater)  updater OR [HACS Home Assistant Community Store](https://github.com/hacs). 
 Use either one to install the component the go for configuration. using HACS or Custom Updater means you will automagically get updates when I release them.
+
+I *highly recommend HACS*, for instructions on how to install HACS see their documentation website at https://hacs.xyz/
 
 ## For custom_updater
 
