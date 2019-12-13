@@ -1,6 +1,6 @@
 {
     "wiser": {
-        "version": "1.4.0",
+        "version": "1.5.1",
         "local_location": "/custom_components/wiser/__init__.py",
         "remote_location": "https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/custom_components/wiser/__init__.py",
         "visit_repo": "https://github.com/asantaga/wiserHomeAssistantPlatform",
