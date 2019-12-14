@@ -95,7 +95,15 @@ class WiserRoom(ClimateDevice):
 
     @property
     def icon(self):
-        return "mdi:oil-temperature"
+        #Change icon to show if radiator is heating, not heating or set to off.
+        if self.handler.get_hub_data().getRoom(self.roomId).get('ControlOutputState') == 'On':
+            return 'mdi:radiator'
+        else:
+            if self.handler.get_hub_data().getRoom(self.roomId). \
+                   get('CurrentSetPoint') == -200:
+                return "mdi:radiator-off"
+            else:
+                return "mdi:radiator-disabled"
 
     @property
     def hvac_mode(self):
