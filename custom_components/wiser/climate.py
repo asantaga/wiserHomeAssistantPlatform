@@ -179,7 +179,7 @@ class WiserRoom(ClimateDevice):
             getRoom(self.roomId).get('PercentageDemand')
         attrs['control_output_state'] = self.handler.get_hub_data(). \
             getRoom(self.roomId).get('ControlOutputState')
-       attrs['heating_rate'] = self.handler.get_hub_data(). \
+        attrs['heating_rate'] = self.handler.get_hub_data(). \
             getRoom(self.roomId).get('HeatingRate')
         attrs['window_state'] = self.handler.get_hub_data(). \
             getRoom(self.roomId).get('WindowState')
