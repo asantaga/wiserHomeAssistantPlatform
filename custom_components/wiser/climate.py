@@ -22,10 +22,12 @@ from homeassistant.helpers.entity import Entity
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = 'wiser'
 
-PRESET_MANUAL = 'Manual'
 PRESET_BOOST = 'Boost'
 PRESET_OVERRIDE = 'Override'
 PRESET_AUTO = 'Schedule'
+PRESET_AWAY = 'Away Mode'
+PRESET_AWAY_BOOST = 'Away Boost'
+PRESET_AWAY_OVERRIDE = 'Away Override'
 
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 
@@ -127,17 +129,20 @@ class WiserRoom(ClimateDevice):
 
     @property
     def preset_mode(self):
-        preset = self.handler.get_hub_data().getRoom(self.roomId).get('SetpointOrigin')
-        if (preset.lower() == "fromboost"):
-            preset = PRESET_BOOST
-        else:
-            if (preset.lower() == "frommanualoverride"):
+        wiser_preset = self.handler.get_hub_data().getRoom(self.roomId).get('SetpointOrigin')
+        mode = self.handler.get_hub_data().getRoom(self.roomId).get('Mode')
+        preset = None
+        if (mode.lower() == HVAC_MODE_AUTO and wiser_preset.lower() == "frommanualoverride"):
                 preset = PRESET_OVERRIDE
-            else:
-                if (preset.lower() == "frommanualmode"):
-                    preset = PRESET_MANUAL
-                else:
-                    preset = PRESET_AUTO
+        else:
+            if (wiser_preset.lower() == "fromboost"):
+                preset = PRESET_BOOST
+            elif (wiser_preset.lower() == "fromawaymode"):
+                preset = PRESET_AWAY
+            elif (wiser_preset.lower() == "frommanualoverrideduringaway"):
+                preset = PRESET_AWAY_OVERRIDE
+            elif (wiser_preset.lower() == "fromboostduringaway"):
+                preset = PRESET_AWAY_BOOST
         return preset
 
     def set_preset_mode(self, preset_mode):
@@ -147,8 +152,6 @@ class WiserRoom(ClimateDevice):
         #Convert HA preset to required api presets
         if (preset_mode.lower() == 'schedule'):
             preset_mode = 'auto'
-        if (preset_mode.lower() == 'override' or preset_mode.lower() == 'manual'):
-            preset_mode = 'manual'
         self.handler.set_room_mode(self.roomId, preset_mode)
 
         return True
