@@ -39,7 +39,6 @@ PLATFORM_SCHEMA = vol.Schema({
     vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int))
 })
 
-
 def setup(hass, config):
     hub_host = config[DOMAIN][0][CONF_HOST]
     password = config[DOMAIN][0][CONF_PASSWORD]
