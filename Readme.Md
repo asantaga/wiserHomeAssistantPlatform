@@ -1,15 +1,20 @@
-# Wiser Home Assistant Platform (v1.6.1 TESTING)
+# Wiser Home Assistant Platform (v1.7)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
-This component provides the following functionality :
+## Functionality 
 
 - Support for Custom components and HACS!!
 - Climate platforms
     - List of climate entities for each Room. The state is the current temperature and the target temperature.  
+    - Allows setting of temperatures from HA
+    - Allows setting of boost temperature using Home Assistant Presets
+    - Displays icon if radiator is heating (heat flowing) or not
+
 - Switch platform
    - Allows the switching of Home/Away mode via a switch which means it can now be controlled by HA
+
 - Sensor Platforms
     - Each **TRV** is representated by a Sensor. The sensor attributes include extensive information about the device, such as WIFI Signal strength, firmware version, battery levels etc
     - **Heathub** displayed as a sensor, firmware version etc
@@ -65,7 +70,7 @@ See installation instructions at the HACS documentation website https://hacs.xyz
 # Configuration
 
 
-## 1. Find your HeatHub Secret key
+## Find your HeatHub Secret key
 Reference https://it.knightnet.org.uk/kb/nr-qa/drayton-wiser-heating-control/#controlling-the-system
 1. Press the setup button on your HeatHub, the light will start flashing
 Look for the Wi-Fi network (SSID) called **‘WiserHeatXXX’** where XXX is random
@@ -90,14 +95,14 @@ wiser:
   password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
   scan_interval: 300
   minimum: -5
-  boost_temp: 20
+  boost_temp: 2
   boost_time: 30
 ```
 
 I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty.
 ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
 
-```boost_temp``` is the temperature the radiator should be set to when boosted, default is 20
+```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
 
 ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
@@ -120,20 +125,16 @@ Angelo
                  Display Presets and support boost (PR38)
 
 # Change log
-- 1.6.1    TODO 
-             - Fixed setting temperature bugs 
+- 1.7      Presets and now supports delta boosts (thanks @msp1974)
+           (BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g. now is 2C vs previously 20C
+- 1.6.1    Fixed setting temperature bugs 
 - 1.6      Merged functionality where it now shows which rooms are being heated by an icon 
 - 1.5.1    Minor bump to fix home/away issue and bring versions inline
-
 - 1.5 	   Now supports HACS
 - 1.4      Major changes. Now uses pypi library 
            Uses new Climate Model (see https://developers.home-assistant.io/blog/2019/07/03/climate-cleanup.html)
            Fix bug where updates werent seen till new refresh cycle
            Changes to make code HA native component compatible (more work to be done)
-
 - 1.3.1    Merged djbanks Home/Away switch
-
 - 1.3      Added ability to set temperature
            Added ability to set room mode (auto,boost,manual)
-
-
