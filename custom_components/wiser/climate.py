@@ -36,6 +36,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     """ Get Rooms """
     for room in handler.get_hub_data().getRooms():
+
         wiser_rooms.append(WiserRoom(room.get('id'), handler))
     add_devices(wiser_rooms)
 

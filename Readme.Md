@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.5.1)
+# Wiser Home Assistant Platform (v1.5.2 TESTING)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -118,13 +118,18 @@ Angelo
 - @djbanks     : Home/Away switch (v 1.31)
 
 # Change log
+- 1.5.1    Bug fixes
+
 - 1.5.1    Minor bump to fix home/away issue and bring versions inline
+
 - 1.5 	   Now supports HACS
 - 1.4      Major changes. Now uses pypi library 
            Uses new Climate Model (see https://developers.home-assistant.io/blog/2019/07/03/climate-cleanup.html)
            Fix bug where updates werent seen till new refresh cycle
            Changes to make code HA native component compatible (more work to be done)
+
 - 1.3.1    Merged djbanks Home/Away switch
+
 - 1.3      Added ability to set temperature
            Added ability to set room mode (auto,boost,manual)
 
