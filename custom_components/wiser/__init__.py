@@ -22,7 +22,6 @@ from homeassistant.helpers.discovery import load_platform
 _LOGGER = logging.getLogger(__name__)
 NOTIFICATION_ID = 'wiser_notification'
 NOTIFICATION_TITLE = 'Wiser Component Setup'
-CONF_BOOST_TEMP_DEFAULT = '20'
 CONF_BOOST_TEMP = 'boost_temp'
 CONF_BOOST_TEMP_TIME = 'boost_time'
 
@@ -34,8 +33,8 @@ PLATFORM_SCHEMA = vol.Schema({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PASSWORD): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default=300): cv.time_period,
-    vol.Optional(CONF_MINIMUM, default=-5): vol.All(vol.Coerce(int)),
-    vol.Optional(CONF_BOOST_TEMP, default=20): vol.All(vol.Coerce(int)),
+    vol.Optional(CONF_MINIMUM, default=5): vol.All(vol.Coerce(int)),
+    vol.Optional(CONF_BOOST_TEMP, default=2): vol.All(vol.Coerce(int)),
     vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int))
 })
 
@@ -48,9 +47,10 @@ def setup(hass, config):
     boost_time = config[DOMAIN][0][CONF_BOOST_TEMP_TIME]
 
     _LOGGER.info("Wiser setup with HubIp =  {}".format(hub_host))
-    hass.data[DATA_KEY] = WiserHubHandle(hub_host, password, scan_interval,
+    wiserhub =  WiserHubHandle(hub_host, password, scan_interval,
                                          minimum_temp, boost_temp, boost_time)
-
+    hass.data[DATA_KEY] = wiserhub
+    
     _LOGGER.info("Wiser Component Setup Completed")
 
     load_platform(hass, 'climate', DOMAIN, {}, config)
@@ -143,13 +143,18 @@ class WiserHubHandle:
             self.force_next_scan()
             return True
 
-    def set_room_mode(self, room_id, mode):
+    def set_room_mode(self, room_id, mode, boost_temp = None, boost_time = None):
         from wiserHeatingAPI import wiserHub
+        
+        """ Set to default values if not passed in """
+        boost_temp = self.boost_temp if boost_temp is None else boost_temp
+        boost_time = self.boost_time if boost_time is None else boost_time
+        
         if self.wiserHubInstance is None:
             self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
         with self.mutex:
-            self.wiserHubInstance.setRoomMode(room_id, mode, self.boost_temp,
-                                                self.boost_time)
+            self.wiserHubInstance.setRoomMode(room_id, mode, boost_temp,
+                                                boost_time)
             self.force_next_scan()
             return True
 
