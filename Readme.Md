@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.5.2 TESTING)
+# Wiser Home Assistant Platform (v1.6.1 TESTING)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -26,7 +26,7 @@ This component provides the following functionality :
     - Support for Heathubs with No Hot Water Control (added 1.1)
     - Support for Home/Away Sensor (added v1.1)
     - Support for setting room mode (boost/manual/auto) (added in 1.3)
-
+    - Animated icons for the Rooms to let you know which rooms are actually being heated (@msp1974)
 
 
 ## Sample Images
@@ -116,10 +116,13 @@ Angelo
 - @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
 - @djbanks     : Home/Away switch (v 1.31)
+- @msp1974     : Animated graphics showing which rooms are being heated 
+                 Display Presets and support boost (PR38)
 
 # Change log
-- 1.5.1    Bug fixes
-
+- 1.6.1    TODO 
+             - Fixed setting temperature bugs 
+- 1.6      Merged functionality where it now shows which rooms are being heated by an icon 
 - 1.5.1    Minor bump to fix home/away issue and bring versions inline
 
 - 1.5 	   Now supports HACS
