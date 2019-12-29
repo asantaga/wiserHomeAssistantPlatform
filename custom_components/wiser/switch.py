@@ -42,7 +42,7 @@ class WiserAwaySwitch(SwitchDevice):
         self.overrideType = self.handler.get_hub_data().getSystem(). \
             get('OverrideType')
         self.awayTemperature = self.handler.get_hub_data().getSystem(). \
-            get('AwayModeSetPointLimit')
+            get('AwayModeSetPointLimit') /10
 
     @property
     def name(self):
