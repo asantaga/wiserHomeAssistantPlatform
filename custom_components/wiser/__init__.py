@@ -19,6 +19,8 @@ from homeassistant.const import (CONF_HOST, CONF_MINIMUM, CONF_PASSWORD,
                                  CONF_SCAN_INTERVAL)
 from homeassistant.helpers.discovery import load_platform
 
+from wiserHeatingAPI.wiserHub import (TEMP_MINIMUM, TEMP_MAXIMUM)
+
 _LOGGER = logging.getLogger(__name__)
 NOTIFICATION_ID = 'wiser_notification'
 NOTIFICATION_TITLE = 'Wiser Component Setup'
@@ -33,7 +35,7 @@ PLATFORM_SCHEMA = vol.Schema({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PASSWORD): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default=300): cv.time_period,
-    vol.Optional(CONF_MINIMUM, default=5): vol.All(vol.Coerce(int)),
+    vol.Optional(CONF_MINIMUM, default=TEMP_MINIMUM): vol.All(vol.Coerce(int)),
     vol.Optional(CONF_BOOST_TEMP, default=2): vol.All(vol.Coerce(int)),
     vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int))
 })
@@ -73,6 +75,7 @@ class WiserHubHandle:
         self.wiserHubInstance = None
         self.mutex = Lock()
         self.minimum_temp = minimum_temp
+        self.maximum_temp = 30
         self.last_updated = time.time()
         self.boost_temp = boost_temp
         self.boost_time = boost_time
@@ -86,6 +89,9 @@ class WiserHubHandle:
 
     def get_minimum_temp(self):
         return self.minimum_temp
+        
+    def get_maximum_temp(self):
+        return TEMP_MAXIMUM
 
     def force_next_scan(self):
         # When this function is called, the last_updated variable is forced

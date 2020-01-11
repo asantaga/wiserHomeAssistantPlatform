@@ -15,12 +15,15 @@ from homeassistant.components.climate import ClimateDevice
 #                                                    HVAC_MODE_HEAT_COOL)
 #
 from homeassistant.components.climate.const import (HVAC_MODE_AUTO, SUPPORT_TARGET_TEMPERATURE, SUPPORT_PRESET_MODE, HVAC_MODE_HEAT, HVAC_MODE_OFF)
-from homeassistant.const import (ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE,
+from homeassistant.const import (ATTR_ENTITY_ID, ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE,
                                  TEMP_CELSIUS)
 from homeassistant.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = 'wiser'
+
+ATTR_TIME_PERIOD = "time_period"
+ATTR_TEMPERATURE_DELTA = "temperature_delta"
 
 PRESET_BOOST = 'boost'
 PRESET_BOOST30 = 'Boost 30m'
@@ -35,6 +38,17 @@ PRESET_AWAY_OVERRIDE = 'Away Override'
 
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 
+SERVICE_BOOST_HEATING = "boost_heating"
+
+BOOST_HEATING_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_TIME_PERIOD, default=60): vol.Coerce(int),
+        vol.Optional(ATTR_TEMPERATURE, default="23.0"): vol.Coerce(float),
+        vol.Optional(ATTR_TEMPERATURE_DELTA, default="0"): vol.Coerce(float),
+    }
+)
+
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Setup the sensor platform."""
     handler = hass.data[DOMAIN]  # Get Handler
@@ -44,10 +58,40 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     """ Get Rooms """
     for room in handler.get_hub_data().getRooms():
-
         wiser_rooms.append(WiserRoom(room.get('id'), handler))
     add_devices(wiser_rooms)
-
+    
+    def heating_boost(service):
+        """Handle the service call."""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        
+        if entity_id:
+            target_devices = [
+                device for device in wiser_rooms if device.entity_id in entity_id
+            ]
+        else:
+            _LOGGER.error("Cannot boost entity id entered")
+            return
+        
+        boost_time = service.data[ATTR_TIME_PERIOD]
+        boost_temp = service.data[ATTR_TEMPERATURE]
+        boost_temp_delta = service.data[ATTR_TEMPERATURE_DELTA]
+        
+        for target_device in target_devices:
+            if boost_temp_delta > 0:
+                boost_temp = (handler.get_hub_data().getRoom(target_device.roomId).get('CalculatedTemperature')/10) + boost_temp_delta
+            
+            _LOGGER.debug("Boost service called for {} to set to {}C for {} mins.".format(target_device.name, boost_temp, boost_time))
+            
+            handler.set_room_mode(target_device.roomId, 'boost', boost_temp, boost_time)
+            target_device.async_schedule_update_ha_state(True)
+        
+    hass.services.register(
+                    DOMAIN,
+                    SERVICE_BOOST_HEATING,
+                    heating_boost,
+                    schema=BOOST_HEATING_SCHEMA,
+                )
 
 """ Definition of WiserRoom """
 
@@ -94,6 +138,14 @@ class WiserRoom(ClimateDevice):
     @property
     def temperature_unit(self):
         return TEMP_CELSIUS
+        
+    @property
+    def min_temp(self):
+        return self.handler.minimum_temp
+    
+    @property    
+    def max_temp(self):
+        return self.handler.maximum_temp
 
     @property
     def current_temperature(self):
@@ -221,7 +273,7 @@ class WiserRoom(ClimateDevice):
 
     def update(self):
         _LOGGER.debug("*******************************************")
-        _LOGGER.debug("WiserRoom Update requested")
+        _LOGGER.debug("WiserRoom Update requested for {}".format(self.name))
         _LOGGER.debug("*******************************************")
         self.handler.update()
 

@@ -1,0 +1,22 @@
+boost_heating:
+  description: "Set the boost mode ON defining the period of time and the desired target temperature
+  or temperature increase delta for the boost.
+  Setting the temperature delta overrides any target temperature."
+  fields:
+    entity_id:
+      {
+        description: Enter the entity_id for the device required to set the boost mode.,
+        example: "climate.heating",
+      }
+    time_period:
+      { description: Set the time period for the boost in minutes., example: 60  }
+    temperature:
+      {
+        description: Set the target temperature for the boost period.,
+        example: "20.5",
+      }
+    temperature_delta:
+      {
+        description: Set the temperature increase for the boost period.,
+        example: "2"
+      }
