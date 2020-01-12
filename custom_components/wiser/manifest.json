@@ -4,5 +4,5 @@
   "documentation": "https://www.tbd.com",
   "dependencies": [],
   "codeowners": ["@asantaga"],
-  "requirements": ["wiser-heating-api>=1.0.3"]
+  "requirements": ["wiser-heating-api>=1.0.2.3"]
 }
