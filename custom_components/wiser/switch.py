@@ -5,7 +5,7 @@ import json
 from homeassistant.components.switch import SwitchDevice
 
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = 'wiser'
+DOMAIN = "wiser"
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -28,26 +28,32 @@ Switch to set the status of the Wiser Operation Mode (Away/Normal)
 class WiserAwaySwitch(SwitchDevice):
     def __init__(self, handler):
         """Initialize the sensor."""
-        _LOGGER.info('Wiser Away Mode Switch Init')
+        _LOGGER.info("Wiser Away Mode Switch Init")
         self.ison = True
         self.handler = handler
-        self.overrideType = self.handler.get_hub_data().getSystem(). \
-            get('OverrideType')
-        self.awayTemperature = self.handler.get_hub_data().getSystem(). \
-            get('AwayModeSetPointLimit')/10
+        self.overrideType = (
+            self.handler.get_hub_data().getSystem().get("OverrideType")
+        )
+        self.awayTemperature = (
+            self.handler.get_hub_data().getSystem().get("AwayModeSetPointLimit")
+            / 10
+        )
 
     def update(self):
-        _LOGGER.debug('Wiser Away Mode Switch Update requested')
+        _LOGGER.debug("Wiser Away Mode Switch Update requested")
         self.handler.update()
-        self.overrideType = self.handler.get_hub_data().getSystem(). \
-            get('OverrideType')
-        self.awayTemperature = self.handler.get_hub_data().getSystem(). \
-            get('AwayModeSetPointLimit') /10
+        self.overrideType = (
+            self.handler.get_hub_data().getSystem().get("OverrideType")
+        )
+        self.awayTemperature = (
+            self.handler.get_hub_data().getSystem().get("AwayModeSetPointLimit")
+            / 10
+        )
 
     @property
     def name(self):
         """Return the name of the Device """
-        return 'Wiser Away Mode'
+        return "Wiser Away Mode"
 
     @property
     def should_poll(self):
