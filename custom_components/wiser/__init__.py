@@ -173,3 +173,32 @@ class WiserHubHandle:
             self.wiserHubInstance.setHomeAwayMode(mode, away_temperature)
             self.force_next_scan()
             return True
+            
+    def get_room_schedule(self, room_id):
+        from wiserHeatingAPI import wiserHub
+        if self.wiserHubInstance is None:
+            self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
+        with self.mutex:
+            scheduleData = self.wiserHubInstance.getRoomSchedule(room_id)
+            #Remove Id key from schedule
+            if "id" in scheduleData:
+                del scheduleData["id"]
+            return scheduleData
+            
+    def set_room_schedule(self, room_id, scheduleData):
+        from wiserHeatingAPI import wiserHub
+        if self.wiserHubInstance is None:
+            self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
+        with self.mutex:
+            self.wiserHubInstance.setRoomSchedule(room_id, scheduleData)
+            self.force_next_scan()
+            return True
+            
+    def copy_room_schedule(self, room_id, to_room_id):
+        from wiserHeatingAPI import wiserHub
+        if self.wiserHubInstance is None:
+            self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
+        with self.mutex:
+            self.wiserHubInstance.copyRoomSchedule(room_id, to_room_id)
+            self.force_next_scan
+            return True

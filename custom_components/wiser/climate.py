@@ -18,12 +18,15 @@ from homeassistant.components.climate.const import (HVAC_MODE_AUTO, SUPPORT_TARG
 from homeassistant.const import (ATTR_ENTITY_ID, ATTR_BATTERY_LEVEL, ATTR_TEMPERATURE,
                                  TEMP_CELSIUS)
 from homeassistant.helpers.entity import Entity
+from homeassistant.util.ruamel_yaml import load_yaml, save_yaml
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = 'wiser'
 
 ATTR_TIME_PERIOD = "time_period"
 ATTR_TEMPERATURE_DELTA = "temperature_delta"
+ATTR_FILENAME = "filename"
+ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 
 PRESET_BOOST = 'boost'
 PRESET_BOOST30 = 'Boost 30m'
@@ -39,6 +42,9 @@ PRESET_AWAY_OVERRIDE = 'Away Override'
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 
 SERVICE_BOOST_HEATING = "boost_heating"
+SERVICE_GET_SCHEDULE = "get_schedule"
+SERVICE_SET_SCHEDULE = "set_schedule"
+SERVICE_COPY_SCHEDULE = "copy_schedule"
 
 BOOST_HEATING_SCHEMA = vol.Schema(
     {
@@ -46,6 +52,20 @@ BOOST_HEATING_SCHEMA = vol.Schema(
         vol.Optional(ATTR_TIME_PERIOD, default=60): vol.Coerce(int),
         vol.Optional(ATTR_TEMPERATURE, default="23.0"): vol.Coerce(float),
         vol.Optional(ATTR_TEMPERATURE_DELTA, default="0"): vol.Coerce(float),
+    }
+)
+
+GET_SET_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
+    }
+)
+
+COPY_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
     }
 )
 
@@ -88,11 +108,98 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
             handler.set_room_mode(target_device.roomId, 'boost', boost_temp, boost_time)
             target_device.async_schedule_update_ha_state(True)
         
+    def get_schedule(service):
+        """Handle the service call"""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        
+        if entity_id:
+            target_devices = [
+                device for device in wiser_rooms if device.entity_id in entity_id
+            ]
+        else:
+            _LOGGER.error("Cannot get schedule from this entity")
+            return
+        
+        filename = service.data[ATTR_FILENAME]
+        
+        #Get schedule data
+        for target_device in target_devices:
+            scheduleData = handler.get_room_schedule(target_device.roomId)
+        
+        if scheduleData != None:
+            #Write to file
+            save_yaml(filename, scheduleData)
+            
+    def set_schedule(service):
+        """Handle the service call"""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        
+        if entity_id:
+            target_devices = [
+                device for device in wiser_rooms if device.entity_id in entity_id
+            ]
+        else:
+            _LOGGER.error("Cannot set schedule of this entity")
+            return
+        
+        filename = service.data[ATTR_FILENAME]
+        
+        #Get schedule data
+        scheduleData = load_yaml(filename)
+        #Set schedule
+        for target_device in target_devices:
+            handler.set_room_schedule(target_device.roomId, scheduleData)
+            
+    def copy_schedule(service):
+        """Handle the service call"""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        to_entity_id = service.data[ATTR_COPYTO_ENTITY_ID]
+        
+        if entity_id:
+            target_devices = [
+                device for device in wiser_rooms if device.entity_id in entity_id
+            ]
+        else:
+            _LOGGER.error("Cannot copy schedule of this entity")
+            return
+        
+        if to_entity_id:
+            target_copyto_devices = [
+                device for device in wiser_rooms if device.entity_id in to_entity_id
+            ]
+        else:
+            _LOGGER.error("Cannot copy schedule to this entity")
+            return
+        
+        for target_device in target_devices:
+            handler.copy_room_schedule(target_device.roomId, target_copyto_devices[0].roomId)
+
     hass.services.register(
                     DOMAIN,
                     SERVICE_BOOST_HEATING,
                     heating_boost,
                     schema=BOOST_HEATING_SCHEMA,
+                )
+                
+    hass.services.register(
+                    DOMAIN,
+                    SERVICE_GET_SCHEDULE,
+                    get_schedule,
+                    schema=GET_SET_SCHEDULE_SCHEMA,
+                )
+                
+    hass.services.register(
+                    DOMAIN,
+                    SERVICE_SET_SCHEDULE,
+                    set_schedule,
+                    schema=GET_SET_SCHEDULE_SCHEMA,
+                )
+                
+    hass.services.register(
+                    DOMAIN,
+                    SERVICE_COPY_SCHEDULE,
+                    copy_schedule,
+                    schema=COPY_SCHEDULE_SCHEMA,
                 )
 
 """ Definition of WiserRoom """
