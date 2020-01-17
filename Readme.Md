@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.7)
+# Wiser Home Assistant Platform (v1.8.1)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -125,6 +125,7 @@ Angelo
                  Display Presets and support boost (PR38)
 
 # Change log
+- 1.8.1	   Multiple fixes to timeouts, boost and upgrade to wiserapi 1.0.3
 - 1.7      Presets and now supports delta boosts (thanks @msp1974)
            (BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g. now is 2C vs previously 20C
 - 1.6.1    Fixed setting temperature bugs 
