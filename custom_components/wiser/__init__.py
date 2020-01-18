@@ -273,7 +273,7 @@ class WiserHubHandle:
                                 for key, value in k.items(): 
                                     #Convert values and keys to human readable version
                                     if key == 'Time':
-                                        value =  (datetime.strptime(str(value),"%H%M")).strftime("%H:%M")
+                                        value =  (datetime.strptime(format(value,'04d'),"%H%M")).strftime("%H:%M")
                                     if key == 'DegreesC':
                                         key = 'Temp'
                                         if value < 0:
