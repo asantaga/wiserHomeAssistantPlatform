@@ -247,7 +247,9 @@ class WiserHubHandle:
         Param: scheduleData
         Param: mode
         """
-        WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+        WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday']
+        WEEKENDS = ['saturday','sunday']
+        SPECIALDAYS = ['weekdays','weekends']
         #Remove Id key from schedule as not needed
         if "id" in scheduleData:
             del scheduleData["id"]
@@ -260,7 +262,7 @@ class WiserHubHandle:
         if mode.lower() == 'to':
             #Iterate through each day
             for day, sched in scheduleData.items():
-                if day.lower() in WEEKDAYS:
+                if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
                     schedDay = {}
                     #Iterate through setpoint key for each day
                     for setpoint, times in sched.items():
@@ -288,7 +290,7 @@ class WiserHubHandle:
             #Convert to wiser format for setting schedules
             #Iterate through each day
             for day, times in scheduleData.items():
-                if day.lower() in WEEKDAYS:
+                if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
                     schedDay = {}
                     schedSetpoints = []
                     #Iterate through each set of times for a day
@@ -308,6 +310,15 @@ class WiserHubHandle:
                             schedTime.update(tmp)
                         schedSetpoints.append(schedTime.copy())
                         schedDay = {"Setpoints" : schedSetpoints}
-                    scheduleOutput.update({ day : schedDay })
+                    #If using special days, convert to one entry for each day of week
+                    if day.lower() in SPECIALDAYS:
+                        if day.lower() == 'weekdays':
+                            for d in WEEKDAYS:
+                                scheduleOutput.update({ d.capitalize() : schedDay })
+                        if day.lower() == 'weekends':
+                            for d in WEEKENDS:
+                                scheduleOutput.update({ d.capitalize() : schedDay })
+                    else:
+                        scheduleOutput.update({ day : schedDay })
         _LOGGER.debug("Output from conversion: {}".format(scheduleOutput))
         return scheduleOutput
