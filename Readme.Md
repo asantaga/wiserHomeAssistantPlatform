@@ -11,6 +11,8 @@ This repository contains a Home Assistant component + platforms, for the Drayton
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
     - Displays icon if radiator is heating (heat flowing) or not
+    - Service to set heating boost
+    - Services to get, set and copy heating schedules (**See instructions below**)
 
 - Switch platform
    - Allows the switching of Home/Away mode via a switch which means it can now be controlled by HA
@@ -105,6 +107,145 @@ I don't recommend you set the scan_interval too low, after all temperatures do n
 ```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
 
 ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
+
+
+# Managing Schedules with HA
+
+New in version 1.x is the ability to get, set and copy schedules from climate devices.
+
+### Getting a Schedule
+Use the service wiser.get_schedule.
+This will require you to provide the entity ID of the wiser device and a file to copy this schedule to.
+It is recommended to create a directory in your config directory to store these.
+
+### Setting a Schedule
+Use the service wiser.set_schedule.
+This will require you to provide the entity ID of the wiser device and a file containing the schedule.
+
+A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within
+each day as you see fit.  As file created using the wiser.get_schedule service looks like below:
+```
+Name: Dining Room
+Description: Schedule for Dining Room
+Type: Heating
+Monday:
+  - Time: 07:30
+    Temp: 21
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Tuesday:
+  - Time: 07:30
+    Temp: 21
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Wednesday:
+  - Time: 07:30
+    Temp: 21
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Thursday:
+  - Time: 07:30
+    Temp: 21
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Friday:
+  - Time: 07:30
+    Temp: 21
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Saturday:
+  - Time: 07:00
+    Temp: 19
+  - Time: 10:00
+    Temp: 17
+  - Time: 16:00
+    Temp: 20
+  - Time: 23:00
+    Temp: 15
+Sunday:
+  - Time: 08:30
+    Temp: 21
+```
+If you are creating your own file (or editing one you have copied from a wiser device), you can use the 2 special day
+names of 'Weekdays' and 'Weekends' instead of listing individual days.  As below:
+```
+Name: Test Room
+Description: Schedule for Test Room
+Type: Heating
+Weekdays:
+  - Time: 07:30
+    Temp: 21.5
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Weekends:
+  - Time: 07:00
+    Temp: 19
+  - Time: 10:00
+    Temp: 17
+  - Time: 16:00
+    Temp: 20.5
+  - Time: 23:00
+    Temp: 15
+```
+You can also use a mixture of these special day names and normal days to override a specific day (providing the
+specific days names are below these special ones!).
+```
+Name: Test Room
+Description: Schedule for Test Room
+Type: Heating
+Weekdays:
+  - Time: 07:30
+    Temp: 21.5
+  - Time: 08:30
+    Temp: 15
+  - Time: 16:30
+    Temp: 20
+  - Time: 22:30
+    Temp: 15
+Weekends:
+  - Time: 07:00
+    Temp: 19
+  - Time: 10:00
+    Temp: 17
+  - Time: 16:00
+    Temp: 20.5
+  - Time: 23:00
+    Temp: 15
+Tuesday:
+  - Time: 08:00
+    Temp: 21.5
+  - Time: 20:00
+    Temp: 18.0
+```
+
+### Copying a Schedule
+Use the service wiser.copy_schedule.
+This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to
+and will copy the schedule between them.
 
 ------
 
