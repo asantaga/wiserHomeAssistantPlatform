@@ -10,6 +10,7 @@ Angelo.santagata@gmail.com
 import json
 import logging
 import time
+from datetime import datetime
 from socket import timeout
 from threading import Lock
 
@@ -211,19 +212,23 @@ class WiserHubHandle:
             self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
         with self.mutex:
             scheduleData = self.wiserHubInstance.getRoomSchedule(room_id)
-            #Remove Id key from schedule
-            if "id" in scheduleData:
-                del scheduleData["id"]
-            return scheduleData
+            if scheduleData != None:
+                return self._convert_schedule(scheduleData,"TO",self.wiserHubInstance.getRoom(room_id).get("Name"))
+            else:
+                raise Exception("Could not read schedule data for room {}".format(room_id))
             
     def set_room_schedule(self, room_id, scheduleData):
         from wiserHeatingAPI import wiserHub
         if self.wiserHubInstance is None:
             self.wiserHubInstance = wiserHub.wiserHub(self.ip, self.secret)
         with self.mutex:
-            self.wiserHubInstance.setRoomSchedule(room_id, scheduleData)
-            self.force_next_scan()
-            return True
+            scheduleData = self._convert_schedule(scheduleData, "FROM")
+            if scheduleData != None:
+                self.wiserHubInstance.setRoomSchedule(room_id, scheduleData)
+                self.force_next_scan()
+                return True
+            else:
+                return False
             
     def copy_room_schedule(self, room_id, to_room_id):
         from wiserHeatingAPI import wiserHub
@@ -233,3 +238,76 @@ class WiserHubHandle:
             self.wiserHubInstance.copyRoomSchedule(room_id, to_room_id)
             self.force_next_scan
             return True
+            
+            
+    def _convert_schedule(self, scheduleData : dict, mode = 'TO', scheduleName=""):
+        """
+        Description: Converts between human readable format for yaml and wiser format and vice versa
+        
+        Param: scheduleData
+        Param: mode
+        """
+        WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+        #Remove Id key from schedule as not needed
+        if "id" in scheduleData:
+            del scheduleData["id"]
+        #Create dict to take converted data
+        if scheduleName !="":
+            scheduleOutput = {"Name": scheduleName, "Description": "Schedule for " + scheduleName, "Type": "Heating"}
+        else:
+            scheduleOutput = {"Type": "Heating"}
+        #Convert to human readable format for yaml
+        if mode.lower() == 'to':
+            #Iterate through each day
+            for day, sched in scheduleData.items():
+                if day.lower() in WEEKDAYS:
+                    schedDay = {}
+                    #Iterate through setpoint key for each day
+                    for setpoint, times in sched.items():
+                        if setpoint == 'SetPoints':
+                            #Iterate all times
+                            schedSetpoints = []
+                            #Iterate through each setpoint entry
+                            for k in times:
+                                schedTime = {}
+                                for key, value in k.items(): 
+                                    #Convert values and keys to human readable version
+                                    if key == 'Time':
+                                        value =  (datetime.strptime(str(value),"%H%M")).strftime("%H:%M")
+                                    if key == 'DegreesC':
+                                        key = 'Temp'
+                                        if value < 0:
+                                            value = 'Off'
+                                        else:
+                                            value = round(value/10)
+                                    tmp = {key : value}
+                                    schedTime.update(tmp)
+                                schedSetpoints.append(schedTime.copy())
+                    scheduleOutput.update({ day : schedSetpoints })
+        else:
+            #Convert to wiser format for setting schedules
+            #Iterate through each day
+            for day, times in scheduleData.items():
+                if day.lower() in WEEKDAYS:
+                    schedDay = {}
+                    schedSetpoints = []
+                    #Iterate through each set of times for a day
+                    for k in times:
+                        schedTime = {}
+                        for key, value in k.items(): 
+                            #Convert values and key to wiser format
+                            if key == 'Time':
+                                value =  value.replace(":","")
+                            if key == 'Temp':
+                                key = 'DegreesC'
+                                if value == 'Off':
+                                    value = -200
+                                else:
+                                    value = int(value*10)
+                            tmp = {key : value}
+                            schedTime.update(tmp)
+                        schedSetpoints.append(schedTime.copy())
+                        schedDay = {"Setpoints" : schedSetpoints}
+                    scheduleOutput.update({ day : schedDay })
+        _LOGGER.debug("Output from conversion: {}".format(scheduleOutput))
+        return scheduleOutput

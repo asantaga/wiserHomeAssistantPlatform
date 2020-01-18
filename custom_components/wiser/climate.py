@@ -135,7 +135,6 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     def get_schedule(service):
         """Handle the service call"""
         entity_id = service.data[ATTR_ENTITY_ID]
-        
         if entity_id:
             target_devices = [
                 device for device in wiser_rooms if device.entity_id in entity_id
@@ -143,21 +142,18 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         else:
             _LOGGER.error("Cannot get schedule from this entity")
             return
-        
-        filename = service.data[ATTR_FILENAME]
-        
+        filename = service.data[ATTR_FILENAME] if service.data[ATTR_FILENAME] != "" else ("schedule_" + entity_id + ".yaml")
         #Get schedule data
         for target_device in target_devices:
             scheduleData = handler.get_room_schedule(target_device.roomId)
-        
         if scheduleData != None:
             #Write to file
             save_yaml(filename, scheduleData)
+            return
             
     def set_schedule(service):
         """Handle the service call"""
         entity_id = service.data[ATTR_ENTITY_ID]
-        
         if entity_id:
             target_devices = [
                 device for device in wiser_rooms if device.entity_id in entity_id
@@ -165,14 +161,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         else:
             _LOGGER.error("Cannot set schedule of this entity")
             return
-        
         filename = service.data[ATTR_FILENAME]
-        
         #Get schedule data
         scheduleData = load_yaml(filename)
         #Set schedule
         for target_device in target_devices:
             handler.set_room_schedule(target_device.roomId, scheduleData)
+        return
             
     def copy_schedule(service):
         """Handle the service call"""
@@ -197,6 +192,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         
         for target_device in target_devices:
             handler.copy_room_schedule(target_device.roomId, target_copyto_devices[0].roomId)
+        return
 
     hass.services.register(
         DOMAIN,
@@ -519,3 +515,4 @@ class WiserRoom(ClimateDevice):
         _LOGGER.debug("Value of wiserhub {}".format(self.handler))
 
         self.handler.set_room_temperature(self.roomId, target_temperature)
+
