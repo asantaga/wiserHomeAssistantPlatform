@@ -5,16 +5,13 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+import asyncio
 import logging
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.components.climate import ClimateDevice
+from homeassistant.core import callback
 
-# from homeassistant.components.climate.const import (STATE_AUTO,
-#                                                    SUPPORT_OPERATION_MODE,
-#                                                    SUPPORT_TARGET_TEMPERATURE,
-#                                                    HVAC_MODE_HEAT_COOL)
-#
 from homeassistant.components.climate.const import (
     HVAC_MODE_AUTO,
     SUPPORT_TARGET_TEMPERATURE,
@@ -29,10 +26,15 @@ from homeassistant.const import (
     TEMP_CELSIUS,
 )
 from homeassistant.helpers.entity import Entity
-from homeassistant.util.ruamel_yaml import load_yaml, save_yaml
+from homeassistant.util import ruamel_yaml as yaml
 
-_LOGGER = logging.getLogger(__name__)
-DOMAIN = "wiser"
+from .const import (
+    _LOGGER,
+    DOMAIN
+)
+
+from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
+
 
 ATTR_TIME_PERIOD = "time_period"
 ATTR_TEMPERATURE_DELTA = "temperature_delta"
@@ -50,12 +52,24 @@ PRESET_AWAY = "Away Mode"
 PRESET_AWAY_BOOST = "Away Boost"
 PRESET_AWAY_OVERRIDE = "Away Override"
 
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
-
 SERVICE_BOOST_HEATING = "boost_heating"
 SERVICE_GET_SCHEDULE = "get_schedule"
 SERVICE_SET_SCHEDULE = "set_schedule"
 SERVICE_COPY_SCHEDULE = "copy_schedule"
+
+WISER_PRESET_TO_HASS = {
+    "fromawaymode": PRESET_AWAY,
+    "frommanualmode": None,
+    "fromboost": PRESET_BOOST,
+    "frommanualoverrideduringaway": PRESET_AWAY_OVERRIDE,
+    "fromboostduringaway": PRESET_AWAY_BOOST,
+    "frommanualoverride": PRESET_OVERRIDE,
+    "fromecoiq": None,
+    "fromschedule": None
+}
+
+SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
+
 
 BOOST_HEATING_SCHEMA = vol.Schema(
     {
@@ -80,142 +94,104 @@ COPY_SCHEDULE_SCHEMA = vol.Schema(
     }
 )
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the sensor platform."""
-    handler = hass.data[DOMAIN]  # Get Handler
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Set up Wiser climate device"""
+    data = hass.data[DOMAIN]
 
-    handler.update()
-    wiser_rooms = []
+    wiser_rooms = [WiserRoom(hass, data, room.get("id")) for room in data.wiserhub.getRooms()]
+    async_add_entities(wiser_rooms, True)
 
-    """ Get Rooms """
-    for room in handler.get_hub_data().getRooms():
-        """    https://github.com/asantaga/wiserHomeAssistantPlatform/issues/10 """
-        if room.get("RoomStatId") != None or room.get("SmartValveIds") != None:
-            wiser_rooms.append(WiserRoom(room.get("id"), handler))
-    add_devices(wiser_rooms)
-
+    @callback
     def heating_boost(service):
         """Handle the service call."""
         entity_id = service.data[ATTR_ENTITY_ID]
-
-        if entity_id:
-            target_devices = [
-                device
-                for device in wiser_rooms
-                if device.entity_id in entity_id
-            ]
-        else:
-            _LOGGER.error("Cannot boost entity id entered")
-            return
-
         boost_time = service.data[ATTR_TIME_PERIOD]
         boost_temp = service.data[ATTR_TEMPERATURE]
         boost_temp_delta = service.data[ATTR_TEMPERATURE_DELTA]
-
-        for target_device in target_devices:
-            if boost_temp_delta > 0:
-                boost_temp = (
-                    handler.get_hub_data()
-                    .getRoom(target_device.roomId)
-                    .get("CalculatedTemperature")
-                    / 10
-                ) + boost_temp_delta
-
-            _LOGGER.debug(
-                "Boost service called for {} to set to {}C for {} mins.".format(
-                    target_device.name, boost_temp, boost_time
-                )
-            )
-
-            handler.set_room_mode(
-                target_device.roomId, "boost", boost_temp, boost_time
-            )
-            target_device.async_schedule_update_ha_state(True)
         
+        for room in wiser_rooms:
+            _LOGGER.debug("*****BOOST for {}".format(room.entity_id))
+            if room.entity_id == entity_id:
+                if boost_temp_delta > 0:
+                    boost_temp = (
+                        (room.current_temperature)
+                    ) + boost_temp_delta
+                _LOGGER.debug(
+                    "Boost service called for {} to set to {}C for {} mins.".format(
+                        room.name, boost_temp, boost_time
+                    )
+                )
+                hass.async_create_task(room.set_room_mode(room.room_id, "boost", boost_temp, boost_time))
+                room.schedule_update_ha_state(True)
+                break
+
+    @callback    
     def get_schedule(service):
         """Handle the service call"""
         entity_id = service.data[ATTR_ENTITY_ID]
-        if entity_id:
-            target_devices = [
-                device for device in wiser_rooms if device.entity_id in entity_id
-            ]
-        else:
-            _LOGGER.error("Cannot get schedule from this entity")
-            return
         filename = service.data[ATTR_FILENAME] if service.data[ATTR_FILENAME] != "" else ("schedule_" + entity_id + ".yaml")
-        #Get schedule data
-        for target_device in target_devices:
-            scheduleData = handler.get_room_schedule(target_device.roomId)
-        if scheduleData != None:
-            #Write to file
-            save_yaml(filename, scheduleData)
-            return
-            
+
+        for room in wiser_rooms:
+            if room.entity_id == entity_id:
+                scheduleData = room.schedule
+                _LOGGER.debug("Sched Service Data = {}".format(scheduleData))
+                if scheduleData != None:
+                    scheduleData = convert_from_wiser_schedule(scheduleData, room.name)
+                    yaml.save_yaml(filename, scheduleData)
+                else:
+                    raise Exception ("No schedule data returned")
+                break
+
+    @callback        
     def set_schedule(service):
         """Handle the service call"""
         entity_id = service.data[ATTR_ENTITY_ID]
-        if entity_id:
-            target_devices = [
-                device for device in wiser_rooms if device.entity_id in entity_id
-            ]
-        else:
-            _LOGGER.error("Cannot set schedule of this entity")
-            return
         filename = service.data[ATTR_FILENAME]
         #Get schedule data
-        scheduleData = load_yaml(filename)
+        scheduleData = yaml.load_yaml(filename)
         #Set schedule
-        for target_device in target_devices:
-            handler.set_room_schedule(target_device.roomId, scheduleData)
-        return
-            
+        for room in wiser_rooms:
+            if room.entity_id == entity_id:
+                hass.async_create_task(room.set_room_schedule(room.room_id, scheduleData))
+                room.schedule_update_ha_state(True)
+                break
+    @callback        
     def copy_schedule(service):
         """Handle the service call"""
         entity_id = service.data[ATTR_ENTITY_ID]
         to_entity_id = service.data[ATTR_COPYTO_ENTITY_ID]
         
-        if entity_id:
-            target_devices = [
-                device for device in wiser_rooms if device.entity_id in entity_id
-            ]
-        else:
-            _LOGGER.error("Cannot copy schedule of this entity")
-            return
-        
-        if to_entity_id:
-            target_copyto_devices = [
-                device for device in wiser_rooms if device.entity_id in to_entity_id
-            ]
-        else:
-            _LOGGER.error("Cannot copy schedule to this entity")
-            return
-        
-        for target_device in target_devices:
-            handler.copy_room_schedule(target_device.roomId, target_copyto_devices[0].roomId)
-        return
+        for room in wiser_rooms:
+            if room.entity_id == entity_id:
+                for to_room in wiser_rooms:
+                    if to_room.entity_id == to_entity_id:
+                        hass.async_create_task(room.copy_room_schedule(room.room_id, to_room.room_id))
+                        room.schedule_update_ha_state(True)
+                        break
+                        
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_BOOST_HEATING,
         heating_boost,
         schema=BOOST_HEATING_SCHEMA,
     )
                 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_GET_SCHEDULE,
         get_schedule,
         schema=GET_SET_SCHEDULE_SCHEMA,
     )
                 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_SET_SCHEDULE,
         set_schedule,
         schema=GET_SET_SCHEDULE_SCHEMA,
     )
                 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_COPY_SCHEDULE,
         copy_schedule,
@@ -226,11 +202,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
 
 class WiserRoom(ClimateDevice):
-    def __init__(self, room_id, handler):
+    def __init__(self, hass, data, room_id):
         """Initialize the sensor."""
-        _LOGGER.info("Wiser Room Initialisation")
-        self.handler = handler
-        self.roomId = room_id
+        self.data = data
+        self.hass = hass
+        self.schedule = {}
+        self.room_id = room_id
+        self._force_update = False
         self._hvac_modes_list = [HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF]
         self._preset_modes_list = [
             PRESET_BOOST30,
@@ -239,7 +217,17 @@ class WiserRoom(ClimateDevice):
             PRESET_BOOST180,
             PRESET_BOOST_CANCEL,
         ]
+        _LOGGER.info("Wiser Room Initialisation for {}".format(self.data.wiserhub.getRoom(self.room_id).get("Name")))
 
+    async def async_update(self):
+        _LOGGER.debug("WiserRoom Update requested for {}".format(self.name))
+        if self._force_update:
+            await self.data.async_update(no_throttle = True)
+            self._force_update = False
+        else:
+            await self.data.async_update()
+        self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
+    
     @property
     def supported_features(self):
         """Return the list of supported features."""
@@ -251,15 +239,9 @@ class WiserRoom(ClimateDevice):
 
     @property
     def state(self):
-        state = self.handler.get_hub_data().getRoom(self.roomId).get("Mode")
-        current_temp = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("CurrentSetPoint")
-        )
-        _LOGGER.info(
-            "State requested for room %s, state=%s", self.roomId, state
-        )
+        state = self.data.wiserhub.getRoom(self.room_id).get("Mode")
+        current_temp = (self.data.wiserhub.getRoom(self.room_id).get("DisplayedSetPoint"))
+        _LOGGER.info("State requested for room %s, state=%s", self.room_id, state)
 
         if state.lower() == "manual":
             if current_temp == -200:
@@ -272,9 +254,7 @@ class WiserRoom(ClimateDevice):
 
     @property
     def name(self):
-        return "Wiser " + self.handler.get_hub_data().getRoom(self.roomId).get(
-            "Name"
-        )
+        return "Wiser " + self.data.wiserhub.getRoom(self.room_id).get("Name")
 
     @property
     def temperature_unit(self):
@@ -282,42 +262,42 @@ class WiserRoom(ClimateDevice):
 
     @property
     def min_temp(self):
-        return self.handler.minimum_temp
+        return self.data.minimum_temp
 
     @property
     def max_temp(self):
-        return self.handler.maximum_temp
+        return self.data.maximum_temp
 
     @property
     def current_temperature(self):
         temp = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
+            self.data.wiserhub
+            .getRoom(self.room_id)
             .get("CalculatedTemperature")
             / 10
         )
-        if temp < self.handler.get_minimum_temp():
+        if temp < self.min_temp:
             """ Sometimes we get really low temps (like -3000!),
                 not sure why, if we do then just set it to -20 for now till i
                 debug this.
             """
-            temp = self.handler.get_minimum_temp()
+            temp = self.min_temp
         return temp
 
     @property
     def icon(self):
         # Change icon to show if radiator is heating, not heating or set to off.
         if (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
+            self.data.wiserhub
+            .getRoom(self.room_id)
             .get("ControlOutputState")
             == "On"
         ):
             return "mdi:radiator"
         else:
             if (
-                self.handler.get_hub_data()
-                .getRoom(self.roomId)
+                self.data.wiserhub
+                .getRoom(self.room_id)
                 .get("CurrentSetPoint")
                 == -200
             ):
@@ -327,10 +307,10 @@ class WiserRoom(ClimateDevice):
 
     @property
     def hvac_mode(self):
-        state = self.handler.get_hub_data().getRoom(self.roomId).get("Mode")
+        state = self.data.wiserhub.getRoom(self.room_id).get("Mode")
         current_set_point = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
+            self.data.wiserhub
+            .getRoom(self.room_id)
             .get("CurrentSetPoint")
         )
         if state.lower() == "manual":
@@ -342,18 +322,13 @@ class WiserRoom(ClimateDevice):
             state = HVAC_MODE_AUTO
         return state
 
-    def set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
-        _LOGGER.debug(
-            "*******Setting Device Operation {} for roomId {}".format(
-                hvac_mode, self.roomId
-            )
-        )
+        _LOGGER.debug("Setting Device Operation {} for roomId {}".format(hvac_mode, self.room_id))
         # Convert HA heat_cool to manual as required by api
         if hvac_mode == HVAC_MODE_HEAT:
             hvac_mode = "manual"
-        self.handler.set_room_mode(self.roomId, hvac_mode)
-
+        await self.set_room_mode(self.room_id, hvac_mode)
         return True
 
     @property
@@ -363,12 +338,8 @@ class WiserRoom(ClimateDevice):
 
     @property
     def preset_mode(self):
-        wiser_preset = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("SetpointOrigin")
-        )
-        mode = self.handler.get_hub_data().getRoom(self.roomId).get("Mode")
+        wiser_preset = (self.data.wiserhub.getRoom(self.room_id).get("SetpointOrigin"))
+        mode = self.data.wiserhub.getRoom(self.room_id).get("Mode")
 
         if (
             mode.lower() == HVAC_MODE_AUTO
@@ -376,25 +347,17 @@ class WiserRoom(ClimateDevice):
         ):
             preset = PRESET_OVERRIDE
         else:
-            if wiser_preset.lower() == "fromboost":
-                preset = PRESET_BOOST
-            elif wiser_preset.lower() == "fromawaymode":
-                preset = PRESET_AWAY
-            elif wiser_preset.lower() == "frommanualoverrideduringaway":
-                preset = PRESET_AWAY_OVERRIDE
-            elif wiser_preset.lower() == "fromboostduringaway":
-                preset = PRESET_AWAY_BOOST
-            else:
-                preset = None
+            preset = WISER_PRESET_TO_HASS[wiser_preset.lower()]
         return preset
+        
 
-    def set_preset_mode(self, preset_mode):
-        boost_time = self.handler.boost_time
-        boost_temp = self.handler.boost_temp
+    async def async_set_preset_mode(self, preset_mode):
+        boost_time = self.data.boost_time
+        boost_temp = self.data.boost_temp
         """Set new preset mode."""
         _LOGGER.debug(
             "*******Setting Preset Mode {} for roomId {}".format(
-                preset_mode, self.roomId
+                preset_mode, self.room_id
             )
         )
         # Convert HA preset to required api presets
@@ -402,7 +365,7 @@ class WiserRoom(ClimateDevice):
         """ Cancel boost mode """
         if preset_mode.lower() == PRESET_BOOST_CANCEL.lower():
             preset_mode = (
-                self.handler.get_hub_data().getRoom(self.roomId).get("Mode")
+                self.hvac_mode
             )
 
         """ Deal with boost time variations """
@@ -421,16 +384,10 @@ class WiserRoom(ClimateDevice):
 
             """ Set boost temp to current + boost_temp """
             boost_temp = (
-                self.handler.get_hub_data()
-                .getRoom(self.roomId)
-                .get("CalculatedTemperature")
-                / 10
+                self.data.wiserhub.getRoom(self.room_id).get("CalculatedTemperature")/ 10
             ) + boost_temp
 
-        self.handler.set_room_mode(
-            self.roomId, preset_mode, boost_temp, boost_time
-        )
-
+        await self.set_room_mode(self.room_id, preset_mode, boost_temp, boost_time)
         return True
 
     @property
@@ -441,29 +398,23 @@ class WiserRoom(ClimateDevice):
     @property
     def target_temperature(self):
         target = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("CurrentSetPoint")
+            self.data.wiserhub
+            .getRoom(self.room_id)
+            .get("DisplayedSetPoint")
             / 10
         )
 
-        state = self.handler.get_hub_data().getRoom(self.roomId).get("Mode")
+        state = self.data.wiserhub.getRoom(self.room_id).get("Mode")
         current_set_point = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("CurrentSetPoint")
+            self.data.wiserhub
+            .getRoom(self.room_id)
+            .get("DisplayedSetPoint")
         )
 
         if state.lower() == "manual" and current_set_point == -200:
             target = None
 
         return target
-
-    def update(self):
-        _LOGGER.debug("*******************************************")
-        _LOGGER.debug("WiserRoom Update requested for {}".format(self.name))
-        _LOGGER.debug("*******************************************")
-        self.handler.update()
 
     """    https://github.com/asantaga/wiserHomeAssistantPlatform/issues/13 """
 
@@ -472,47 +423,72 @@ class WiserRoom(ClimateDevice):
         # Generic attributes
         attrs = super().state_attributes
         attrs["percentage_demand"] = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("PercentageDemand")
+            self.data.wiserhub.getRoom(self.room_id).get("PercentageDemand")
         )
         attrs["control_output_state"] = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("ControlOutputState")
+            self.data.wiserhub.getRoom(self.room_id).get("ControlOutputState")
         )
         attrs["heating_rate"] = (
-            self.handler.get_hub_data().getRoom(self.roomId).get("HeatingRate")
+            self.data.wiserhub.getRoom(self.room_id).get("HeatingRate")
         )
         attrs["window_state"] = (
-            self.handler.get_hub_data().getRoom(self.roomId).get("WindowState")
+            self.data.wiserhub.getRoom(self.room_id).get("WindowState")
         )
         attrs["window_detection_active"] = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("WindowDetectionActive")
+            self.data.wiserhub.getRoom(self.room_id).get("WindowDetectionActive")
         )
         attrs["away_mode_supressed"] = (
-            self.handler.get_hub_data()
-            .getRoom(self.roomId)
-            .get("AwayModeSuppressed")
+            self.data.wiserhub.getRoom(self.room_id).get("AwayModeSuppressed")
         )
 
         return attrs
 
-    """ Set temperature """
 
-    def set_temperature(self, **kwargs):
+    async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        if kwargs.get(ATTR_TEMPERATURE) is None:
-            return False
         target_temperature = kwargs.get(ATTR_TEMPERATURE)
+        if target_temperature is None:
+            return False
+        
         _LOGGER.debug(
-            "Setting Device Temperature for roomId {}, temperature {}".format(
-                self.roomId, target_temperature
+            "Setting temperature for {} to {}".format(
+                self.name, target_temperature
             )
         )
-        _LOGGER.debug("Value of wiserhub {}".format(self.handler))
+        self.data.wiserhub.setRoomTemperature(self.room_id, target_temperature)
+        self._force_update = True
 
-        self.handler.set_room_temperature(self.roomId, target_temperature)
+    async def set_room_mode(self, room_id, mode, boost_temp = None, boost_time = None):
+        """ Set to default values if not passed in """
+        boost_temp = self.data.boost_temp if boost_temp is None else boost_temp
+        boost_time = self.data.boost_time if boost_time is None else boost_time
+        _LOGGER.debug(
+            "Setting Room Mode to {} for roomId {}".format(
+                mode, self.room_id
+            )
+        )
+        self.data.wiserhub.setRoomMode(room_id, mode, boost_temp, boost_time)
+        self._force_update = True
+
+    async def set_room_schedule(self, room_id, scheduleData):
+        if scheduleData != None:
+            scheduleData = convert_to_wiser_schedule(scheduleData)
+            self.data.wiserhub.setRoomSchedule(room_id, scheduleData)
+            _LOGGER.debug("Set room schedule for {}".format(self.name))
+            self._force_update = True
+            return True
+        else:
+            return False
+            
+    async def copy_room_schedule(self, room_id, to_room_id):
+        self.data.wiserhub.copyRoomSchedule(room_id, to_room_id)
+        _LOGGER.debug("Copied room schedule from {} to {}".format(self.name, self.data.wiserhub.getRoom(to_room_id).get("Name")))
+        self._force_update = True
+        return True
+            
+
+            
+
+            
+
 
