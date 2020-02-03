@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.8.1)
+# Wiser Home Assistant Platform (v1.9)
 
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
@@ -264,8 +264,11 @@ Angelo
 - @djbanks     : Home/Away switch (v 1.31)
 - @msp1974     : Animated graphics showing which rooms are being heated 
                  Display Presets and support boost (PR38)
+                 Async Mode rewrite
+                 Loads more!
 
 # Change log
+- 1.9      Component rewritten to use Async, Displayed Setpoint bug fixed for eco mode
 - 1.8.1	   Multiple fixes to timeouts, boost and upgrade to wiserapi 1.0.3
 - 1.7      Presets and now supports delta boosts (thanks @msp1974)
            (BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g. now is 2C vs previously 20C
