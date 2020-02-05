@@ -63,6 +63,7 @@ WISER_PRESET_TO_HASS = {
     "frommanualoverride": PRESET_OVERRIDE,
     "fromecoiq": None,
     "fromschedule": None,
+    "fromcomfortmode": None,
 }
 
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
@@ -335,7 +336,10 @@ class WiserRoom(ClimateDevice):
         ):
             preset = PRESET_OVERRIDE
         else:
-            preset = WISER_PRESET_TO_HASS[wiser_preset.lower()]
+            try:
+                preset = WISER_PRESET_TO_HASS[wiser_preset.lower()]
+            except:
+                preset = None
         return preset
 
     async def async_set_preset_mode(self, preset_mode):
