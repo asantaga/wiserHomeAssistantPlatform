@@ -1,6 +1,5 @@
 # Wiser Home Assistant Platform (v1.9)
 
-
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
 ## Functionality 
@@ -15,8 +14,9 @@ This repository contains a Home Assistant component + platforms, for the Drayton
     - Services to get, set and copy heating schedules (**See instructions below**)
 
 - Switch platform
-   - Allows the switching of Home/Away mode via a switch which means it can now be controlled by HA
-
+   - Allows the switching of various system switches including EcoMode, ComfortMode, AwayMode, Valve Protection and AwayModeAffectsWater   
+   - Allows the switching of the wiser system smartplugs
+   
 - Sensor Platforms
     - Each **TRV** is representated by a Sensor. The sensor attributes include extensive information about the device, such as WIFI Signal strength, firmware version, battery levels etc
     - **Heathub** displayed as a sensor, firmware version etc
@@ -249,12 +249,12 @@ and will copy the schedule between them.
 
 ------
 
-***Run, Play*** and let me know if there are any bugs, enhancements etc via the github issues system
+***Run, Play*** and let us know if there are any bugs, enhancements etc via the github issues system
 
 Special thanks for contributors 
 Thanks!
 
-Angelo
+Angelo and the many contributors to this project!
 
 # Contributors
 
@@ -268,18 +268,30 @@ Angelo
                  Loads more!
 
 # Change log
-- 1.9      Component rewritten to use Async, Displayed Setpoint bug fixed for eco mode
-- 1.8.1	   Multiple fixes to timeouts, boost and upgrade to wiserapi 1.0.3
-- 1.7      Presets and now supports delta boosts (thanks @msp1974)
-           (BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g. now is 2C vs previously 20C
-- 1.6.1    Fixed setting temperature bugs 
-- 1.6      Merged functionality where it now shows which rooms are being heated by an icon 
-- 1.5.1    Minor bump to fix home/away issue and bring versions inline
-- 1.5 	   Now supports HACS
-- 1.4      Major changes. Now uses pypi library 
-           Uses new Climate Model (see https://developers.home-assistant.io/blog/2019/07/03/climate-cleanup.html)
-           Fix bug where updates werent seen till new refresh cycle
-           Changes to make code HA native component compatible (more work to be done)
-- 1.3.1    Merged djbanks Home/Away switch
-- 1.3      Added ability to set temperature
-           Added ability to set room mode (auto,boost,manual)
+- 1.9      
+    * Component rewritten to use Async, Displayed Setpoint bug fixed for eco mode
+    * Ability to control SmartPlugs
+           
+- 1.8.1	   
+    * Multiple fixes to timeouts, boost and upgrade to wiserapi 1.0.3
+- 1.7      
+    * Presets and now supports delta boosts (thanks @msp1974)
+    * BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g. now is 2C vs previously 20C
+- 1.6.1    
+    * Fixed setting temperature bugs 
+- 1.6      
+    * Merged functionality where it now shows which rooms are being heated by an icon 
+- 1.5.1    
+    * Minor bump to fix home/away issue and bring versions inline
+- 1.5 	   
+    * Now supports HACS
+- 1.4      
+    * Major changes. Now uses pypi library 
+    * Uses new Climate Model (see https://developers.home-assistant.io/blog/2019/07/03/climate-cleanup.html)
+    * Fix bug where updates werent seen till new refresh cycle
+    * Changes to make code HA native component compatible (more work to be done)
+- 1.3.1    
+    * Merged djbanks Home/Away switch
+- 1.3
+    * Added ability to set temperature
+    * Added ability to set room mode (auto,boost,manual)

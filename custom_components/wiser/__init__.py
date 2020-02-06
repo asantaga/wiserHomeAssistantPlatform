@@ -136,3 +136,21 @@ class WiserHubHandle:
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
+
+    async def set_smart_plug_mode(self, plug_id, state):
+        """
+        Set the state of the smart plug,
+        :param plug_id:
+        :param state: Can be On or Off
+        :return:
+        """
+        if self.wiserhub is None:
+            self.wiserhub = wiserHub(self.ip, self.secret)
+        _LOGGER.info(
+            "Setting SmartPlug {} to {} ".format(plug_id, state))
+
+        try:
+            self.wiserhub.setSmartPlugMode(plug_id,state.title() )
+            await self.async_update(no_throttle=True)
+        except BaseException as e:
+            _LOGGER.debug("Error setting SmartPlug {} to {}, error {}".format(plug_id, state, str(e)))

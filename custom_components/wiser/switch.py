@@ -5,12 +5,15 @@ from .const import _LOGGER, DOMAIN, WISER_SWITCHES
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Add the Wiser Switch entities"""
+    """Add the Wiser System Switch entities"""
     entities = []
     data = hass.data[DOMAIN]
 
     for switchType, hubKey in WISER_SWITCHES.items():
         entities.append(WiserSwitch(hass, data, switchType, hubKey))
+
+    for plug in data.wiserhub.getSmartPlugs():
+        entities.append(WiserSmartPlug(hass, data, plug.get("id"), plug.get("Name")))
 
     if len(entities):
         async_add_entities(entities)
@@ -81,4 +84,65 @@ class WiserSwitch(SwitchDevice):
             self._force_update = True
         else:
             await self.data.set_system_switch(self.hub_key, False)
+        return True
+
+
+class WiserSmartPlug(SwitchDevice):
+    def __init__(self, hass, data, plugId, name):
+        """Initialize the sensor."""
+        _LOGGER.info("Wiser {} SmartPlug Init".format(name))
+        self.plugName = name
+        self.smartPlugId = plugId
+        self.data = data
+        self._force_update = False
+        self.hass = hass
+        self.awayTemperature = None
+
+    async def async_update(self):
+        _LOGGER.debug(" SmartPlug {} Status requested".format(self.plugName))
+        if self._force_update:
+            await self.data.async_update(no_throttle=True)
+            self._force_update = False
+        else:
+            await self.data.async_update()
+
+    @property
+    def name(self):
+        """Return the name of the SmartPlug """
+        return self.plugName
+
+    @property
+    def should_poll(self):
+        """Return the polling state."""
+        return True
+
+    @property
+    def is_on(self):
+        """Return true if device is on."""
+        _LOGGER.debug(
+            "Checking for smartplug is_on for plug {} ".format(self.smartPlugId)
+        )
+        smartPlugs = self.data.wiserhub.getSmartPlugs()
+        for plug in smartPlugs:
+            if plug.get("id") == self.smartPlugId:
+                if plug.get("OutputState") == "On":
+                    _LOGGER.debug("PLUG ON")
+                    return True
+                else:
+                    _LOGGER.debug("PLUG OFF")
+
+                    return False
+        # Should never get here.....
+        return False
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+
+        await self.data.set_smart_plug_mode(self.smartPlugId, "On")
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+
+        await self.data.set_smart_plug_mode(self.smartPlugId, "Off")
         return True
