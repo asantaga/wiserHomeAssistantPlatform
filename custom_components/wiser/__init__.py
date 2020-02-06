@@ -151,6 +151,9 @@ class WiserHubHandle:
 
         try:
             self.wiserhub.setSmartPlugMode(plug_id,state.title() )
+            # Force a refresh to prevent the inconsistent state issue
+            self.wiserhub.refreshData()
             await self.async_update(no_throttle=True)
+
         except BaseException as e:
             _LOGGER.debug("Error setting SmartPlug {} to {}, error {}".format(plug_id, state, str(e)))
