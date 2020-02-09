@@ -21,8 +21,10 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
 )
+from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import Throttle
 
 from .const import (
@@ -66,19 +68,44 @@ async def async_setup(hass, config):
     )
 
     data = WiserHubHandle(hass, config, host, secret)
-    await data.async_update()
-
-    if data.wiserhub.getDevices is None:
-        _LOGGER.error("No Wiser devices found to set up")
-        return False
-
-    hass.data[DOMAIN] = data
-
-    for component in WISER_PLATFORMS:
-        hass.async_create_task(async_load_platform(hass, component, DOMAIN, {}, config))
-
-    _LOGGER.info("Wiser Component Setup Completed")
+    
+    @callback
+    def retryWiserHubSetup():
+        hass.async_create_task(wiserHubSetup())
+    
+    async def wiserHubSetup():
+        _LOGGER.info("Initiating WiserHub connection")
+        try:
+            if await data.async_update(no_throttle=True):
+                if data.wiserhub.getDevices is None:
+                    _LOGGER.error("No Wiser devices found to set up")
+                    return False
+            
+                hass.data[DOMAIN] = data
+            
+                for component in WISER_PLATFORMS:
+                    hass.async_create_task(async_load_platform(hass, component, DOMAIN, {}, config))
+            
+                _LOGGER.info("Wiser Component Setup Completed")
+                return True
+            else:
+                await scheduleWiserHubSetup()
+                return True
+        except (asyncio.TimeoutError) as ex:
+            await scheduleWiserHubSetup()
+            return True
+    
+    async def scheduleWiserHubSetup(interval = 30):
+        _LOGGER.error(
+            "Unable to connect to the Wiser Hub, retrying in {} seconds".format(interval)
+        )
+        hass.loop.call_later(interval, retryWiserHubSetup)
+        return
+        
+    hass.async_create_task(wiserHubSetup())
     return True
+        
+
 
 
 class WiserHubHandle:
@@ -98,7 +125,12 @@ class WiserHubHandle:
         _LOGGER.info("**Update of Wiser Hub data requested**")
         try:
             result = await self._hass.async_add_executor_job(self.wiserhub.refreshData)
-            _LOGGER.info("**Wiser Hub data updated**")
+            if result is not None:
+                _LOGGER.info("**Wiser Hub data updated**")
+                return True
+            else:
+                _LOGGER.info("**Unable to update from wiser hub**")
+                return False
         except json.decoder.JSONDecodeError as JSONex:
             _LOGGER.error(
                 "Data not JSON when getting Data from hub, "
@@ -111,6 +143,7 @@ class WiserHubHandle:
                 title=NOTIFICATION_TITLE,
                 notification_id=NOTIFICATION_ID,
             )
+            return False
 
     async def set_away_mode(self, away, away_temperature):
         mode = "AWAY" if away else "HOME"
