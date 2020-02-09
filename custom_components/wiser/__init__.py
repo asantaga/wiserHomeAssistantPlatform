@@ -137,7 +137,7 @@ class WiserHubHandle:
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
 
-    async def set_smart_plug_mode(self, plug_id, state):
+    async def set_smart_plug_state(self, plug_id, state):
         """
         Set the state of the smart plug,
         :param plug_id:
@@ -150,9 +150,9 @@ class WiserHubHandle:
             "Setting SmartPlug {} to {} ".format(plug_id, state))
 
         try:
-            self.wiserhub.setSmartPlugMode(plug_id,state.title() )
-            # Force a refresh to prevent the inconsistent state issue
-            self.wiserhub.refreshData()
+            self.wiserhub.setSmartPlugMode(plug_id,state)
+            # Add small delay to allow hub to update status before refreshing
+            await asyncio.sleep(0.5)
             await self.async_update(no_throttle=True)
 
         except BaseException as e:

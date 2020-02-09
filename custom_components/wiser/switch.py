@@ -72,7 +72,6 @@ class WiserSwitch(SwitchDevice):
         """Turn the device on."""
         if self.switch_type == "Away Mode":
             await self.data.set_away_mode(True, self.awayTemperature)
-            self._force_update = True
         else:
             await self.data.set_system_switch(self.hub_key, True)
         return True
@@ -81,7 +80,6 @@ class WiserSwitch(SwitchDevice):
         """Turn the device off."""
         if self.switch_type == "Away Mode":
             await self.data.set_away_mode(False, self.awayTemperature)
-            self._force_update = True
         else:
             await self.data.set_system_switch(self.hub_key, False)
         return True
@@ -96,7 +94,7 @@ class WiserSmartPlug(SwitchDevice):
         self.data = data
         self._force_update = False
         self.hass = hass
-        self.awayTemperature = None
+        self._is_on = False
 
     async def async_update(self):
         _LOGGER.debug(" SmartPlug {} Status requested".format(self.plugName))
@@ -105,7 +103,12 @@ class WiserSmartPlug(SwitchDevice):
             self._force_update = False
         else:
             await self.data.async_update()
-
+        #Update status
+        smartPlugs = self.data.wiserhub.getSmartPlugs()
+        for plug in smartPlugs:
+            if plug.get("id") == self.smartPlugId:
+                self._is_on = True if plug.get("OutputState") == "On" else False
+                
     @property
     def name(self):
         """Return the name of the SmartPlug """
@@ -120,29 +123,17 @@ class WiserSmartPlug(SwitchDevice):
     def is_on(self):
         """Return true if device is on."""
         _LOGGER.debug(
-            "Checking for smartplug is_on for plug {} ".format(self.smartPlugId)
+            "Smartplug {} is currently {}".format(self.smartPlugId, self._is_on)
         )
-        smartPlugs = self.data.wiserhub.getSmartPlugs()
-        for plug in smartPlugs:
-            if plug.get("id") == self.smartPlugId:
-                if plug.get("OutputState") == "On":
-                    _LOGGER.debug("PLUG ON")
-                    return True
-                else:
-                    _LOGGER.debug("PLUG OFF")
-
-                    return False
-        # Should never get here.....
-        return False
+        return self._is_on
+        
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-
-        await self.data.set_smart_plug_mode(self.smartPlugId, "On")
+        await self.data.set_smart_plug_state(self.smartPlugId, "On")
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-
-        await self.data.set_smart_plug_mode(self.smartPlugId, "Off")
+        await self.data.set_smart_plug_state(self.smartPlugId, "Off")
         return True
