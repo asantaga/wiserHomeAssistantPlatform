@@ -59,3 +59,16 @@ copy_schedule:
         description: Enter the entity_id for the room to copy the schedule to.,
         example: "climate.wiser_kitchen",
       }
+set_smartplug_mode:
+  description: "Sets the mode of a smart plug"
+  fields:
+    entity_id:
+      {
+        description: Enter the entity_id for the smartplug.,
+        example: "swtich.smartplug1",
+      }
+    to_entity_id:
+      {
+        description: Enter the mode [Auto,Manual],
+        example: "Auto",
+      }

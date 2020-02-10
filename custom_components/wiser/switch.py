@@ -2,7 +2,19 @@ import asyncio
 
 from homeassistant.components.switch import SwitchDevice
 from .const import _LOGGER, DOMAIN, WISER_SWITCHES
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+)
 
+ATTR_PLUG_MODE="plugmode"
+SET_PLUG_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_PLUG_MODE, default=""): vol.Coerce(str),
+    }
+)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Add the Wiser System Switch entities"""
@@ -22,6 +34,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 """
 Switch to set the status of the Wiser Operation Mode (Away/Normal)
 """
+
 
 
 class WiserSwitch(SwitchDevice):
@@ -85,6 +98,7 @@ class WiserSwitch(SwitchDevice):
         return True
 
 
+
 class WiserSmartPlug(SwitchDevice):
     def __init__(self, hass, data, plugId, name):
         """Initialize the sensor."""
@@ -126,7 +140,19 @@ class WiserSmartPlug(SwitchDevice):
             "Smartplug {} is currently {}".format(self.smartPlugId, self._is_on)
         )
         return self._is_on
-        
+
+    @property
+    def device_state_attributes(self):
+        attrs = {}
+        device_data = self.data.wiserhub.getSmartPlug(self.smartPlugId)
+        attrs["ManualState"] = device_data.get("ManualState")
+        attrs["Name"] = device_data.get("Name")
+        attrs["Mode"] = device_data.get("Mode")
+        attrs["AwayAction"] = device_data.get("AwayAction")
+        attrs["OutputState"] = device_data.get("OutputState")
+        attrs["ControlSource"] = device_data.get("ControlSource")
+        attrs["ScheduledState"] = device_data.get("ScheduledState")
+        return attrs
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
@@ -137,3 +163,11 @@ class WiserSmartPlug(SwitchDevice):
         """Turn the device off."""
         await self.data.set_smart_plug_state(self.smartPlugId, "Off")
         return True
+
+
+    def set_smartplug_mode(service):
+        """Handle the service call"""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        plug_mode = service.data[ATTR_PLUG_MODE]
+        # TODO
+

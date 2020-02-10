@@ -182,7 +182,7 @@ class WiserHubHandle:
             "Setting SmartPlug {} to {} ".format(plug_id, state))
 
         try:
-            self.wiserhub.setSmartPlugMode(plug_id,state)
+            self.wiserhub.setSmartPlugState(plug_id,state)
             # Add small delay to allow hub to update status before refreshing
             await asyncio.sleep(0.5)
             await self.async_update(no_throttle=True)
