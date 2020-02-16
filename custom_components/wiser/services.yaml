@@ -69,6 +69,6 @@ set_smartplug_mode:
       }
     plug_mode:
       {
-        description: Enter the mode [Auto,Manual],
+        description: Enter the mode Auto,Manual.,
         example: "Auto",
       }
