@@ -120,6 +120,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                         room.name, boost_temp, boost_time
                     )
                 )
+
                 hass.async_create_task(
                     room.set_room_mode(room.room_id, "boost", boost_temp, boost_time)
                 )

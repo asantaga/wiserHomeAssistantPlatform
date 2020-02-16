@@ -7,29 +7,57 @@ import voluptuous as vol
 from homeassistant.const import (
     ATTR_ENTITY_ID,
 )
+from homeassistant.core import callback
 
-ATTR_PLUG_MODE="plugmode"
+
+from .const import _LOGGER, DOMAIN
+
+
+ATTR_PLUG_MODE="plug_mode"
+SERVICE_SET_SMARTPLUG_MODE="set_smartplug_mode"
+
 SET_PLUG_MODE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_PLUG_MODE, default=""): vol.Coerce(str),
+        vol.Required(ATTR_PLUG_MODE, default="Auto"): vol.Coerce(str),
     }
 )
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Add the Wiser System Switch entities"""
-    entities = []
     data = hass.data[DOMAIN]
 
-    for switchType, hubKey in WISER_SWITCHES.items():
-        entities.append(WiserSwitch(hass, data, switchType, hubKey))
+    wiser_switches = [
+        WiserSwitch(hass, data, switchType, hubKey)  for switchType, hubKey in WISER_SWITCHES.items()
+    ]
+    wiser_smart_plugs = [
+        WiserSmartPlug(hass, data, plug.get("id"), plug.get("Name")) for plug in data.wiserhub.getSmartPlugs()
+    ]
 
-    for plug in data.wiserhub.getSmartPlugs():
-        entities.append(WiserSmartPlug(hass, data, plug.get("id"), plug.get("Name")))
+    async_add_entities(wiser_switches)
+    async_add_entities(wiser_smart_plugs)
 
-    if len(entities):
-        async_add_entities(entities)
+    @callback
+    def set_smartplug_mode(service):
+        device_found=False
+        entity_id = service.data[ATTR_ENTITY_ID]
+        smart_plug_mode = service.data[ATTR_PLUG_MODE]
+        print("data = {} {}".format(entity_id,smart_plug_mode))
 
+        for smart_plug in wiser_smart_plugs:
+
+            if smart_plug.entity_id == entity_id:
+                device_found=True
+                hass.async_create_task(
+                    smart_plug.set_smartplug_mode(smart_plug_mode)
+                )
+            smart_plug.schedule_update_ha_state(True)
+            break
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_SMARTPLUG_MODE, set_smartplug_mode,schema=SET_PLUG_MODE_SCHEMA,
+    )
+    return True
 
 """
 Switch to set the status of the Wiser Operation Mode (Away/Normal)
@@ -103,15 +131,16 @@ class WiserSmartPlug(SwitchDevice):
     def __init__(self, hass, data, plugId, name):
         """Initialize the sensor."""
         _LOGGER.info("Wiser {} SmartPlug Init".format(name))
-        self.plugName = name
-        self.smartPlugId = plugId
+        self.plug_name = name
+        self.smart_plug_id = plugId
         self.data = data
         self._force_update = False
         self.hass = hass
         self._is_on = False
 
+
     async def async_update(self):
-        _LOGGER.debug(" SmartPlug {} Status requested".format(self.plugName))
+        _LOGGER.debug(" SmartPlug {} Status requested".format(self.plug_name))
         if self._force_update:
             await self.data.async_update(no_throttle=True)
             self._force_update = False
@@ -120,13 +149,13 @@ class WiserSmartPlug(SwitchDevice):
         #Update status
         smartPlugs = self.data.wiserhub.getSmartPlugs()
         for plug in smartPlugs:
-            if plug.get("id") == self.smartPlugId:
+            if plug.get("id") == self.smart_plug_id:
                 self._is_on = True if plug.get("OutputState") == "On" else False
                 
     @property
     def name(self):
         """Return the name of the SmartPlug """
-        return self.plugName
+        return self.plug_name
 
     @property
     def should_poll(self):
@@ -137,14 +166,14 @@ class WiserSmartPlug(SwitchDevice):
     def is_on(self):
         """Return true if device is on."""
         _LOGGER.debug(
-            "Smartplug {} is currently {}".format(self.smartPlugId, self._is_on)
+            "Smartplug {} is currently {}".format(self.smart_plug_id, self._is_on)
         )
         return self._is_on
 
     @property
     def device_state_attributes(self):
         attrs = {}
-        device_data = self.data.wiserhub.getSmartPlug(self.smartPlugId)
+        device_data = self.data.wiserhub.getSmartPlug(self.smart_plug_id)
         attrs["ManualState"] = device_data.get("ManualState")
         attrs["Name"] = device_data.get("Name")
         attrs["Mode"] = device_data.get("Mode")
@@ -156,18 +185,20 @@ class WiserSmartPlug(SwitchDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.data.set_smart_plug_state(self.smartPlugId, "On")
+        await self.data.set_smart_plug_state(self.smart_plug_id, "On")
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.data.set_smart_plug_state(self.smartPlugId, "Off")
+        await self.data.set_smart_plug_state(self.smart_plug_id, "Off")
         return True
 
+    async def set_smartplug_mode(self,plug_mode):
+        _LOGGER.debug(
+            "Setting Smartplug {} Mode to {} ".format(self.smart_plug_id, plug_mode)
+        )
+        self.data.wiserhub.setSmartPlugMode(self.smart_plug_id,plug_mode)
+        self._force_update = True
 
-    def set_smartplug_mode(service):
-        """Handle the service call"""
-        entity_id = service.data[ATTR_ENTITY_ID]
-        plug_mode = service.data[ATTR_PLUG_MODE]
-        # TODO
+
 

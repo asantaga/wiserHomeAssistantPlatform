@@ -169,6 +169,7 @@ class WiserHubHandle:
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
 
+
     async def set_smart_plug_state(self, plug_id, state):
         """
         Set the state of the smart plug,

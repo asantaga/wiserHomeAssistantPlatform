@@ -65,9 +65,9 @@ set_smartplug_mode:
     entity_id:
       {
         description: Enter the entity_id for the smartplug.,
-        example: "swtich.smartplug1",
+        example: "switch.smartplug",
       }
-    to_entity_id:
+    plug_mode:
       {
         description: Enter the mode [Auto,Manual],
         example: "Auto",
