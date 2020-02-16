@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v1.9)
+# Wiser Home Assistant Platform (v1.9Dev)
 
 This repository contains a Home Assistant component + platforms, for the Drayton Wiser Heating solution.
 
