@@ -146,13 +146,35 @@ class WiserDeviceSensor(WiserSensor):
         )
         attrs = {}
         device_data = self.data.wiserhub.getDevice(self.deviceId)
-        # Generic attributes
+
+        """ Generic attributes """
         attrs["vendor"] = "Drayton Wiser"
         attrs["product_type"] = device_data.get("ProductType")
         attrs["model_identifier"] = device_data.get("ModelIdentifier")
         attrs["device_lock_enabled"] = device_data.get("DeviceLockEnabled")
         attrs["displayed_signal_strength"] = device_data.get("DisplayedSignalStrength")
         attrs["firmware"] = device_data.get("ActiveFirmwareVersion")
+        attrs["serial_number"] = device_data.get("SerialNumber")
+
+        """ if controller then add the zigbee data to the controller info """
+        if device_data.get("ProductType")=="Controller":
+            attrs["zigbee_channel"] = self.data.wiserhub.getHubData().get("Zigbee").get("NetworkChannel")
+
+
+
+        """ Network Data"""
+        attrs["node_id"] = device_data.get("NodeId")
+        attrs["displayed_signal_strength"] = device_data.get("DisplayedSignalStrength")
+
+        if self.sensor_type in ["RoomStat", "iTRV"]:
+            attrs["parent_node_id"] = device_data.get("ParentNodeId")
+            """ hub route"""
+            if device_data.get("ParentNodeId")==0:
+
+                attrs["hub_route"] = "direct"
+            else:
+                attrs["hub_route"] = "repeater"
+
 
         if device_data.get("ReceptionOfDevice") is not None:
             attrs["device_reception_RSSI"] = device_data.get("ReceptionOfDevice").get(
@@ -170,6 +192,7 @@ class WiserDeviceSensor(WiserSensor):
                 "ReceptionOfController"
             ).get("Lqi")
 
+        """ Battery Data """
         if self.sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get(
             "BatteryVoltage"
         ):
@@ -180,10 +203,13 @@ class WiserDeviceSensor(WiserSensor):
             attrs["battery_level"] = device_data.get("BatteryLevel")
             attrs["serial_number"] = device_data.get("SerialNumber")
 
+        """ Other """
         if self.sensor_type == "RoomStat":
             attrs["humidity"] = self.data.wiserhub.getRoomStatData(self.deviceId).get(
                 "MeasuredHumidity"
             )
+
+
         return attrs
 
 

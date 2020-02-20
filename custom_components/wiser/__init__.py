@@ -67,7 +67,7 @@ async def async_setup(hass, config):
     )
 
     data = WiserHubHandle(hass, config, host, secret)
-    
+
     @callback
     def retryWiserHubSetup():
         hass.async_create_task(wiserHubSetup())
