@@ -1,7 +1,5 @@
 boost_heating:
-  description: "Set the boost mode ON defining the period of time and the desired target temperature
-  or temperature increase delta for the boost.
-  Setting the temperature delta overrides any target temperature."
+  description: "Set the boost mode ON defining the period of time and the desired target temperature or temperature increase delta for the boost.  Setting the temperature delta overrides any target temperature."
   fields:
     entity_id:
       {
@@ -69,7 +67,7 @@ set_smartplug_mode:
       }
     plug_mode:
       {
-        description: "Enter the mode, can be Auto or Manual.",
+        description: "Enter the mode, can be auto or manual.",
         example: "Auto",
       }
 set_hotwater_mode:
@@ -77,6 +75,6 @@ set_hotwater_mode:
   fields:
     hotwater_mode:
       {
-        description: "Enter the mode can be on , off or manual.",
+        description: "Enter the mode can be on , off or auto.",
         example: "auto",
       }
