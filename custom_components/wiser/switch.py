@@ -14,12 +14,23 @@ from .const import _LOGGER, DOMAIN
 
 
 ATTR_PLUG_MODE="plug_mode"
+ATTR_HOTWATER_MODE="hotwater_mode"
+
 SERVICE_SET_SMARTPLUG_MODE="set_smartplug_mode"
+SERVICE_SET_HOTWATER_MODE="set_hotwater_mode"
+
 
 SET_PLUG_MODE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_PLUG_MODE, default="Auto"): vol.Coerce(str),
+    }
+)
+
+SET_HOTWATER_MODE_SCHEMA = vol.Schema(
+    {
+
+        vol.Required(ATTR_HOTWATER_MODE, default="auto"): vol.Coerce(str),
     }
 )
 
@@ -54,8 +65,20 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             smart_plug.schedule_update_ha_state(True)
             break
 
+    @callback
+    def set_hotwater_mode(service):
+        hotwater_mode = service.data[ATTR_HOTWATER_MODE]
+        hass.async_create_task(
+            data.set_hotwater_mode(hotwater_mode)
+        )
+
+
+    """ Register Services """
     hass.services.async_register(
         DOMAIN, SERVICE_SET_SMARTPLUG_MODE, set_smartplug_mode,schema=SET_PLUG_MODE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_HOTWATER_MODE, set_hotwater_mode,schema=SET_HOTWATER_MODE_SCHEMA,
     )
     return True
 

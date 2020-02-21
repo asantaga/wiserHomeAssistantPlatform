@@ -190,3 +190,24 @@ class WiserHubHandle:
 
         except BaseException as e:
             _LOGGER.debug("Error setting SmartPlug {} to {}, error {}".format(plug_id, state, str(e)))
+
+    async def set_hotwater_mode(self, hotwater_mode):
+        """
+
+        """
+        if self.wiserhub is None:
+            self.wiserhub = wiserHub(self.ip, self.secret)
+        _LOGGER.info(
+            "Setting Hotwater to {} ".format(hotwater_mode))
+        # Add small delay to allow hub to update status before refreshing
+        await asyncio.sleep(0.5)
+        await self.async_update(no_throttle=True)
+
+        try:
+            self.wiserhub.setHotwaterMode(hotwater_mode)
+
+
+        except BaseException as e:
+            _LOGGER.debug(
+                "Error setting Hotwater Mode to  {}, error {}".format(hotwater_mode,
+                                                                    str(e)))
