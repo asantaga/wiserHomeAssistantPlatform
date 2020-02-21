@@ -68,7 +68,7 @@ set_smartplug_mode:
     plug_mode:
       {
         description: "Enter the mode, can be auto or manual.",
-        example: "Auto",
+        example: "auto",
       }
 set_hotwater_mode:
   description: "Sets the hot water mode"
