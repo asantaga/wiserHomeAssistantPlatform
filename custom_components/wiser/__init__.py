@@ -10,7 +10,7 @@ import asyncio
 import json
 
 # import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from wiserHeatingAPI.wiserHub import wiserHub, TEMP_MINIMUM, TEMP_MAXIMUM
 import voluptuous as vol
@@ -135,10 +135,10 @@ class WiserHubHandle:
                 "Data not JSON when getting Data from hub, "
                 + "did you enter the right URL? error {}".format(str(JSONex))
             )
-            hass.components.persistent_notification.create(
+            self.hass.components.persistent_notification.create(
                 "Error: {}"
                 + "<br /> You will need to restart Home Assistant "
-                + " after fixing.".format(ex),
+                + " after fixing.".format(JSONex),
                 title=NOTIFICATION_TITLE,
                 notification_id=NOTIFICATION_ID,
             )
