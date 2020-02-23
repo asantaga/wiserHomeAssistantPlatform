@@ -320,15 +320,21 @@ Angelo
 
 # Contributors
 
+Special thanks to all the contributors to this project.  Special shout to 
+
 - @angrycamel  : Home/Away Sensor
 - @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
 - @djbanks     : Home/Away switch (v 1.31)
 - @msp1974     : Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more!
 
+
+
+Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
+
 # Change log
 - 1.9      
-    
+  
     * Component rewritten to use Async to ensure the component is more robust and HA friendly
     
     * Ability to control SmartPlugs
@@ -347,22 +353,22 @@ Angelo
       **BREAKING CHANGE** : We no longer support the custom component updater, please use HACS instead
     
 - 1.8.1	   
-    
+  
     * Multiple fixes to timeouts, boost and upgrade to wiserapi 1.0.3
 - 1.7      
     * Presets and now supports delta boosts (thanks @msp1974)
     * BREAKING CHANGE : boost temp is now a delta and not a specific value  e.g.. now is 2C vs previously 20C
 - 1.6.1    
-    
+  
     * Fixed setting temperature bugs 
 - 1.6      
-    
+  
     * Merged functionality where it now shows which rooms are being heated by an icon 
 - 1.5.1    
-    
+  
     * Minor bump to fix home/away issue and bring versions inline
 - 1.5 	   
-    
+  
     * Now supports HACS
 - 1.4      
     * Major changes. Now uses pypi library 
@@ -370,7 +376,7 @@ Angelo
     * Fix bug where updates weren't seen till new refresh cycle
     * Changes to make code HA native component compatible (more work to be done)
 - 1.3.1    
-    
+  
     * Merged djbanks Home/Away switch
 - 1.3
     * Added ability to set temperature
