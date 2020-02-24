@@ -28,11 +28,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     data = hass.data[DOMAIN]  # Get Handler
     wiser_devices = []
 
-    # Add device sensors
-    for device in data.wiserhub.getDevices():
-        wiser_devices.append(
-            WiserDeviceSensor(data, device.get("id"), device.get("ProductType"))
-        )
+    # Add device sensors, only if there are some
+    if data.wiserhub.getDevices() is not None:
+        for device in data.wiserhub.getDevices():
+            wiser_devices.append(
+                WiserDeviceSensor(data, device.get("id"), device.get("ProductType"))
+            )
 
     # Add cloud status sensor
     wiser_devices.append(WiserSystemCloudSensor(data, sensorType="Cloud Sensor"))
