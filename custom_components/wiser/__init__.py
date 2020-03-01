@@ -37,6 +37,8 @@ from .const import (
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
+    HUBNAME,
+    MANUFACTURER,
     NOTIFICATION_ID,
     NOTIFICATION_TITLE,
     VERSION,
@@ -191,8 +193,8 @@ class WiserHubHandle:
             config_entry_id=self._config_entry.entry_id,
             connections={(CONNECTION_NETWORK_MAC, self.wiserhub.getMACAddress())},
             identifiers={(DOMAIN, self.unique_id)},
-            manufacturer="Drayton Wiser",
-            name="Wiser Heat Hub",
+            manufacturer=MANUFACTURER,
+            name=HUBNAME,
             model=self.wiserhub.getDevice(0).get("ProductType"),
             sw_version=self.wiserhub.getDevice(0).get("ActiveFirmwareVersion")
         )

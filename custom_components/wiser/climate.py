@@ -28,7 +28,7 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
-from .const import _LOGGER, DOMAIN
+from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM
 
 from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
 
@@ -305,8 +305,8 @@ class WiserRoom(ClimateDevice):
         return {
             "name": self.name,
             "identifiers": {(DOMAIN, self.unique_id)},
-            "manufacturer": "Drayton Wiser",
-            "model": "Room",
+            "manufacturer": MANUFACTURER,
+            "model": ROOM.title(),
         }
 
     @property

@@ -214,9 +214,22 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input=user_input)
 
     async def async_step_unignore(self, user_input):
-        unique_id = user_input["unique_id"]
-        await self.async_set_unique_id(unique_id)
+        #unique_id = user_input["unique_id"]
+        #await self.async_set_unique_id(unique_id)
     
         # TODO: Discover devices and find the one that matches the unique ID.
     
-        return await self.async_step_zeroconf(user_input)
+        #return await self.async_step_zeroconf(user_input)
+        data = self.discovery_schema or {
+                    vol.Required(CONF_HOST): str,
+                    vol.Required(CONF_PASSWORD): str,
+                    vol.Required(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): int,
+                    vol.Required(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): int,
+                }
+
+        return self.async_show_form(
+            step_id="user",
+            description_placeholders=self.device_config,
+            data_schema=vol.Schema(data),
+            errors=errors,
+        )

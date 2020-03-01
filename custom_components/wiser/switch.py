@@ -10,7 +10,7 @@ from homeassistant.const import (
 from homeassistant.core import callback
 
 
-from .const import _LOGGER, DOMAIN
+from .const import _LOGGER, DOMAIN, MANUFACTURER
 
 
 ATTR_PLUG_MODE="plug_mode"
@@ -212,7 +212,7 @@ class WiserSmartPlug(SwitchDevice):
         return {
             "name": self.plug_name,
             "identifiers": {(DOMAIN, identifier)},
-            "manufacturer": "Drayton Wiser",
+            "manufacturer": MANUFACTURER,
             "model": model,
         }
     
