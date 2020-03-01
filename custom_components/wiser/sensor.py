@@ -36,12 +36,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             wiser_devices.append(
                 WiserDeviceSensor(data, device.get("id"), device.get("ProductType"))
             )
+
             # Add battery sensors
             if device.get("BatteryVoltage"):
                 wiser_devices.append(
                     WiserBatterySensor(data, device.get("id"), sensorType="Battery")
                 )
-        
+
     # Add cloud status sensor
     wiser_devices.append(WiserSystemCloudSensor(data, sensorType="Cloud Sensor"))
     # Add operation sensor

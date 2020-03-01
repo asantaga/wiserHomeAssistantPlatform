@@ -42,16 +42,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_switches = [
         WiserSwitch(hass, data, switchType, hubKey)  for switchType, hubKey in WISER_SWITCHES.items()
     ]
-    
     async_add_entities(wiser_switches)
-    
+
     # Add SmartPlugs (if any)
     if data.wiserhub.getSmartPlugs() is not None:
         wiser_smart_plugs = [
             WiserSmartPlug(hass, data, plug.get("id"), plug.get("Name")) for plug in data.wiserhub.getSmartPlugs()
         ]
         async_add_entities(wiser_smart_plugs)
-    
 
     @callback
     def set_smartplug_mode(service):
