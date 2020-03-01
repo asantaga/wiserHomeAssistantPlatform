@@ -93,7 +93,7 @@ COPY_SCHEDULE_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device"""
     data = hass.data[DOMAIN]
 
@@ -294,6 +294,20 @@ class WiserRoom(ClimateDevice):
                 return "mdi:radiator-off"
             else:
                 return "mdi:radiator-disabled"
+                
+    @property
+    def unique_id(self):
+        return "WiserRoom-{}".format(self.room_id)
+                
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": self.name,
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "manufacturer": "Drayton Wiser",
+            "model": "Room",
+        }
 
     @property
     def hvac_mode(self):

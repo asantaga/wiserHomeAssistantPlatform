@@ -15,21 +15,25 @@ from datetime import timedelta
 from wiserHeatingAPI.wiserHub import wiserHub, TEMP_MINIMUM, TEMP_MAXIMUM
 import voluptuous as vol
 
+from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
     CONF_HOST,
     CONF_MINIMUM,
+    CONF_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.util import Throttle
 
 from .const import (
     _LOGGER,
     CONF_BOOST_TEMP,
     CONF_BOOST_TEMP_TIME,
+    DATA_WISER_CONFIG,
     DOMAIN,
     NOTIFICATION_ID,
     NOTIFICATION_TITLE,
@@ -50,23 +54,41 @@ PLATFORM_SCHEMA = vol.Schema(
     }
 )
 
-
 async def async_setup(hass, config):
+    """
+    Wiser uses config flow for configuration.
+    But, a "wiser:" entry in configuration.yaml will trigger an import flow
+    if a config entry doesn't already exist. If it exists, the import
+    flow will attempt to import it and create a config entry, to assist users
+    migrating from the old wiser component. Otherwise, the user will have to
+    continue setting up the integration via the config flow.
+    """
+    hass.data[DATA_WISER_CONFIG] = config.get(DOMAIN, {})
 
-    host = config[DOMAIN][0][CONF_HOST]
-    secret = config[DOMAIN][0][CONF_PASSWORD]
-    scan_interval = config[DOMAIN][0][CONF_SCAN_INTERVAL]
+    if not hass.config_entries.async_entries(DOMAIN) and hass.data[DATA_WISER_CONFIG]:
+        # No config entry exists and configuration.yaml config exists, trigger the import flow.
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data = hass.data[DATA_WISER_CONFIG]
+            )
+        )
 
-    if scan_interval > timedelta(0):
-        MIN_TIME_BETWEEN_UPDATES = scan_interval
+    return True
+
+
+async def async_setup_entry(hass, config_entry):
+
+    """Set up the Wiser component."""
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
 
     _LOGGER.info(
         "Wiser setup with Hub IP =  {} and scan interval of {}".format(
-            host, MIN_TIME_BETWEEN_UPDATES
+            config_entry.data[CONF_HOST], MIN_TIME_BETWEEN_UPDATES
         )
     )
 
-    data = WiserHubHandle(hass, config, host, secret)
+    data = WiserHubHandle(hass, config_entry, config_entry.data[CONF_HOST], config_entry.data[CONF_PASSWORD])
 
     @callback
     def retryWiserHubSetup():
@@ -83,7 +105,8 @@ async def async_setup(hass, config):
                 hass.data[DOMAIN] = data
             
                 for component in WISER_PLATFORMS:
-                    hass.async_create_task(async_load_platform(hass, component, DOMAIN, {}, config))
+                    hass.async_create_task(
+                         hass.config_entries.async_forward_entry_setup(config_entry, component))
             
                 _LOGGER.info("Wiser Component Setup Completed")
                 return True
@@ -91,6 +114,9 @@ async def async_setup(hass, config):
                 await scheduleWiserHubSetup()
                 return True
         except (asyncio.TimeoutError) as ex:
+            await scheduleWiserHubSetup()
+            return True
+        except WiserHubTimeoutException:
             await scheduleWiserHubSetup()
             return True
     
@@ -102,22 +128,28 @@ async def async_setup(hass, config):
         return
         
     hass.async_create_task(wiserHubSetup())
+    await data.async_update_device_registry()
     return True
+    
+async def async_unload_entry(hass, config_entry):
+    """Unload a config entry."""
+    for component in WISER_PLATFORMS:
+        hass.async_create_task(
+             hass.config_entries.async_forward_entry_unload(config_entry, component))
         
 
-
-
 class WiserHubHandle:
-    def __init__(self, hass, config, ip, secret):
+    def __init__(self, hass, config_entry, ip, secret):
         self._hass = hass
-        self._config = config
+        self._config_entry = config_entry
+        self._name = config_entry.data[CONF_NAME]
         self.ip = ip
         self.secret = secret
         self.wiserhub = wiserHub(self.ip, self.secret)
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
-        self.boost_temp = self._config[DOMAIN][0][CONF_BOOST_TEMP]
-        self.boost_time = self._config[DOMAIN][0][CONF_BOOST_TEMP_TIME]
+        self.boost_temp = config_entry[CONF_BOOST_TEMP]
+        self.boost_time = config_entry[CONF_BOOST_TEMP_TIME]
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -143,6 +175,25 @@ class WiserHubHandle:
                 notification_id=NOTIFICATION_ID,
             )
             return False
+        except WiserHubTimeoutException:
+            pass
+            
+    @property
+    def unique_id(self):
+        return self._name
+            
+    async def async_update_device_registry(self):
+        """Update device registry."""
+        device_registry = await self._hass.helpers.device_registry.async_get_registry()
+        device_registry.async_get_or_create(
+            config_entry_id=self._config_entry.entry_id,
+            connections={(CONNECTION_NETWORK_MAC, self.wiserhub.getMACAddress())},
+            identifiers={(DOMAIN, self.unique_id)},
+            manufacturer="Drayton Wiser",
+            name="Wiser Heat Hub",
+            model=self.wiserhub.getDevice(0).get("ProductType"),
+            sw_version=self.wiserhub.getDevice(0).get("ActiveFirmwareVersion")
+        )
 
     async def set_away_mode(self, away, away_temperature):
         mode = "AWAY" if away else "HOME"
@@ -161,7 +212,7 @@ class WiserHubHandle:
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
         _LOGGER.debug(
-            "Setting {} system switch to {}.".format(switch, "on" if mode else "off")
+            "Setting {} system switch to {}."..format(switch, str(e)))
         )
         try:
             self.wiserhub.setSystemSwitch(switch, mode)
