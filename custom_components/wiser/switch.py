@@ -14,7 +14,11 @@ from .const import _LOGGER, DOMAIN
 
 
 ATTR_PLUG_MODE="plug_mode"
+ATTR_HOTWATER_MODE="hotwater_mode"
+
 SERVICE_SET_SMARTPLUG_MODE="set_smartplug_mode"
+SERVICE_SET_HOTWATER_MODE="set_hotwater_mode"
+
 
 SET_PLUG_MODE_SCHEMA = vol.Schema(
     {
@@ -23,7 +27,14 @@ SET_PLUG_MODE_SCHEMA = vol.Schema(
     }
 )
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+SET_HOTWATER_MODE_SCHEMA = vol.Schema(
+    {
+
+        vol.Required(ATTR_HOTWATER_MODE, default="auto"): vol.Coerce(str),
+    }
+)
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add the Wiser System Switch entities"""
     data = hass.data[DOMAIN]
 
@@ -54,8 +65,20 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             smart_plug.schedule_update_ha_state(True)
             break
 
+    @callback
+    def set_hotwater_mode(service):
+        hotwater_mode = service.data[ATTR_HOTWATER_MODE]
+        hass.async_create_task(
+            data.set_hotwater_mode(hotwater_mode)
+        )
+
+
+    """ Register Services """
     hass.services.async_register(
         DOMAIN, SERVICE_SET_SMARTPLUG_MODE, set_smartplug_mode,schema=SET_PLUG_MODE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_HOTWATER_MODE, set_hotwater_mode,schema=SET_HOTWATER_MODE_SCHEMA,
     )
     return True
 
@@ -93,7 +116,24 @@ class WiserSwitch(SwitchDevice):
     def name(self):
         """Return the name of the Device """
         return "Wiser " + self.switch_type
-
+    
+    @property
+    def unique_id(self):
+        return "{}-{}".format(self.switch_type, self.name)
+        
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        identifier = None
+        model = None
+        
+        identifier = self.data.unique_id
+        model = self.data.wiserhub.getDevice(0).get("ProductType")
+        
+        return {
+            "identifiers": {(DOMAIN, identifier)},
+        }
+    
     @property
     def should_poll(self):
         """Return the polling state."""
@@ -108,6 +148,7 @@ class WiserSwitch(SwitchDevice):
             return status and status.lower() == "away"
         else:
             return status
+    
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
@@ -151,6 +192,27 @@ class WiserSmartPlug(SwitchDevice):
         for plug in smartPlugs:
             if plug.get("id") == self.smart_plug_id:
                 self._is_on = True if plug.get("OutputState") == "On" else False
+                
+    @property
+    def unique_id(self):
+        return "{}-{}".format(self.plug_name, self.smart_plug_id)
+        
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        identifier = None
+        model = None
+        
+        identifier = self.unique_id
+        model = self.data.wiserhub.getDevice(self.smart_plug_id).get("ModelIdentifier")
+        
+        return {
+            "name": self.plug_name,
+            "identifiers": {(DOMAIN, identifier)},
+            "manufacturer": "Drayton Wiser",
+            "model": model,
+        }
+    
                 
     @property
     def name(self):
