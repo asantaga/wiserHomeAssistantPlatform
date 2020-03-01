@@ -148,8 +148,8 @@ class WiserHubHandle:
         self.wiserhub = wiserHub(self.ip, self.secret)
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
-        self.boost_temp = 2 #self._config[DOMAIN][0][CONF_BOOST_TEMP]
-        self.boost_time = 30 #self._config[DOMAIN][0][CONF_BOOST_TEMP_TIME]
+        self.boost_temp = config_entry[CONF_BOOST_TEMP]
+        self.boost_time = config_entry[CONF_BOOST_TEMP_TIME]
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):

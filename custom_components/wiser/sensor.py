@@ -30,18 +30,18 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     data = hass.data[DOMAIN]  # Get Handler
     wiser_devices = []
 
-    # Add device sensors
-    for device in data.wiserhub.getDevices():
-        wiser_devices.append(
-            WiserDeviceSensor(data, device.get("id"), device.get("ProductType"))
-        )
-        # Add battery sensors
-        if device.get("BatteryVoltage"):
+    # Add device sensors, only if there are some
+    if data.wiserhub.getDevices() is not None:
+        for device in data.wiserhub.getDevices():
             wiser_devices.append(
-                WiserBatterySensor(data, device.get("id"), sensorType="Battery")
+                WiserDeviceSensor(data, device.get("id"), device.get("ProductType"))
             )
+            # Add battery sensors
+            if device.get("BatteryVoltage"):
+                wiser_devices.append(
+                    WiserBatterySensor(data, device.get("id"), sensorType="Battery")
+                )
         
-
     # Add cloud status sensor
     wiser_devices.append(WiserSystemCloudSensor(data, sensorType="Cloud Sensor"))
     # Add operation sensor
