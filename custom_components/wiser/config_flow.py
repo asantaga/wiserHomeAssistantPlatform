@@ -15,7 +15,9 @@ from .const import (
 from wiserHeatingAPI.wiserHub import (
     wiserHub,
     WiserHubAuthenticationException,
-    WiserHubTimeoutException
+    WiserHubTimeoutException,
+    WiserHubDataNull,
+    WiserRESTException
     )
 
 
@@ -105,7 +107,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="auth_failure")
             except WiserHubTimeoutException:
                 return self.async_abort(reason="timeout_error")
-            except BaseException:
+            except (WiserRESTException, WiserHubDataNull) as ex:
                 return self.async_abort(reason="not_successful")
 
         data = self.discovery_schema or {
