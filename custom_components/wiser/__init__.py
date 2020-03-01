@@ -212,7 +212,7 @@ class WiserHubHandle:
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
         _LOGGER.debug(
-            "Setting {} system switch to {}.".format(switch, "on" if mode else "off")
+            "Setting {} system switch to {}."..format(switch, str(e)))
         )
         try:
             self.wiserhub.setSystemSwitch(switch, mode)

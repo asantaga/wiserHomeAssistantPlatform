@@ -1,25 +1,23 @@
 boost_heating:
-  description: "Set the boost mode ON defining the period of time and the desired target temperature
-  or temperature increase delta for the boost.
-  Setting the temperature delta overrides any target temperature."
+  description: "Set the boost mode ON defining the period of time and the desired target temperature or temperature increase delta for the boost.  Setting the temperature delta overrides any target temperature."
   fields:
     entity_id:
       {
-        description: Enter the entity_id for the room required to set the boost mode.,
+        description: "Enter the entity_id for the room required to set the boost mode.",
         example: "climate.wiser_lounge",
       }
     time_period:
-      { description: Set the time period for the boost in minutes., 
+      { description: "Set the time period for the boost in minutes.",
         example: 60
       }
     temperature:
       {
-        description: Set the target temperature for the boost period.,
+        description: "Set the target temperature for the boost period.",
         example: "20.5",
       }
     temperature_delta:
       {
-        description: Set the temperature increase for the boost period.,
+        description: "Set the temperature increase for the boost period.",
         example: "2"
       }
 get_schedule:
@@ -27,11 +25,11 @@ get_schedule:
   fields:
     entity_id:
       {
-        description: Enter the entity_id for the room to read the schedule.,
+        description: "Enter the entity_id for the room to read the schedule.",
         example: "climate.wiser_lounge",
       }
     filename:
-      { description: The filename to write out the yaml., 
+      { description: "The filename to write out the yaml.",
         example: schedule1.yaml  
       }
 set_schedule:
@@ -39,11 +37,11 @@ set_schedule:
   fields:
     entity_id:
       {
-        description: Enter the entity_id for the room to set the schedule.,
+        description: "Enter the entity_id for the room to set the schedule.",
         example: "climate.wiser_lounge",
       }
     filename:
-      { description: The filename to read the yaml schedule from., 
+      { description: "The filename to read the yaml schedule from.",
         example: schedules/schedule1.yaml  
       }
 copy_schedule:
@@ -51,12 +49,12 @@ copy_schedule:
   fields:
     entity_id:
       {
-        description: Enter the entity_id for the room to copy the schedule from.,
+        description: "Enter the entity_id for the room to copy the schedule from.",
         example: "climate.wiser_lounge",
       }
     to_entity_id:
       {
-        description: Enter the entity_id for the room to copy the schedule to.,
+        description: "Enter the entity_id for the room to copy the schedule to.",
         example: "climate.wiser_kitchen",
       }
 set_smartplug_mode:
@@ -64,11 +62,19 @@ set_smartplug_mode:
   fields:
     entity_id:
       {
-        description: Enter the entity_id for the smartplug.,
+        description: "Enter the entity_id for the smartplug.",
         example: "switch.smartplug",
       }
     plug_mode:
       {
-        description: Enter the mode Auto,Manual.,
+        description: "Enter the mode Auto,Manual.",
         example: "Auto",
+      }
+set_hotwater_mode:
+  description: "Sets the hot water mode"
+  fields:
+    hotwater_mode:
+      {
+        description: "Enter the mode can be on , off or auto.",
+        example: "auto",
       }
