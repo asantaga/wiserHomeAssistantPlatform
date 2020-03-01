@@ -34,6 +34,8 @@ from .const import (
     CONF_BOOST_TEMP,
     CONF_BOOST_TEMP_TIME,
     DATA_WISER_CONFIG,
+    DEFAULT_BOOST_TEMP,
+    DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
     NOTIFICATION_ID,
     NOTIFICATION_TITLE,
@@ -148,8 +150,8 @@ class WiserHubHandle:
         self.wiserhub = wiserHub(self.ip, self.secret)
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
-        self.boost_temp = config_entry[CONF_BOOST_TEMP]
-        self.boost_time = config_entry[CONF_BOOST_TEMP_TIME]
+        self.boost_temp = config_entry.data[CONF_BOOST_TEMP] or DEFAULT_BOOST_TEMP
+        self.boost_time = config_entry.data[CONF_BOOST_TEMP_TIME] or DEFAULT_BOOST_TEMP_TIME
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -212,7 +214,7 @@ class WiserHubHandle:
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
         _LOGGER.debug(
-            "Setting {} system switch to {}."..format(switch, str(e)))
+            "Setting {} system switch to {}.".format(switch, str(e))
         )
         try:
             self.wiserhub.setSystemSwitch(switch, mode)
