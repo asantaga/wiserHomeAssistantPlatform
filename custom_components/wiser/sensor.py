@@ -15,14 +15,20 @@ from homeassistant.const import (
     ATTR_ATTRIBUTION,
     ATTR_BATTERY_LEVEL,
     ATTR_VOLTAGE,
-    DEVICE_CLASS_BATTERY,
     CONF_ENTITY_NAMESPACE,
+    DEVICE_CLASS_BATTERY,
     STATE_UNKNOWN,
 )
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.icon import icon_for_battery_level
 
-from .const import _LOGGER, BATTERY_FULL, MIN_BATTERY_LEVEL, DOMAIN, SIGNAL_STRENGTH_ICONS
+from .const import (
+    _LOGGER,
+    BATTERY_FULL,
+    DOMAIN,
+    MIN_BATTERY_LEVEL,
+    SIGNAL_STRENGTH_ICONS,
+)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -83,33 +89,32 @@ class WiserSensor(Entity):
         """Return the state of the sensor."""
         _LOGGER.debug("{} device state requested".format(self.name))
         return self._state
-        
+
     @property
     def unique_id(self):
         return "{}-{}".format(self._sensor_type, self._deviceId)
-        
+
 
 class WiserBatterySensor(WiserSensor):
     """Definition of a battery sensor for wiser iTRVs and RoomStats"""
-    
+
     def __init__(self, data, device_id=0, sensorType=""):
         super().__init__(data, device_id, sensorType)
         self._device_name = self.get_device_name()
         _LOGGER.info("{} device init".format(self._device_name))
-        
+
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await super().async_update()
-        
-        #Set battery percentage
-        batt_level = self.data.wiserhub.getDevice(self._deviceId).get(
-            "BatteryVoltage"
+
+        # Set battery percentage
+        batt_level = self.data.wiserhub.getDevice(self._deviceId).get("BatteryVoltage")
+
+        batt_percent = (batt_level - MIN_BATTERY_LEVEL) / (
+            BATTERY_FULL - MIN_BATTERY_LEVEL
         )
-        
-        batt_percent = (batt_level - MIN_BATTERY_LEVEL) / (BATTERY_FULL - MIN_BATTERY_LEVEL)
         self._state = int(batt_percent * 100)
-        
-    
+
     @property
     def device_class(self):
         """Return the class of the sensor."""
@@ -119,24 +124,26 @@ class WiserBatterySensor(WiserSensor):
     def unit_of_measurement(self):
         """Return the unit of measurement of this entity."""
         return "%"
-        
+
     @property
     def device_state_attributes(self):
         """Return the state attributes of the battery."""
         attrs = {}
         device_data = self.data.wiserhub.getDevice(self._deviceId)
-        
-        attrs["battery_voltage"] = str(round(device_data.get("BatteryVoltage")/10,1)) + "v"
+
+        attrs["battery_voltage"] = (
+            str(round(device_data.get("BatteryVoltage") / 10, 1)) + "v"
+        )
         attrs["battery_level"] = device_data.get("BatteryLevel")
         attrs["serial_number"] = device_data.get("SerialNumber")
         return attrs
-        
+
     def get_device_name(self):
         """Return the name of the Device"""
         product_type = str(
             self.data.wiserhub.getDevice(self._deviceId).get("ProductType") or ""
         )
-        
+
         # Only iTRVs and RoomStats have batteries
         if product_type == "iTRV":
             # Multiple ones get automagically number _n by HA
@@ -163,19 +170,15 @@ class WiserBatterySensor(WiserSensor):
                 + "-"
                 + str(
                     self.data.wiserhub.getDevice(self._deviceId).get("SerialNumber")
-                    or ""
-                + " Battery Level"
+                    or "" + " Battery Level"
                 )
             )
-        
+
     @property
     def device_info(self):
         """Return device specific attributes."""
-        identifier = None
         product_type = self.data.wiserhub.getDevice(self._deviceId).get("ProductType")
-        return {
-                "identifiers": {(DOMAIN, "{}-{}".format(product_type, self._deviceId))}
-        }
+        return {"identifiers": {(DOMAIN, "{}-{}".format(product_type, self._deviceId))}}
 
 
 class WiserDeviceSensor(WiserSensor):
@@ -192,34 +195,36 @@ class WiserDeviceSensor(WiserSensor):
         self._state = self.data.wiserhub.getDevice(self._deviceId).get(
             "DisplayedSignalStrength"
         )
-        
+
     @property
     def device_info(self):
         """Return device specific attributes."""
         identifier = None
-        
-        if self.data.wiserhub.getDevice(self._deviceId).get("ProductType") == "Controller":
-            return {
-                "identifiers": {(DOMAIN, self.data.unique_id)}
-            }
-        elif self.data.wiserhub.getDevice(self._deviceId).get("ProductType") == "SmartPlug":
-            #combine sensor for smartplug with smartplug device
+
+        if (
+            self.data.wiserhub.getDevice(self._deviceId).get("ProductType")
+            == "Controller"
+        ):
+            return {"identifiers": {(DOMAIN, self.data.unique_id)}}
+        elif (
+            self.data.wiserhub.getDevice(self._deviceId).get("ProductType")
+            == "SmartPlug"
+        ):
+            # combine sensor for smartplug with smartplug device
             identifier = "{}-{}".format(
-                                self.data.wiserhub.getSmartPlug(self._deviceId)["Name"], 
-                                self._deviceId
-                                )
-                    
-            return {
-                "identifiers": {(DOMAIN, identifier)}
-            }
+                self.data.wiserhub.getSmartPlug(self._deviceId)["Name"], self._deviceId
+            )
+
+            return {"identifiers": {(DOMAIN, identifier)}}
         else:
             return {
                 "name": self.name,
                 "identifiers": {(DOMAIN, self.unique_id)},
                 "manufacturer": "Drayton Wiser",
-                "model": self.data.wiserhub.getDevice(self._deviceId).get("ProductType"),
+                "model": self.data.wiserhub.getDevice(self._deviceId).get(
+                    "ProductType"
+                ),
             }
-        
 
     def get_device_name(self):
         """Return the name of the Device"""
@@ -246,9 +251,7 @@ class WiserDeviceSensor(WiserSensor):
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
             )
         elif product_type == "SmartPlug":
-            return (
-                self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
-                )
+            return self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
         else:
             return (
                 "Wiser "
@@ -269,11 +272,10 @@ class WiserDeviceSensor(WiserSensor):
                     "DisplayedSignalStrength"
                 )
             ]
-        except KeyError as ex:
+        except KeyError:
             # Handle anything else as no signal
             return SIGNAL_STRENGTH_ICONS["NoSignal"]
-    
-    
+
     @property
     def device_state_attributes(self):
         _LOGGER.debug(
@@ -292,10 +294,10 @@ class WiserDeviceSensor(WiserSensor):
         attrs["serial_number"] = device_data.get("SerialNumber")
 
         """ if controller then add the zigbee data to the controller info """
-        if device_data.get("ProductType")=="Controller":
-            attrs["zigbee_channel"] = self.data.wiserhub.getHubData().get("Zigbee").get("NetworkChannel")
-
-
+        if device_data.get("ProductType") == "Controller":
+            attrs["zigbee_channel"] = (
+                self.data.wiserhub.getHubData().get("Zigbee").get("NetworkChannel")
+            )
 
         """ Network Data"""
         attrs["node_id"] = device_data.get("NodeId")
@@ -304,12 +306,11 @@ class WiserDeviceSensor(WiserSensor):
         if self._sensor_type in ["RoomStat", "iTRV"]:
             attrs["parent_node_id"] = device_data.get("ParentNodeId")
             """ hub route"""
-            if device_data.get("ParentNodeId")==0:
+            if device_data.get("ParentNodeId") == 0:
 
                 attrs["hub_route"] = "direct"
             else:
                 attrs["hub_route"] = "repeater"
-
 
         if device_data.get("ReceptionOfDevice") is not None:
             attrs["device_reception_RSSI"] = device_data.get("ReceptionOfDevice").get(
@@ -344,7 +345,6 @@ class WiserDeviceSensor(WiserSensor):
                 "MeasuredHumidity"
             )
 
-
         return attrs
 
 
@@ -363,7 +363,7 @@ class WiserSystemCircuitState(WiserSensor):
             self._state = self.data.wiserhub.getHeatingRelayStatus()
         else:
             self._state = self.data.wiserhub.getHotwaterRelayStatus()
-            
+
     @property
     def device_info(self):
         """Return device specific attributes."""
@@ -377,13 +377,6 @@ class WiserSystemCircuitState(WiserSensor):
             return "Wiser Heating"
         else:
             return "Wiser Hot Water"
-            
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "identifiers": {(DOMAIN, self.data.unique_id)},
-        }
 
     @property
     def icon(self):
@@ -428,7 +421,7 @@ class WiserSystemCloudSensor(WiserSensor):
         """Fetch new state data for the sensor."""
         await super().async_update()
         self._state = self.data.wiserhub.getSystem().get("CloudConnectionStatus")
-        
+
     @property
     def device_info(self):
         """Return device specific attributes."""
@@ -468,7 +461,7 @@ class WiserSystemOperationModeSensor(WiserSensor):
             "AwayModeSetPointLimit"
         )
         self._state = self.mode()
-        
+
     @property
     def device_info(self):
         """Return device specific attributes."""
@@ -500,7 +493,7 @@ class WiserSystemOperationModeSensor(WiserSensor):
         if self._away_temperature:
             try:
                 attrs["AwayModeTemperature"] = round(self._away_temperature / 10.0, 1)
-            except Exception as ex:
+            except Exception:
                 _LOGGER.debug(
                     "Exception" + " : Unexpected value for awayTemperature",
                     self._away_temperature,

@@ -11,9 +11,8 @@ import json
 
 # import time
 from datetime import timedelta
-
-from wiserHeatingAPI.wiserHub import wiserHub, TEMP_MINIMUM, TEMP_MAXIMUM
 import voluptuous as vol
+from wiserHeatingAPI.wiserHub import wiserHub, TEMP_MINIMUM, TEMP_MAXIMUM
 
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
@@ -117,7 +116,7 @@ async def async_setup_entry(hass, config_entry):
             else:
                 await scheduleWiserHubSetup()
                 return True
-        except (asyncio.TimeoutError) as ex:
+        except (asyncio.TimeoutError):
             await scheduleWiserHubSetup()
             return True
         except WiserHubTimeoutException:

@@ -7,24 +7,24 @@ DATA_WISER_CONFIG = "wiser_config"
 VERSION = "1.3.1"
 WISER_PLATFORMS = ["climate", "sensor", "switch"]
 
-#Battery
+# Battery
 BATTERY_FULL = 31
 MIN_BATTERY_LEVEL = 21
 
-#Hub
+# Hub
 HUBNAME = "Wiser Heat Hub"
 MANUFACTURER = "Drayton WIser"
 ROOM = "Room"
 
-#Notifications
+# Notifications
 NOTIFICATION_ID = "wiser_notification"
 NOTIFICATION_TITLE = "Wiser Component Setup"
 
-#Default Values
+# Default Values
 DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 
-#Custom Configs
+# Custom Configs
 CONF_BOOST_TEMP = "boost_temp"
 CONF_BOOST_TEMP_TIME = "boost_time"
 

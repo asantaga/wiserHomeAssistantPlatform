@@ -7,8 +7,9 @@ Angelosantagata@gmail.com
 """
 import asyncio
 import logging
-import homeassistant.helpers.config_validation as cv
+
 import voluptuous as vol
+
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.core import callback
 
@@ -25,6 +26,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     TEMP_CELSIUS,
 )
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
@@ -38,6 +40,9 @@ ATTR_TEMPERATURE_DELTA = "temperature_delta"
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 
+PRESET_AWAY = "Away Mode"
+PRESET_AWAY_BOOST = "Away Boost"
+PRESET_AWAY_OVERRIDE = "Away Override"
 PRESET_BOOST = "boost"
 PRESET_BOOST30 = "Boost 30m"
 PRESET_BOOST60 = "Boost 1h"
@@ -45,14 +50,12 @@ PRESET_BOOST120 = "Boost 2h"
 PRESET_BOOST180 = "Boost 3h"
 PRESET_BOOST_CANCEL = "Cancel Boost"
 PRESET_OVERRIDE = "Override"
-PRESET_AWAY = "Away Mode"
-PRESET_AWAY_BOOST = "Away Boost"
-PRESET_AWAY_OVERRIDE = "Away Override"
 
 SERVICE_BOOST_HEATING = "boost_heating"
+SERVICE_COPY_SCHEDULE = "copy_schedule"
 SERVICE_GET_SCHEDULE = "get_schedule"
 SERVICE_SET_SCHEDULE = "set_schedule"
-SERVICE_COPY_SCHEDULE = "copy_schedule"
+
 
 WISER_PRESET_TO_HASS = {
     "fromawaymode": PRESET_AWAY,
@@ -67,7 +70,6 @@ WISER_PRESET_TO_HASS = {
 }
 
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
-
 
 BOOST_HEATING_SCHEMA = vol.Schema(
     {

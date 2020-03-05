@@ -1,17 +1,12 @@
 import asyncio
-
-from homeassistant.components.switch import SwitchDevice
-from .const import _LOGGER, DOMAIN, WISER_SWITCHES
-import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-)
+
+import homeassistant.helpers.config_validation as cv
+from homeassistant.components.switch import SwitchDevice
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import callback
 
-
-from .const import _LOGGER, DOMAIN, MANUFACTURER
-
+from .const import _LOGGER, DOMAIN, MANUFACTURER, WISER_SWITCHES
 
 ATTR_PLUG_MODE="plug_mode"
 ATTR_HOTWATER_MODE="hotwater_mode"
@@ -53,7 +48,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     @callback
     def set_smartplug_mode(service):
-        device_found=False
         entity_id = service.data[ATTR_ENTITY_ID]
         smart_plug_mode = service.data[ATTR_PLUG_MODE]
         print("data = {} {}".format(entity_id,smart_plug_mode))
@@ -61,7 +55,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for smart_plug in wiser_smart_plugs:
 
             if smart_plug.entity_id == entity_id:
-                device_found=True
                 hass.async_create_task(
                     smart_plug.set_smartplug_mode(smart_plug_mode)
                 )
@@ -85,13 +78,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
     return True
 
-"""
-Switch to set the status of the Wiser Operation Mode (Away/Normal)
-"""
-
-
 
 class WiserSwitch(SwitchDevice):
+    """
+    Switch to set the status of the Wiser Operation Mode (Away/Normal)
+    """
     def __init__(self, hass, data, switchType, hubKey):
         """Initialize the sensor."""
         _LOGGER.info("Wiser {} Switch Init".format(switchType))
@@ -127,11 +118,7 @@ class WiserSwitch(SwitchDevice):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        identifier = None
-        model = None
-        
         identifier = self.data.unique_id
-        model = self.data.wiserhub.getDevice(0).get("ProductType")
         
         return {
             "identifiers": {(DOMAIN, identifier)},
@@ -264,6 +251,3 @@ class WiserSmartPlug(SwitchDevice):
         )
         self.data.wiserhub.setSmartPlugMode(self.smart_plug_id,plug_mode)
         self._force_update = True
-
-
-
