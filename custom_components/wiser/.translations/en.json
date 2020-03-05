@@ -13,8 +13,8 @@
         "step": {
             "user": {
                 "data": {
-                    "boost_time": "Defualt Boost Duration",
                     "boost_temp": "Default Boost Temperature",
+                    "boost_time": "Defualt Boost Duration",
                     "host": "IP Address",
                     "password": "Secret Key"
                 },
