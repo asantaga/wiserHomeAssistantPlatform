@@ -1,6 +1,14 @@
-# Wiser Home Assistant Platform (v1.9)
+# Wiser Home Assistant Platform (v2.0 DEV )
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
+
+
+
+For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. 
+
+if you want bleeding edge then checkout the `DEV`  branch, however you will need to use the **Manual Code Installation** (described below)
+
+
 
 ## Functionality 
 
@@ -307,6 +315,10 @@ For each battery driven device sensor the following attributes are available `ba
 An obvious ideal candidate for a Home Assistant automation to remind you to change the batteries :-)
 
 Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr). 
+
+# Community Recipes
+
+I've been totally amazed at the community which has sprung up contributing and supporting this component.  The [recipes](Recipes.md) following page contains some community contributed ideas / YAML files for Home Assistant.
 
 
 
