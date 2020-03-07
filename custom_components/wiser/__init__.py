@@ -12,7 +12,14 @@ import json
 # import time
 from datetime import timedelta
 import voluptuous as vol
-from wiserHeatingAPI.wiserHub import wiserHub, TEMP_MINIMUM, TEMP_MAXIMUM
+from wiserHeatingAPI.wiserHub import (
+    wiserHub, 
+    TEMP_MINIMUM, 
+    TEMP_MAXIMUM,
+    WiserHubTimeoutException,
+    WiserHubAuthenticationException,
+    WiserRESTException
+)
 
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
@@ -215,7 +222,7 @@ class WiserHubHandle:
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
         _LOGGER.debug(
-            "Setting {} system switch to {}.".format(switch, str(e))
+            "Setting {} system switch to {}.".format(switch, mode)
         )
         try:
             self.wiserhub.setSystemSwitch(switch, mode)
