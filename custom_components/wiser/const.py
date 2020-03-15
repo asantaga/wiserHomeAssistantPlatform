@@ -5,7 +5,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 VERSION = "1.3.1"
-WISER_PLATFORMS = ["climate", "sensor", "switch"]
+WISER_PLATFORMS = ["climate", "sensor", "switch", "water_heater"]
 
 # Battery
 BATTERY_FULL = 31
@@ -33,13 +33,22 @@ WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"]
 WEEKENDS = ["saturday", "sunday"]
 SPECIALDAYS = ["weekdays", "weekends"]
 
-WISER_SWITCHES = {
-    "Valve Protection": "ValveProtectionEnabled",
-    "Eco Mode": "EcoModeEnabled",
-    "Away Mode Affects Hot Water": "AwayModeAffectsHotWater",
-    "Comfort Mode": "ComfortModeEnabled",
-    "Away Mode": "OverrideType",
-}
+WISER_SWITCHES = [
+    {
+        "name": "Valve Protection",
+        "key": "ValveProtectionEnabled",
+        "icon": "mdi:snowflake-alert",
+    },
+    {"name": "Eco Mode", "key": "EcoModeEnabled", "icon": "mdi:earth"},
+    {
+        "name": "Away Mode Affects Hot Water",
+        "key": "AwayModeAffectsHotWater",
+        "icon": "mdi:water",
+    },
+    {"name": "Comfort Mode", "key": "ComfortModeEnabled", "icon": "mdi:sofa"},
+    {"name": "Away Mode", "key": "OverrideType", "icon": "mdi:beach"},
+]
+
 
 SIGNAL_STRENGTH_ICONS = {
     "NoSignal": "mdi:wifi-strength-alert-outline",
@@ -47,4 +56,13 @@ SIGNAL_STRENGTH_ICONS = {
     "Medium": "mdi:wifi-strength-2",
     "Good": "mdi:wifi-strength-3",
     "VeryGood": "mdi:wifi-strength-4",
+}
+
+WISER_SERVICES = {
+    "SERVICE_BOOST_HEATING": "boost_heating",
+    "SERVICE_COPY_SCHEDULE": "copy_schedule",
+    "SERVICE_GET_SCHEDULE": "get_schedule",
+    "SERVICE_SET_SCHEDULE": "set_schedule",
+    "SERVICE_SET_SMARTPLUG_MODE": "set_smartplug_mode",
+    "SERVICE_SET_HOTWATER_MODE": "set_hotwater_mode",
 }

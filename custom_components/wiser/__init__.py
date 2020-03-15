@@ -13,12 +13,12 @@ import json
 from datetime import timedelta
 import voluptuous as vol
 from wiserHeatingAPI.wiserHub import (
-    wiserHub, 
-    TEMP_MINIMUM, 
+    wiserHub,
+    TEMP_MINIMUM,
     TEMP_MAXIMUM,
     WiserHubTimeoutException,
     WiserHubAuthenticationException,
-    WiserRESTException
+    WiserRESTException,
 )
 
 from homeassistant.config_entries import SOURCE_IMPORT
@@ -49,7 +49,9 @@ from .const import (
     NOTIFICATION_TITLE,
     VERSION,
     WISER_PLATFORMS,
+    WISER_SERVICES,
 )
+
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
@@ -63,6 +65,7 @@ PLATFORM_SCHEMA = vol.Schema(
         vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int)),
     }
 )
+
 
 async def async_setup(hass, config):
     """
@@ -79,7 +82,9 @@ async def async_setup(hass, config):
         # No config entry exists and configuration.yaml config exists, trigger the import flow.
         hass.async_create_task(
             hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": SOURCE_IMPORT}, data = hass.data[DATA_WISER_CONFIG]
+                DOMAIN,
+                context={"source": SOURCE_IMPORT},
+                data=hass.data[DATA_WISER_CONFIG],
             )
         )
 
@@ -98,12 +103,17 @@ async def async_setup_entry(hass, config_entry):
         )
     )
 
-    data = WiserHubHandle(hass, config_entry, config_entry.data[CONF_HOST], config_entry.data[CONF_PASSWORD])
+    data = WiserHubHandle(
+        hass,
+        config_entry,
+        config_entry.data[CONF_HOST],
+        config_entry.data[CONF_PASSWORD],
+    )
 
     @callback
     def retryWiserHubSetup():
         hass.async_create_task(wiserHubSetup())
-    
+
     async def wiserHubSetup():
         _LOGGER.info("Initiating WiserHub connection")
         try:
@@ -111,13 +121,16 @@ async def async_setup_entry(hass, config_entry):
                 if data.wiserhub.getDevices is None:
                     _LOGGER.error("No Wiser devices found to set up")
                     return False
-            
+
                 hass.data[DOMAIN] = data
-            
-                for component in WISER_PLATFORMS:
+
+                for platform in WISER_PLATFORMS:
                     hass.async_create_task(
-                         hass.config_entries.async_forward_entry_setup(config_entry, component))
-            
+                        hass.config_entries.async_forward_entry_setup(
+                            config_entry, platform
+                        )
+                    )
+
                 _LOGGER.info("Wiser Component Setup Completed")
                 return True
             else:
@@ -129,24 +142,41 @@ async def async_setup_entry(hass, config_entry):
         except WiserHubTimeoutException:
             await scheduleWiserHubSetup()
             return True
-    
-    async def scheduleWiserHubSetup(interval = 30):
+
+    async def scheduleWiserHubSetup(interval=30):
         _LOGGER.error(
-            "Unable to connect to the Wiser Hub, retrying in {} seconds".format(interval)
+            "Unable to connect to the Wiser Hub, retrying in {} seconds".format(
+                interval
+            )
         )
         hass.loop.call_later(interval, retryWiserHubSetup)
         return
-        
+
     hass.async_create_task(wiserHubSetup())
     await data.async_update_device_registry()
     return True
-    
+
+
 async def async_unload_entry(hass, config_entry):
     """Unload a config entry."""
-    for component in WISER_PLATFORMS:
-        hass.async_create_task(
-             hass.config_entries.async_forward_entry_unload(config_entry, component))
-        
+
+    # Deregister services
+    _LOGGER.debug("Unregister Wiser Services")
+    for service in WISER_SERVICES:
+        hass.services.async_remove(DOMAIN, WISER_SERVICES[service])
+
+    _LOGGER.debug("Unloading Wiser Component")
+    tasks = []
+    for platform in WISER_PLATFORMS:
+        tasks.append(
+            hass.config_entries.async_forward_entry_unload(config_entry, platform)
+        )
+
+    unload_status = all(await asyncio.gather(*tasks))
+    if unload_status:
+        hass.data.pop(DOMAIN)
+    return unload_status
+
 
 class WiserHubHandle:
     def __init__(self, hass, config_entry, ip, secret):
@@ -159,7 +189,9 @@ class WiserHubHandle:
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.data[CONF_BOOST_TEMP] or DEFAULT_BOOST_TEMP
-        self.boost_time = config_entry.data[CONF_BOOST_TEMP_TIME] or DEFAULT_BOOST_TEMP_TIME
+        self.boost_time = (
+            config_entry.data[CONF_BOOST_TEMP_TIME] or DEFAULT_BOOST_TEMP_TIME
+        )
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -177,7 +209,7 @@ class WiserHubHandle:
                 "Data not JSON when getting Data from hub, "
                 + "did you enter the right URL? error {}".format(str(JSONex))
             )
-            self.hass.components.persistent_notification.create(
+            self._hass.components.persistent_notification.create(
                 "Error: {}"
                 + "<br /> You will need to restart Home Assistant "
                 + " after fixing.".format(JSONex),
@@ -187,11 +219,11 @@ class WiserHubHandle:
             return False
         except WiserHubTimeoutException:
             pass
-            
+
     @property
     def unique_id(self):
         return self._name
-            
+
     async def async_update_device_registry(self):
         """Update device registry."""
         device_registry = await self._hass.helpers.device_registry.async_get_registry()
@@ -202,7 +234,7 @@ class WiserHubHandle:
             manufacturer=MANUFACTURER,
             name=HUBNAME,
             model=self.wiserhub.getDevice(0).get("ProductType"),
-            sw_version=self.wiserhub.getDevice(0).get("ActiveFirmwareVersion")
+            sw_version=self.wiserhub.getDevice(0).get("ActiveFirmwareVersion"),
         )
 
     async def set_away_mode(self, away, away_temperature):
@@ -221,15 +253,12 @@ class WiserHubHandle:
     async def set_system_switch(self, switch, mode):
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
-        _LOGGER.debug(
-            "Setting {} system switch to {}.".format(switch, mode)
-        )
+        _LOGGER.debug("Setting {} system switch to {}.".format(switch, mode))
         try:
             self.wiserhub.setSystemSwitch(switch, mode)
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
-
 
     async def set_smart_plug_state(self, plug_id, state):
         """
@@ -240,17 +269,20 @@ class WiserHubHandle:
         """
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
-        _LOGGER.info(
-            "Setting SmartPlug {} to {} ".format(plug_id, state))
+        _LOGGER.info("Setting SmartPlug {} to {} ".format(plug_id, state))
 
         try:
-            self.wiserhub.setSmartPlugState(plug_id,state)
+            self.wiserhub.setSmartPlugState(plug_id, state)
             # Add small delay to allow hub to update status before refreshing
             await asyncio.sleep(0.5)
             await self.async_update(no_throttle=True)
 
         except BaseException as e:
-            _LOGGER.debug("Error setting SmartPlug {} to {}, error {}".format(plug_id, state, str(e)))
+            _LOGGER.debug(
+                "Error setting SmartPlug {} to {}, error {}".format(
+                    plug_id, state, str(e)
+                )
+            )
 
     async def set_hotwater_mode(self, hotwater_mode):
         """
@@ -258,8 +290,7 @@ class WiserHubHandle:
         """
         if self.wiserhub is None:
             self.wiserhub = wiserHub(self.ip, self.secret)
-        _LOGGER.info(
-            "Setting Hotwater to {} ".format(hotwater_mode))
+        _LOGGER.info("Setting Hotwater to {} ".format(hotwater_mode))
         # Add small delay to allow hub to update status before refreshing
         await asyncio.sleep(0.5)
         await self.async_update(no_throttle=True)
@@ -267,8 +298,10 @@ class WiserHubHandle:
         try:
             self.wiserhub.setHotwaterMode(hotwater_mode)
 
-
         except BaseException as e:
             _LOGGER.debug(
-                "Error setting Hotwater Mode to  {}, error {}".format(hotwater_mode,
-                                                                    str(e)))
+                "Error setting Hotwater Mode to  {}, error {}".format(
+                    hotwater_mode, str(e)
+                )
+            )
+

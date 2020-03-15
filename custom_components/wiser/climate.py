@@ -30,7 +30,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
-from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM
+from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM, WISER_SERVICES
 
 from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
 
@@ -50,12 +50,6 @@ PRESET_BOOST120 = "Boost 2h"
 PRESET_BOOST180 = "Boost 3h"
 PRESET_BOOST_CANCEL = "Cancel Boost"
 PRESET_OVERRIDE = "Override"
-
-SERVICE_BOOST_HEATING = "boost_heating"
-SERVICE_COPY_SCHEDULE = "copy_schedule"
-SERVICE_GET_SCHEDULE = "get_schedule"
-SERVICE_SET_SCHEDULE = "set_schedule"
-
 
 WISER_PRESET_TO_HASS = {
     "fromawaymode": PRESET_AWAY,
@@ -183,19 +177,31 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         break
 
     hass.services.async_register(
-        DOMAIN, SERVICE_BOOST_HEATING, heating_boost, schema=BOOST_HEATING_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_BOOST_HEATING"],
+        heating_boost,
+        schema=BOOST_HEATING_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_GET_SCHEDULE, get_schedule, schema=GET_SET_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_GET_SCHEDULE"],
+        get_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_SCHEDULE, set_schedule, schema=GET_SET_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SET_SCHEDULE"],
+        set_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_COPY_SCHEDULE, copy_schedule, schema=COPY_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
+        copy_schedule,
+        schema=COPY_SCHEDULE_SCHEMA,
     )
 
 
@@ -296,11 +302,11 @@ class WiserRoom(ClimateDevice):
                 return "mdi:radiator-off"
             else:
                 return "mdi:radiator-disabled"
-                
+
     @property
     def unique_id(self):
         return "WiserRoom-{}".format(self.room_id)
-                
+
     @property
     def device_info(self):
         """Return device specific attributes."""

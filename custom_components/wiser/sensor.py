@@ -44,9 +44,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
 
             # Add battery sensors
-            #Add based on device type due to battery values sometimes not showing
-            #until sometime after a hub restart
-            if device.get("ProductType") in ['iTRV','RoomStat']:
+            # Add based on device type due to battery values sometimes not showing
+            # until sometime after a hub restart
+            if device.get("ProductType") in ["iTRV", "RoomStat"]:
                 wiser_devices.append(
                     WiserBatterySensor(data, device.get("id"), sensorType="Battery")
                 )
@@ -103,20 +103,27 @@ class WiserBatterySensor(WiserSensor):
     def __init__(self, data, device_id=0, sensorType=""):
         super().__init__(data, device_id, sensorType)
         self._device_name = self.get_device_name()
+        self._battery_voltage = 0
+        self._battery_level = None
         _LOGGER.info("{} device init".format(self._device_name))
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await super().async_update()
 
-        # Set battery percentage
-        batt_percent = 0
-        batt_level = self.data.wiserhub.getDevice(self._deviceId).get("BatteryVoltage")
-        if batt_level:
-            batt_percent = (batt_level - MIN_BATTERY_LEVEL) / (
-                BATTERY_FULL - MIN_BATTERY_LEVEL
+        device = self.data.wiserhub.getDevice(self._deviceId)
+
+        # Set battery info
+        self._battery_level = device.get("BatteryLevel")
+        self._battery_voltage = device.get("BatteryVoltage")
+        if self._battery_voltage > 0:
+            self._state = int(
+                (
+                    (self._battery_voltage - MIN_BATTERY_LEVEL)
+                    / (BATTERY_FULL - MIN_BATTERY_LEVEL)
+                )
+                * 100
             )
-        self._state = int(batt_percent * 100)
 
     @property
     def device_class(self):
@@ -132,13 +139,11 @@ class WiserBatterySensor(WiserSensor):
     def device_state_attributes(self):
         """Return the state attributes of the battery."""
         attrs = {}
-        device_data = self.data.wiserhub.getDevice(self._deviceId)
-        if device_data.get("BatteryVoltage"):
-            attrs["battery_voltage"] = (
-                str(round(device_data.get("BatteryVoltage") / 10, 1)) + "v"
+        if self._battery_voltage > 0:
+            attrs["battery_voltage"] = str(self._battery_voltage / 10) + "v"
+            attrs[ATTR_BATTERY_LEVEL] = (
+                self.data.wiserhub.getDevice(self._deviceId).get("BatteryLevel") or None
             )
-        attrs["battery_level"] = device_data.get("BatteryLevel")
-        attrs["serial_number"] = device_data.get("SerialNumber")
         return attrs
 
     def get_device_name(self):
@@ -330,17 +335,6 @@ class WiserDeviceSensor(WiserSensor):
             attrs["device_reception_LQI"] = device_data.get(
                 "ReceptionOfController"
             ).get("Lqi")
-
-        """ Battery Data """
-        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get(
-            "BatteryVoltage"
-        ):
-            attrs["battery_voltage"] = device_data.get("BatteryVoltage")
-            attrs["battery_percent"] = int(
-                device_data.get("BatteryVoltage") / BATTERY_FULL * 100
-            )
-            attrs["battery_level"] = device_data.get("BatteryLevel")
-            attrs["serial_number"] = device_data.get("SerialNumber")
 
         """ Other """
         if self._sensor_type == "RoomStat":
