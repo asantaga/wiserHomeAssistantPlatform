@@ -8,7 +8,7 @@ boost_heating:
       }
     time_period:
       { description: "Set the time period for the boost in minutes.",
-        example: 60
+        example: "60",
       }
     temperature:
       {
@@ -18,7 +18,7 @@ boost_heating:
     temperature_delta:
       {
         description: "Set the temperature increase for the boost period.",
-        example: "2"
+        example: "2",
       }
 get_schedule:
   description: "Read the schedule from a roomId and write to an output file in yaml"
@@ -30,7 +30,7 @@ get_schedule:
       }
     filename:
       { description: "The filename to write out the yaml.",
-        example: schedule1.yaml  
+        example: "schedule1.yaml"  ,
       }
 set_schedule:
   description: "Read in the yaml schedule file and set the schedule in a room"
@@ -42,7 +42,7 @@ set_schedule:
       }
     filename:
       { description: "The filename to read the yaml schedule from.",
-        example: schedules/schedule1.yaml  
+        example: schedules/schedule1.yaml , 
       }
 copy_schedule:
   description: "Copy the schedule in a room to another room"
