@@ -304,4 +304,3 @@ class WiserHubHandle:
                     hotwater_mode, str(e)
                 )
             )
-

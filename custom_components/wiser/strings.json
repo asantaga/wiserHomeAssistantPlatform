@@ -10,8 +10,8 @@
                     "host": "IP Address",
                     "password": "Secret Key",
                     "boost_temp": "Default Boost Temperature",
-                    "boost_time": "Defualt Boost Duration"
-                }
+                    "boost_time": "Defualt Boost Duration",
+                },
             }
         },
         "abort": {
@@ -21,7 +21,7 @@
             "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
             "not_successful": "Unable to connect to the Wiser hub.",
             "not_wiser_device": "This device is currently not supported.",
-            "one_instance_only": "Only 1 instance of the wiser hub is supported.  Check in ignored devices."
-        }
+            "one_instance_only": "Only 1 instance of the wiser hub is supported.  Check in ignored devices.",
+        },
     }
 }
