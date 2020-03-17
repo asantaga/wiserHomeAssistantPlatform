@@ -14,6 +14,8 @@ if you want bleeding edge then checkout the `DEV`  branch, however you will need
 
 - Support for [Home Assistant Component Store](https://community.home-assistant.io/t/custom-component-hacs/121727)
 
+- Support for Native Home Assistant Configurations (no more editing YAML!)
+
 - Support for Wiser TRVs, Hub and SmartPlugs
 
 - **Climate platforms**
@@ -23,6 +25,7 @@ if you want bleeding edge then checkout the `DEV`  branch, however you will need
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
     - Displays icon if radiator is heating (heat flowing) or not
+    
 - **Service to set heating boost**
   
     - Services to get, set and copy heating schedules (See instructions below)**
@@ -131,11 +134,39 @@ Before you can use the component you need to find the HeatHub secret key, this i
 7. Find Your HEATHUB IP
     Using your router, or some other method, identify the IP address of your HeatHub. On many routers it usually identifies itself as the something like ``WiserHeatXXXXXX`` 
 
-8. Add references to Home Assistant `Configuration.yaml` file 
+8. Configure using Home Assistant Configuration Assistant "Set up new integration"
 
-Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
+    ![](docs/add_configuration_image.png)
+
+9. This will then show the config screen for Wiser Heat Hub, now configure it appropriately.
+
+    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image2.png)
+
+    ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
+
+    ```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
+
+    ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
+
+    
+
+    
+
+    
+
+10. When added, you should something like see this in integrations
+    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image3.png)
+
+11. Clicking on it should show you this and you can now add the devices to your Home Assistant Lovelace UI as you please
+     ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image4.png)
+
+     
+
+12. **Alternatively** you can also configure the integration using YAML. Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
+
 ```
-wiser:
+wi
+ser:
   host: <ENTER YOUR HEATHUB IP HERE>
   password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
   scan_interval: 300
@@ -143,14 +174,6 @@ wiser:
   boost_temp: 2
   boost_time: 30
 ```
-
-I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty but adjust as per your requirements.
-
-```minimum``` is the bottom minimum temperature to be recorded, the default is -5
-
-```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
-
-```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
 
 
