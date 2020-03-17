@@ -7,8 +7,9 @@ Angelosantagata@gmail.com
 """
 import asyncio
 import logging
-import homeassistant.helpers.config_validation as cv
+
 import voluptuous as vol
+
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.core import callback
 
@@ -25,10 +26,11 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     TEMP_CELSIUS,
 )
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
-from .const import _LOGGER, DOMAIN
+from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM, WISER_SERVICES
 
 from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
 
@@ -38,6 +40,9 @@ ATTR_TEMPERATURE_DELTA = "temperature_delta"
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 
+PRESET_AWAY = "Away Mode"
+PRESET_AWAY_BOOST = "Away Boost"
+PRESET_AWAY_OVERRIDE = "Away Override"
 PRESET_BOOST = "boost"
 PRESET_BOOST30 = "Boost 30m"
 PRESET_BOOST60 = "Boost 1h"
@@ -45,14 +50,6 @@ PRESET_BOOST120 = "Boost 2h"
 PRESET_BOOST180 = "Boost 3h"
 PRESET_BOOST_CANCEL = "Cancel Boost"
 PRESET_OVERRIDE = "Override"
-PRESET_AWAY = "Away Mode"
-PRESET_AWAY_BOOST = "Away Boost"
-PRESET_AWAY_OVERRIDE = "Away Override"
-
-SERVICE_BOOST_HEATING = "boost_heating"
-SERVICE_GET_SCHEDULE = "get_schedule"
-SERVICE_SET_SCHEDULE = "set_schedule"
-SERVICE_COPY_SCHEDULE = "copy_schedule"
 
 WISER_PRESET_TO_HASS = {
     "fromawaymode": PRESET_AWAY,
@@ -67,7 +64,6 @@ WISER_PRESET_TO_HASS = {
 }
 
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
-
 
 BOOST_HEATING_SCHEMA = vol.Schema(
     {
@@ -93,7 +89,7 @@ COPY_SCHEDULE_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device"""
     data = hass.data[DOMAIN]
 
@@ -181,19 +177,31 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                         break
 
     hass.services.async_register(
-        DOMAIN, SERVICE_BOOST_HEATING, heating_boost, schema=BOOST_HEATING_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_BOOST_HEATING"],
+        heating_boost,
+        schema=BOOST_HEATING_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_GET_SCHEDULE, get_schedule, schema=GET_SET_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_GET_SCHEDULE"],
+        get_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_SCHEDULE, set_schedule, schema=GET_SET_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SET_SCHEDULE"],
+        set_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(
-        DOMAIN, SERVICE_COPY_SCHEDULE, copy_schedule, schema=COPY_SCHEDULE_SCHEMA,
+        DOMAIN,
+        WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
+        copy_schedule,
+        schema=COPY_SCHEDULE_SCHEMA,
     )
 
 
@@ -294,6 +302,20 @@ class WiserRoom(ClimateDevice):
                 return "mdi:radiator-off"
             else:
                 return "mdi:radiator-disabled"
+
+    @property
+    def unique_id(self):
+        return "WiserRoom-{}".format(self.room_id)
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": self.name,
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "manufacturer": MANUFACTURER,
+            "model": ROOM.title(),
+        }
 
     @property
     def hvac_mode(self):

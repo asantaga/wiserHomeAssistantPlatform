@@ -23,7 +23,6 @@ def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
     # Iterate through each day
     for day, sched in scheduleData.items():
         if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
-            schedDay = {}
             # Iterate through setpoint key for each day
             for setpoint, times in sched.items():
                 if setpoint == "SetPoints":
@@ -43,7 +42,7 @@ def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
                                 if value < 0:
                                     value = "Off"
                                 else:
-                                    value = round(value / 10,1)
+                                    value = round(value / 10, 1)
                             tmp = {key: value}
                             schedTime.update(tmp)
                         schedSetpoints.append(schedTime.copy())
