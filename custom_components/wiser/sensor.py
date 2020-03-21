@@ -103,6 +103,7 @@ class WiserBatterySensor(WiserSensor):
     def __init__(self, data, device_id=0, sensorType=""):
         super().__init__(data, device_id, sensorType)
         self._device_name = self.get_device_name()
+        self._state = 0
         self._battery_voltage = 0
         self._battery_level = None
         _LOGGER.info("{} device init".format(self._device_name))
