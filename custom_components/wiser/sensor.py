@@ -103,7 +103,7 @@ class WiserBatterySensor(WiserSensor):
     def __init__(self, data, device_id=0, sensorType=""):
         super().__init__(data, device_id, sensorType)
         self._device_name = self.get_device_name()
-        # Set default state to -1 to show this value if battery info
+        # Set default state to unknown to show this value if battery info
         # cannot be read.
         self._state = "Unknown"
         self._battery_voltage = 0
