@@ -116,7 +116,7 @@ class WiserBatterySensor(WiserSensor):
         # Set battery info
         self._battery_level = device.get("BatteryLevel")
         self._battery_voltage = device.get("BatteryVoltage")
-        if self._battery_voltage > 0:
+        if self._battery_voltage and self._battery_voltage > 0:
             self._state = int(
                 (
                     (self._battery_voltage - MIN_BATTERY_LEVEL)
@@ -139,7 +139,7 @@ class WiserBatterySensor(WiserSensor):
     def device_state_attributes(self):
         """Return the state attributes of the battery."""
         attrs = {}
-        if self._battery_voltage > 0:
+        if self._battery_voltage and self._battery_voltage > 0:
             attrs["battery_voltage"] = str(self._battery_voltage / 10) + "v"
             attrs[ATTR_BATTERY_LEVEL] = (
                 self.data.wiserhub.getDevice(self._deviceId).get("BatteryLevel") or None
