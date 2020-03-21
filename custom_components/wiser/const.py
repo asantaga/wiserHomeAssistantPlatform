@@ -5,7 +5,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 VERSION = "1.3.1"
-WISER_PLATFORMS = ["climate", "sensor", "switch", "water_heater"]
+WISER_PLATFORMS = ["climate", "sensor", "switch"]
 
 # Battery
 BATTERY_FULL = 31
