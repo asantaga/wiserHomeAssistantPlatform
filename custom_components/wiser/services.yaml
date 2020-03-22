@@ -29,8 +29,8 @@ get_schedule:
         example: "climate.wiser_lounge",
       }
     filename:
-      { description: "The filename to write out the yaml.",
-        example: "schedule1.yaml"  ,
+      { description: "The filename to write out the yaml. See README.MD if running within a docker container.",
+        example: "schedule1.yaml",
       }
 set_schedule:
   description: "Read in the yaml schedule file and set the schedule in a room"

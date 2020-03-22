@@ -186,12 +186,16 @@ Use the service `wiser.get_schedule`
 This will require you to provide the entity ID of the wiser device and a file to copy this schedule to.
 It is recommended to create a directory in your config directory to store these.
 
+Note : If you are running HA within a docker container then the directory will be absolute to the container, if you have mapped the config directory to a local directory then all is good but the directory name given to the service must be a docker container address.
+
+E.g. if you specify the filename as `/config/schedule.yaml`then `get_schedule` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
+
 ### Setting a Schedule
 Use the service `wiser.set_schedule`
 
 This will require you to provide the entity ID of the wiser device and a file containing the schedule.
 
-A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the wiser.get_schedule service looks like below:
+A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the `wiser.get_schedule` service looks like below:
 ```
 Name: Dining Room
 Description: Schedule for Dining Room
@@ -315,7 +319,7 @@ Tuesday:
 ### Copying a Schedule
 Use the service `wiser.copy_schedule`
 
-This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy toand will copy the schedule between them.
+This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to and will copy the schedule between them.
 
 ## Network Topology
 
@@ -333,11 +337,11 @@ Each TRV sensor now has three special network related attributes
 
 ## Battery Values
 
-For each battery driven device sensor the following attributes are available `battery_voltage`, `battery_percentage` and `battery_level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or OneThird battery level. RoomStats battery levels can be lower.
+For each battery driven device sensor the following attributes are available `battery_voltage`, `battery_percentage` and `battery_level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or *OneThird* battery level. Given that RoomStats do not need to drive a valve, their battery levels can be lower.
 
 An obvious ideal candidate for a Home Assistant automation to remind you to change the batteries :-)
 
-Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr). 
+Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr) , just wait and the battery values will appear.
 
 # Community Recipes
 
