@@ -2,6 +2,8 @@
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
+Checkout `dev` branch for bleeding edge
+
 ## Functionality 
 
 - Support for [Home Assistant Component Store](https://community.home-assistant.io/t/custom-component-hacs/121727)
