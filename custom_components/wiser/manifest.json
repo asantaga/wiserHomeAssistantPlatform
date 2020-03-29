@@ -8,7 +8,7 @@
     "@asantaga"
   ],
   "requirements": [
-    "wiser-heating-api>=1.0.7"
+    "wiser-heating-api>=1.0.7.1"
   ],
   "zeroconf": [
     "_http._tcp.local."
