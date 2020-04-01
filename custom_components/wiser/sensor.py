@@ -172,7 +172,7 @@ class WiserBatterySensor(WiserSensor):
                 + product_type
                 + "-"
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
-                + "Battery Level"
+                + " Battery Level"
             )
         else:
             return (
