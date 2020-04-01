@@ -13,7 +13,7 @@ MIN_BATTERY_LEVEL = 21
 
 # Hub
 HUBNAME = "Wiser Heat Hub"
-MANUFACTURER = "Drayton WIser"
+MANUFACTURER = "Drayton Wiser"
 ROOM = "Room"
 
 # Notifications
@@ -39,7 +39,7 @@ WISER_SWITCHES = [
         "key": "ValveProtectionEnabled",
         "icon": "mdi:snowflake-alert",
     },
-    {"name": "Eco Mode", "key": "EcoModeEnabled", "icon": "mdi:earth"},
+    {"name": "Eco Mode", "key": "EcoModeEnabled", "icon": "mdi:leaf"},
     {
         "name": "Away Mode Affects Hot Water",
         "key": "AwayModeAffectsHotWater",
