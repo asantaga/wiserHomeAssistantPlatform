@@ -262,7 +262,7 @@ class WiserDeviceSensor(WiserSensor):
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
             )
         elif product_type == "SmartPlug":
-            return self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
+            return "Wiser "+self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
         else:
             return (
                 "Wiser "

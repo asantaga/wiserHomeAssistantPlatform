@@ -40,7 +40,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Add SmartPlugs (if any)
     if data.wiserhub.getSmartPlugs() is not None:
         wiser_smart_plugs = [
-            WiserSmartPlug(hass, data, plug.get("id"), plug.get("Name"))
+            WiserSmartPlug(hass, data, plug.get("id"), "Wiser {}".format(plug.get("Name")))
             for plug in data.wiserhub.getSmartPlugs()
         ]
         async_add_entities(wiser_smart_plugs)
