@@ -339,6 +339,11 @@ class WiserDeviceSensor(WiserSensor):
                 "ReceptionOfController"
             ).get("Lqi")
 
+        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get("BatteryVoltage"):
+            attrs["battery_voltage"] = device_data.get("BatteryVoltage")
+            attrs["battery_percent"] = int( device_data.get("BatteryVoltage") / BATTERY_FULL * 100)
+            attrs["battery_level"] = device_data.get("BatteryLevel")
+
         """ Other """
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self.data.wiserhub.getRoomStatData(self._deviceId).get(
