@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform (v2.1)
+# Wiser Home Assistant Platform (v2.2)
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
@@ -55,6 +55,7 @@ if you want bleeding edge then checkout the `DEV`  branch, however you will need
         - Also a service which allows you to modify the state of the hotwater 
     - Operation Mode Sensor (aka away sensor)
         - This sensor returns the away status of the heathub, being either `away` or `normal`. 
+    - Battery Sensors for all the battery devices
     
 - **Services**
 
@@ -358,6 +359,8 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 2.1
+    * Minor bug fixes and documentation fixes
 - 2.0
     * Now supports Home Assistant Config Flow (credit @msp1974)
     * Fix/error for when there is no smartplug present, also error if smartplug exists but offline

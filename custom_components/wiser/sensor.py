@@ -124,8 +124,7 @@ class WiserBatterySensor(WiserSensor):
                 (
                     (self._battery_voltage - MIN_BATTERY_LEVEL)
                     / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                )
-                * 100
+                ) * 100
             )
 
     @property
@@ -340,8 +339,17 @@ class WiserDeviceSensor(WiserSensor):
             ).get("Lqi")
 
         if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get("BatteryVoltage"):
-            attrs["battery_voltage"] = device_data.get("BatteryVoltage")
-            attrs["battery_percent"] = int( device_data.get("BatteryVoltage") / BATTERY_FULL * 100)
+            self._battery_level = device_data.get("BatteryLevel")
+            self._battery_voltage = device_data.get("BatteryVoltage")
+            if self._battery_voltage and self._battery_voltage > 0:
+                self._battery_percent = int(
+                    (
+                            (self._battery_voltage - MIN_BATTERY_LEVEL)
+                            / (BATTERY_FULL - MIN_BATTERY_LEVEL)
+                    ) * 100
+                )
+            attrs["battery_voltage"] = self._battery_voltage
+            attrs["battery_percent"] = self._battery_percent
             attrs["battery_level"] = device_data.get("BatteryLevel")
 
         """ Other """
