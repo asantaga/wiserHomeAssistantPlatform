@@ -1,7 +1,7 @@
 from datetime import datetime
 from .const import _LOGGER, WEEKDAYS, WEEKENDS, SPECIALDAYS
 
-SCHEDULETYPES = ["Heating","HotWater"]
+SCHEDULETYPES = ["Heating", "HotWater"]
 
 
 def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
@@ -19,7 +19,7 @@ def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
         scheduleOutput = {
             "Name": scheduleName,
             "Description": "Schedule for " + scheduleName,
-            "Type": scheduleData.get("Type"),
+            "Type": "Heating",
         }
     # Convert to human readable format for yaml
     # Iterate through each day
@@ -60,15 +60,8 @@ def convert_to_wiser_schedule(scheduleData: dict):
     Param: mode
     """
     # Convert to wiser format for setting schedules
-    # Validate schedule type and default to heating if missing
-    scheduleType = scheduleData["Type"]
-    
-    if scheduleType and scheduleType in SCHEDULETYPES:
-        scheduleOutput = {"Type" : scheduleType }
-    else:
-        scheduleOutput = {"Type": "Heating"}
-    
     # Iterate through each day
+    scheduleOutput = {"Type": "Heating"}
     for day, times in scheduleData.items():
         if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
             schedDay = {}
