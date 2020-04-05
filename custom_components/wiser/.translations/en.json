@@ -16,35 +16,26 @@
           "boost_temp": "Default Boost Temperature",
           "boost_time": "Default Boost Duration",
           "host": "IP Address",
-          "password": "Secret Key"
+          "password": "Secret Key",
+          "scan_interval": "Scan Interval"
         },
-        "flow_title": "Wiser Heat Hub: {name}",
-        "step": {
-            "user": {
-                "data": {
-                    "boost_temp": "Default Boost Temperature",
-                    "boost_time": "Default Boost Duration",
-                    "host": "IP Address",
-                    "password": "Secret Key",
-                    "scan_interval": "Scan Interval"
-                },
-                "description": "Please enter the ip address and secret key obtained from the hub.",
-                "title": "Wiser Heat Hub Setup"
-            }
-        },
-        "title": "Wiser Heat Hub"
+        "description": "Please enter the ip address and secret key obtained from the hub.",
+        "title": "Wiser Heat Hub Setup"
+      }
     },
-    "options": {
-        "step": {
-            "user": {
-                "data": {
-                    "boost_temp": "Default Boost Temperature",
-                    "boost_time": "Default Boost Duration",
-                    "scan_interval": "Scan Interval"
-                },
-                "description": "Amend Wiser parameters.",
-                "title": "Wiser Heat Hub Options"
-            }
-        }
+    "title": "Wiser Heat Hub"
+  },
+  "options": {
+    "step": {
+      "user": {
+        "data": {
+          "boost_temp": "Default Boost Temperature",
+          "boost_time": "Default Boost Duration",
+          "scan_interval": "Scan Interval"
+        },
+        "description": "Amend Wiser parameters.",
+        "title": "Wiser Heat Hub Options"
+      }
     }
+  }
 }
