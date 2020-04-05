@@ -23,6 +23,7 @@ NOTIFICATION_TITLE = "Wiser Component Setup"
 # Default Values
 DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
+DEFAULT_SCAN_INTERVAL = 30
 
 # Custom Configs
 CONF_BOOST_TEMP = "boost_temp"
