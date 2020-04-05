@@ -56,15 +56,22 @@ from .const import (
 
 # Set config values to default
 # These get set to config later
-MIN_TIME_BETWEEN_UPDATES = DEFAULT_SCAN_INTERVAL
+SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
 
 PLATFORM_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=0): cv.time_period,
-        vol.Optional(CONF_BOOST_TEMP, default=2): vol.All(vol.Coerce(int)),
-        vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int)),
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+            vol.Coerce(int)
+        ),
+        vol.Optional(CONF_MINIMUM, default=TEMP_MINIMUM): vol.All(vol.Coerce(int)),
+        vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): vol.All(
+            vol.Coerce(int)
+        ),
+        vol.Optional(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): vol.All(
+            vol.Coerce(int)
+        ),
     }
 )
 
@@ -95,19 +102,19 @@ async def async_setup(hass, config):
 
 async def async_setup_entry(hass, config_entry):
 
-    global MIN_TIME_BETWEEN_UPDATES
+    global SCAN_INTERVAL
 
     """Set up the Wiser component."""
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    MIN_TIME_BETWEEN_UPDATES = int(
+    SCAN_INTERVAL = int(
         config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     )
 
     _LOGGER.info(
         "Wiser setup with Hub IP =  {} and scan interval of {}".format(
-            config_entry.data[CONF_HOST], MIN_TIME_BETWEEN_UPDATES
+            config_entry.data[CONF_HOST], SCAN_INTERVAL
         )
     )
     config_entry.add_update_listener(update_listener)
@@ -189,14 +196,14 @@ async def async_unload_entry(hass, config_entry):
 
 async def update_listener(hass, config_entry):
     """Handle config update update."""
-    global MIN_TIME_BETWEEN_UPDATES
+    global SCAN_INTERVAL
 
-    MIN_TIME_BETWEEN_UPDATES = int(config_entry.data.get(CONF_SCAN_INTERVAL))
+    SCAN_INTERVAL = int(config_entry.data.get(CONF_SCAN_INTERVAL))
     _LOGGER.info(
         "Wiser config parameters changed. Boost temp = {}, Boost time = {}, scan interval = {}".format(
             config_entry.data[CONF_BOOST_TEMP],
             config_entry.data[CONF_BOOST_TEMP_TIME],
-            MIN_TIME_BETWEEN_UPDATES,
+            SCAN_INTERVAL,
         )
     )
 
@@ -221,12 +228,12 @@ class WiserHubHandle:
         # Only update after min time
         if (
             no_throttle
-            or datetime.now().timestamp() >= self.last_update + MIN_TIME_BETWEEN_UPDATES
+            or datetime.now().timestamp() >= self.last_update + SCAN_INTERVAL
         ):
             self.last_update = datetime.now().timestamp()
             _LOGGER.info(
                 "**Update of Wiser Hub data requested on {} interval**".format(
-                    MIN_TIME_BETWEEN_UPDATES
+                    SCAN_INTERVAL
                 )
             )
             try:
