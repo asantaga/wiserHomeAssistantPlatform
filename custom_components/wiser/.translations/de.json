@@ -16,12 +16,26 @@
           "boost_temp": "Boost Temperatur",
           "boost_time": "Boost Dauer",
           "host": "IP Adresse",
-          "password": "API Schl\u00fcssel"
+          "password": "API Schl\u00fcssel",
+          "scan_interval": "Scan Intervall"
         },
         "description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
         "title": "Wiser Heat Hub Setup"
       }
     },
     "title": "Wiser Heat Hub"
+  },
+  "options": {
+    "step": {
+      "user": {
+        "data": {
+          "boost_temp": "Boost Temperatur",
+          "boost_time": "Boost Dauer",
+          "scan_interval": "Scan Intervall"
+        },
+        "description": "Amend Wiser parameters.",
+        "title": "Wiser Heat Hub Options"
+      }
+    }
   }
 }
