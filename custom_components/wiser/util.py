@@ -1,8 +1,6 @@
 from datetime import datetime
 from .const import _LOGGER, WEEKDAYS, WEEKENDS, SPECIALDAYS
 
-SCHEDULETYPES = ["Heating", "HotWater"]
-
 
 def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
     """
