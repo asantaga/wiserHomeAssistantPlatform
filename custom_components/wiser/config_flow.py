@@ -82,8 +82,17 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
                 self._name = device
                 await self.async_set_unique_id(self._name)
-                self._abort_if_unique_id_configured()
-
+                self._abort_if_unique_id_configured(
+                    updates={
+                        CONF_NAME: self._name,
+                        CONF_HOST: user_input[CONF_HOST],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                        CONF_BOOST_TEMP: user_input[CONF_BOOST_TEMP],
+                        CONF_BOOST_TEMP_TIME: user_input[CONF_BOOST_TEMP_TIME],
+                        CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL]
+                        or DEFAULT_SCAN_INTERVAL,
+                    }
+                )
 
                 # set device config values
                 self.device_config = user_input
@@ -177,11 +186,12 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured(
                 updates={
                     CONF_NAME: self._name,
-                    CONF_HOST: user_input.get(CONF_HOST),
-                    CONF_PASSWORD: user_input.get(CONF_PASSWORD),
-                    CONF_BOOST_TEMP: user_input.get(CONF_BOOST_TEMP),
-                    CONF_BOOST_TEMP_TIME: user_input.get(CONF_BOOST_TEMP_TIME),
-                    CONF_SCAN_INTERVAL: user_input.get(CONF_SCAN_INTERVAL),
+                    CONF_HOST: user_input[CONF_HOST],
+                    CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    CONF_BOOST_TEMP: user_input[CONF_BOOST_TEMP],
+                    CONF_BOOST_TEMP_TIME: user_input[CONF_BOOST_TEMP_TIME],
+                    CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL]
+                    or DEFAULT_SCAN_INTERVAL,
                 }
             )
 
@@ -229,19 +239,20 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_BOOST_TEMP,
-                        default=self.options[CONF_BOOST_TEMP] or DEFAULT_BOOST_TEMP,
+                        default=self.options.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP),
                     ): int,
                     vol.Required(
                         CONF_BOOST_TEMP_TIME,
-                        default=self.options[CONF_BOOST_TEMP_TIME]
-                        or DEFAULT_BOOST_TEMP_TIME,
+                        default=self.options.get(
+                            CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
+                        ),
                     ): int,
                     vol.Required(
                         CONF_SCAN_INTERVAL,
-                        default=self.options[CONF_SCAN_INTERVAL]
-                        or DEFAULT_SCAN_INTERVAL,
+                        default=self.options.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                        ),
                     ): int,
                 }
             ),
         )
-

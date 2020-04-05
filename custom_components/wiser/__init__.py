@@ -101,7 +101,9 @@ async def async_setup_entry(hass, config_entry):
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    MIN_TIME_BETWEEN_UPDATES = int(config_entry.data.get(CONF_SCAN_INTERVAL))
+    MIN_TIME_BETWEEN_UPDATES = int(
+        config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
 
     _LOGGER.info(
         "Wiser setup with Hub IP =  {} and scan interval of {}".format(
