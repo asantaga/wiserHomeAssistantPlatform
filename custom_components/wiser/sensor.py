@@ -124,8 +124,7 @@ class WiserBatterySensor(WiserSensor):
                 (
                     (self._battery_voltage - MIN_BATTERY_LEVEL)
                     / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                )
-                * 100
+                ) * 100
             )
 
     @property
@@ -172,7 +171,7 @@ class WiserBatterySensor(WiserSensor):
                 + product_type
                 + "-"
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
-                + "Battery Level"
+                + " Battery Level"
             )
         else:
             return (
@@ -262,7 +261,7 @@ class WiserDeviceSensor(WiserSensor):
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
             )
         elif product_type == "SmartPlug":
-            return self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
+            return "Wiser "+self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
         else:
             return (
                 "Wiser "
@@ -338,6 +337,20 @@ class WiserDeviceSensor(WiserSensor):
             attrs["device_reception_LQI"] = device_data.get(
                 "ReceptionOfController"
             ).get("Lqi")
+
+        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get("BatteryVoltage"):
+            self._battery_level = device_data.get("BatteryLevel")
+            self._battery_voltage = device_data.get("BatteryVoltage")
+            if self._battery_voltage and self._battery_voltage > 0:
+                self._battery_percent = int(
+                    (
+                            (self._battery_voltage - MIN_BATTERY_LEVEL)
+                            / (BATTERY_FULL - MIN_BATTERY_LEVEL)
+                    ) * 100
+                )
+            attrs["battery_voltage"] = self._battery_voltage
+            attrs["battery_percent"] = self._battery_percent
+            attrs["battery_level"] = device_data.get("BatteryLevel")
 
         """ Other """
         if self._sensor_type == "RoomStat":

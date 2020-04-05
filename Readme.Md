@@ -1,10 +1,20 @@
-# Wiser Home Assistant Platform (v1.9)
+# Wiser Home Assistant Platform (v2.2alpha)
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
+
+
+
+For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. 
+
+if you want bleeding edge then checkout the `DEV`  branch, however you will need to use the **Manual Code Installation** (described below)
+
+
 
 ## Functionality 
 
 - Support for [Home Assistant Component Store](https://community.home-assistant.io/t/custom-component-hacs/121727)
+
+- Support for Native Home Assistant Configurations (no more editing YAML!)
 
 - Support for Wiser TRVs, Hub and SmartPlugs
 
@@ -15,6 +25,7 @@ This repository contains a Home Assistant component + platforms, for the awesome
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
     - Displays icon if radiator is heating (heat flowing) or not
+    
 - **Service to set heating boost**
   
     - Services to get, set and copy heating schedules (See instructions below)**
@@ -44,6 +55,7 @@ This repository contains a Home Assistant component + platforms, for the awesome
         - Also a service which allows you to modify the state of the hotwater 
     - Operation Mode Sensor (aka away sensor)
         - This sensor returns the away status of the heathub, being either `away` or `normal`. 
+    - Battery Sensors for all the battery devices
     
 - **Services**
 
@@ -60,7 +72,7 @@ This repository contains a Home Assistant component + platforms, for the awesome
 
     
 
-    ## Sample Images
+## Sample Images
 
 ![](https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/docs/homeassistant_sample.jpg)
 
@@ -81,9 +93,7 @@ This method is best used when you want to play with the "latest and greatest" fr
 
 2. Switch to either the master or dev branch as per your requirements. 
    e.g.
-
-   `git checkout master      `
-
+   `git checkout master`
    or 
    `git checkout dev`
 
@@ -113,7 +123,6 @@ Before you can use the component you need to find the HeatHub secret key, this i
    * For Linux (or Windows WSL) use 
      `curl http://192.168.8.1/secret`
 
-
    This will return a string which will contain your system secret, obviously dont share this...
 
 5. Press the setup button on the HeatHub again and it will go back to normal operations
@@ -123,10 +132,29 @@ Before you can use the component you need to find the HeatHub secret key, this i
 7. Find Your HEATHUB IP
     Using your router, or some other method, identify the IP address of your HeatHub. On many routers it usually identifies itself as the something like ``WiserHeatXXXXXX`` 
 
-8. Add references to Home Assistant `Configuration.yaml` file 
+8. Configure using Home Assistant Configuration Assistant "Set up new integration"
 
-Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
-```
+    ![](docs/add_configuration_image.png)
+
+9. This will then show the config screen for Wiser Heat Hub, now configure it appropriately.
+
+    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image2.png)
+
+    ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
+
+    ```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
+
+    ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
+
+10. When added, you should something like see this in integrations
+    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image3.png)
+
+11. Clicking on it should show you this and you can now add the devices to your Home Assistant Lovelace UI as you please
+     ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image4.png)
+
+12. **Alternatively** you can also configure the integration using YAML. Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
+
+```yaml
 wiser:
   host: <ENTER YOUR HEATHUB IP HERE>
   password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
@@ -135,16 +163,6 @@ wiser:
   boost_temp: 2
   boost_time: 30
 ```
-
-I don't recommend you set the scan_interval too low, after all temperatures do not change that often and 300 seconds(5mins) is probably plenty but adjust as per your requirements.
-
-```minimum``` is the bottom minimum temperature to be recorded, the default is -5
-
-```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
-
-```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
-
-
 
 
 ## Managing Schedules with Home Assistant
@@ -155,13 +173,17 @@ Use the service `wiser.get_schedule`
 This will require you to provide the entity ID of the wiser device and a file to copy this schedule to.
 It is recommended to create a directory in your config directory to store these.
 
+Note : If you are running HA within a docker container then the directory will be absolute to the container, if you have mapped the config directory to a local directory then all is good but the directory name given to the service must be a docker container address.
+
+E.g. if you specify the filename as `/config/schedule.yaml`then `get_schedule` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
+
 ### Setting a Schedule
 Use the service `wiser.set_schedule`
 
 This will require you to provide the entity ID of the wiser device and a file containing the schedule.
 
-A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the wiser.get_schedule service looks like below:
-```
+A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the `wiser.get_schedule` service looks like below:
+```yaml
 Name: Dining Room
 Description: Schedule for Dining Room
 Type: Heating
@@ -228,7 +250,7 @@ names of 'Weekdays' and 'Weekends' instead of listing individual days.
 
 e.g.
 
-```
+```yaml
 Name: Test Room
 Description: Schedule for Test Room
 Type: Heating
@@ -252,7 +274,7 @@ Weekends:
     Temp: 15
 ```
 You can also use a mixture of these special day names and normal days to override a specific day (providing the specific days names are below these special ones!).
-```
+```yaml
 Name: Test Room
 Description: Schedule for Test Room
 Type: Heating
@@ -284,7 +306,7 @@ Tuesday:
 ### Copying a Schedule
 Use the service `wiser.copy_schedule`
 
-This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy toand will copy the schedule between them.
+This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to and will copy the schedule between them.
 
 ## Network Topology
 
@@ -302,11 +324,15 @@ Each TRV sensor now has three special network related attributes
 
 ## Battery Values
 
-For each battery driven device sensor the following attributes are available `battery_voltage`, `battery_percentage` and `battery_level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or OneThird battery level. RoomStats battery levels can be lower.
+For each battery driven device sensor the following attributes are available `battery_voltage`, `battery_percentage` and `battery_level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or *OneThird* battery level. Given that RoomStats do not need to drive a valve, their battery levels can be lower.
 
 An obvious ideal candidate for a Home Assistant automation to remind you to change the batteries :-)
 
-Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr). 
+Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr) , just wait and the battery values will appear.
+
+# Community Recipes
+
+I've been totally amazed at the community which has sprung up contributing and supporting this component.  The [recipes](Recipes.md) following page contains some community contributed ideas / YAML files for Home Assistant.
 
 
 
@@ -316,7 +342,7 @@ Note : If you power cycle your HomeHub, with more than a minute or so when it is
 
 Special thanks for many contributors to this project!
 
-Angelo
+Angelo and Team
 
 # Contributors
 
@@ -333,6 +359,16 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 2.2alpha
+    * Minor bug fixes
+- 2.1
+    * Minor bug fixes and documentation fixes
+- 2.0
+    * Now supports Home Assistant Config Flow (credit @msp1974)
+    * Fix/error for when there is no smartplug present, also error if smartplug exists but offline
+    * Documented some community inspired (non obvious) recepies
+    * Uptake of new wiser-heating-api (1.7.1)
+    
 - 1.9      
   
     * Component rewritten to use Async to ensure the component is more robust and HA friendly
@@ -381,3 +417,4 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 1.3
     * Added ability to set temperature
     * Added ability to set room mode (auto,boost,manual)
+

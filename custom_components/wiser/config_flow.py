@@ -84,8 +84,8 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(self._name)
                 self._abort_if_unique_id_configured()
 
+
                 # set device config values
-                # user_input[CONF_NAME] = self._name
                 self.device_config = user_input
                 return await self._create_entry()
 
@@ -244,3 +244,4 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 }
             ),
         )
+
