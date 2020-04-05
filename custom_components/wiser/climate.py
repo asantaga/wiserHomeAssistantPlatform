@@ -30,8 +30,15 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
-from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM, WISER_SERVICES
-
+from .const import (
+    _LOGGER,
+    CONF_BOOST_TEMP,
+    CONF_BOOST_TEMP_TIME,
+    DOMAIN,
+    MANUFACTURER,
+    ROOM,
+    WISER_SERVICES,
+)
 from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
 
 
@@ -68,9 +75,9 @@ SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 BOOST_HEATING_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_TIME_PERIOD, default=60): vol.Coerce(int),
-        vol.Optional(ATTR_TEMPERATURE, default="23.0"): vol.Coerce(float),
-        vol.Optional(ATTR_TEMPERATURE_DELTA, default="0"): vol.Coerce(float),
+        vol.Optional(ATTR_TIME_PERIOD, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_TEMPERATURE, default=0): vol.Coerce(float),
+        vol.Optional(ATTR_TEMPERATURE_DELTA, default=0): vol.Coerce(float),
     }
 )
 
@@ -106,6 +113,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         boost_temp = service.data[ATTR_TEMPERATURE]
         boost_temp_delta = service.data[ATTR_TEMPERATURE_DELTA]
 
+        # Set to config values if not set
+        if boost_time == 0:
+            boost_time = config_entry.data[CONF_BOOST_TEMP_TIME]
+
+        if boost_temp == 0 and boost_temp_delta == 0:
+            boost_temp_delta = config_entry.data[CONF_BOOST_TEMP]
+
+        # Find correct room to boost
         for room in wiser_rooms:
             _LOGGER.debug("*****BOOST for {}".format(room.entity_id))
             if room.entity_id == entity_id:
@@ -366,8 +381,13 @@ class WiserRoom(ClimateDevice):
         return preset
 
     async def async_set_preset_mode(self, preset_mode):
-        boost_time = self.data.boost_time
-        boost_temp = self.data.boost_temp
+        boost_time = self.data._config_entry.data.get(
+            CONF_BOOST_TEMP_TIME, self.data.boost_temp_time
+        )
+        boost_temp = self.data._config_entry.data.get(
+            CONF_BOOST_TEMP, self.data.boost_temp
+        )
+
         """Set new preset mode."""
         _LOGGER.debug(
             "*******Setting Preset Mode {} for roomId {}".format(
