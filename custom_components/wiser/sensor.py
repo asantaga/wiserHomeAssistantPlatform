@@ -237,9 +237,7 @@ class WiserDeviceSensor(WiserSensor):
             == "SmartPlug"
         ):
             # combine sensor for smartplug with smartplug device
-            identifier = "{}-{}".format(
-                self.data.wiserhub.getSmartPlug(self._deviceId)["Name"], self._deviceId
-            )
+            identifier = "{}-{}".format(self._device_name, self._deviceId)
 
             return {"identifiers": {(DOMAIN, identifier)}}
         else:
