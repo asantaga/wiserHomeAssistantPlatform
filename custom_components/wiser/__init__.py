@@ -10,7 +10,7 @@ import asyncio
 import json
 
 # import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 import voluptuous as vol
 from wiserHeatingAPI.wiserHub import (
     wiserHub,
@@ -20,7 +20,6 @@ from wiserHeatingAPI.wiserHub import (
     WiserHubAuthenticationException,
     WiserRESTException,
 )
-
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
     CONF_HOST,
@@ -31,9 +30,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.util import Throttle
 
 from .const import (
     _LOGGER,
@@ -42,6 +41,7 @@ from .const import (
     DATA_WISER_CONFIG,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     HUBNAME,
     MANUFACTURER,
@@ -53,16 +53,24 @@ from .const import (
 )
 
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+# Set config values to default
+# These get set to config later
+SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
 
 PLATFORM_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): cv.string,
-        vol.Optional(CONF_PASSWORD): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=0): cv.time_period,
+        vol.Required(CONF_PASSWORD): cv.string,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+            vol.Coerce(int)
+        ),
         vol.Optional(CONF_MINIMUM, default=TEMP_MINIMUM): vol.All(vol.Coerce(int)),
-        vol.Optional(CONF_BOOST_TEMP, default=2): vol.All(vol.Coerce(int)),
-        vol.Optional(CONF_BOOST_TEMP_TIME, default=30): vol.All(vol.Coerce(int)),
+        vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): vol.All(
+            vol.Coerce(int)
+        ),
+        vol.Optional(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): vol.All(
+            vol.Coerce(int)
+        ),
     }
 )
 
@@ -93,15 +101,22 @@ async def async_setup(hass, config):
 
 async def async_setup_entry(hass, config_entry):
 
+    global SCAN_INTERVAL
+
     """Set up the Wiser component."""
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
+    SCAN_INTERVAL = int(
+        config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
+
     _LOGGER.info(
-        "Wiser setup with Hub IP =  {} and scan interval of {}".format(
-            config_entry.data[CONF_HOST], MIN_TIME_BETWEEN_UPDATES
+        "Wiser setup with Hub IP =  {} and scan interval of {} seconds".format(
+            config_entry.data[CONF_HOST], SCAN_INTERVAL
         )
     )
+    config_entry.add_update_listener(config_update_listener)
 
     data = WiserHubHandle(
         hass,
@@ -117,7 +132,7 @@ async def async_setup_entry(hass, config_entry):
     async def wiserHubSetup():
         _LOGGER.info("Initiating WiserHub connection")
         try:
-            if await data.async_update(no_throttle=True):
+            if await data.async_update():
                 if data.wiserhub.getDevices is None:
                     _LOGGER.error("No Wiser devices found to set up")
                     return False
@@ -178,6 +193,20 @@ async def async_unload_entry(hass, config_entry):
     return unload_status
 
 
+async def config_update_listener(hass, config_entry):
+    """Handle config update update."""
+    global SCAN_INTERVAL
+
+    SCAN_INTERVAL = int(config_entry.data.get(CONF_SCAN_INTERVAL))
+    _LOGGER.info(
+        "Wiser config parameters changed. Boost temp = {}, Boost time = {}, scan interval = {}".format(
+            config_entry.data[CONF_BOOST_TEMP],
+            config_entry.data[CONF_BOOST_TEMP_TIME],
+            SCAN_INTERVAL,
+        )
+    )
+
+
 class WiserHubHandle:
     def __init__(self, hass, config_entry, ip, secret):
         self._hass = hass
@@ -188,37 +217,65 @@ class WiserHubHandle:
         self.wiserhub = wiserHub(self.ip, self.secret)
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
-        self.boost_temp = config_entry.data[CONF_BOOST_TEMP] or DEFAULT_BOOST_TEMP
-        self.boost_time = (
-            config_entry.data[CONF_BOOST_TEMP_TIME] or DEFAULT_BOOST_TEMP_TIME
+        self.boost_temp = config_entry.data.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP)
+        self.boost_time = config_entry.data.get(
+            CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
+        )
+        self.timer_handle = None
+
+    @callback
+    def do_hub_update(self):
+        self._hass.async_create_task(self.async_update())
+
+    async def async_update(self, no_throttle: bool = False):
+        # Update uses event loop scheduler for scan interval
+        if no_throttle:
+            # Forced update
+            _LOGGER.info("**Update of Wiser Hub data requested via On Demand**")
+            # Cancel next scheduled update and schedule for next interval
+            if self.timer_handle:
+                self.timer_handle.cancel()
+        else:
+            # Updated on schedule
+            _LOGGER.info(
+                "**Update of Wiser Hub data requested on {} seconds interval**".format(
+                    SCAN_INTERVAL
+                )
+            )
+        # Schedule next update
+        self.timer_handle = self._hass.loop.call_later(
+            SCAN_INTERVAL, self.do_hub_update
         )
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self):
-        _LOGGER.info("**Update of Wiser Hub data requested**")
         try:
+            # Update from hub
             result = await self._hass.async_add_executor_job(self.wiserhub.refreshData)
             if result is not None:
                 _LOGGER.info("**Wiser Hub data updated**")
+                # Send update notice to all components to update
+                dispatcher_send(self._hass, "WiserHubUpdateMessage")
                 return True
             else:
-                _LOGGER.info("**Unable to update from wiser hub**")
+                _LOGGER.error("**Unable to update from wiser hub**")
                 return False
         except json.decoder.JSONDecodeError as JSONex:
             _LOGGER.error(
-                "Data not JSON when getting Data from hub, "
+                "Data not in JSON format when getting data from the Wiser hub, "
                 + "did you enter the right URL? error {}".format(str(JSONex))
             )
-            self._hass.components.persistent_notification.create(
-                "Error: {}"
-                + "<br /> You will need to restart Home Assistant "
-                + " after fixing.".format(JSONex),
-                title=NOTIFICATION_TITLE,
-                notification_id=NOTIFICATION_ID,
-            )
             return False
-        except WiserHubTimeoutException:
-            pass
+        except WiserHubTimeoutException as ex:
+            _LOGGER.error(
+                "***Failed to get update from Wiser hub due to timeout error***"
+            )
+            _LOGGER.debug("Error is {}".format(ex))
+            return False
+        except Exception as ex:
+            _LOGGER.error(
+                "***Failed to get update from Wiser hub due to unknown error***"
+            )
+            _LOGGER.debug("Error is {}".format(ex))
+            return False
 
     @property
     def unique_id(self):

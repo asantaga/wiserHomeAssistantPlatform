@@ -19,6 +19,7 @@ from homeassistant.const import (
     DEVICE_CLASS_BATTERY,
     STATE_UNKNOWN,
 )
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.icon import icon_for_battery_level
 
@@ -79,12 +80,17 @@ class WiserSensor(Entity):
 
     async def async_update(self):
         _LOGGER.debug("{} device update requested".format(self._device_name))
-        await self.data.async_update()
+        # await self.data.async_update()
 
     @property
     def name(self):
         """Return the name of the sensor"""
         return self._device_name
+
+    @property
+    def should_poll(self):
+        """Return the polling state."""
+        return False
 
     @property
     def state(self):
@@ -95,6 +101,15 @@ class WiserSensor(Entity):
     @property
     def unique_id(self):
         return "{}-{}".format(self._sensor_type, self._deviceId)
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub"""
+
+        async def async_update_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(True)
+
+        async_dispatcher_connect(self.hass, "WiserHubUpdateMessage", async_update_state)
 
 
 class WiserBatterySensor(WiserSensor):
@@ -124,7 +139,8 @@ class WiserBatterySensor(WiserSensor):
                 (
                     (self._battery_voltage - MIN_BATTERY_LEVEL)
                     / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                ) * 100
+                )
+                * 100
             )
 
     @property
@@ -261,7 +277,7 @@ class WiserDeviceSensor(WiserSensor):
                 + self.data.wiserhub.getDeviceRoom(self._deviceId)["roomName"]
             )
         elif product_type == "SmartPlug":
-            return "Wiser "+self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
+            return "Wiser " + self.data.wiserhub.getSmartPlug(self._deviceId)["Name"]
         else:
             return (
                 "Wiser "
@@ -338,15 +354,18 @@ class WiserDeviceSensor(WiserSensor):
                 "ReceptionOfController"
             ).get("Lqi")
 
-        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get("BatteryVoltage"):
+        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get(
+            "BatteryVoltage"
+        ):
             self._battery_level = device_data.get("BatteryLevel")
             self._battery_voltage = device_data.get("BatteryVoltage")
             if self._battery_voltage and self._battery_voltage > 0:
                 self._battery_percent = int(
                     (
-                            (self._battery_voltage - MIN_BATTERY_LEVEL)
-                            / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                    ) * 100
+                        (self._battery_voltage - MIN_BATTERY_LEVEL)
+                        / (BATTERY_FULL - MIN_BATTERY_LEVEL)
+                    )
+                    * 100
                 )
             attrs["battery_voltage"] = self._battery_voltage
             attrs["battery_percent"] = self._battery_percent
