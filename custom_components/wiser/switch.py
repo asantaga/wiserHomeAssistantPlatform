@@ -5,6 +5,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import _LOGGER, DOMAIN, MANUFACTURER, WISER_SWITCHES, WISER_SERVICES
 
@@ -40,7 +41,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Add SmartPlugs (if any)
     if data.wiserhub.getSmartPlugs() is not None:
         wiser_smart_plugs = [
-            WiserSmartPlug(hass, data, plug.get("id"), "Wiser {}".format(plug.get("Name")))
+            WiserSmartPlug(data, plug.get("id"), "Wiser {}".format(plug.get("Name")))
             for plug in data.wiserhub.getSmartPlugs()
         ]
         async_add_entities(wiser_smart_plugs)
@@ -88,7 +89,6 @@ class WiserSwitch(SwitchDevice):
         """Initialize the sensor."""
         _LOGGER.info("Wiser {} Switch Init".format(switchType))
         self.data = data
-        self._force_update = False
         self._hub_key = hubKey
         self._icon = icon
         self._switch_type = switchType
@@ -96,12 +96,6 @@ class WiserSwitch(SwitchDevice):
 
     async def async_update(self):
         _LOGGER.debug("Wiser {} Switch Update requested".format(self._switch_type))
-        if self._force_update:
-            await self.data.async_update(no_throttle=True)
-            self._force_update = False
-        else:
-            await self.data.async_update()
-
         if self._switch_type == "Away Mode":
             self._awayTemperature = round(
                 self.data.wiserhub.getSystem().get("AwayModeSetPointLimit") / 10, 1
@@ -132,7 +126,7 @@ class WiserSwitch(SwitchDevice):
     @property
     def should_poll(self):
         """Return the polling state."""
-        return True
+        return False
 
     @property
     def device_state_attributes(self):
@@ -169,30 +163,24 @@ class WiserSwitch(SwitchDevice):
             await self.data.set_system_switch(self._hub_key, False)
         return True
 
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub"""
+
+        async def async_update_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(True)
+
+        async_dispatcher_connect(self.hass, "WiserHubUpdateMessage", async_update_state)
+
 
 class WiserSmartPlug(SwitchDevice):
-    def __init__(self, hass, data, plugId, name):
+    def __init__(self, data, plugId, name):
         """Initialize the sensor."""
         _LOGGER.info("Wiser {} SmartPlug Init".format(name))
         self.plug_name = name
         self.smart_plug_id = plugId
         self.data = data
-        self._force_update = False
-        self.hass = hass
         self._is_on = False
-
-    async def async_update(self):
-        _LOGGER.debug(" SmartPlug {} Status requested".format(self.plug_name))
-        if self._force_update:
-            await self.data.async_update(no_throttle=True)
-            self._force_update = False
-        else:
-            await self.data.async_update()
-        # Update status
-        smartPlugs = self.data.wiserhub.getSmartPlugs()
-        for plug in smartPlugs:
-            if plug.get("id") == self.smart_plug_id:
-                self._is_on = True if plug.get("OutputState") == "On" else False
 
     @property
     def unique_id(self):
@@ -226,11 +214,17 @@ class WiserSmartPlug(SwitchDevice):
     @property
     def should_poll(self):
         """Return the polling state."""
-        return True
+        return False
 
     @property
     def is_on(self):
         """Return true if device is on."""
+        self._is_on = (
+            True
+            if self.data.wiserhub.getSmartPlug(self.smart_plug_id).get("OutputState")
+            == "On"
+            else False
+        )
         _LOGGER.debug(
             "Smartplug {} is currently {}".format(self.smart_plug_id, self._is_on)
         )
@@ -264,4 +258,13 @@ class WiserSmartPlug(SwitchDevice):
             "Setting Smartplug {} Mode to {} ".format(self.smart_plug_id, plug_mode)
         )
         self.data.wiserhub.setSmartPlugMode(self.smart_plug_id, plug_mode)
-        self._force_update = True
+        return True
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub"""
+
+        async def async_update_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(False)
+
+        async_dispatcher_connect(self.hass, "WiserHubUpdateMessage", async_update_state)

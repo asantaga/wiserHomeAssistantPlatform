@@ -27,6 +27,7 @@ from homeassistant.const import (
     TEMP_CELSIUS,
 )
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
@@ -250,8 +251,6 @@ class WiserRoom(ClimateDevice):
         if self._force_update:
             await self.data.async_update(no_throttle=True)
             self._force_update = False
-        else:
-            await self.data.async_update()
         self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
 
     @property
@@ -261,7 +260,7 @@ class WiserRoom(ClimateDevice):
 
     @property
     def should_poll(self):
-        return True
+        return False
 
     @property
     def state(self):
@@ -480,6 +479,9 @@ class WiserRoom(ClimateDevice):
         )
         self.data.wiserhub.setRoomTemperature(self.room_id, target_temperature)
         self._force_update = True
+        await self.async_update_ha_state(True)
+
+        return True
 
     async def set_room_mode(self, room_id, mode, boost_temp=None, boost_time=None):
         """ Set to default values if not passed in """
@@ -490,6 +492,8 @@ class WiserRoom(ClimateDevice):
         )
         self.data.wiserhub.setRoomMode(room_id, mode, boost_temp, boost_time)
         self._force_update = True
+        await self.async_update_ha_state(True)
+        return True
 
     async def set_room_schedule(self, room_id, scheduleData):
         if scheduleData != None:
@@ -497,6 +501,7 @@ class WiserRoom(ClimateDevice):
             self.data.wiserhub.setRoomSchedule(room_id, scheduleData)
             _LOGGER.debug("Set room schedule for {}".format(self.name))
             self._force_update = True
+            await self.async_update_ha_state(True)
             return True
         else:
             return False
@@ -509,4 +514,14 @@ class WiserRoom(ClimateDevice):
             )
         )
         self._force_update = True
+        await self.async_update_ha_state(True)
         return True
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub"""
+
+        async def async_update_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(True)
+
+        async_dispatcher_connect(self.hass, "WiserHubUpdateMessage", async_update_state)
