@@ -8,8 +8,8 @@ VERSION = "1.3.1"
 WISER_PLATFORMS = ["climate", "sensor", "switch"]
 
 # Battery
-BATTERY_FULL = 31
-MIN_BATTERY_LEVEL = 21
+BATTERY_FULL = 30
+MIN_BATTERY_LEVEL = 24
 
 # Hub
 HUBNAME = "Wiser Heat Hub"
