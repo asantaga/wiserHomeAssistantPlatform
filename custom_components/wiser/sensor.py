@@ -25,10 +25,12 @@ from homeassistant.helpers.icon import icon_for_battery_level
 
 from .const import (
     _LOGGER,
-    BATTERY_FULL,
+    TRV_FULL_BATTERY_LEVEL,
     DOMAIN,
-    MIN_BATTERY_LEVEL,
+    TRV_MIN_BATTERY_LEVEL,
     SIGNAL_STRENGTH_ICONS,
+    ROOMSTAT_MIN_BATTERY_LEVEL,
+    ROOMSTAT_FULL_BATTERY_LEVEL,
 )
 
 
@@ -49,21 +51,21 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             # until sometime after a hub restart
             if device.get("ProductType") in ["iTRV", "RoomStat"]:
                 wiser_devices.append(
-                    WiserBatterySensor(data, device.get("id"), sensorType="Battery")
+                    WiserBatterySensor(data, device.get("id"), sensor_type="Battery")
                 )
 
     # Add cloud status sensor
-    wiser_devices.append(WiserSystemCloudSensor(data, sensorType="Cloud Sensor"))
+    wiser_devices.append(WiserSystemCloudSensor(data, sensor_type="Cloud Sensor"))
     # Add operation sensor
     wiser_devices.append(
-        WiserSystemOperationModeSensor(data, sensorType="Operation Mode")
+        WiserSystemOperationModeSensor(data, sensor_type="Operation Mode")
     )
     # Add heating circuit sensor
-    wiser_devices.append(WiserSystemCircuitState(data, sensorType="HEATING"))
+    wiser_devices.append(WiserSystemCircuitState(data, sensor_type="HEATING"))
     # Dont display Hotwater if hotwater not supported
     # https://github.com/asantaga/wiserHomeAssistantPlatform/issues/8
     if data.wiserhub.getHotwater() is not None:
-        wiser_devices.append(WiserSystemCircuitState(data, sensorType="HOTWATER"))
+        wiser_devices.append(WiserSystemCircuitState(data, sensor_type="HOTWATER"))
 
     async_add_entities(wiser_devices, True)
 
@@ -71,12 +73,49 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserSensor(Entity):
     """Definition of a Wiser sensor"""
 
-    def __init__(self, config_entry, device_id=0, sensorType=""):
+    def __init__(self, config_entry, device_id=0, sensor_type=""):
         """Initialize the sensor."""
         self.data = config_entry
         self._deviceId = device_id
-        self._sensor_type = sensorType
+        self._sensor_type = sensor_type
         self._state = None
+
+    #
+    @staticmethod
+    def calculate_device_battery_pct( device_type, device_voltage):
+        """
+        Helper function for iTRV & RoomStat
+        :param device_type:
+        :param device_voltage:
+        :return:
+        """
+        # Return 0 if not iTRV or RoomStat, should never be
+        if device_type not in ("iTRV", "RoomStat"):
+            return 0
+
+        if device_type == "iTRV":
+            return min(
+                100,
+                int(
+                    (
+                        (device_voltage - TRV_MIN_BATTERY_LEVEL)
+                        / (TRV_FULL_BATTERY_LEVEL - TRV_MIN_BATTERY_LEVEL)
+                    )
+                    * 100
+                ),
+            )
+        else:
+            # If not TRV then RoomStat
+            return min(
+                100,
+                int(
+                    (
+                        (device_voltage - ROOMSTAT_MIN_BATTERY_LEVEL)
+                        / (ROOMSTAT_FULL_BATTERY_LEVEL - ROOMSTAT_MIN_BATTERY_LEVEL)
+                    )
+                    * 100
+                ),
+            )
 
     async def async_update(self):
         _LOGGER.debug("{} device update requested".format(self._device_name))
@@ -115,8 +154,8 @@ class WiserSensor(Entity):
 class WiserBatterySensor(WiserSensor):
     """Definition of a battery sensor for wiser iTRVs and RoomStats"""
 
-    def __init__(self, data, device_id=0, sensorType=""):
-        super().__init__(data, device_id, sensorType)
+    def __init__(self, data, device_id=0, sensor_type=""):
+        super().__init__(data, device_id, sensor_type)
         self._device_name = self.get_device_name()
         # Set default state to unknown to show this value if battery info
         # cannot be read.
@@ -134,14 +173,11 @@ class WiserBatterySensor(WiserSensor):
         # Set battery info
         self._battery_level = device.get("BatteryLevel")
         self._battery_voltage = device.get("BatteryVoltage")
+
         if self._battery_voltage and self._battery_voltage > 0:
-            self._state = min(100, int(
-                (
-                    (self._battery_voltage - MIN_BATTERY_LEVEL)
-                    / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                )
-                * 100
-            ))
+            self._state = self.calculate_device_battery_pct(
+                device.get("ProductType"), self._battery_voltage
+            )
 
     @property
     def device_class(self):
@@ -210,9 +246,12 @@ class WiserBatterySensor(WiserSensor):
 class WiserDeviceSensor(WiserSensor):
     """Definition of Wiser Device Sensor"""
 
-    def __init__(self, data, device_id=0, sensorType=""):
-        super().__init__(data, device_id, sensorType)
+    def __init__(self, data, device_id=0, sensor_type=""):
+        super().__init__(data, device_id, sensor_type)
         self._device_name = self.get_device_name()
+        self._battery_voltage = 0
+        self._battery_level = None
+        self._battery_percent = 0
         _LOGGER.info("{} device init".format(self._device_name))
 
     async def async_update(self):
@@ -352,19 +391,18 @@ class WiserDeviceSensor(WiserSensor):
                 "ReceptionOfController"
             ).get("Lqi")
 
-        if self._sensor_type in ["RoomStat", "iTRV", "SmartPlug"] and device_data.get(
+        if self._sensor_type in ["RoomStat", "iTRV"] and device_data.get(
             "BatteryVoltage"
         ):
             self._battery_level = device_data.get("BatteryLevel")
             self._battery_voltage = device_data.get("BatteryVoltage")
+            self._battery_percent = 0
             if self._battery_voltage and self._battery_voltage > 0:
-                self._battery_percent = min(100,int(
-                    (
-                        (self._battery_voltage - MIN_BATTERY_LEVEL)
-                        / (BATTERY_FULL - MIN_BATTERY_LEVEL)
-                    )
-                    * 100
-                ))
+
+                self._battery_percent = self.calculate_device_battery_pct(
+                    self._sensor_type, self._battery_voltage
+                )
+
             attrs["battery_voltage"] = self._battery_voltage
             attrs["battery_percent"] = self._battery_percent
             attrs["battery_level"] = device_data.get("BatteryLevel")
@@ -381,8 +419,8 @@ class WiserDeviceSensor(WiserSensor):
 class WiserSystemCircuitState(WiserSensor):
     """Definition of a Hotwater/Heating circuit state sensor"""
 
-    def __init__(self, data, device_id=0, sensorType=""):
-        super().__init__(data, device_id, sensorType)
+    def __init__(self, data, device_id=0, sensor_type=""):
+        super().__init__(data, device_id, sensor_type)
         self._device_name = self.get_device_name()
         _LOGGER.info("{} device init".format(self._device_name))
 
@@ -442,8 +480,8 @@ class WiserSystemCircuitState(WiserSensor):
 class WiserSystemCloudSensor(WiserSensor):
     """Sensor to display the status of the Wiser Cloud"""
 
-    def __init__(self, data, device_id=0, sensorType=""):
-        super().__init__(data, device_id, sensorType)
+    def __init__(self, data, device_id=0, sensor_type=""):
+        super().__init__(data, device_id, sensor_type)
         self._device_name = self.get_device_name()
         _LOGGER.info("{} device init".format(self._device_name))
 
@@ -474,8 +512,8 @@ class WiserSystemCloudSensor(WiserSensor):
 class WiserSystemOperationModeSensor(WiserSensor):
     """Sensor for the Wiser Operation Mode (Away/Normal etc)"""
 
-    def __init__(self, data, device_id=0, sensorType=""):
-        super().__init__(data, device_id, sensorType)
+    def __init__(self, data, device_id=0, sensor_type=""):
+        super().__init__(data, device_id, sensor_type)
         self._device_name = self.get_device_name()
         self._override_type = self.data.wiserhub.getSystem().get("OverrideType")
         self._away_temperature = self.data.wiserhub.getSystem().get(
