@@ -403,7 +403,7 @@ class WiserDeviceSensor(WiserSensor):
                     self._sensor_type, self._battery_voltage
                 )
 
-            attrs["battery_voltage"] = str(self._battery_voltage / 10) 
+            attrs["battery_voltage"] = str(self._battery_voltage / 10)
             attrs["battery_percent"] = self._battery_percent
             attrs["battery_level"] = device_data.get("BatteryLevel")
 
