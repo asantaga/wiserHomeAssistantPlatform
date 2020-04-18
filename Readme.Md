@@ -6,7 +6,9 @@ This repository contains a Home Assistant component + platforms, for the awesome
 
 For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. 
 
-if you want bleeding edge then checkout the `DEV`  branch, however you will need to use the **Manual Code Installation** (described below)
+if you want bleeding edge then checkout the `dev`  branch, or look out for beta releases via HACS. 
+
+Depending on what you choose you may need to use the **Manual Code Installation** described below.
 
 
 
