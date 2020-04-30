@@ -7,9 +7,13 @@ DATA_WISER_CONFIG = "wiser_config"
 VERSION = "1.3.1"
 WISER_PLATFORMS = ["climate", "sensor", "switch"]
 
-# Battery
-BATTERY_FULL = 31
-MIN_BATTERY_LEVEL = 21
+# Battery Constants
+
+TRV_FULL_BATTERY_LEVEL = 30
+TRV_MIN_BATTERY_LEVEL = 25
+ROOMSTAT_MIN_BATTERY_LEVEL = 17
+ROOMSTAT_FULL_BATTERY_LEVEL = 27
+
 
 # Hub
 HUBNAME = "Wiser Heat Hub"
