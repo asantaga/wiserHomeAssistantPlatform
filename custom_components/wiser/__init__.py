@@ -304,22 +304,26 @@ class WiserHubHandle:
     async def set_away_mode(self, away, away_temperature):
         mode = "AWAY" if away else "HOME"
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.debug(
             "Setting away mode to {} with temp {}.".format(mode, away_temperature)
         )
         try:
-            self.wiserhub.setHomeAwayMode(mode, away_temperature)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setHomeAwayMode, mode, away_temperature)
+            )
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting away mode! {}".format(str(e)))
 
     async def set_system_switch(self, switch, mode):
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.debug("Setting {} system switch to {}.".format(switch, mode))
         try:
-            self.wiserhub.setSystemSwitch(switch, mode)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setSystemSwitch, switch, mode)
+            )
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
@@ -332,11 +336,13 @@ class WiserHubHandle:
         :return:
         """
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.info("Setting SmartPlug {} to {} ".format(plug_id, state))
 
         try:
-            self.wiserhub.setSmartPlugState(plug_id, state)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setSmartPlugState, plug_id, state)
+            )
             # Add small delay to allow hub to update status before refreshing
             await asyncio.sleep(0.5)
             await self.async_update(no_throttle=True)
@@ -353,14 +359,16 @@ class WiserHubHandle:
 
         """
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.info("Setting Hotwater to {} ".format(hotwater_mode))
         # Add small delay to allow hub to update status before refreshing
         await asyncio.sleep(0.5)
         await self.async_update(no_throttle=True)
 
         try:
-            self.wiserhub.setHotwaterMode(hotwater_mode)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setHotwaterMode, hotwater_mode)
+            )
 
         except BaseException as e:
             _LOGGER.debug(
