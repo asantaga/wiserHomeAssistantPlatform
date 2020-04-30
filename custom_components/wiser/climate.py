@@ -15,6 +15,8 @@ from homeassistant.components.climate import ClimateDevice
 from homeassistant.core import callback
 
 from homeassistant.components.climate.const import (
+    CURRENT_HVAC_HEAT,
+    CURRENT_HVAC_IDLE,
     HVAC_MODE_AUTO,
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_PRESET_MODE,
@@ -331,6 +333,13 @@ class WiserRoom(ClimateDevice):
             "manufacturer": MANUFACTURER,
             "model": ROOM.title(),
         }
+
+    @property
+    def hvac_action(self):
+        if self.data.wiserhub.getRoom(self.room_id).get("ControlOutputState") == "On":
+            return CURRENT_HVAC_HEAT
+        else:
+            return CURRENT_HVAC_IDLE
 
     @property
     def hvac_mode(self):
