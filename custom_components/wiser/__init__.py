@@ -126,8 +126,6 @@ async def async_setup_entry(hass, config_entry):
         config_entry.data[CONF_PASSWORD],
     )
 
-    await data.async_connect()
-
     @callback
     def retryWiserHubSetup():
         hass.async_create_task(wiserHubSetup())
@@ -135,33 +133,38 @@ async def async_setup_entry(hass, config_entry):
     async def wiserHubSetup():
         _LOGGER.info("Initiating WiserHub connection")
         try:
-            if await data.async_update():
-                if data.wiserhub.getDevices is None:
-                    _LOGGER.error("No Wiser devices found to set up")
-                    return False
+            if await data.async_connect():
+                if await data.async_update():
+                    if data.wiserhub.getDevices is None:
+                        _LOGGER.error("No Wiser devices found to set up")
+                        return False
 
-                hass.data[DOMAIN] = data
+                    hass.data[DOMAIN] = data
 
-                for platform in WISER_PLATFORMS:
-                    hass.async_create_task(
-                        hass.config_entries.async_forward_entry_setup(
-                            config_entry, platform
+                    for platform in WISER_PLATFORMS:
+                        hass.async_create_task(
+                            hass.config_entries.async_forward_entry_setup(
+                                config_entry, platform
+                            )
                         )
-                    )
 
-                _LOGGER.info("Wiser Component Setup Completed")
-                return True
-            else:
-                await scheduleWiserHubSetup()
-                return True
+                    _LOGGER.info("Wiser Component Setup Completed")
+                    await data.async_update_device_registry()
+                    return True
+                else:
+                    await scheduleWiserHubSetup()
+                    return True
         except (asyncio.TimeoutError):
             await scheduleWiserHubSetup()
             return True
         except WiserHubTimeoutException:
             await scheduleWiserHubSetup()
             return True
+        except Exception:
+            await scheduleWiserHubSetup()
+            return True
 
-    async def scheduleWiserHubSetup(interval=30):
+    async def scheduleWiserHubSetup(interval=10):
         _LOGGER.error(
             "Unable to connect to the Wiser Hub, retrying in {} seconds".format(
                 interval
@@ -170,8 +173,7 @@ async def async_setup_entry(hass, config_entry):
         hass.loop.call_later(interval, retryWiserHubSetup)
         return
 
-    hass.async_create_task(wiserHubSetup())
-    await data.async_update_device_registry()
+    await wiserHubSetup()
     return True
 
 
@@ -230,6 +232,7 @@ class WiserHubHandle:
         self.wiserhub = await self._hass.async_add_executor_job(
             partial(wiserHub, self.ip, self.secret)
         )
+        return True
 
     @callback
     def do_hub_update(self):
@@ -264,7 +267,7 @@ class WiserHubHandle:
                 dispatcher_send(self._hass, "WiserHubUpdateMessage")
                 return True
             else:
-                _LOGGER.error("**Unable to update from wiser hub**")
+                _LOGGER.error("Unable to update from wiser hub")
                 return False
         except json.decoder.JSONDecodeError as JSONex:
             _LOGGER.error(
@@ -273,15 +276,11 @@ class WiserHubHandle:
             )
             return False
         except WiserHubTimeoutException as ex:
-            _LOGGER.error(
-                "***Failed to get update from Wiser hub due to timeout error***"
-            )
+            _LOGGER.error("Unable to update from Wiser hub due to timeout error")
             _LOGGER.debug("Error is {}".format(ex))
             return False
         except Exception as ex:
-            _LOGGER.error(
-                "***Failed to get update from Wiser hub due to unknown error***"
-            )
+            _LOGGER.error("Unable to update from Wiser hub due to unknown error")
             _LOGGER.debug("Error is {}".format(ex))
             return False
 
