@@ -27,11 +27,19 @@ from homeassistant.const import (
     TEMP_CELSIUS,
 )
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
 
-from .const import _LOGGER, DOMAIN, MANUFACTURER, ROOM, WISER_SERVICES
-
+from .const import (
+    _LOGGER,
+    CONF_BOOST_TEMP,
+    CONF_BOOST_TEMP_TIME,
+    DOMAIN,
+    MANUFACTURER,
+    ROOM,
+    WISER_SERVICES,
+)
 from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
 
 
@@ -68,9 +76,9 @@ SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
 BOOST_HEATING_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_TIME_PERIOD, default=60): vol.Coerce(int),
-        vol.Optional(ATTR_TEMPERATURE, default="23.0"): vol.Coerce(float),
-        vol.Optional(ATTR_TEMPERATURE_DELTA, default="0"): vol.Coerce(float),
+        vol.Optional(ATTR_TIME_PERIOD, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_TEMPERATURE, default=0): vol.Coerce(float),
+        vol.Optional(ATTR_TEMPERATURE_DELTA, default=0): vol.Coerce(float),
     }
 )
 
@@ -106,6 +114,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         boost_temp = service.data[ATTR_TEMPERATURE]
         boost_temp_delta = service.data[ATTR_TEMPERATURE_DELTA]
 
+        # Set to config values if not set
+        if boost_time == 0:
+            boost_time = config_entry.data[CONF_BOOST_TEMP_TIME]
+
+        if boost_temp == 0 and boost_temp_delta == 0:
+            boost_temp_delta = config_entry.data[CONF_BOOST_TEMP]
+
+        # Find correct room to boost
         for room in wiser_rooms:
             _LOGGER.debug("*****BOOST for {}".format(room.entity_id))
             if room.entity_id == entity_id:
@@ -235,8 +251,6 @@ class WiserRoom(ClimateDevice):
         if self._force_update:
             await self.data.async_update(no_throttle=True)
             self._force_update = False
-        else:
-            await self.data.async_update()
         self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
 
     @property
@@ -246,7 +260,7 @@ class WiserRoom(ClimateDevice):
 
     @property
     def should_poll(self):
-        return True
+        return False
 
     @property
     def state(self):
@@ -366,8 +380,13 @@ class WiserRoom(ClimateDevice):
         return preset
 
     async def async_set_preset_mode(self, preset_mode):
-        boost_time = self.data.boost_time
-        boost_temp = self.data.boost_temp
+        boost_time = self.data._config_entry.data.get(
+            CONF_BOOST_TEMP_TIME, self.data.boost_temp_time
+        )
+        boost_temp = self.data._config_entry.data.get(
+            CONF_BOOST_TEMP, self.data.boost_temp
+        )
+
         """Set new preset mode."""
         _LOGGER.debug(
             "*******Setting Preset Mode {} for roomId {}".format(
@@ -460,6 +479,9 @@ class WiserRoom(ClimateDevice):
         )
         self.data.wiserhub.setRoomTemperature(self.room_id, target_temperature)
         self._force_update = True
+        await self.async_update_ha_state(True)
+
+        return True
 
     async def set_room_mode(self, room_id, mode, boost_temp=None, boost_time=None):
         """ Set to default values if not passed in """
@@ -470,6 +492,8 @@ class WiserRoom(ClimateDevice):
         )
         self.data.wiserhub.setRoomMode(room_id, mode, boost_temp, boost_time)
         self._force_update = True
+        await self.async_update_ha_state(True)
+        return True
 
     async def set_room_schedule(self, room_id, scheduleData):
         if scheduleData != None:
@@ -477,6 +501,7 @@ class WiserRoom(ClimateDevice):
             self.data.wiserhub.setRoomSchedule(room_id, scheduleData)
             _LOGGER.debug("Set room schedule for {}".format(self.name))
             self._force_update = True
+            await self.async_update_ha_state(True)
             return True
         else:
             return False
@@ -489,4 +514,14 @@ class WiserRoom(ClimateDevice):
             )
         )
         self._force_update = True
+        await self.async_update_ha_state(True)
         return True
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub"""
+
+        async def async_update_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(True)
+
+        async_dispatcher_connect(self.hass, "WiserHubUpdateMessage", async_update_state)
