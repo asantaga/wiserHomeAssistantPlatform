@@ -11,6 +11,7 @@ import json
 
 # import time
 from datetime import datetime, timedelta
+from functools import partial
 import voluptuous as vol
 from wiserHeatingAPI.wiserHub import (
     wiserHub,
@@ -125,6 +126,8 @@ async def async_setup_entry(hass, config_entry):
         config_entry.data[CONF_PASSWORD],
     )
 
+    await data.async_connect()
+
     @callback
     def retryWiserHubSetup():
         hass.async_create_task(wiserHubSetup())
@@ -214,7 +217,7 @@ class WiserHubHandle:
         self._name = config_entry.data[CONF_NAME]
         self.ip = ip
         self.secret = secret
-        self.wiserhub = wiserHub(self.ip, self.secret)
+        self.wiserhub = None
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.data.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -222,6 +225,11 @@ class WiserHubHandle:
             CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
         )
         self.timer_handle = None
+
+    async def async_connect(self):
+        self.wiserhub = await self._hass.async_add_executor_job(
+            partial(wiserHub, self.ip, self.secret)
+        )
 
     @callback
     def do_hub_update(self):
