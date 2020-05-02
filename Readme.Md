@@ -425,3 +425,4 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Added ability to set temperature
     * Added ability to set room mode (auto,boost,manual)
 
+
