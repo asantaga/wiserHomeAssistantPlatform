@@ -11,6 +11,7 @@ import json
 
 # import time
 from datetime import datetime, timedelta
+from functools import partial
 import voluptuous as vol
 from wiserHeatingAPI.wiserHub import (
     wiserHub,
@@ -132,33 +133,38 @@ async def async_setup_entry(hass, config_entry):
     async def wiserHubSetup():
         _LOGGER.info("Initiating WiserHub connection")
         try:
-            if await data.async_update():
-                if data.wiserhub.getDevices is None:
-                    _LOGGER.error("No Wiser devices found to set up")
-                    return False
+            if await data.async_connect():
+                if await data.async_update():
+                    if data.wiserhub.getDevices is None:
+                        _LOGGER.error("No Wiser devices found to set up")
+                        return False
 
-                hass.data[DOMAIN] = data
+                    hass.data[DOMAIN] = data
 
-                for platform in WISER_PLATFORMS:
-                    hass.async_create_task(
-                        hass.config_entries.async_forward_entry_setup(
-                            config_entry, platform
+                    for platform in WISER_PLATFORMS:
+                        hass.async_create_task(
+                            hass.config_entries.async_forward_entry_setup(
+                                config_entry, platform
+                            )
                         )
-                    )
 
-                _LOGGER.info("Wiser Component Setup Completed")
-                return True
-            else:
-                await scheduleWiserHubSetup()
-                return True
+                    _LOGGER.info("Wiser Component Setup Completed")
+                    await data.async_update_device_registry()
+                    return True
+                else:
+                    await scheduleWiserHubSetup()
+                    return True
         except (asyncio.TimeoutError):
             await scheduleWiserHubSetup()
             return True
         except WiserHubTimeoutException:
             await scheduleWiserHubSetup()
             return True
+        except Exception:
+            await scheduleWiserHubSetup()
+            return True
 
-    async def scheduleWiserHubSetup(interval=30):
+    async def scheduleWiserHubSetup(interval=10):
         _LOGGER.error(
             "Unable to connect to the Wiser Hub, retrying in {} seconds".format(
                 interval
@@ -167,8 +173,7 @@ async def async_setup_entry(hass, config_entry):
         hass.loop.call_later(interval, retryWiserHubSetup)
         return
 
-    hass.async_create_task(wiserHubSetup())
-    await data.async_update_device_registry()
+    await wiserHubSetup()
     return True
 
 
@@ -214,7 +219,7 @@ class WiserHubHandle:
         self._name = config_entry.data[CONF_NAME]
         self.ip = ip
         self.secret = secret
-        self.wiserhub = wiserHub(self.ip, self.secret)
+        self.wiserhub = None
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.data.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -222,6 +227,12 @@ class WiserHubHandle:
             CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
         )
         self.timer_handle = None
+
+    async def async_connect(self):
+        self.wiserhub = await self._hass.async_add_executor_job(
+            partial(wiserHub, self.ip, self.secret)
+        )
+        return True
 
     @callback
     def do_hub_update(self):
@@ -256,7 +267,7 @@ class WiserHubHandle:
                 dispatcher_send(self._hass, "WiserHubUpdateMessage")
                 return True
             else:
-                _LOGGER.error("**Unable to update from wiser hub**")
+                _LOGGER.error("Unable to update from wiser hub")
                 return False
         except json.decoder.JSONDecodeError as JSONex:
             _LOGGER.error(
@@ -265,15 +276,11 @@ class WiserHubHandle:
             )
             return False
         except WiserHubTimeoutException as ex:
-            _LOGGER.error(
-                "***Failed to get update from Wiser hub due to timeout error***"
-            )
+            _LOGGER.error("Unable to update from Wiser hub due to timeout error")
             _LOGGER.debug("Error is {}".format(ex))
             return False
         except Exception as ex:
-            _LOGGER.error(
-                "***Failed to get update from Wiser hub due to unknown error***"
-            )
+            _LOGGER.error("Unable to update from Wiser hub due to unknown error")
             _LOGGER.debug("Error is {}".format(ex))
             return False
 
@@ -297,22 +304,26 @@ class WiserHubHandle:
     async def set_away_mode(self, away, away_temperature):
         mode = "AWAY" if away else "HOME"
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.debug(
             "Setting away mode to {} with temp {}.".format(mode, away_temperature)
         )
         try:
-            self.wiserhub.setHomeAwayMode(mode, away_temperature)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setHomeAwayMode, mode, away_temperature)
+            )
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting away mode! {}".format(str(e)))
 
     async def set_system_switch(self, switch, mode):
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.debug("Setting {} system switch to {}.".format(switch, mode))
         try:
-            self.wiserhub.setSystemSwitch(switch, mode)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setSystemSwitch, switch, mode)
+            )
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug("Error setting {} system switch! {}".format(switch, str(e)))
@@ -325,11 +336,13 @@ class WiserHubHandle:
         :return:
         """
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.info("Setting SmartPlug {} to {} ".format(plug_id, state))
 
         try:
-            self.wiserhub.setSmartPlugState(plug_id, state)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setSmartPlugState, plug_id, state)
+            )
             # Add small delay to allow hub to update status before refreshing
             await asyncio.sleep(0.5)
             await self.async_update(no_throttle=True)
@@ -346,14 +359,16 @@ class WiserHubHandle:
 
         """
         if self.wiserhub is None:
-            self.wiserhub = wiserHub(self.ip, self.secret)
+            self.wiserhub = await self.async_connect()
         _LOGGER.info("Setting Hotwater to {} ".format(hotwater_mode))
         # Add small delay to allow hub to update status before refreshing
         await asyncio.sleep(0.5)
         await self.async_update(no_throttle=True)
 
         try:
-            self.wiserhub.setHotwaterMode(hotwater_mode)
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.setHotwaterMode, hotwater_mode)
+            )
 
         except BaseException as e:
             _LOGGER.debug(
