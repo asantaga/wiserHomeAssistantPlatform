@@ -7,7 +7,12 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 """
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import HomeAssistantError, callback
 from wiserHeatingAPI.wiserHub import (
     WiserHubAuthenticationException,
@@ -61,7 +66,9 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_connection(self, ip, secret):
         self.wiserhub = wiserHub(ip, secret)
         try:
-            return await self.hass.async_add_executor_job(self.wiserhub.getWiserHubName)
+            return await self.hass.async_add_executor_job(
+                self.wiserhub.getWiserHubName
+            )
         except:
             raise
 
@@ -120,9 +127,9 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(self, discovery_info):
         # Check that it is a Wiser Hub
-        if not discovery_info.get("name") or not discovery_info["name"].startswith(
-            "WiserHeat"
-        ):
+        if not discovery_info.get("name") or not discovery_info[
+            "name"
+        ].startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_device")
 
         self._host = discovery_info[CONF_HOST].rstrip(".")
@@ -147,8 +154,12 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_HOST, default=self._host): str,
             vol.Required(CONF_PASSWORD,): str,
             vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): int,
-            vol.Optional(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): int,
-            vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
+            vol.Optional(
+                CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME
+            ): int,
+            vol.Optional(
+                CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+            ): int,
         }
 
         return await self.async_step_user()
@@ -184,7 +195,8 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             device = await self._test_connection(
-                ip=user_input.get(CONF_HOST), secret=user_input.get(CONF_PASSWORD)
+                ip=user_input.get(CONF_HOST),
+                secret=user_input.get(CONF_PASSWORD),
             )
 
             self._name = device
@@ -227,7 +239,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the wiser devices options."""
         if user_input is not None:
             self.options[CONF_BOOST_TEMP] = user_input[CONF_BOOST_TEMP]
-            self.options[CONF_BOOST_TEMP_TIME] = user_input[CONF_BOOST_TEMP_TIME]
+            self.options[CONF_BOOST_TEMP_TIME] = user_input[
+                CONF_BOOST_TEMP_TIME
+            ]
             self.options[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
 
             # Update main data config instead of option config
@@ -246,7 +260,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_BOOST_TEMP,
-                        default=self.options.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP),
+                        default=self.options.get(
+                            CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP
+                        ),
                     ): int,
                     vol.Required(
                         CONF_BOOST_TEMP_TIME,

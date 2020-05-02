@@ -54,19 +54,18 @@ PLATFORM_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL,
-                     default=DEFAULT_SCAN_INTERVAL): vol.All(
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): vol.All(vol.Coerce(int)),
+        vol.Optional(CONF_MINIMUM, default=TEMP_MINIMUM): vol.All(
             vol.Coerce(int)
         ),
-        vol.Optional(CONF_MINIMUM, default=TEMP_MINIMUM): vol.All(
-            vol.Coerce(int)),
         vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): vol.All(
             vol.Coerce(int)
         ),
-        vol.Optional(CONF_BOOST_TEMP_TIME,
-                     default=DEFAULT_BOOST_TEMP_TIME): vol.All(
-            vol.Coerce(int)
-        ),
+        vol.Optional(
+            CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME
+        ): vol.All(vol.Coerce(int)),
     }
 )
 
@@ -83,8 +82,10 @@ async def async_setup(hass, config):
     """
     hass.data[DATA_WISER_CONFIG] = config.get(DOMAIN, {})
 
-    if not hass.config_entries.async_entries(DOMAIN) and hass.data[
-            DATA_WISER_CONFIG]:
+    if (
+        not hass.config_entries.async_entries(DOMAIN)
+        and hass.data[DATA_WISER_CONFIG]
+    ):
         """
         No config entry exists and configuration.yaml config exists,
         so lets trigger the import flow.
@@ -167,7 +168,7 @@ async def async_setup_entry(hass, config_entry):
     async def scheduleWiserHubSetup(interval=10):
         _LOGGER.error(
             "Unable to connect to the Wiser Hub, retrying in %s seconds",
-            interval
+            interval,
         )
         hass.loop.call_later(interval, retryWiserHubSetup)
         return
@@ -193,8 +194,9 @@ async def async_unload_entry(hass, config_entry):
     tasks = []
     for platform in WISER_PLATFORMS:
         tasks.append(
-            hass.config_entries.async_forward_entry_unload(config_entry,
-                                                           platform)
+            hass.config_entries.async_forward_entry_unload(
+                config_entry, platform
+            )
         )
 
     unload_status = all(await asyncio.gather(*tasks))
@@ -209,8 +211,8 @@ async def config_update_listener(hass, config_entry):
 
     SCAN_INTERVAL = int(config_entry.data.get(CONF_SCAN_INTERVAL))
     _LOGGER.info(
-        "Wiser config parameters changed. Boost temp = {}, Boost time = {}, " +
-        "scan interval = {}".format(
+        "Wiser config parameters changed. Boost temp = {}, Boost time = {}, "
+        + "scan interval = {}".format(
             config_entry.data[CONF_BOOST_TEMP],
             config_entry.data[CONF_BOOST_TEMP_TIME],
             SCAN_INTERVAL,
@@ -231,8 +233,9 @@ class WiserHubHandle:
         self.wiserhub = None
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
-        self.boost_temp = config_entry.data.get(CONF_BOOST_TEMP,
-                                                DEFAULT_BOOST_TEMP)
+        self.boost_temp = config_entry.data.get(
+            CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP
+        )
         self.boost_time = config_entry.data.get(
             CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
         )
@@ -272,7 +275,8 @@ class WiserHubHandle:
         try:
             # Update from hub
             result = await self._hass.async_add_executor_job(
-                self.wiserhub.refreshData)
+                self.wiserhub.refreshData
+            )
             if result is not None:
                 _LOGGER.info("**Wiser Hub data updated**")
                 # Send update notice to all components to update
@@ -290,12 +294,14 @@ class WiserHubHandle:
             return False
         except WiserHubTimeoutException as ex:
             _LOGGER.error(
-                "Unable to update from Wiser hub due to timeout error")
+                "Unable to update from Wiser hub due to timeout error"
+            )
             _LOGGER.debug("Error is %s", str(ex))
             return False
         except Exception as ex:
             _LOGGER.error(
-                "Unable to update from Wiser hub due to unknown error")
+                "Unable to update from Wiser hub due to unknown error"
+            )
             _LOGGER.debug("Error is %s", str(ex))
             return False
 
@@ -306,12 +312,14 @@ class WiserHubHandle:
 
     async def async_update_device_registry(self):
         """Update device registry."""
-        device_registry = await \
-            self._hass.helpers.device_registry.async_get_registry()
+        device_registry = (
+            await self._hass.helpers.device_registry.async_get_registry()
+        )
         device_registry.async_get_or_create(
             config_entry_id=self._config_entry.entry_id,
             connections={
-                (CONNECTION_NETWORK_MAC, self.wiserhub.getMACAddress())},
+                (CONNECTION_NETWORK_MAC, self.wiserhub.getMACAddress())
+            },
             identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
             name=HUBNAME,
@@ -325,8 +333,9 @@ class WiserHubHandle:
         if self.wiserhub is None:
             self.wiserhub = await self.async_connect()
         _LOGGER.debug(
-            "Setting away mode to {} with temp {}.".format(mode,
-                                                           away_temperature)
+            "Setting away mode to {} with temp {}.".format(
+                mode, away_temperature
+            )
         )
         try:
             await self._hass.async_add_executor_job(
@@ -348,7 +357,8 @@ class WiserHubHandle:
             await self.async_update(no_throttle=True)
         except BaseException as e:
             _LOGGER.debug(
-                "Error setting {} system switch! {}".format(switch, str(e)))
+                "Error setting {} system switch! {}".format(switch, str(e))
+            )
 
     async def set_smart_plug_state(self, plug_id, state):
         """
@@ -393,5 +403,5 @@ class WiserHubHandle:
         except BaseException as e:
             _LOGGER.debug(
                 "Error setting Hotwater Mode to  %s, error %s".hotwater_mode,
-                str(e)
+                str(e),
             )
