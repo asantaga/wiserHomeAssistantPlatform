@@ -5,31 +5,27 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-import asyncio
-import logging
-
-import voluptuous as vol
-
 from functools import partial
-from homeassistant.components.climate import ClimateDevice
-from homeassistant.core import callback
 
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_IDLE,
     HVAC_MODE_AUTO,
-    SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_PRESET_MODE,
     HVAC_MODE_HEAT,
     HVAC_MODE_OFF,
+    SUPPORT_PRESET_MODE,
+    SUPPORT_TARGET_TEMPERATURE,
 )
 from homeassistant.const import (
-    ATTR_ENTITY_ID,
     ATTR_BATTERY_LEVEL,
+    ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     TEMP_CELSIUS,
 )
-import homeassistant.helpers.config_validation as cv
+from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import ruamel_yaml as yaml
@@ -43,8 +39,7 @@ from .const import (
     ROOM,
     WISER_SERVICES,
 )
-from .util import convert_to_wiser_schedule, convert_from_wiser_schedule
-
+from .util import convert_from_wiser_schedule, convert_to_wiser_schedule
 
 ATTR_TIME_PERIOD = "time_period"
 ATTR_TEMPERATURE_DELTA = "temperature_delta"
@@ -126,11 +121,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
         # Find correct room to boost
         for room in wiser_rooms:
-            _LOGGER.debug("*****BOOST for {}".format(room.entity_id))
+            _LOGGER.debug("BOOST for {}".format(room.entity_id))
             if room.entity_id == entity_id:
                 if boost_temp_delta > 0:
                     boost_temp = ((room.current_temperature)) + boost_temp_delta
-                _LOGGER.debug(
+                _LOGGER.info(
                     "Boost service called for {} to set to {}C for {} mins.".format(
                         room.name, boost_temp, boost_time
                     )
@@ -358,7 +353,7 @@ class WiserRoom(ClimateDevice):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
-        _LOGGER.debug(
+        _LOGGER.info(
             "Setting Device Operation {} for roomId {}".format(hvac_mode, self.room_id)
         )
         # Convert HA heat_cool to manual as required by api
@@ -484,7 +479,7 @@ class WiserRoom(ClimateDevice):
         if target_temperature is None:
             return False
 
-        _LOGGER.debug(
+        _LOGGER.info(
             "Setting temperature for {} to {}".format(self.name, target_temperature)
         )
         await self.hass.async_add_executor_job(

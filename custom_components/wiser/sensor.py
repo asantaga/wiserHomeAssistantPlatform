@@ -6,8 +6,6 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-import asyncio
-import logging
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -25,12 +23,12 @@ from homeassistant.helpers.icon import icon_for_battery_level
 
 from .const import (
     _LOGGER,
-    TRV_FULL_BATTERY_LEVEL,
     DOMAIN,
-    TRV_MIN_BATTERY_LEVEL,
-    SIGNAL_STRENGTH_ICONS,
-    ROOMSTAT_MIN_BATTERY_LEVEL,
     ROOMSTAT_FULL_BATTERY_LEVEL,
+    ROOMSTAT_MIN_BATTERY_LEVEL,
+    SIGNAL_STRENGTH_ICONS,
+    TRV_FULL_BATTERY_LEVEL,
+    TRV_MIN_BATTERY_LEVEL,
 )
 
 
@@ -82,7 +80,7 @@ class WiserSensor(Entity):
 
     #
     @staticmethod
-    def calculate_device_battery_pct( device_type, device_voltage):
+    def calculate_device_battery_pct(device_type, device_voltage):
         """
         Helper function for iTRV & RoomStat
         :param device_type:

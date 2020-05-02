@@ -1,13 +1,18 @@
-import asyncio
-import voluptuous as vol
+"""
+Switch  Platform Device for Wiser Rooms
 
+https://github.com/asantaga/wiserHomeAssistantPlatform
+Angelosantagata@gmail.com
+
+"""
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from .const import _LOGGER, DOMAIN, MANUFACTURER, WISER_SWITCHES, WISER_SERVICES
+from .const import _LOGGER, DOMAIN, MANUFACTURER, WISER_SERVICES, WISER_SWITCHES
 
 ATTR_PLUG_MODE = "plug_mode"
 ATTR_HOTWATER_MODE = "hotwater_mode"

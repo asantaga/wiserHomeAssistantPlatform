@@ -12,15 +12,8 @@ import json
 # import time
 from datetime import datetime, timedelta
 from functools import partial
+
 import voluptuous as vol
-from wiserHeatingAPI.wiserHub import (
-    wiserHub,
-    TEMP_MINIMUM,
-    TEMP_MAXIMUM,
-    WiserHubTimeoutException,
-    WiserHubAuthenticationException,
-    WiserRESTException,
-)
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
     CONF_HOST,
@@ -31,9 +24,17 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.helpers.dispatcher import dispatcher_send
+from wiserHeatingAPI.wiserHub import (
+    TEMP_MAXIMUM,
+    TEMP_MINIMUM,
+    WiserHubAuthenticationException,
+    WiserHubTimeoutException,
+    WiserRESTException,
+    wiserHub,
+)
 
 from .const import (
     _LOGGER,
@@ -52,7 +53,6 @@ from .const import (
     WISER_PLATFORMS,
     WISER_SERVICES,
 )
-
 
 # Set config values to default
 # These get set to config later
@@ -166,9 +166,7 @@ async def async_setup_entry(hass, config_entry):
 
     async def scheduleWiserHubSetup(interval=10):
         _LOGGER.error(
-            "Unable to connect to the Wiser Hub, retrying in {} seconds".format(
-                interval
-            )
+            "Unable to connect to the Wiser Hub, retrying in %s seconds".interval
         )
         hass.loop.call_later(interval, retryWiserHubSetup)
         return
@@ -242,16 +240,15 @@ class WiserHubHandle:
         # Update uses event loop scheduler for scan interval
         if no_throttle:
             # Forced update
-            _LOGGER.info("**Update of Wiser Hub data requested via On Demand**")
+            _LOGGER.info("Update of Wiser Hub data requested via On Demand")
             # Cancel next scheduled update and schedule for next interval
             if self.timer_handle:
                 self.timer_handle.cancel()
         else:
             # Updated on schedule
             _LOGGER.info(
-                "**Update of Wiser Hub data requested on {} seconds interval**".format(
-                    SCAN_INTERVAL
-                )
+                "Update of Wiser Hub data requested on %s seconds interval",
+                SCAN_INTERVAL,
             )
         # Schedule next update
         self.timer_handle = self._hass.loop.call_later(
@@ -271,17 +268,18 @@ class WiserHubHandle:
                 return False
         except json.decoder.JSONDecodeError as JSONex:
             _LOGGER.error(
-                "Data not in JSON format when getting data from the Wiser hub, "
-                + "did you enter the right URL? error {}".format(str(JSONex))
+                "Data not in JSON format when getting data from the Wiser hub,"
+                + "did you enter the right URL? error %s",
+                str(JSONex),
             )
             return False
         except WiserHubTimeoutException as ex:
             _LOGGER.error("Unable to update from Wiser hub due to timeout error")
-            _LOGGER.debug("Error is {}".format(ex))
+            _LOGGER.debug("Error is %s", str(ex))
             return False
         except Exception as ex:
             _LOGGER.error("Unable to update from Wiser hub due to unknown error")
-            _LOGGER.debug("Error is {}".format(ex))
+            _LOGGER.debug("Error is %s", str(ex))
             return False
 
     @property
@@ -372,7 +370,5 @@ class WiserHubHandle:
 
         except BaseException as e:
             _LOGGER.debug(
-                "Error setting Hotwater Mode to  {}, error {}".format(
-                    hotwater_mode, str(e)
-                )
+                "Error setting Hotwater Mode to  %s, error %s".hotwater_mode, str(e)
             )

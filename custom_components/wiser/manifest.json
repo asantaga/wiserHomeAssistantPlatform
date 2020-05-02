@@ -1,16 +1,10 @@
 {
-  "domain": "wiser",
-  "name": "Wiser Heating Component for Home Assistant",
-  "config_flow": true,
-  "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Readme.Md",
-  "dependencies": [],
-  "codeowners": [
-    "@asantaga"
-  ],
-  "requirements": [
-    "wiser-heating-api>=1.0.7.2"
-  ],
-  "zeroconf": [
-    "_http._tcp.local."
-  ]
+    "domain": "wiser",
+    "name": "Wiser Heating Component for Home Assistant",
+    "config_flow": true,
+    "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Readme.Md",
+    "dependencies": [],
+    "codeowners": ["@asantaga"],
+    "requirements": ["wiser-heating-api>=1.0.7.2"],
+    "zeroconf": ["_http._tcp.local."],
 }

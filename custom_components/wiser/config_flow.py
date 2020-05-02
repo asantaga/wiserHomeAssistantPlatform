@@ -1,24 +1,31 @@
-import voluptuous as vol
+"""
+Config Flow for Wiser Rooms
 
+https://github.com/asantaga/wiserHomeAssistantPlatform
+@msp1974
+
+"""
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistantError, callback
+from wiserHeatingAPI.wiserHub import (
+    WiserHubAuthenticationException,
+    WiserHubDataNull,
+    WiserHubTimeoutException,
+    WiserRESTException,
+    wiserHub,
+)
+
 from .const import (
     _LOGGER,
-    DATA_WISER_CONFIG,
-    DOMAIN,
     CONF_BOOST_TEMP,
     CONF_BOOST_TEMP_TIME,
+    DATA_WISER_CONFIG,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
-)
-from wiserHeatingAPI.wiserHub import (
-    wiserHub,
-    WiserHubAuthenticationException,
-    WiserHubTimeoutException,
-    WiserHubDataNull,
-    WiserRESTException,
+    DOMAIN,
 )
 
 data_schema = {
