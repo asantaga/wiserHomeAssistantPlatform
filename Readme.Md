@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform v2.2
+# Wiser Home Assistant Platform v2.3
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
@@ -361,6 +361,9 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 2.3
+   * Fix for error given by latest HA highlighting that I/O Detected in event loop (issue 97)
+   * Fix for climate graph not showing true state (issue 98)
 - 2.2
     * Battery voltage across sensor types now consistent (1 decimal place no v)
     * Implemented what we think is correct battery percentages depending on device (itrv or roomstat)
