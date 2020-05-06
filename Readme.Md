@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform v2.3
+# Wiser Home Assistant Platform v2.3.1
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
