@@ -415,7 +415,7 @@ class WiserRoom(ClimateDevice):
 
     async def async_set_preset_mode(self, preset_mode):
         boost_time = self.data._config_entry.data.get(
-            CONF_BOOST_TEMP_TIME, self.data.boost_temp_time
+            CONF_BOOST_TEMP_TIME, self.data.boost_time
         )
         boost_temp = self.data._config_entry.data.get(
             CONF_BOOST_TEMP, self.data.boost_temp
