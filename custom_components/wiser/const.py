@@ -37,7 +37,7 @@ DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 
 # Custom Configs
-CONF_BOOST_TEMP = "boost_temp"
+CONF_BOOST_TEMP: str = "boost_temp"
 CONF_BOOST_TEMP_TIME = "boost_time"
 
 
