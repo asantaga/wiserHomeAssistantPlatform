@@ -305,7 +305,7 @@ class WiserHubHandle:
 
     @property
     def unique_id(self):
-        """Return a unique name, otherwise config flow doesnt work right."""
+        """Return a unique name, otherwise config flow does not work right."""
         return self._name
 
     async def async_update_device_registry(self):

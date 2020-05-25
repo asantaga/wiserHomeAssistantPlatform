@@ -65,7 +65,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
     # Add heating circuit sensor
     wiser_devices.append(WiserSystemCircuitState(data, sensor_type="HEATING"))
-    # Dont display Hotwater if hotwater not supported
+    # Don't display Hotwater if hotwater not supported
     # https://github.com/asantaga/wiserHomeAssistantPlatform/issues/8
     if data.wiserhub.getHotwater() is not None:
         wiser_devices.append(
