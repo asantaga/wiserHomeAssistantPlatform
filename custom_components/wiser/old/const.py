@@ -1,5 +1,5 @@
 """
-Constants  for Wiser Platform.
+Constants  for Wiser Platform
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com

@@ -12,7 +12,7 @@
     "flow_title": "Wiser Heat Hub: {name}",
     "step": {
       "user": {
-        "data":{
+        "data": {
           "boost_temp": "Default Boost Temperature",
           "boost_time": "Default Boost Duration",
           "host": "IP Address",

@@ -1,5 +1,5 @@
 """
-General Utilities Wiser Platform.
+General Utilities Wiser Platform
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
@@ -12,8 +12,8 @@ from .const import SPECIALDAYS, WEEKDAYS, WEEKENDS
 
 def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
     """
-    Convert from wiser format to human readable format.
-
+    Description: Converts from wiser format to human readable format
+    
     Param: scheduleData
     Param: mode
     """
@@ -43,7 +43,9 @@ def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
                             # Convert values and keys to human readable version
                             if key == "Time":
                                 value = (
-                                    datetime.strptime(format(value, "04d"), "%H%M")
+                                    datetime.strptime(
+                                        format(value, "04d"), "%H%M"
+                                    )
                                 ).strftime("%H:%M")
                             if key == "DegreesC":
                                 key = "Temp"
@@ -60,8 +62,8 @@ def convert_from_wiser_schedule(scheduleData: dict, scheduleName=""):
 
 def convert_to_wiser_schedule(scheduleData: dict):
     """
-    Convert from human readable format to wiser format.
-
+    Description: Converts from human readable format to wiser format
+    
     Param: scheduleData
     Param: mode
     """

@@ -1,11 +1,19 @@
 """
-Config Flow for Wiser Rooms.
+Config Flow for Wiser Rooms
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
 import voluptuous as vol
+from homeassistant import config_entries
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+)
+from homeassistant.core import HomeAssistantError, callback
 from wiserHeatingAPI.wiserHub import (
     WiserHubAuthenticationException,
     WiserHubDataNull,
@@ -14,14 +22,11 @@ from wiserHeatingAPI.wiserHub import (
     wiserHub,
 )
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistantError, callback
-
 from .const import (
     _LOGGER,
     CONF_BOOST_TEMP,
     CONF_BOOST_TEMP_TIME,
+    DATA_WISER_CONFIG,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
@@ -39,14 +44,9 @@ data_schema = {
 
 @config_entries.HANDLERS.register(DOMAIN)
 class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """
-    WiserFlowHandler configuration method.
-
-    The schema version of the entries that it creates
-    Home Assistant will call your migrate method if the version changes
-    (this is not implemented yet)
-    """
-
+    # The schema version of the entries that it creates
+    # Home Assistant will call your migrate method if the version changes
+    # (this is not implemented yet)
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
@@ -61,22 +61,20 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        """Return flow options."""
         return WiserOptionsFlowHandler(config_entry)
 
     async def _test_connection(self, ip, secret):
-        """Allow test connection."""
         self.wiserhub = wiserHub(ip, secret)
-        #        try:
-        return await self.hass.async_add_executor_job(self.wiserhub.getWiserHubName)
-
-    #        except:
-    #            raise
+        try:
+            return await self.hass.async_add_executor_job(
+                self.wiserhub.getWiserHubName
+            )
+        except:
+            raise
 
     async def _create_entry(self):
         """
         Create entry for device.
-
         Generate a name to be used as a prefix for device entities.
         """
         self.device_config[CONF_NAME] = self._name
@@ -86,7 +84,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """
         Handle a Wiser Heat Hub config flow start.
-
         Manage device specific parameters.
         """
         errors = {}
@@ -105,7 +102,9 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_HOST: user_input[CONF_HOST],
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                         CONF_BOOST_TEMP: user_input[CONF_BOOST_TEMP],
-                        CONF_BOOST_TEMP_TIME: user_input[CONF_BOOST_TEMP_TIME],
+                        CONF_BOOST_TEMP_TIME: user_input[
+                            CONF_BOOST_TEMP_TIME
+                        ],
                         CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL]
                         or DEFAULT_SCAN_INTERVAL,
                     }
@@ -129,11 +128,10 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_zeroconf(self, discovery_info):
-        """Check that it is a Wiser Hub."""
-
-        if not discovery_info.get("name") or not discovery_info["name"].startswith(
-            "WiserHeat"
-        ):
+        # Check that it is a Wiser Hub
+        if not discovery_info.get("name") or not discovery_info[
+            "name"
+        ].startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_device")
 
         self._host = discovery_info[CONF_HOST].rstrip(".")
@@ -158,8 +156,12 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_HOST, default=self._host): str,
             vol.Required(CONF_PASSWORD,): str,
             vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): int,
-            vol.Optional(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): int,
-            vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
+            vol.Optional(
+                CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME
+            ): int,
+            vol.Optional(
+                CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+            ): int,
         }
 
         return await self.async_step_user()
@@ -167,7 +169,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, import_data):
         """
         Import wiser config from configuration.yaml.
-
         Triggered by async_setup only if a config entry doesn't already exist.
         We will attempt to validate the credentials
         and create an entry if valid. Otherwise, we will delegate to the user
@@ -196,7 +197,8 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             device = await self._test_connection(
-                ip=user_input.get(CONF_HOST), secret=user_input.get(CONF_PASSWORD),
+                ip=user_input.get(CONF_HOST),
+                secret=user_input.get(CONF_PASSWORD),
             )
 
             self._name = device
@@ -226,8 +228,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class WiserOptionsFlowHandler(config_entries.OptionsFlow):
-    """Main Class for Wiser Options in ConfigFlow."""
-
     def __init__(self, config_entry):
         """Initialize deCONZ options flow."""
         self.config_entry = config_entry
@@ -241,7 +241,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the wiser devices options."""
         if user_input is not None:
             self.options[CONF_BOOST_TEMP] = user_input[CONF_BOOST_TEMP]
-            self.options[CONF_BOOST_TEMP_TIME] = user_input[CONF_BOOST_TEMP_TIME]
+            self.options[CONF_BOOST_TEMP_TIME] = user_input[
+                CONF_BOOST_TEMP_TIME
+            ]
             self.options[CONF_SCAN_INTERVAL] = user_input[CONF_SCAN_INTERVAL]
 
             # Update main data config instead of option config
@@ -260,7 +262,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_BOOST_TEMP,
-                        default=self.options.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP),
+                        default=self.options.get(
+                            CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP
+                        ),
                     ): int,
                     vol.Required(
                         CONF_BOOST_TEMP_TIME,
