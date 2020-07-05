@@ -9,7 +9,6 @@ import requests.exceptions
 import voluptuous as vol
 from wiserHeatingAPI.wiserHub import (
     WiserHubAuthenticationException,
-    WiserHubDataNull,
     WiserHubTimeoutException,
     WiserRESTException,
     wiserHub,
@@ -30,13 +29,7 @@ from .const import (
 )
 
 DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_HOST): str,
-        vol.Required(CONF_PASSWORD): str,
-        vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): int,
-        vol.Optional(CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME): int,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
-    }
+    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str}
 )
 
 
@@ -50,17 +43,21 @@ async def validate_input(hass, data):
         wiser = await hass.async_add_executor_job(
             wiserHub, data[CONF_HOST], data[CONF_PASSWORD]
         )
-        wiserID = await hass.async_add_executor_job(wiser.getWiserHubName)
-    except AttributeError:
-        # bug in wiser api needs fixing
-        raise WiserHubDataNull
-    except requests.exceptions.ConnectionError:
-        raise WiserHubTimeoutException
-    except Exception:
-        raise
+        wiser_id = await hass.async_add_executor_job(wiser.getWiserHubName)
 
-    unique_id = str(f"{DOMAIN}-{wiserID}")
-    name = wiserID
+    except WiserHubTimeoutException:
+        raise CannotConnect
+    except WiserHubAuthenticationException:
+        raise InvalidAuth
+    except WiserRESTException:
+        raise UnknownError
+    except requests.exceptions.ConnectionError:
+        raise CannotConnect
+    except RuntimeError:
+        raise UnknownError
+
+    unique_id = str(f"{DOMAIN}-{wiser_id}")
+    name = wiser_id
 
     return {"title": name, "unique_id": unique_id}
 
@@ -98,13 +95,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 validated = await validate_input(self.hass, user_input)
-            except WiserHubAuthenticationException:
+            except InvalidAuth:
                 errors["base"] = "auth_failure"
-            except WiserHubTimeoutException:
+            except CannotConnect:
                 errors["base"] = "timeout_error"
-            except (WiserRESTException, WiserHubDataNull):
-                errors["base"] = "not_successful"
-            except Exception:  # pylint: disable=broad-except
+            except UnknownError:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -123,63 +118,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=self.discovery_schema or DATA_SCHEMA,
             errors=errors,
         )
-
-    async def async_step_zeroconf(self, discovery_info):
-        """Check that it is a Wiser Hub."""
-        if not discovery_info.get("name") or not discovery_info["name"].startswith(
-            "WiserHeat"
-        ):
-            return self.async_abort(reason="not_wiser_device")
-
-        if self._async_current_entries():
-            return self.async_abort(reason="already_configured")
-
-        properties = {
-            CONF_HOST: discovery_info[CONF_HOST].rstrip("."),
-            CONF_NAME: discovery_info["name"].replace("." + discovery_info["type"], ""),
-        }
-
-        await self.async_set_unique_id("{}-{}".format(DOMAIN, properties[CONF_NAME]))
-
-        # replace placeholder with hub mDNS name
-        self.context["title_placeholders"] = {
-            CONF_NAME: properties[CONF_NAME],
-        }
-
-        # If discovered via zero conf, set host
-        self.discovery_schema = vol.Schema(
-            {
-                vol.Required(CONF_HOST, default=properties[CONF_HOST]): str,
-                vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_BOOST_TEMP, default=DEFAULT_BOOST_TEMP): int,
-                vol.Optional(
-                    CONF_BOOST_TEMP_TIME, default=DEFAULT_BOOST_TEMP_TIME
-                ): int,
-                vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
-            }
-        )
-
-        return await self.async_step_user()
-
-    async def async_step_import(self, import_data):
-        """
-        Import wiser config from configuration.yaml.
-
-        Triggered by async_setup only if a config entry doesn't already exist.
-        We will attempt to validate the credentials
-        and create an entry if valid. Otherwise, we will delegate to the user
-        step so that the user can continue the config flow.
-        """
-        if self._host_already_configured(import_data):
-            return self.async_abort(reason="already_configured")
-        return await self.async_step_user(import_data)
-
-    def _host_already_configured(self, user_input):
-        """See if we already have a username matching user input configured."""
-        existing_host = {
-            entry.data[CONF_HOST] for entry in self._async_current_entries()
-        }
-        return user_input[CONF_HOST] in existing_host
 
 
 class WiserOptionsFlowHandler(config_entries.OptionsFlow):
@@ -225,3 +163,7 @@ class CannotConnect(exceptions.HomeAssistantError):
 
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class UnknownError(exceptions.HomeAssistantError):
+    """Error to indicate there is an unknown error."""
