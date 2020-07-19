@@ -134,6 +134,8 @@ Before you can use the component you need to find the HeatHub secret key, this i
 7. Find Your HEATHUB IP
     Using your router, or some other method, identify the IP address of your HeatHub. On many routers it usually identifies itself as the something like ``WiserHeatXXXXXX`` 
 
+    **We recommend you configure your router so that it assigns a FIXED IP address to the Wiser HeatHub. Whilst it "shouldnt" change IP address some people have noticed it has/does, perhaps when wiser issue a firmware update. Most routers allow you to reserve an IP address to a MAC address, this setting is often (like on Virgin Media Routers) done in the DHCP section.**   
+
 8. Configure using Home Assistant Configuration Assistant "Set up new integration"
 
     ![](docs/add_configuration_image.png)
@@ -374,6 +376,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Implemented what we think is correct battery percentages depending on device (itrv or roomstat)
     * Regression of itrv sensors not having battery voltage fixed 
 - 2.1
+    
     * Minor bug fixes and documentation fixes
 - 2.0
     * Now supports Home Assistant Config Flow (credit @msp1974)
