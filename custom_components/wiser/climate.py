@@ -452,7 +452,7 @@ class WiserRoom(ClimateEntity):
             "DisplayedSetPoint"
         )
 
-        if state.lower() == "manual" and current_set_point == -200:
+        if current_set_point == -200:
             target = None
 
         return target
