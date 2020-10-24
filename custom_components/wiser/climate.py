@@ -445,17 +445,14 @@ class WiserRoom(ClimateEntity):
     @property
     def target_temperature(self):
         """Return target temp."""
-        target = self.data.wiserhub.getRoom(self.room_id).get("DisplayedSetPoint") / 10
-
-        state = self.data.wiserhub.getRoom(self.room_id).get("Mode")
         current_set_point = self.data.wiserhub.getRoom(self.room_id).get(
             "DisplayedSetPoint"
         )
 
         if current_set_point == -200:
-            target = None
+            return None
 
-        return target
+        return current_set_point / 10
 
     @property
     def state_attributes(self):
