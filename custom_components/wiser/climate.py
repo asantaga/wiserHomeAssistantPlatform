@@ -309,15 +309,10 @@ class WiserRoom(ClimateEntity):
     @property
     def current_temperature(self):
         """Return current temp from data."""
-        temp = (
-            self.data.wiserhub.getRoom(self.room_id).get("CalculatedTemperature") / 10
-        )
-        if temp < self.min_temp:
-            # Sometimes we get really low temps (like -3000!),
-            # not sure why, if we do then just set it to -20 for now till i
-            # debug this.
-            temp = self.min_temp
-        return temp
+        raw = self.data.wiserhub.getRoom(self.room_id).get("CalculatedTemperature")
+        if raw == -32768: # Reported temperature if there are no thermostats available
+            return None
+        return raw / 10
 
     @property
     def icon(self):
