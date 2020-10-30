@@ -22,7 +22,7 @@ from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import ruamel_yaml as yaml
+from homeassistant.util import ruamel_yaml as yaml, dt
 
 from .const import (
     _LOGGER,
@@ -462,6 +462,14 @@ class WiserRoom(ClimateEntity):
         """Return state attributes."""
         # Generic attributes
         attrs = super().state_attributes
+
+        # If boosted show boost end time
+        if self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0) > 0:
+            attrs["boost_timeout"] = dt.utc_from_timestamp(
+                                        self.data.wiserhub.getRoom(self.room_id).get(
+                                            "OverrideTimeoutUnixTime", 0
+                                        )
+                                    )
         attrs["percentage_demand"] = self.data.wiserhub.getRoom(self.room_id).get(
             "PercentageDemand"
         )
