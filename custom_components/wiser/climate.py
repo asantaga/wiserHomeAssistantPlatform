@@ -22,7 +22,7 @@ from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import ruamel_yaml as yaml
+from homeassistant.util import ruamel_yaml as yaml, dt
 
 from .const import (
     _LOGGER,
@@ -309,15 +309,10 @@ class WiserRoom(ClimateEntity):
     @property
     def current_temperature(self):
         """Return current temp from data."""
-        temp = (
-            self.data.wiserhub.getRoom(self.room_id).get("CalculatedTemperature") / 10
-        )
-        if temp < self.min_temp:
-            # Sometimes we get really low temps (like -3000!),
-            # not sure why, if we do then just set it to -20 for now till i
-            # debug this.
-            temp = self.min_temp
-        return temp
+        raw = self.data.wiserhub.getRoom(self.room_id).get("CalculatedTemperature")
+        if raw == -32768: # Reported temperature if there are no thermostats available
+            return None
+        return raw / 10
 
     @property
     def icon(self):
@@ -445,23 +440,37 @@ class WiserRoom(ClimateEntity):
     @property
     def target_temperature(self):
         """Return target temp."""
-        target = self.data.wiserhub.getRoom(self.room_id).get("DisplayedSetPoint") / 10
-
-        state = self.data.wiserhub.getRoom(self.room_id).get("Mode")
         current_set_point = self.data.wiserhub.getRoom(self.room_id).get(
             "DisplayedSetPoint"
         )
 
-        if state.lower() == "manual" and current_set_point == -200:
-            target = None
+        if current_set_point == -200:
+            return None
 
-        return target
+        return current_set_point / 10
 
     @property
     def state_attributes(self):
         """Return state attributes."""
         # Generic attributes
         attrs = super().state_attributes
+
+        # If boosted show boost end time
+        #if self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0) > 0:
+        boost_end = self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0)
+
+        attrs["boost_end"] = dt.utc_from_timestamp(boost_end)
+
+        if boost_end > 0:
+            boost_remaining = dt.utc_from_timestamp(
+                self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0)
+                ) - dt.utc_from_timestamp(self.data.wiserhub.getSystem().get("UnixTime", 0))
+            attrs["boost_remaining"] = int(boost_remaining.total_seconds()/60)
+        else:
+            attrs["boost_remaining"] = 0
+        
+
+            
         attrs["percentage_demand"] = self.data.wiserhub.getRoom(self.room_id).get(
             "PercentageDemand"
         )
