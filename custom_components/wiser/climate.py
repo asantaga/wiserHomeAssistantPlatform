@@ -464,12 +464,21 @@ class WiserRoom(ClimateEntity):
         attrs = super().state_attributes
 
         # If boosted show boost end time
-        if self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0) > 0:
-            attrs["boost_timeout"] = dt.utc_from_timestamp(
-                                        self.data.wiserhub.getRoom(self.room_id).get(
-                                            "OverrideTimeoutUnixTime", 0
-                                        )
-                                    )
+        #if self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0) > 0:
+        boost_end = self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0)
+
+        attrs["boost_end"] = dt.utc_from_timestamp(boost_end)
+
+        if boost_end > 0:
+            boost_remaining = dt.utc_from_timestamp(
+                self.data.wiserhub.getRoom(self.room_id).get("OverrideTimeoutUnixTime", 0)
+                ) - dt.utc_from_timestamp(self.data.wiserhub.getSystem().get("UnixTime", 0))
+            attrs["boost_remaining"] = int(boost_remaining.total_seconds()/60)
+        else:
+            attrs["boost_remaining"] = 0
+        
+
+            
         attrs["percentage_demand"] = self.data.wiserhub.getRoom(self.room_id).get(
             "PercentageDemand"
         )
