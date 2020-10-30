@@ -94,6 +94,9 @@ async def async_setup_entry(hass, config_entry):
 
     try:
         await hass.async_add_executor_job(data.connect)
+    except (WiserHubTimeoutException, requests.exceptions.ConnectionError):
+        _LOGGER.error("Connection timed out connecing to wiser hub")
+        raise ConfigEntryNotReady
     except KeyError:
         _LOGGER.error("Failed to login to wiser hub")
         return False
