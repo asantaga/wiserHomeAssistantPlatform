@@ -224,6 +224,7 @@ class WiserSmartPlug(SwitchEntity):
             "identifiers": {(DOMAIN, identifier)},
             "manufacturer": MANUFACTURER,
             "model": model,
+            "sw_version": self.data.wiserhub.getDevice(self.smart_plug_id).get("ActiveFirmwareVersion"),
         }
 
     @property

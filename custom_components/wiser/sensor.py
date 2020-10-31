@@ -289,6 +289,7 @@ class WiserDeviceSensor(WiserSensor):
                 "model": self.data.wiserhub.getDevice(self._device_id).get(
                     "ProductType"
                 ),
+                "sw_version": self.data.wiserhub.getDevice(self._device_id).get("ActiveFirmwareVersion"),
             }
         return info
 
