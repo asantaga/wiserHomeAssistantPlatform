@@ -90,12 +90,21 @@ async def async_setup_entry(hass, config_entry):
     """Set up Wiser from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
-    data = WiserHubHandle(hass, config_entry,)
+    data = WiserHubHandle(
+        hass,
+        config_entry,
+    )
 
     try:
         await hass.async_add_executor_job(data.connect)
-    except (WiserHubTimeoutException, requests.exceptions.ConnectionError):
-        _LOGGER.error("Connection timed out connecing to wiser hub")
+    except (
+        WiserHubTimeoutException,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.InvalidHeader,
+        requests.exceptions.ProxyError
+    ):
+        _LOGGER.error("Connection error trying to connect to wiser hub")
         raise ConfigEntryNotReady
     except KeyError:
         _LOGGER.error("Failed to login to wiser hub")
@@ -334,7 +343,10 @@ class WiserHubHandle:
 
         except BaseException as ex:  # pylint: disable=broad-except
             _LOGGER.debug(
-                "Error setting SmartPlug %s to %s, error %s", plug_id, state, str(ex),
+                "Error setting SmartPlug %s to %s, error %s",
+                plug_id,
+                state,
+                str(ex),
             )
 
     async def set_hotwater_mode(self, hotwater_mode):
@@ -352,5 +364,7 @@ class WiserHubHandle:
             )
         except BaseException as ex:  # pylint: disable=broad-except
             _LOGGER.debug(
-                "Error setting Hotwater Mode to  %s, error %s", hotwater_mode, str(ex),
+                "Error setting Hotwater Mode to  %s, error %s",
+                hotwater_mode,
+                str(ex),
             )
