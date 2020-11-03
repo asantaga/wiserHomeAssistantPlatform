@@ -385,7 +385,7 @@ class WiserRoom(ClimateEntity):
     @property
     def preset_mode(self):
         """Set preset mode."""
-        wiser_preset = self.data.wiserhub.getRoom(self.room_id).get("SetpointOrigin")
+        wiser_preset = self.data.wiserhub.getRoom(self.room_id).get("SetpointOrigin","NA")
         mode = self.data.wiserhub.getRoom(self.room_id).get("Mode")
 
         if (
