@@ -23,7 +23,7 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
 
     # Get schedule type
     if "Type" in schedule_data:
-        schedule_type = schedule_data["Type"]
+        schedule_type = schedule_data["Type"].capitalize()
     else:
         schedule_type = "Heating"
 
@@ -44,7 +44,7 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
                     # Iterate all times
                     schedule_set_points = convert_wiser_to_yaml_day(times, schedule_type)
                     # Iterate through each setpoint entry
-            schedule_output.update({day: schedule_set_points})
+            schedule_output.update({day.capitalize(): schedule_set_points})
     return schedule_output
 
 
@@ -59,7 +59,7 @@ def convert_to_wiser_schedule(schedule_data: dict):
     # Iterate through each day
     # Get schedule type
     if "Type" in schedule_data:
-        schedule_output = {"Type": schedule_data["Type"]}
+        schedule_output = {"Type": schedule_data["Type"]capitalize()}
     else:
         schedule_output = {"Type": "Heating"}
 
@@ -89,11 +89,11 @@ def convert_wiser_to_yaml_day(times, schedule_type):
         schedule_time = {}
         for key, value in k.items():
             # Convert values and keys to human readable version
-            if key == "Time":
+            if key.lower() == "time":
                 value = (datetime.strptime(format(value, "04d"), "%H%M")).strftime(
                     "%H:%M"
                 )
-            if key == "DegreesC":
+            if key.lower() == "degreesc":
                 if schedule_type == "Heating":
                     key = "Temp"
                 else:
@@ -120,17 +120,17 @@ def convert_yaml_to_wiser_day(times):
         schedule_time = {}
         for key, value in k.items():
             # Convert values and key to wiser format
-            if key == "Time":
+            if key.lower() == "time":
                 value = str(value).replace(":", "")
-            if key in ["Temp", "State"]:
+            if key.lower() in ["temp", "state"]:
                 key = "DegreesC"
-                if value == "Off":
+                if value.lower() == "off":
                     value = -200
-                elif value == "On":
+                elif value.lower() == "on":
                     value = 1100
                 else:
                     value = int(value * 10)
-            tmp = {key: value}
+            tmp = {key.capitalize(): value}
             schedule_time.update(tmp)
         schedule_set_points.append(schedule_time.copy())
     return schedule_set_points
