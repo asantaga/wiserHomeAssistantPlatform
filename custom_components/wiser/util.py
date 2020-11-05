@@ -23,7 +23,7 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
 
     # Get schedule type
     if "Type" in schedule_data:
-        schedule_type = schedule_data["Type"].capitalize()
+        schedule_type = schedule_data["Type"]
     else:
         schedule_type = "Heating"
 
@@ -59,7 +59,7 @@ def convert_to_wiser_schedule(schedule_data: dict):
     # Iterate through each day
     # Get schedule type
     if "Type" in schedule_data:
-        schedule_output = {"Type": schedule_data["Type"].capitalize()}
+        schedule_output = {"Type": schedule_data["Type"].capitalize().replace("w","W")}
     else:
         schedule_output = {"Type": "Heating"}
 
@@ -68,7 +68,7 @@ def convert_to_wiser_schedule(schedule_data: dict):
         if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
             schedule_day = {}
             # Iterate through each set of times for a day
-            schedule_day = {"Setpoints": convert_yaml_to_wiser_day(times)}
+            schedule_day = {"SetPoints": convert_yaml_to_wiser_day(times)}
             # If using special days, convert to one entry for each day of week
             if day.lower() in SPECIALDAYS:
                 if day.lower() == "weekdays":
@@ -124,13 +124,13 @@ def convert_yaml_to_wiser_day(times):
                 value = str(value).replace(":", "")
             if key.lower() in ["temp", "state"]:
                 key = "DegreesC"
-                if value.lower() == "off":
+                if str(value).lower() == "off":
                     value = -200
-                elif value.lower() == "on":
+                elif str(value).lower() == "on":
                     value = 1100
                 else:
                     value = int(value * 10)
-            tmp = {key.capitalize(): value}
+            tmp = {key: value}
             schedule_time.update(tmp)
         schedule_set_points.append(schedule_time.copy())
     return schedule_set_points

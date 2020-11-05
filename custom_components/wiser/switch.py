@@ -206,7 +206,7 @@ class WiserSmartPlug(SwitchEntity):
         self._is_on = self.data.wiserhub.getSmartPlug(self.smart_plug_id).get(
             "OutputState"
         )
-        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getScheduleId(self.smart_plug_id, "smartplug")
+        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getSmartPlug(self.smart_plug_id).get("ScheduleId")
 
     @property
     def unique_id(self):

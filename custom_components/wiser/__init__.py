@@ -18,6 +18,7 @@ from wiserHeatingAPI.wiserHub import (
     TEMP_MINIMUM,
     WiserHubTimeoutException,
     wiserHub,
+    WiserRESTException,
 )
 
 from homeassistant.const import (
@@ -128,7 +129,7 @@ async def async_setup_entry(hass, config_entry):
 
         for entity, scheduleId in data.schedules.items():
             if entity == entity_id:
-                schedule_data = data.wiserhub.getScheduleById(scheduleId)
+                schedule_data = data.wiserhub.getSchedule(scheduleId)
                 _LOGGER.error("Schedule id for %s is %s", entity, scheduleId)
                 if schedule_data is not None:
                     schedule_data = convert_from_wiser_schedule(
@@ -480,23 +481,30 @@ class WiserHubHandle:
         """Set room schedules."""
         if schedule_data is not None:
             schedule_data = convert_to_wiser_schedule(schedule_data)
-            await self._hass.async_add_executor_job(
-                partial(self.wiserhub.setScheduleById, schedule_id, schedule_data)
-            )
-            _LOGGER.debug("Set schedule for %s", entity_id)
-            self._force_update = True
-            return True
+            try:
+                await self._hass.async_add_executor_job(
+                    partial(self.wiserhub.setSchedule, schedule_id, schedule_data)
+                )
+                _LOGGER.debug("Set schedule for %s", entity_id)
+                self._force_update = True
+                return True
+            except WiserRESTException:
+                _LOGGER.error("Error setting schedule for %s.  Please check your schedule file.", entity_id)
         return False
 
     async def copy_schedule(self, entity_id, schedule_id, to_entity_id, to_schedule_id):
         """Copy schedule from one device to another."""
-        await self._hass.async_add_executor_job(
-            partial(self.wiserhub.copySchedule, schedule_id, to_schedule_id)
-        )
-        _LOGGER.debug(
-            "Copied schedule from %s to %s",
-            entity_id,
-            to_entity_id,
-        )
-        self._force_update = True
-        return True
+        try:
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.copySchedule, schedule_id, to_schedule_id)
+            )
+            _LOGGER.debug(
+                "Copied schedule from %s to %s",
+                entity_id,
+                to_entity_id,
+            )
+            self._force_update = True
+            return True
+        except WiserRESTException:
+                _LOGGER.error("Error copying schedule %s to %s.", entity_id, to_entity_id)
+        return False

@@ -168,7 +168,7 @@ class WiserRoom(ClimateEntity):
             self._force_update = False
         self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
         # Testing for adding schedule ids to hub controller entity
-        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getScheduleId(self.room_id, "heating")
+        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getRoom(self.room_id).get("ScheduleId")
 
     @property
     def supported_features(self):
