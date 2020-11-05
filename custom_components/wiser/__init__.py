@@ -18,21 +18,24 @@ from wiserHeatingAPI.wiserHub import (
     TEMP_MINIMUM,
     WiserHubTimeoutException,
     wiserHub,
+    WiserRESTException,
 )
 
 from homeassistant.const import (
+    ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_MINIMUM,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
 )
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import Throttle
+from homeassistant.util import ruamel_yaml as yaml, Throttle
 
 from .const import (
     _LOGGER,
@@ -50,8 +53,12 @@ from .const import (
     WISER_PLATFORMS,
     WISER_SERVICES,
 )
+from .util import convert_from_wiser_schedule, convert_to_wiser_schedule
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+
+ATTR_FILENAME = "filename"
+ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -80,6 +87,20 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+GET_SET_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
+    }
+)
+
+COPY_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
+    }
+)
+
 
 async def async_setup(hass, config):
     """Set up of the Wiser Hub component."""
@@ -94,6 +115,68 @@ async def async_setup_entry(hass, config_entry):
         hass,
         config_entry,
     )
+
+    # Services callback functions
+    @callback
+    def get_schedule(service):
+        """Handle the service call."""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        filename = (
+            service.data[ATTR_FILENAME]
+            if service.data[ATTR_FILENAME] != ""
+            else ("schedule_" + entity_id + ".yaml")
+        )
+
+        for entity, scheduleId in data.schedules.items():
+            if entity == entity_id:
+                schedule_data = data.wiserhub.getSchedule(scheduleId)
+                _LOGGER.error("Schedule id for %s is %s", entity, scheduleId)
+                if schedule_data is not None:
+                    schedule_data = convert_from_wiser_schedule(
+                        schedule_data, entity_id.replace("climate.","").replace("switch.","").replace("sensor.","").replace("_"," ").title()
+                    )
+                    yaml.save_yaml(filename, schedule_data)
+                    break
+                else:
+                    raise Exception("No schedule data returned")
+                return True
+        _LOGGER.debug("No schedule exists for %s", entity_id)
+        
+
+    @callback
+    def set_schedule(service):
+        """Handle the service call."""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        filename = service.data[ATTR_FILENAME]
+        schedule_data = None
+        # Get schedule data
+        try:
+            schedule_data = yaml.load_yaml(filename)
+        except:
+            _LOGGER.error("Error loading schedule file %s", filename)
+        # Set schedule
+        if schedule_data is not None:
+            for entity, scheduleId in data.schedules.items():
+                if entity == entity_id:
+                    hass.async_create_task(
+                        data.set_schedule(entity, scheduleId, schedule_data)
+                    )
+                    break
+
+    @callback
+    def copy_schedule(service):
+        """Handle the service call."""
+        entity_id = service.data[ATTR_ENTITY_ID]
+        to_entity_id = service.data[ATTR_COPYTO_ENTITY_ID]
+
+        for from_entity, from_scheduleId in data.schedules.items():
+            if from_entity == entity_id:
+                for to_entity, to_scheduleId in data.schedules.items():
+                    if to_entity == to_entity_id:
+                        hass.async_create_task(
+                            data.copy_schedule(from_entity, from_scheduleId, to_entity_id, to_scheduleId)
+                        )
+                        break
 
     try:
         await hass.async_add_executor_job(data.connect)
@@ -145,6 +228,28 @@ async def async_setup_entry(hass, config_entry):
 
     _LOGGER.info("Wiser Component Setup Completed")
     await data.async_update_device_registry()
+
+    # Register services
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_GET_SCHEDULE"],
+        get_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SET_SCHEDULE"],
+        set_schedule,
+        schema=GET_SET_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
+        copy_schedule,
+        schema=COPY_SCHEDULE_SCHEMA,
+    )
 
     return True
 
@@ -198,6 +303,7 @@ class WiserHubHandle:
         self.host = config_entry.data[CONF_HOST]
         self.secret = config_entry.data[CONF_PASSWORD]
         self.wiserhub = None
+        self.schedules = {}
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.options.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -241,6 +347,8 @@ class WiserHubHandle:
             _LOGGER.error("Unable to update from Wiser hub due to unknown error")
             _LOGGER.debug("Error is %s", str(ex))
             return False
+
+        _LOGGER.error(self.schedules)
 
     @property
     def unique_id(self):
@@ -368,3 +476,35 @@ class WiserHubHandle:
                 hotwater_mode,
                 str(ex),
             )
+    
+    async def set_schedule(self, entity_id, schedule_id, schedule_data):
+        """Set room schedules."""
+        if schedule_data is not None:
+            schedule_data = convert_to_wiser_schedule(schedule_data)
+            try:
+                await self._hass.async_add_executor_job(
+                    partial(self.wiserhub.setSchedule, schedule_id, schedule_data)
+                )
+                _LOGGER.debug("Set schedule for %s", entity_id)
+                self._force_update = True
+                return True
+            except WiserRESTException:
+                _LOGGER.error("Error setting schedule for %s.  Please check your schedule file.", entity_id)
+        return False
+
+    async def copy_schedule(self, entity_id, schedule_id, to_entity_id, to_schedule_id):
+        """Copy schedule from one device to another."""
+        try:
+            await self._hass.async_add_executor_job(
+                partial(self.wiserhub.copySchedule, schedule_id, to_schedule_id)
+            )
+            _LOGGER.debug(
+                "Copied schedule from %s to %s",
+                entity_id,
+                to_entity_id,
+            )
+            self._force_update = True
+            return True
+        except WiserRESTException:
+                _LOGGER.error("Error copying schedule %s to %s.", entity_id, to_entity_id)
+        return False

@@ -22,7 +22,7 @@ from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import ruamel_yaml as yaml, dt
+from homeassistant.util import dt
 
 from .const import (
     _LOGGER,
@@ -34,7 +34,6 @@ from .const import (
     ROOM,
     WISER_SERVICES,
 )
-from .util import convert_from_wiser_schedule, convert_to_wiser_schedule
 
 try:
     from homeassistant.components.climate import ClimateEntity
@@ -44,8 +43,6 @@ except ImportError:
 
 ATTR_TIME_PERIOD = "time_period"
 ATTR_TEMPERATURE_DELTA = "temperature_delta"
-ATTR_FILENAME = "filename"
-ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 
 PRESET_AWAY = "Away Mode"
 PRESET_AWAY_BOOST = "Away Boost"
@@ -86,21 +83,6 @@ BOOST_HEATING_SCHEMA = vol.Schema(
         vol.Optional(ATTR_TEMPERATURE_DELTA, default=0): vol.Coerce(float),
     }
 )
-
-GET_SET_SCHEDULE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-    }
-)
-
-COPY_SCHEDULE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
-    }
-)
-
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
@@ -145,87 +127,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 room.schedule_update_ha_state(True)
                 break
 
-    @callback
-    def get_schedule(service):
-        """Handle the service call."""
-        entity_id = service.data[ATTR_ENTITY_ID]
-        filename = (
-            service.data[ATTR_FILENAME]
-            if service.data[ATTR_FILENAME] != ""
-            else ("schedule_" + entity_id + ".yaml")
-        )
-
-        for room in wiser_rooms:
-            if room.entity_id == entity_id:
-                schedule_data = room.schedule
-                _LOGGER.debug("Sched Service Data = %s", schedule_data)
-                if schedule_data is not None:
-                    schedule_data = convert_from_wiser_schedule(
-                        schedule_data, room.name
-                    )
-                    yaml.save_yaml(filename, schedule_data)
-                else:
-                    raise Exception("No schedule data returned")
-                break
-
-    @callback
-    def set_schedule(service):
-        """Handle the service call."""
-        entity_id = service.data[ATTR_ENTITY_ID]
-        filename = service.data[ATTR_FILENAME]
-        # Get schedule data
-        schedule_data = yaml.load_yaml(filename)
-        # Set schedule
-        for room in wiser_rooms:
-            if room.entity_id == entity_id:
-                hass.async_create_task(
-                    room.set_room_schedule(room.room_id, schedule_data)
-                )
-                room.schedule_update_ha_state(True)
-                break
-
-    @callback
-    def copy_schedule(service):
-        """Handle the service call."""
-        entity_id = service.data[ATTR_ENTITY_ID]
-        to_entity_id = service.data[ATTR_COPYTO_ENTITY_ID]
-
-        for room in wiser_rooms:
-            if room.entity_id == entity_id:
-                for to_room in wiser_rooms:
-                    if to_room.entity_id == to_entity_id:
-                        hass.async_create_task(
-                            room.copy_room_schedule(room.room_id, to_room.room_id)
-                        )
-                        room.schedule_update_ha_state(True)
-                        break
+    
 
     hass.services.async_register(
         DOMAIN,
         WISER_SERVICES["SERVICE_BOOST_HEATING"],
         heating_boost,
         schema=BOOST_HEATING_SCHEMA,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        WISER_SERVICES["SERVICE_GET_SCHEDULE"],
-        get_schedule,
-        schema=GET_SET_SCHEDULE_SCHEMA,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        WISER_SERVICES["SERVICE_SET_SCHEDULE"],
-        set_schedule,
-        schema=GET_SET_SCHEDULE_SCHEMA,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
-        copy_schedule,
-        schema=COPY_SCHEDULE_SCHEMA,
     )
 
 
@@ -259,6 +167,8 @@ class WiserRoom(ClimateEntity):
             await self.data.async_update(no_throttle=True)
             self._force_update = False
         self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
+        # Testing for adding schedule ids to hub controller entity
+        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getRoom(self.room_id).get("ScheduleId")
 
     @property
     def supported_features(self):
@@ -380,7 +290,11 @@ class WiserRoom(ClimateEntity):
     @property
     def preset_mode(self):
         """Set preset mode."""
-        wiser_preset = self.data.wiserhub.getRoom(self.room_id).get("SetpointOrigin")
+        # Added fix for old firmware where capitalisation of name is different
+        wiser_preset = self.data.wiserhub.getRoom(self.room_id).get(
+            "SetpointOrigin",
+            self.data.wiserhub.getRoom(self.room_id).get("SetPointOrigin", "NA"),
+        )
         mode = self.data.wiserhub.getRoom(self.room_id).get("Mode")
 
         if (
@@ -519,33 +433,6 @@ class WiserRoom(ClimateEntity):
             partial(
                 self.data.wiserhub.setRoomMode, room_id, mode, boost_temp, boost_time,
             )
-        )
-        self._force_update = True
-        await self.async_update_ha_state(True)
-        return True
-
-    async def set_room_schedule(self, room_id, schedule_data):
-        """Set room schedules."""
-        if schedule_data is not None:
-            schedule_data = convert_to_wiser_schedule(schedule_data)
-            await self.hass.async_add_executor_job(
-                partial(self.data.wiserhub.setRoomSchedule, room_id, schedule_data)
-            )
-            _LOGGER.debug("Set room schedule for %s", self.name)
-            self._force_update = True
-            await self.async_update_ha_state(True)
-            return True
-        return False
-
-    async def copy_room_schedule(self, room_id, to_room_id):
-        """Copy room schedules."""
-        await self.hass.async_add_executor_job(
-            partial(self.data.wiserhub.copyRoomSchedule, room_id, to_room_id)
-        )
-        _LOGGER.debug(
-            "Copied room schedule from %s to %s",
-            self.name,
-            self.data.wiserhub.getRoom(to_room_id).get("Name"),
         )
         self._force_update = True
         await self.async_update_ha_state(True)

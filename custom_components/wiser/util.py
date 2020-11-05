@@ -20,12 +20,19 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
     # Remove Id key from schedule as not needed
     if "id" in schedule_data:
         del schedule_data["id"]
+
+    # Get schedule type
+    if "Type" in schedule_data:
+        schedule_type = schedule_data["Type"]
+    else:
+        schedule_type = "Heating"
+
     # Create dict to take converted data
     if schedule_name != "":
         schedule_output = {
             "Name": schedule_name,
             "Description": "Schedule for " + schedule_name,
-            "Type": "Heating",
+            "Type": schedule_type,
         }
     # Convert to human readable format for yaml
     # Iterate through each day
@@ -35,9 +42,9 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
             for setpoint, times in sched.items():
                 if setpoint == "SetPoints":
                     # Iterate all times
-                    schedule_set_points = convert_wiser_to_yaml_day(times)
+                    schedule_set_points = convert_wiser_to_yaml_day(times, schedule_type)
                     # Iterate through each setpoint entry
-            schedule_output.update({day: schedule_set_points})
+            schedule_output.update({day.capitalize(): schedule_set_points})
     return schedule_output
 
 
@@ -50,12 +57,18 @@ def convert_to_wiser_schedule(schedule_data: dict):
     """
     # Convert to wiser format for setting schedules
     # Iterate through each day
-    schedule_output = {"Type": "Heating"}
+    # Get schedule type
+    if "Type" in schedule_data:
+        schedule_output = {"Type": schedule_data["Type"].capitalize().replace("w","W")}
+    else:
+        schedule_output = {"Type": "Heating"}
+
+    
     for day, times in schedule_data.items():
         if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
             schedule_day = {}
             # Iterate through each set of times for a day
-            schedule_day = {"Setpoints": convert_yaml_to_wiser_day(times)}
+            schedule_day = {"SetPoints": convert_yaml_to_wiser_day(times)}
             # If using special days, convert to one entry for each day of week
             if day.lower() in SPECIALDAYS:
                 if day.lower() == "weekdays":
@@ -69,23 +82,31 @@ def convert_to_wiser_schedule(schedule_data: dict):
     return schedule_output
 
 
-def convert_wiser_to_yaml_day(times):
+def convert_wiser_to_yaml_day(times, schedule_type):
     """Convert from yaml to wiser schedule."""
     schedule_set_points = []
     for k in times:
         schedule_time = {}
         for key, value in k.items():
             # Convert values and keys to human readable version
-            if key == "Time":
+            if key.lower() == "time":
                 value = (datetime.strptime(format(value, "04d"), "%H%M")).strftime(
                     "%H:%M"
                 )
-            if key == "DegreesC":
-                key = "Temp"
-                if value < 0:
+            if key.lower() == "degreesc":
+                if schedule_type == "Heating":
+                    key = "Temp"
+                else:
+                    key = "State"
+
+                if value == -200:
                     value = "Off"
                 else:
-                    value = round(value / 10, 1)
+                    if schedule_type == "Heating":
+                        value = round(value / 10, 1)
+                    else:
+                        value = "On"
+                        
             tmp = {key: value}
             schedule_time.update(tmp)
         schedule_set_points.append(schedule_time.copy())
@@ -99,12 +120,14 @@ def convert_yaml_to_wiser_day(times):
         schedule_time = {}
         for key, value in k.items():
             # Convert values and key to wiser format
-            if key == "Time":
+            if key.lower() == "time":
                 value = str(value).replace(":", "")
-            if key == "Temp":
+            if key.lower() in ["temp", "state"]:
                 key = "DegreesC"
-                if value == "Off":
+                if str(value).lower() == "off":
                     value = -200
+                elif str(value).lower() == "on":
+                    value = 1100
                 else:
                     value = int(value * 10)
             tmp = {key: value}
