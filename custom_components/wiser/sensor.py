@@ -363,7 +363,7 @@ class WiserDeviceSensor(WiserSensor):
         attrs["serial_number"] = device_data.get("SerialNumber")
 
         # if controller then add the zigbee data to the controller info
-        if device_data.get("ProductType") == "Controller":
+        if device_data.get("ProductType") == "Controller" and self.data.wiserhub.getHubData().get("Zigbee") is not None:
             attrs["zigbee_channel"] = (
                 self.data.wiserhub.getHubData().get("Zigbee").get("NetworkChannel")
             )
