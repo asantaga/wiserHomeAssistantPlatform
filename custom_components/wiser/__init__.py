@@ -198,6 +198,7 @@ class WiserHubHandle:
         self.host = config_entry.data[CONF_HOST]
         self.secret = config_entry.data[CONF_PASSWORD]
         self.wiserhub = None
+        self.schedules = {}
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.options.get(CONF_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -241,6 +242,8 @@ class WiserHubHandle:
             _LOGGER.error("Unable to update from Wiser hub due to unknown error")
             _LOGGER.debug("Error is %s", str(ex))
             return False
+
+        _LOGGER.error(self.schedules)
 
     @property
     def unique_id(self):

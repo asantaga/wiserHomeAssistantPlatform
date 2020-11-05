@@ -155,18 +155,21 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             else ("schedule_" + entity_id + ".yaml")
         )
 
-        for room in wiser_rooms:
-            if room.entity_id == entity_id:
-                schedule_data = room.schedule
-                _LOGGER.debug("Sched Service Data = %s", schedule_data)
+        for entity, scheduleId in data.schedules.items():
+            if entity == entity_id:
+                schedule_data = data.wiserhub.getSchedule(scheduleId)
+                _LOGGER.error("Schedule id for %s is %s", entity, scheduleId)
                 if schedule_data is not None:
                     schedule_data = convert_from_wiser_schedule(
-                        schedule_data, room.name
+                        schedule_data, entity_id.replace("climate.","").replace("switch.","").replace("sensor.","").replace("_"," ").title()
                     )
                     yaml.save_yaml(filename, schedule_data)
+                    break
                 else:
                     raise Exception("No schedule data returned")
-                break
+                return True
+        _LOGGER.debug("No schedule exists for %s", entity_id)
+        
 
     @callback
     def set_schedule(service):
@@ -259,6 +262,8 @@ class WiserRoom(ClimateEntity):
             await self.data.async_update(no_throttle=True)
             self._force_update = False
         self.schedule = self.data.wiserhub.getRoomSchedule(self.room_id)
+        # Testing for adding schedule ids to hub controller entity
+        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getScheduleId(self.room_id, "heating")
 
     @property
     def supported_features(self):
