@@ -25,7 +25,7 @@ def convert_from_wiser_schedule(schedule_data: dict, schedule_name=""):
     if "Type" in schedule_data:
         schedule_type = schedule_data["Type"]
     else:
-        schedule_type = "Unknown"
+        schedule_type = "Heating"
 
     # Create dict to take converted data
     if schedule_name != "":
@@ -57,7 +57,13 @@ def convert_to_wiser_schedule(schedule_data: dict):
     """
     # Convert to wiser format for setting schedules
     # Iterate through each day
-    schedule_output = {"Type": "Heating"}
+    # Get schedule type
+    if "Type" in schedule_data:
+        schedule_output = {"Type": schedule_data["Type"]}
+    else:
+        schedule_output = {"Type": "Heating"}
+
+    
     for day, times in schedule_data.items():
         if day.lower() in (WEEKDAYS + WEEKENDS + SPECIALDAYS):
             schedule_day = {}
@@ -116,10 +122,12 @@ def convert_yaml_to_wiser_day(times):
             # Convert values and key to wiser format
             if key == "Time":
                 value = str(value).replace(":", "")
-            if key == "Temp":
+            if key in ["Temp", "State"]:
                 key = "DegreesC"
                 if value == "Off":
                     value = -200
+                elif value == "On":
+                    value = 1100
                 else:
                     value = int(value * 10)
             tmp = {key: value}
