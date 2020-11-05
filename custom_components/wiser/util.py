@@ -59,7 +59,7 @@ def convert_to_wiser_schedule(schedule_data: dict):
     # Iterate through each day
     # Get schedule type
     if "Type" in schedule_data:
-        schedule_output = {"Type": schedule_data["Type"]capitalize()}
+        schedule_output = {"Type": schedule_data["Type"].capitalize()}
     else:
         schedule_output = {"Type": "Heating"}
 
