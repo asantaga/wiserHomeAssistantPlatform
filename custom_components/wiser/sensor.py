@@ -289,6 +289,7 @@ class WiserDeviceSensor(WiserSensor):
                 "model": self.data.wiserhub.getDevice(self._device_id).get(
                     "ProductType"
                 ),
+                "sw_version": self.data.wiserhub.getDevice(self._device_id).get("ActiveFirmwareVersion"),
             }
         return info
 
@@ -438,6 +439,7 @@ class WiserSystemCircuitState(WiserSensor):
             self._state = self.data.wiserhub.getHeatingRelayStatus()
         else:
             self._state = self.data.wiserhub.getHotwaterRelayStatus()
+            self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getHotwater().get("ScheduleID")
 
     @property
     def device_info(self):
