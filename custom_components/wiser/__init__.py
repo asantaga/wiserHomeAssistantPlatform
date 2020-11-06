@@ -130,7 +130,6 @@ async def async_setup_entry(hass, config_entry):
         for entity, scheduleId in data.schedules.items():
             if entity == entity_id:
                 schedule_data = data.wiserhub.getSchedule(scheduleId)
-                _LOGGER.error("Schedule id for %s is %s", entity, scheduleId)
                 if schedule_data is not None:
                     schedule_data = convert_from_wiser_schedule(
                         schedule_data, entity_id.replace("climate.","").replace("switch.","").replace("sensor.","").replace("_"," ").title()
@@ -138,7 +137,7 @@ async def async_setup_entry(hass, config_entry):
                     yaml.save_yaml(filename, schedule_data)
                     break
                 else:
-                    raise Exception("No schedule data returned")
+                    _LOGGER.error("No schedule data returned for %s", entity_id)
                 return True
         _LOGGER.debug("No schedule exists for %s", entity_id)
         
@@ -486,7 +485,7 @@ class WiserHubHandle:
                     partial(self.wiserhub.setSchedule, schedule_id, schedule_data)
                 )
                 _LOGGER.debug("Set schedule for %s", entity_id)
-                self._force_update = True
+                await self.async_update(no_throttle=True)
                 return True
             except WiserRESTException:
                 _LOGGER.error("Error setting schedule for %s.  Please check your schedule file.", entity_id)
@@ -503,7 +502,7 @@ class WiserHubHandle:
                 entity_id,
                 to_entity_id,
             )
-            self._force_update = True
+            await self.async_update(no_throttle=True)
             return True
         except WiserRESTException:
                 _LOGGER.error("Error copying schedule %s to %s.", entity_id, to_entity_id)
