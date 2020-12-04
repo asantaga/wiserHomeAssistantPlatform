@@ -63,7 +63,7 @@ Depending on what you choose you may need to use the **Manual Code Installation*
 
     - Following services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
-    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms (not supported for smartplugs yet)
+    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms, hot water and smartplugs
     - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
     - Service `set_hotwater_mode`: Provides ability to turn a hot water **on**/**off** or **auto**. Valid values include `on`, `off` or `auto` Setting it to auto makes it follow the current schedule
@@ -170,6 +170,7 @@ wiser:
 
 
 ## Managing Schedules with Home Assistant
+
 
 ### Getting a Schedule
 Use the service `wiser.get_schedule`
@@ -311,6 +312,13 @@ Tuesday:
 Use the service `wiser.copy_schedule`
 
 This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to and will copy the schedule between them.
+
+
+### What Entity Should I Choose?
+- Setting room schedules - use the climate entity of the room.  eg climate.lounge
+- Setting the hot water schedule - use the sensor.hotwater entity
+- Setting smartplug schedules - use the switch entity of the smart plug eg switch.smartplug1
+
 
 ## Network Topology
 
