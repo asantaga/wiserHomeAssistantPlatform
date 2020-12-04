@@ -439,7 +439,7 @@ class WiserSystemCircuitState(WiserSensor):
             self._state = self.data.wiserhub.getHeatingRelayStatus()
         else:
             self._state = self.data.wiserhub.getHotwaterRelayStatus()
-            self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getHotwater().get("ScheduleID")
+            self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getHotwater()[0].get("ScheduleId")
 
     @property
     def device_info(self):

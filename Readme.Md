@@ -63,7 +63,7 @@ Depending on what you choose you may need to use the **Manual Code Installation*
 
     - Following services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
-    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms (not supported for smartplugs yet)
+    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms, hot water and smartplugs
     - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
     - Service `set_hotwater_mode`: Provides ability to turn a hot water **on**/**off** or **auto**. Valid values include `on`, `off` or `auto` Setting it to auto makes it follow the current schedule
@@ -171,20 +171,23 @@ wiser:
 
 ## Managing Schedules with Home Assistant
 
+
 ### Getting a Schedule
 Use the service `wiser.get_schedule`
 
 This will require you to provide the entity ID of the wiser device and a file to copy this schedule to.
-It is recommended to create a directory in your config directory to store these.
+It is recommended to create a directory in your config directory to store these.  
+See below for information on selecting the correct entity.
 
 Note : If you are running HA within a docker container then the directory will be absolute to the container, if you have mapped the config directory to a local directory then all is good but the directory name given to the service must be a docker container address.
 
-E.g. if you specify the filename as `/config/schedule.yaml`then `get_schedule` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
+E.g. if you specify the filename as `/config/schedule.yaml` then `get_schedule` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
 
 ### Setting a Schedule
 Use the service `wiser.set_schedule`
 
-This will require you to provide the entity ID of the wiser device and a file containing the schedule.
+This will require you to provide the entity ID of the wiser device and a file containing the schedule.  
+See below for information on selecting the correct entity.
 
 A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the `wiser.get_schedule` service looks like below:
 ```yaml
@@ -307,10 +310,48 @@ Tuesday:
     Temp: 18.0
 ```
 
+For hotwater and smartplugs (to make reading the schedule file easier) you can use time and state keys like below.  Note for both hot water and smartplugs, the Type parameter must be set to HotWater in your file.
+```yaml
+Name: Hot Water
+Description: Schedule for Hot Water
+Type: HotWater
+Weekdays:
+  - Time: 06:30
+    State: On
+  - Time: 10:30
+    State: Off
+  - Time: 16:30
+    State: On
+  - Time: 22:30
+    State: Off
+Weekends:
+  - Time: 06:30
+    State: On
+  - Time: 10:30
+    State: Off
+  - Time: 16:30
+    State: On
+  - Time: 22:30
+    State: Off
+Tuesday:
+  - Time: 08:00
+    State: On
+  - Time: 20:00
+    State: Off
+```
+
+
 ### Copying a Schedule
 Use the service `wiser.copy_schedule`
 
 This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to and will copy the schedule between them.
+
+
+### What Entity Should I Choose?
+- Room heating schedules - use the climate entity of the room.  eg climate.lounge
+- Hot water on/off schedule - use the sensor.hotwater entity
+- Smartplug on/off schedules - use the switch entity of the smart plug eg switch.smartplug1
+
 
 ## Network Topology
 

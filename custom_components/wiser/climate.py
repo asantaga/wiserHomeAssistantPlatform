@@ -88,9 +88,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
 
-    wiser_rooms = [
-        WiserRoom(hass, data, room.get("id")) for room in data.wiserhub.getRooms()
-    ]
+    if (data.wiserhub.getRooms()) is not None:
+        wiser_rooms = [
+            WiserRoom(hass, data, room.get("id")) for room in data.wiserhub.getRooms()
+        ]
+    else:
+        wiser_rooms = None
     async_add_entities(wiser_rooms, True)
 
     @callback
