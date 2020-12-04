@@ -200,6 +200,14 @@ class WiserSmartPlug(SwitchEntity):
         self.data = data
         self._is_on = False
 
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug("Wiser %s Switch Update requested", self.plug_name)
+        self._is_on = self.data.wiserhub.getSmartPlug(self.smart_plug_id).get(
+            "OutputState"
+        )
+        self.data.schedules[str(self.entity_id)] = self.data.wiserhub.getSmartPlug(self.smart_plug_id).get("ScheduleId")
+
     @property
     def unique_id(self):
         """Return unique ID for the plug."""
@@ -224,6 +232,7 @@ class WiserSmartPlug(SwitchEntity):
             "identifiers": {(DOMAIN, identifier)},
             "manufacturer": MANUFACTURER,
             "model": model,
+            "sw_version": self.data.wiserhub.getDevice(self.smart_plug_id).get("ActiveFirmwareVersion"),
         }
 
     @property
@@ -239,10 +248,6 @@ class WiserSmartPlug(SwitchEntity):
     @property
     def is_on(self):
         """Return true if device is on."""
-        self._is_on = self.data.wiserhub.getSmartPlug(self.smart_plug_id).get(
-            "OutputState"
-        )
-
         _LOGGER.debug("Smartplug %s is currently %s", self.smart_plug_id, self._is_on)
 
         if self._is_on == "On":
@@ -283,7 +288,7 @@ class WiserSmartPlug(SwitchEntity):
 
         async def async_update_state():
             """Update sensor state."""
-            await self.async_update_ha_state(False)
+            await self.async_update_ha_state(True)
 
         self.async_on_remove(
             async_dispatcher_connect(
