@@ -407,7 +407,13 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 2.4
    * Fixed deprecated devices
    * code changes to support publishing as a native HA component
-   * Upgraded to wiserheatingapi 1.0.8.1
+   * Fixed issues with older firmware
+   * Fixed issues with hubs with no rooms (new installs)
+   * Added ability to manage schedules for all device types - rooms, hot water, smart plugs
+   * Implemented new attribute on climate entities to show remaining boost duration
+   * Improved handling of hub connection errors at startup
+   * Fixed issue where component does not request update from wiser hub at startup
+
 - 2.3
    * Fix for error given by latest HA highlighting that I/O Detected in event loop (issue 97)[https://github.com/asantaga/wiserHomeAssistantPlatform/issues/97]
    * Fix for climate graph not showing true state (issue 98)[https://github.com/asantaga/wiserHomeAssistantPlatform/issues/98]

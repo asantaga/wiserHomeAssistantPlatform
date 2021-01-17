@@ -60,7 +60,7 @@ WISER_SWITCHES = [
         "icon": "mdi:water",
     },
     {"name": "Comfort Mode", "key": "ComfortModeEnabled", "icon": "mdi:sofa"},
-    {"name": "Away Mode", "key": "OverrideType", "icon": "mdi:beach"},
+    {"name": "Away Mode", "key": "OverrideType", "icon": "mdi:beach"},    
 ]
 
 
