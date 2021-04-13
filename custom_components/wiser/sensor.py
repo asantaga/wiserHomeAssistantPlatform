@@ -416,9 +416,9 @@ class WiserDeviceSensor(WiserSensor):
         # Other
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self.data.wiserhub.getRoomStatData(self._device_id).get(
-                "MeasuredHumidity"
-            )
-
+                "MeasuredHumidity")
+            attrs["temperature"] = self.data.wiserhub.getRoomStatData(self._device_id).get(
+                "MeasuredTemperature") / 10
         return attrs
 
 
