@@ -38,6 +38,8 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import ruamel_yaml as yaml, Throttle
 
 from .const import (
+    CONF_SETPOINT_MODE,
+    DEFAULT_SETPOINT_MODE,
     _LOGGER,
     CONF_BOOST_TEMP,
     CONF_BOOST_TEMP_TIME,
@@ -311,6 +313,7 @@ class WiserHubHandle:
         self.boost_time = config_entry.options.get(
             CONF_BOOST_TEMP_TIME, DEFAULT_BOOST_TEMP_TIME
         )
+        self.setpoint_mode = config_entry.options.get(CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE)
 
     def connect(self):
         """Connect to Wiser Hub."""
