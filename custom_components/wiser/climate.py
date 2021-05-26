@@ -415,7 +415,7 @@ class WiserRoom(ClimateEntity):
         if target_temperature is None:
             return False
 
-        if self.data.setpoint_mode == 'boost':
+        if self.data.setpoint_mode == "boost":
             _LOGGER.info("Setting temperature for %s to %s using boost method.", self.name, target_temperature)
 
             await self.set_room_mode(self.room_id, "boost", target_temperature)
