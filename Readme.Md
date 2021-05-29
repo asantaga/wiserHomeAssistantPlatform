@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform v2.5
+# Wiser Home Assistant Platform v2.6beta
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
@@ -399,6 +399,9 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 2.6beta
+   * Added version to manifest.json
+   * When cancelling boost the setpoint is returned correctly
 - 2.5
    * Added water scheduling support
    * Fixed wiserhub doesnt update on server start
