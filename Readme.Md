@@ -144,6 +144,8 @@ Before you can use the component you need to find the HeatHub secret key, this i
 
     ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
 
+    ```setpoint_mode``` modifies the way setpoint works. If left to default the n the functionality is the same as the Wiser app, if set to 'boost' then when you set a new setpoint it will only take affect for the normal "boost" time.
+
 10. When added, you should something like see this in integrations
     ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image3.png)
 
@@ -402,6 +404,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 2.6beta
    * Added version to manifest.json
    * When cancelling boost the setpoint is returned correctly
+   * New setpoint mode added (thanks @charlesomer)
 - 2.5
    * Added water scheduling support
    * Fixed wiserhub doesnt update on server start
