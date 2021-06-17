@@ -1,14 +1,10 @@
-# Wiser Home Assistant Platform v2.6 dev
+# Wiser Home Assistant Platform v2.6beta
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
+For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. if you want bleeding edge then checkout the `dev`  branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the **Manual Code Installation** described below.
 
-
-For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. 
-
-if you want bleeding edge then checkout the `dev`  branch, or look out for beta releases via HACS. 
-
-Depending on what you choose you may need to use the **Manual Code Installation** described below.
+For more information checkout the AMAZING community thread available on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
 
 
 
@@ -83,8 +79,6 @@ Depending on what you choose you may need to use the **Manual Code Installation*
 
 We highly recommend using [HACS Home Assistant Community Store](https://github.com/hacs), for more information on how to install HACS please see their documentation website at https://hacs.xyz/
 
-
-
 ## Manual Code Installation
 
 This method is best used when you want to play with the "latest and greatest" from the repository. Moving forward (post 1.9) , the github repository will contain two primary branches, **master** and dev. Master is the latest released, and hopefully most stable branch, whereas **dev** is the branch that we're currently working on.
@@ -149,6 +143,8 @@ Before you can use the component you need to find the HeatHub secret key, this i
     ```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
 
     ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
+
+    ```setpoint_mode``` modifies the way setpoint works. If left to default the n the functionality is the same as the Wiser app, if set to 'boost' then when you set a new setpoint it will only take affect for the normal "boost" time.
 
 10. When added, you should something like see this in integrations
     ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image3.png)
@@ -375,11 +371,11 @@ An obvious ideal candidate for a Home Assistant automation to remind you to chan
 
 Note : If you power cycle your HomeHub, with more than a minute or so when it is off, we've noticed that the devices will not have the battery info for a short period of time (maybe 30mins to 1hr) , just wait and the battery values will appear.
 
-# Community Recipes
+# Community 
 
 I've been totally amazed at the community which has sprung up contributing and supporting this component.  The [recipes](Recipes.md) following page contains some community contributed ideas / YAML files for Home Assistant.
 
-
+Checkout the community thread on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965 for loads of input, comment and participate in our community
 
 # Run, Play 
 
@@ -393,20 +389,27 @@ Angelo and Team
 
 Special thanks to all the contributors to this project.  Special shout to 
 
+- @msp1974     : Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more! Mark is now part of the core team helping me out whilst I deal with screaming babies wanting food :-)
 - @angrycamel  : Home/Away Sensor
 - @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
 - @djbanks     : Home/Away switch (v 1.31)
-- @msp1974     : Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more!
+- @nofuse       : Constantly helping people out on the community thread 
 
 
 
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
-- 2.6 
+- 2.6beta
    * Added version to manifest.json
    * When cancelling boost the setpoint is returned correctly
+   * New setpoint mode added (thanks @charlesomer)
+- 2.5
+   * Added water scheduling support
+   * Fixed wiserhub doesnt update on server start
+   * Upgraded to wiserapi 1.0.10
+   * Added some new recipies to docs
 - 2.4
    * Fixed deprecated devices
    * code changes to support publishing as a native HA component
@@ -426,7 +429,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Implemented what we think is correct battery percentages depending on device (itrv or roomstat)
     * Regression of itrv sensors not having battery voltage fixed 
 - 2.1
-    
+  
     * Minor bug fixes and documentation fixes
 - 2.0
     * Now supports Home Assistant Config Flow (credit @msp1974)
@@ -482,5 +485,4 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 1.3
     * Added ability to set temperature
     * Added ability to set room mode (auto,boost,manual)
-
 

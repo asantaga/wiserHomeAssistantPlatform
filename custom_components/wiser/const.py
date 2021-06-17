@@ -37,10 +37,12 @@ NOTIFICATION_TITLE = "Wiser Component Setup"
 DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
+DEFAULT_SETPOINT_MODE = "normal"
 
 # Custom Configs
 CONF_BOOST_TEMP: str = "boost_temp"
 CONF_BOOST_TEMP_TIME = "boost_time"
+CONF_SETPOINT_MODE = "setpoint_mode"
 
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"]
