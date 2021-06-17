@@ -324,7 +324,13 @@ class WiserRoom(ClimateEntity):
 
         # Cancel boost mode
         if preset_mode.lower() == PRESET_BOOST_CANCEL.lower():
-            preset_mode = HASS_HVAC_TO_WISER[self.hvac_mode]
+# Change based on https://github.com/halfofabanana/wiserHomeAssistantPlatform/commit/463095bd9c4837107f6c8cf6fdb9084f9d68d883
+# Return to corect setpoint after override cancellation
+            if self.hvac_mode == HVAC_MODE_HEAT:
+                preset_mode = "auto_to_manual"
+            else:
+                preset_mode = HASS_HVAC_TO_WISER[self.hvac_mode]   
+
 
         # Deal with boost time variations
         if preset_mode.lower() == PRESET_BOOST30.lower():
