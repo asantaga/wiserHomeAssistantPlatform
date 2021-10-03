@@ -28,11 +28,12 @@
     },
   "options": {
         "step": {
-            "init": {
+            "wiser_options": {
                 "data": {
                     "boost_temp": "Default Boost Temperature",
                     "boost_time": "Default Boost Duration",
-                    "scan_interval": "Scan Interval"
+                    "scan_interval": "Scan Interval",
+                    "setpoint_mode": "Setpoint Mode"
                 },
                 "description": "Amend Wiser parameters.",
                 "title": "Wiser Heat Hub Options"
