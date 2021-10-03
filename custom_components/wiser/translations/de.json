@@ -32,7 +32,7 @@
 			"boost_temp": "Boost Temperatur",
 			"boost_time": "Boost Dauer",
 			"scan_interval": "Scan Intervall",
-			"setpoint_mode": "Setpoint Mode"
+			"setpoint_mode": "Sollwert-Modus"
 		  },
 		  "description": "Amend Wiser parameters.",
 		  "title": "Wiser Heat Hub Options"
@@ -40,4 +40,3 @@
 	  }
 	}
   }
-  
