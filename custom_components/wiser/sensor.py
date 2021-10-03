@@ -5,7 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-
+from datetime import datetime
 from homeassistant.const import ATTR_BATTERY_LEVEL, DEVICE_CLASS_BATTERY
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
@@ -367,6 +367,7 @@ class WiserDeviceSensor(WiserSensor):
             attrs["zigbee_channel"] = (
                 self.data.wiserhub.getHubData().get("Zigbee").get("NetworkChannel")
             )
+            attrs["last_updated"] = datetime.now()
 
         # Network Data
         attrs["node_id"] = device_data.get("NodeId")

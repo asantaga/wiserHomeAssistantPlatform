@@ -10,6 +10,7 @@ import asyncio
 from datetime import timedelta
 from functools import partial
 import json
+from ruamel.yaml import YAML as yaml
 
 import requests.exceptions
 import voluptuous as vol
@@ -35,7 +36,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import ruamel_yaml as yaml, Throttle
+from homeassistant.util import Throttle
 
 from .const import (
     CONF_SETPOINT_MODE,
