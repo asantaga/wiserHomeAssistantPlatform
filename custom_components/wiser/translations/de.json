@@ -27,7 +27,7 @@
 	},
 	"options": {
 	  "step": {
-		"wiser_options": {
+		"init": {
 		  "data": {
 			"boost_temp": "Boost Temperatur",
 			"boost_time": "Boost Dauer",

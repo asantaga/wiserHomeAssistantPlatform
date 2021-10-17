@@ -162,7 +162,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 ): vol.In([DEFAULT_SETPOINT_MODE, "boost"]),
             }
         )
-        return self.async_show_form(step_id="wiser_options", data_schema=data_schema)
+        return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
 class CannotConnect(exceptions.HomeAssistantError):
