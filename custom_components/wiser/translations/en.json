@@ -28,7 +28,7 @@
     },
   "options": {
         "step": {
-            "wiser_options": {
+            "init": {
                 "data": {
                     "boost_temp": "Default Boost Temperature",
                     "boost_time": "Default Boost Duration",
