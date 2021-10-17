@@ -401,6 +401,14 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 2.6beta5
+   * Amended manifest version to include 2 dot notation
+   * Fixed label issue on config for setpoint mode
+- 2.6beta4
+   * Fixed issue caused by removal of ruamel.yaml from core
+   * Added last updated attribute to wiserhub sensor
+- 2.6beta3
+   * Added setpoint mode to allow boosting on temp change instead of setting temp until next scheduled event
 - 2.6beta
    * Added version to manifest.json
    * When cancelling boost the setpoint is returned correctly
