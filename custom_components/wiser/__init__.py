@@ -125,9 +125,9 @@ async def async_setup_entry(hass, config_entry):
         """Handle the service call."""
         entity_id = service.data[ATTR_ENTITY_ID]
         filename = (
-            hass.config.path(service.data[ATTR_FILENAME])
+            service.data[ATTR_FILENAME]
             if service.data[ATTR_FILENAME] != ""
-            else (hass.config.path("schedule_" + entity_id + ".yaml"))
+            else ("schedule_" + entity_id + ".yaml")
         )
 
         _LOGGER.info("Getting schedule for %s", entity_id)
@@ -146,7 +146,7 @@ async def async_setup_entry(hass, config_entry):
             _LOGGER.error("Error setting schedule from file: No filename provided")
         else:
             entity_id = service.data[ATTR_ENTITY_ID]
-            filename = hass.config.path(service.data[ATTR_FILENAME])
+            filename = service.data[ATTR_FILENAME]
             schedule_data = None
 
             # Set schedule data
