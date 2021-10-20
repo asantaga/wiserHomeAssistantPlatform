@@ -161,7 +161,6 @@ async def async_setup_entry(hass, config_entry):
                     _LOGGER.error("Error loading schedule file %s. Error is %s", filename, str(ex))
                 # Set schedule
                 if schedule_data is not None:
-                    _LOGGER.info(schedule_data)
                     hass.async_create_task(
                         data.set_schedule(entity_id, data.schedules[entity_id], schedule_data)
                     )
@@ -504,7 +503,7 @@ class WiserHubHandle:
                     yaml().dump(schedule_data, f)
             except Exception as ex:  # pylint: disable=broad-except
                 _LOGGER.error("Error saving schedule file. Error is %s", str(ex))
-            _LOGGER.debug("Saved schedule for %s to file %s", entity_id, filename)
+            _LOGGER.info("Saved schedule for %s to file %s", entity_id, filename)
         else:
             _LOGGER.error("No schedule data returned for %s", entity_id)
     
