@@ -6,5 +6,5 @@
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "2.6.6",
-  "requirements": ["wiser-heating-api==1.0.10.0", "ruamel.yaml==0.15.100"]
+  "requirements": ["wiser-heating-api==1.0.10.0", "ruamel.yaml==0.17.16"]
 }
