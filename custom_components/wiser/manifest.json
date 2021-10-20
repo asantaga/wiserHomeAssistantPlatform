@@ -5,6 +5,6 @@
   "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Recipes.md",
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "2.6.5",
-  "requirements": ["wiser-heating-api==1.0.10.0", "ruamel.yaml==0.15.100"]
+  "version": "2.6.6",
+  "requirements": ["wiser-heating-api==1.0.10.0"]
 }
