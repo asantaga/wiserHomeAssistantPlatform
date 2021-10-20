@@ -36,7 +36,8 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import Throttle
-from homeassistant.util import yaml
+#from homeassistant.util import yaml
+from ruamel.yaml import YAML as yaml
 
 from .const import (
     CONF_SETPOINT_MODE,
@@ -154,11 +155,13 @@ async def async_setup_entry(hass, config_entry):
             if entity_id in data.schedules:
                 try:
                     _LOGGER.debug("Loading schedule file - %s", filename)
-                    schedule_data = yaml.load_yaml(filename)
+                    with open(filename, 'r') as f:
+                        schedule_data = yaml().load(f)
                 except Exception as ex:
                     _LOGGER.error("Error loading schedule file %s. Error is %s", filename, str(ex))
                 # Set schedule
                 if schedule_data is not None:
+                    _LOGGER.info(schedule_data)
                     hass.async_create_task(
                         data.set_schedule(entity_id, data.schedules[entity_id], schedule_data)
                     )
@@ -497,7 +500,8 @@ class WiserHubHandle:
                 schedule_data, entity_id.title()
             )
             try:
-                yaml.save_yaml(filename, schedule_data)
+                with open(filename, 'w') as f:
+                    yaml().dump(schedule_data, f)
             except Exception as ex:  # pylint: disable=broad-except
                 _LOGGER.error("Error saving schedule file. Error is %s", str(ex))
             _LOGGER.debug("Saved schedule for %s to file %s", entity_id, filename)
@@ -515,8 +519,8 @@ class WiserHubHandle:
                 _LOGGER.debug("Set schedule for %s", entity_id)
                 await self.async_update(no_throttle=True)
                 return True
-            except WiserRESTException:
-                _LOGGER.error("Error setting schedule for %s.  Please check your schedule file.", entity_id)
+            except WiserRESTException as ex:
+                _LOGGER.error("Error setting schedule for %s.  Please check your schedule file. Error is %s", entity_id, str(ex))
         return False
 
     async def copy_schedule(self, entity_id, schedule_id, to_entity_id, to_schedule_id):
