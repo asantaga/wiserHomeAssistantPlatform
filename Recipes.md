@@ -91,7 +91,7 @@ sensor.yaml: history_stats spits out unitof measuerment in hours, so here is a s
     heating_time_flur:
       friendly_name: Heating Time Flur
       icon_template: mdi:radiator
-      value_template: "{{ states('sensor.heating_flur_on_today') | float * 60 }}"
+      value_template: "{{ states('sensor.heating_flur_on_today') | float(0) * 60 }}"
       unit_of_measurement: min
 ```
 
