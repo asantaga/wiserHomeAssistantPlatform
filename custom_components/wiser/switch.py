@@ -141,7 +141,7 @@ class WiserSwitch(SwitchEntity):
         return False
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the device state attributes for the attribute card."""
         attrs = {}
 
@@ -255,7 +255,7 @@ class WiserSmartPlug(SwitchEntity):
         return False
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return set of device state attributes."""
         attrs = {}
         device_data = self.data.wiserhub.getSmartPlug(self.smart_plug_id)

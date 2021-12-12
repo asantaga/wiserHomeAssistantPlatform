@@ -188,7 +188,7 @@ class WiserBatterySensor(WiserSensor):
         return "%"
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes of the battery."""
         attrs = {}
         if self._battery_voltage and self._battery_voltage > 0:
@@ -347,7 +347,7 @@ class WiserDeviceSensor(WiserSensor):
             return SIGNAL_STRENGTH_ICONS["NoSignal"]
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device state attributes."""
         _LOGGER.debug("State attributes for %s %s", self._device_id, self._sensor_type)
         attrs = {}
@@ -416,9 +416,9 @@ class WiserDeviceSensor(WiserSensor):
         # Other
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self.data.wiserhub.getRoomStatData(self._device_id).get(
-                "MeasuredHumidity"
-            )
-
+                "MeasuredHumidity")
+            attrs["temperature"] = self.data.wiserhub.getRoomStatData(self._device_id).get(
+                "MeasuredTemperature") / 10
         return attrs
 
 
@@ -468,7 +468,7 @@ class WiserSystemCircuitState(WiserSensor):
         return "mdi:water"
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return additional info."""
         attrs = {}
         if self._sensor_type == "HEATING":
@@ -568,7 +568,7 @@ class WiserSystemOperationModeSensor(WiserSensor):
         return "mdi:alert"
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the device state attributes."""
         attrs = {"AwayModeTemperature": -1.0}
         if self._away_temperature:
