@@ -9,7 +9,7 @@
 		"one_instance_only": "Nur eine Instanz pro Wiser Heat Hub ist erlaubt. Pr\u00fcfe deine ignoriereten Ger\u00E4te",
 		"timeout_error": "Timeout bei der Verbindung zum Wiser Heat Hub. Pr\u00fcfe die IP Adresse und versuche es erneut."
 	  },
-	  "flow_title": "Wiser Heat Hub: {name}",
+	  "flow_title": "{name}",
 	  "step": {
 		"user": {
 		  "data":{
@@ -29,10 +29,13 @@
 	  "step": {
 		"init": {
 		  "data": {
-			"boost_temp": "Boost Temperatur",
-			"boost_time": "Boost Dauer",
+			"heating_boost_temp": "Boost Temperatur",
+			"heating_boost_time": "Boost Dauer",
+			"hotwater_boost_time": "Default Hot Water Boost Duration",
 			"scan_interval": "Scan Intervall",
-			"setpoint_mode": "Sollwert-Modus"
+			"setpoint_mode": "Sollwert-Modus",
+			"moments": "Enable Moments Buttons",
+			"lts_sensors": "Enable LTS Sensors"
 		  },
 		  "description": "Amend Wiser parameters.",
 		  "title": "Wiser Heat Hub Options"
