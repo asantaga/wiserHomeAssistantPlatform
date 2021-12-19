@@ -1,43 +1,48 @@
 {
     "config": {
-        "abort": {
-            "already_configured": "This device is already configured."
-        },
-        "error": {
-            "already_in_progress": "Wiser Heat Hub configuration is already in progress.",
-            "auth_failure": "Unable to authenticate with the Wiser Hub. Check the secret key and try again.",
-            "not_successful": "Unable to connect to the Wiser hub.",
-            "not_wiser_device": "This device is currently not supported.",
-            "one_instance_only": "Only 1 instance of the wiser hub is supported. Check in ignored devices.",
-            "timeout_error": "Connection to the Wiser Hub has timed out. Check the IP address and try again."
-        },
-        "flow_title": "Wiser Heat Hub: {name}",
+        "flow_title": "{name}",
         "step": {
             "user": {
-                "data":{
-                    "boost_temp": "Default Boost Temperature",
-                    "boost_time": "Default Boost Duration",
-                    "host": "IP Address",
-                    "password": "Secret Key",
-                    "scan_interval": "Scan Interval"
-                },
+                "title": "Wiser Heat Hub Setup",
                 "description": "Please enter the ip address and secret key obtained from the hub.",
-                "title": "Wiser Heat Hub Setup"
+                "data": {
+                    "host": "IP Address or Hostname",
+                    "password": "Secret Key"
+                }
+            },
+            "zeroconf_confirm": {
+                "title": "Wiser Heat Hub Setup",
+                "description": "Please enter the secret key obtained from the hub.",
+                "data": {
+                    "password": "Secret Key"
+                }
             }
+        },
+        "abort": {
+            "already_in_progress": "Wiser Heat Hub configuration is already in progress.",
+            "already_configured": "This device is already configured.",
+            "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
+            "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
+            "not_successful": "Unable to connect to the Wiser hub.",
+            "not_wiser_device": "This device is currently not supported.",
+            "one_instance_only": "Only 1 instance of the wiser hub is supported.  Check in ignored devices."
         }
     },
-  "options": {
+    "options": {
         "step": {
             "init": {
                 "data": {
-                    "boost_temp": "Default Boost Temperature",
-                    "boost_time": "Default Boost Duration",
+                    "heating_boost_temp": "Default Heating Boost Temperature",
+                    "heating_boost_time": "Default Heating Boost Duration",
+                    "hotwater_boost_time": "Default Hot Water Boost Duration",
                     "scan_interval": "Scan Interval",
-                    "setpoint_mode": "Setpoint Mode"
+                    "setpoint_mode": "Setpoint Mode",
+                    "moments": "Enable Moments Buttons",
+                    "lts_sensors": "Enable LTS Sensors"
                 },
                 "description": "Amend Wiser parameters.",
                 "title": "Wiser Heat Hub Options"
             }
         }
-  }
+    }
 }

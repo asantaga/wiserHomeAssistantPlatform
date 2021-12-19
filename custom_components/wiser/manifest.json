@@ -1,10 +1,12 @@
 {
   "domain": "wiser",
-  "name": "Wiser Heating Component for Home Assistant",
+  "name": "Drayton Wiser Integration for Home Assistant",
+  "iot_class": "local_polling",
   "config_flow": true,
-  "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Recipes.md",
+  "documentation": "https://github.com/msp1974/draytonWiserHAComponent/blob/master/Recipes.md",
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "2.6.6",
-  "requirements": ["wiser-heating-api==1.0.10.0", "ruamel.yaml==0.15.100"]
+  "version": "3.1.2",
+  "requirements": ["wiserHeatAPIv2==0.0.8"],
+  "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }
