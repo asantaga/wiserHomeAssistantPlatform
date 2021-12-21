@@ -175,11 +175,12 @@ class WiserOverrideHotWaterButton(WiserButton):
 
 class WiserMomentsButton(WiserButton):
     def __init__(self, data, moment_id):
+        self._moment_id = moment_id
         super().__init__(data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}")
 
     async def async_press(self):
         await self.hass.async_add_executor_job(
-            self._data.wiserhub.moments.get_by_id(self.id).activate
+            self._data.wiserhub.moments.get_by_id(self._moment_id).activate
         )
         await self.async_force_update()
 
