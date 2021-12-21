@@ -480,7 +480,7 @@ Checkout the community thread on https://community.home-assistant.io/t/drayton-w
 
 Special thanks for many contributors to this project!
 
-Angelo and Team
+Angelo, Mark and Team
 
 # Contributors
 
