@@ -26,20 +26,21 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    wiser_selects = []
 
     if data.wiserhub.hotwater:
         _LOGGER.debug("Setting up Hot Water mode select")
-        wiser_hot_water = [WiserHotWaterModeSelect(data)]
-        async_add_entities(wiser_hot_water, True)
+        wiser_selects.extend([WiserHotWaterModeSelect(data)])
 
     # Add SmartPlugs (if any)
     if data.wiserhub.devices.smartplugs.count > 0:
         _LOGGER.debug("Setting up Smartplug mode select")
-        wiser_smart_plugs = [
-            WiserSmartPlugModeSelect(data, plug.id)
-            for plug in data.wiserhub.devices.smartplugs.all
-        ]
-        async_add_entities(wiser_smart_plugs)
+        for plug in data.wiserhub.devices.smartplugs.all:
+            wiser_selects.extend([
+                WiserSmartPlugModeSelect(data, plug.id)
+            ])
+    
+    async_add_entities(wiser_selects)
 
     # Setup services
     platform = entity_platform.async_get_current_platform()
@@ -330,5 +331,4 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
                 _LOGGER.warning(f"{self._smartplug.name} has no schedule to copy")
         except Exception as ex:
             _LOGGER.error(f"Error copying schedule from {self._smartplug.name} to {to_smartplug_name}.  Error is {ex}")
-    
 

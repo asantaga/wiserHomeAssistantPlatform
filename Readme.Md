@@ -67,9 +67,13 @@ Below is a list of the new features in this upgrade (these are in addition to th
 - Devices
     - Turn on/off device lock
     - Enable identify function to flash leds on TRV
-    - Drop down selector to set smartplug mode
     - Device attributes now shows which smartplug is the zwave repeater
     - Signal entity renamed to be more explanatory
+
+- SmartPlugs
+  - Drop down selector to set smartplug mode
+  - Switch to set smartplug to turn off when in away mode
+  - Power sensors for current and total power
 
 - Services
     - Majority of services now utilise new HA functionality to make using them in scripts and automations much easier through the UI.
@@ -116,7 +120,7 @@ Mark & Angelo
 
 - Support for Native Home Assistant Configurations (no more editing YAML!)
 
-- Support for Wiser TRVs, Hub and SmartPlugs
+- Support for Wiser Hub, iTRVs, Roomstats and SmartPlugs
 
 - **Climate platforms**
   
@@ -124,15 +128,17 @@ Mark & Angelo
     - Animated icons for the Rooms to let you know which rooms are actually being heated (credit @msp1974)
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
+    - Allows advancing schedule
     - Displays icon if radiator is heating (heat flowing) or not
     
 - **Service to set heating boost**
   
-    - Services to get, set and copy heating schedules (See instructions below)**
+    - Services to get, set and copy heating, hot water and smart plug schedules (See instructions below)**
     
 - **Switch platform(s)**
   
-   - Allows the switching of various system switches including EcoMode, ComfortMode, AwayMode, Valve Protection and AwayModeAffectsWater   
+   - Allows the switching of various system switches including EcoMode, ComfortMode, AwayMode, Valve Protection and AwayModeAffectsWater
+   - Allows setting Window Detection, Device Lock and Indentify on room devices
    - Allows the switching of the wiser system smartplugs
    
 - **Sensor Platforms**
@@ -161,10 +167,13 @@ Mark & Angelo
 
     - Following services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
-    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms, hot water and smartplugs
+    - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
+    - Service `get_heating_schedule/set_heating_schedule/copy_heating_schedule`: Provides ability to get/set/copy schedules for rooms
+    - Service `get_onoff_schedule/set_onoff_schedule/copy_onoff_schedule`: Provides ability to get/set/copy schedules hot water and smartplugs
     - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
-    - Service `set_hotwater_mode`: Provides ability to turn a hot water **on**/**off** or **auto**. Valid values include `on`, `off` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `set_hotwater_mode`: Provides ability to turn a hot water **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub
 
 - Support for Heathubs with No Hot Water Control 
 
@@ -174,7 +183,17 @@ Mark & Angelo
 
 ## Sample Images
 
-![](docs/screenshotv3.PNG)
+![](docs/screenshot.PNG)
+
+![](docs/hub.PNG)
+
+![](docs/room.PNG)
+
+![](docs/trv.PNG)
+
+![](docs/roomstat.PNG)
+
+![](docs/smartplug.PNG)
 
 
 # Code Installation
@@ -217,7 +236,7 @@ Before you can use the component you need to find the HeatHub secret key, this i
 
 6. Configure using Home Assistant Configuration -> Integrations where your hub should have been auto discovered
 
-![](docs/setupIntegration.PNG)
+![](docs/discovery.PNG)
 
 
 
@@ -225,7 +244,7 @@ Before you can use the component you need to find the HeatHub secret key, this i
 ## Config Options
 Select the configure link from the integrations page.  This will then show the config screen - now configure it appropriately.
 
-![](docs/configure.PNG)
+![](docs/config.PNG)
 
 `Default Heating Boost Temperature` is the delta temperature above the current room temperature the radiator should be set to when boosted, default is 2
 
@@ -467,7 +486,7 @@ Angelo and Team
 
 Special thanks to all the contributors to this project.  Special shout to 
 
-- @msp1974     : Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more! Mark is now part of the core team helping me out whilst I deal with screaming babies wanting food :-)
+- @msp1974     : V3, Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more! Mark is now part of the core team helping me out whilst I deal with screaming babies wanting food :-)
 - @angrycamel  : Home/Away Sensor
 - @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
