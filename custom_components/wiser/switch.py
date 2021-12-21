@@ -108,15 +108,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     WiserDeviceSwitch(data, switch["name"], switch["key"], switch["icon"], device.id )
                 )
         
-    async_add_entities(wiser_switches)
+    
 
 
     # Add SmartPlugs (if any)
-    wiser_smart_plugs = [
-        WiserSmartPlug(data, plug.id, "Wiser {}".format(plug.name))
-        for plug in data.wiserhub.devices.smartplugs.all
-    ]
-    async_add_entities(wiser_smart_plugs)
+    for plug in data.wiserhub.devices.smartplugs.all:
+        wiser_switches.extend([
+            WiserSmartPlugSwitch(data, plug.id, f"Wiser {plug.name}"),
+            WiserSmartPlugAwayActionSwitch(data, plug.id, f"Wiser {plug.name}")
+        ])
+
+    async_add_entities(wiser_switches)
 
     return True
 
@@ -151,7 +153,6 @@ class WiserSwitch(SwitchEntity):
     @property
     def unique_id(self):
         return get_unique_id(self._data, self._type, "switch", self.name)
-        #return f"{self.data.wiserhub.system.name}-{self._type}-switch-{self.name}"
 
     @property
     def should_poll(self):
@@ -360,7 +361,7 @@ class WiserDeviceSwitch(WiserSwitch):
         return attrs
 
 
-class WiserSmartPlug(WiserSwitch):
+class WiserSmartPlugSwitch(WiserSwitch):
     """Plug SwitchEntity Class."""
 
     def __init__(self, data, plugId, name):
@@ -371,7 +372,7 @@ class WiserSmartPlug(WiserSwitch):
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
 
     async def async_force_update(self):
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
         await self._data.async_update(no_throttle=True)
 
     async def async_update(self):
@@ -391,7 +392,7 @@ class WiserSmartPlug(WiserSwitch):
         return get_unique_id(
             self._data, 
             self._smartplug.product_type, 
-            self._name,
+            self.name,
             self._smart_plug_id
         )
 
@@ -411,12 +412,12 @@ class WiserSmartPlug(WiserSwitch):
     def extra_state_attributes(self):
         """Return set of device state attributes."""
         attrs = {}
-        attrs["manual_state"] = self._smartplug.manual_state
-        attrs["name"] = self._smartplug.name
-        attrs["mode"] = self._smartplug.mode
-        attrs["away_action"] = self._smartplug.away_action
-        attrs["output_state"] = "On" if self._smartplug.is_on else "Off"
         attrs["control_source"] = self._smartplug.control_source
+        attrs["manual_state"] = self._smartplug.manual_state
+        attrs["mode"] = self._smartplug.mode
+        attrs["name"] = self._smartplug.name
+        attrs["output_state"] = "On" if self._smartplug.is_on else "Off"
+        attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id).name
         attrs["scheduled_state"] = self._smartplug.scheduled_state
         if self._smartplug.schedule:
             attrs["next_schedule_change"] = str(self._smartplug.schedule.next.time)
@@ -435,6 +436,70 @@ class WiserSmartPlug(WiserSwitch):
         """Turn the device off."""
         await self.hass.async_add_executor_job(
             self._smartplug.turn_off
+        )
+        await self.async_force_update()
+        return True
+
+
+class WiserSmartPlugAwayActionSwitch(WiserSwitch):
+    """Plug SwitchEntity Class."""
+
+    def __init__(self, data, plugId, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._smart_plug_id = plugId
+        super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
+        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+
+    async def async_force_update(self):
+        await asyncio.sleep(2)
+        await self._data.async_update(no_throttle=True)
+
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug("Wiser %s Away Action Switch Update requested", self._name)
+        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+        self._is_on = True if self._smartplug.away_mode_action == "Off" else False
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
+    
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, 
+            self._smartplug.product_type, 
+            self.name,
+            self._smart_plug_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._smart_plug_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._smart_plug_id))},
+                "manufacturer": MANUFACTURER,
+                "model": self._smartplug.model,
+                "sw_version": self._smartplug.firmware_version,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        await self.hass.async_add_executor_job(
+            setattr, self._smartplug, "away_mode_action", "Off"
+        )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+        await self.hass.async_add_executor_job(
+            setattr, self._smartplug, "away_mode_action", "NoChange"
         )
         await self.async_force_update()
         return True

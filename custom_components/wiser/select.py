@@ -37,8 +37,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.debug("Setting up Smartplug mode select")
         for plug in data.wiserhub.devices.smartplugs.all:
             wiser_selects.extend([
-                WiserSmartPlugModeSelect(data, plug.id),
-                WiserSmartPlugAwayModeActionSelect(data, plug.id)
+                WiserSmartPlugModeSelect(data, plug.id)
             ])
     
     async_add_entities(wiser_selects)
@@ -332,51 +331,4 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
                 _LOGGER.warning(f"{self._smartplug.name} has no schedule to copy")
         except Exception as ex:
             _LOGGER.error(f"Error copying schedule from {self._smartplug.name} to {to_smartplug_name}.  Error is {ex}")
-
-
-class WiserSmartPlugAwayModeActionSelect(WiserSelectEntity):
-
-    def __init__(self, data, smartplug_id):
-        """Initialize the sensor."""
-        self._smartplug_id = smartplug_id
-        super().__init__(data)
-        self._smartplug = self._data.wiserhub.devices.smartplugs.get_by_id(self._smartplug_id)
-        self._options = self._smartplug.available_away_mode_actions
-
-
-    async def async_update(self):
-        """Async update method."""
-        self._smartplug = self._data.wiserhub.devices.smartplugs.get_by_id(self._smartplug_id)
-    
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._smartplug_id)} Away Mode Action"
-
-    @property
-    def current_option(self) -> str:
-        return self._smartplug.away_action
-
-    def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting smartplug mode to {option}")
-        self._smartplug.away_action = option
-        self.hass.async_create_task(self.async_force_update())
-    
-    @property
-    def unique_id(self):
-        """Return unique ID for the plug."""
-        return get_unique_id(self._data, self._smartplug.product_type, "away-action-select", self._smartplug_id)
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-                "name": get_device_name(self._data, self._smartplug_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._smartplug_id))},
-                "manufacturer": MANUFACTURER,
-                "model": self._smartplug.model,
-                "sw_version": self._smartplug.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
-    
 
