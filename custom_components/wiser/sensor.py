@@ -8,10 +8,9 @@ Angelosantagata@gmail.com
 from datetime import datetime
 import logging
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import ATTR_BATTERY_LEVEL, DEVICE_CLASS_BATTERY, DEVICE_CLASS_TEMPERATURE, TEMP_CELSIUS, DEVICE_CLASS_POWER_FACTOR, PERCENTAGE
+from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers import config_validation as cv, entity_platform, service
 import voluptuous as vol
 
 from .const import (
@@ -20,7 +19,7 @@ from .const import (
     MANUFACTURER,
     SIGNAL_STRENGTH_ICONS,
 )
-from .helpers import get_device_name, get_room_name, get_unique_id, get_identifier
+from .helpers import get_device_name, get_unique_id, get_identifier
 
 _LOGGER = logging.getLogger(__name__)
 
