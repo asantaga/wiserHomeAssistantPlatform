@@ -8,7 +8,7 @@ Angelosantagata@gmail.com
 from datetime import datetime
 import logging
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE
+from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 import voluptuous as vol
@@ -74,6 +74,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             WiserSystemHotWaterPreset(data, sensor_type= "Hot Water Operation Mode")
 
         ])
+
+
+    # Add power sensors for smartplugs
+    if data.wiserhub.devices.smartplugs:
+        for smartplug in data.wiserhub.devices.smartplugs.all:
+            wiser_sensors.extend([
+                WiserSmartplugPower(data, smartplug.id, sensor_type = "Power"),
+                WiserSmartplugPower(data, smartplug.id, sensor_type = "Total Power")
+            ])
 
 
     # Add LTS sensors - for room temp and target temp
@@ -441,6 +450,66 @@ class WiserSystemOperationModeSensor(WiserSensor):
         """Return the device state attributes."""
         attrs = {"away_mode_temperature": self._away_temperature}
         return attrs
+
+
+class WiserSmartplugPower(WiserSensor):
+    """Sensor for the power of a Wiser SmartPlug."""
+
+    def __init__(self, data, device_id, sensor_type=""):
+        """Initialise the operation mode sensor."""
+        super().__init__(data, device_id, sensor_type)
+        self._device = data.wiserhub.devices.smartplugs.get_by_id(device_id)
+
+
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+        self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
+        if self._sensor_type == "Power":
+            self._state = self._device.instantaneous_power
+        else:
+            self._state = self._device.delivered_power
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
+
+    @property
+    def icon(self):
+        """Return icon."""
+        return "mdi:lightning-bolt-circle"
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+                "manufacturer": MANUFACTURER,
+                "model": self._device.model,
+                "sw_version": self._device.firmware_version,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
+
+    @property
+    def device_class(self):
+        if self._sensor_type == "Power":
+            return SensorDeviceClass.POWER
+        return SensorDeviceClass.ENERGY
+
+    @property
+    def state_class(self):
+        if self._sensor_type == "Power":
+            return SensorStateClass.TOTAL
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def unit_of_measurement(self):
+        if self._sensor_type == "Power":
+            return POWER_WATT
+        return ENERGY_KILO_WATT_HOUR
+
 
 
 class WiserLTSTempSensor(WiserSensor):
