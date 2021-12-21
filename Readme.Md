@@ -72,7 +72,7 @@ Below is a list of the new features in this upgrade (these are in addition to th
 
 - SmartPlugs
   - Drop down selector to set smartplug mode
-  - Drop down selector to set smartplug away mode action
+  - Switch to set smartplug to turn off when in away mode
   - Power sensors for current and total power
 
 - Services
