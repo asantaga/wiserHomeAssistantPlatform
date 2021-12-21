@@ -1,4 +1,4 @@
-# Wiser Home Assistant Platform v2.6beta
+# Wiser Home Assistant Platform v2.7
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
@@ -383,7 +383,7 @@ Checkout the community thread on https://community.home-assistant.io/t/drayton-w
 
 Special thanks for many contributors to this project!
 
-Angelo and Team
+Angelo, Mark and the community at large.
 
 # Contributors
 
@@ -396,11 +396,15 @@ Special thanks to all the contributors to this project.  Special shout to
 - @djbanks     : Home/Away switch (v 1.31)
 - @nofuse       : Constantly helping people out on the community thread 
 
+And many many more, please see github pull requests for more info
+
 
 
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+= 2.7 
+   * Various bug fixes and prep for V3 :-) 
 - 2.6beta6
    * Fix for broken scheduler services - sorry all!
 - 2.6beta5
