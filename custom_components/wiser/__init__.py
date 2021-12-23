@@ -68,7 +68,7 @@ from .helpers import get_device_name, get_identifier
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
