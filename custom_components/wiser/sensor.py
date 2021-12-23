@@ -288,7 +288,6 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs["zigbee_channel"] = (
             self._data.wiserhub.system.zigbee.network_channel
         )
-        attrs["last_updated"] = datetime.now()
 
         # Network Data
         attrs["node_id"] = self._device.node_id
