@@ -45,6 +45,8 @@ Below is a list of the new features in this upgrade (these are in addition to th
     - Button to boost all rooms
     - Button to cancel all heating overrides
     - Daylight saving setting can now be controlled
+    - Number slider to view and set Away Mode target temperature
+    - Attributes on Heating Operation sensor to monitor hub update success
     - Support for Wiser Moments - see Moments below
     - Long term stats sensors for heating channel and hotwater demand - see LTS sensors below
 
@@ -499,7 +501,12 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.14
-    * Fix error with smartplug total power not available in energy config
+    * Fix error with smartplug total power not available in energy config - issue [#192](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/192)192
+    * Fix issue with zeroconf not using hostname
+    * Fix issues with zeroconf not reporting errors on setup - issue #189
+    * Add away mode target temperature number slider to view and set away mode temp - issue [#190](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/190)
+    * Removed last_updated attribute from device signal entities
+    * Added last updated, mins since last updated and last update status attributes to Heating Operation sensor - issue [#191](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/191)
 - 3.0
     * See above for long list of new functionality
 - 2.6beta6
