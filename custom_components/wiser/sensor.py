@@ -7,7 +7,7 @@ Angelosantagata@gmail.com
 """
 from datetime import datetime
 import logging
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass, SensorEntity
 from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
@@ -110,7 +110,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(wiser_sensors, True)
 
 
-class WiserSensor(Entity):
+class WiserSensor(SensorEntity):
     """Definition of a Wiser sensor."""
 
     def __init__(self, config_entry, device_id=0, sensor_type=""):
@@ -199,7 +199,7 @@ class WiserBatterySensor(WiserSensor):
         return SensorDeviceClass.BATTERY
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         """Return the unit of measurement of this entity."""
         return "%"
 
@@ -468,7 +468,7 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             self._state = self._device.instantaneous_power
         else:
-            self._state = self._device.delivered_power
+            self._state = round(self._device.delivered_power / 1000, 2)
 
     @property
     def name(self):
@@ -501,11 +501,17 @@ class WiserSmartplugPower(WiserSensor):
     @property
     def state_class(self):
         if self._sensor_type == "Power":
-            return SensorStateClass.TOTAL
-        return SensorStateClass.MEASUREMENT
+            return SensorStateClass.MEASUREMENT
+        return SensorStateClass.TOTAL_INCREASING
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self) -> float:
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
         if self._sensor_type == "Power":
             return POWER_WATT
         return ENERGY_KILO_WATT_HOUR
@@ -560,7 +566,12 @@ class WiserLTSTempSensor(WiserSensor):
         return SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
         return TEMP_CELSIUS
 
     @property
@@ -623,7 +634,12 @@ class WiserLTSDemandSensor(WiserSensor):
         return SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
         return PERCENTAGE
 
     @property
