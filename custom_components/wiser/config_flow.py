@@ -8,8 +8,8 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 import requests.exceptions
 from typing import Any
 import voluptuous as vol
-from wiserHeatAPIv2.wiserhub import (
-    WiserAPI,
+from wiserHeatAPIv2.wiserhub import WiserAPI
+from wiserHeatAPIv2.exceptions import (
     WiserHubConnectionError,
     WiserHubAuthenticationError,
     WiserHubRESTError,
@@ -48,25 +48,12 @@ async def validate_input(hass, data):
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-
-    try:
-        wiser = await hass.async_add_executor_job(
-            WiserAPI, data[CONF_HOST], data[CONF_PASSWORD],
-        )
-        wiser_id = wiser.system.name
-
-    except WiserHubConnectionError:
-        raise CannotConnect
-    except WiserHubAuthenticationError:
-        raise InvalidAuth
-    except WiserHubRESTError:
-        raise UnknownError
-    except requests.exceptions.ConnectionError:
-        raise CannotConnect
-    except RuntimeError:
-        raise UnknownError
-
+    wiser = await hass.async_add_executor_job(
+        WiserAPI, data[CONF_HOST], data[CONF_PASSWORD],
+    )
+    wiser_id = wiser.system.name
     return {"title": wiser_id, "unique_id": get_unique_id(wiser_id)}
+
 
 def get_unique_id(wiser_id: str):
     return str(f"{DOMAIN}-{wiser_id}")
@@ -105,12 +92,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 validated = await validate_input(self.hass, user_input)
-            except InvalidAuth:
+            except WiserHubAuthenticationError:
                 errors["base"] = "auth_failure"
-            except CannotConnect:
+            except (WiserHubConnectionError, requests.exceptions.ConnectionError):
                 errors["base"] = "timeout_error"
-            except UnknownError:
-                _LOGGER.exception("Unexpected exception")
+            except (WiserHubRESTError, RuntimeError, Exception):
                 errors["base"] = "unknown"
 
             if "base" not in errors:
@@ -135,9 +121,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
 
-        host = discovery_info.host
+        host = discovery_info.hostname
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
+
+        _LOGGER.info(discovery_info)
 
         await self.async_set_unique_id(get_unique_id(name))
         self._abort_if_unique_id_configured()
@@ -159,15 +147,17 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle a confirmation flow initiated by zeroconf."""
         errors = {}
         if user_input is not None:
+            user_input[CONF_HOST] = self.discovery_info[CONF_HOST]
             try:
-                user_input[CONF_HOST] = self.discovery_info[CONF_HOST]
                 validated = await validate_input(self.hass, user_input)
-            except InvalidAuth:
+            except WiserHubAuthenticationError:
+                _LOGGER.warning("Authentication failure connecting to Wiser Hub")
                 errors["base"] = "auth_failure"
-            except CannotConnect:
-                errors["base"] = "timeout_error"
-            except UnknownError:
-                _LOGGER.exception("Unexpected exception")
+            except (WiserHubConnectionError, requests.exceptions.ConnectionError):
+                _LOGGER.warning("Connection timout error connecting to Wiser Hub")
+                errors["base"] = "timeout_error_discovery"
+            except (WiserHubRESTError, RuntimeError, Exception):
+                _LOGGER.exception("Unknown error connecting to Wiser Hub")
                 errors["base"] = "unknown"
 
             if "base" not in errors:
@@ -185,7 +175,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
-            errors={},
+            errors=errors,
         )
 
 

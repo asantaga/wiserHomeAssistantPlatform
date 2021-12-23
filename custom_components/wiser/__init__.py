@@ -5,8 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 msparker@sky.com
 """
 import asyncio
-from datetime import timedelta
-from functools import partial
+from datetime import timedelta, datetime
 import json
 import logging
 import requests.exceptions
@@ -69,7 +68,7 @@ from .helpers import get_device_name, get_identifier
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
@@ -243,6 +242,8 @@ class WiserHubHandle:
         self.host = config_entry.data[CONF_HOST]
         self.secret = config_entry.data[CONF_PASSWORD]
         self.wiserhub = None
+        self.last_update_time = datetime.now()
+        self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.options.get(CONF_HEATING_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -274,24 +275,27 @@ class WiserHubHandle:
             if result is not None:
                 _LOGGER.debug(f"Wiser Hub data updated - {self.wiserhub.system.name}")
                 # Send update notice to all components to update
+                self.last_update_time = datetime.now()
+                self.last_update_status = "Success"
                 dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateMessage")
                 return True
 
             _LOGGER.error(f"Unable to update from Wiser hub - {self.wiserhub.system.name}")
-            return False
         except json.decoder.JSONDecodeError as ex:
             _LOGGER.error(
                 f"Data not in JSON format when getting data from the Wiser hub. Error is {str(ex)}"
             )
-            return False
         except WiserHubConnectionError as ex:
             _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to timeout error")
             _LOGGER.debug(f"Error is {str(ex)}")
-            return False
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to unknown error")
             _LOGGER.debug(f"Error is {str(ex)}")
-            return False
+        
+        self.last_update_status = "Failed"
+        dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateFailedMessage")
+        return False
+
 
 
     @property

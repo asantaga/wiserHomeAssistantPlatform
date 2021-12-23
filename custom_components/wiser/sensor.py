@@ -7,7 +7,7 @@ Angelosantagata@gmail.com
 """
 from datetime import datetime
 import logging
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass, SensorEntity
 from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
@@ -110,7 +110,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(wiser_sensors, True)
 
 
-class WiserSensor(Entity):
+class WiserSensor(SensorEntity):
     """Definition of a Wiser sensor."""
 
     def __init__(self, config_entry, device_id=0, sensor_type=""):
@@ -199,7 +199,7 @@ class WiserBatterySensor(WiserSensor):
         return SensorDeviceClass.BATTERY
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         """Return the unit of measurement of this entity."""
         return "%"
 
@@ -288,7 +288,6 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs["zigbee_channel"] = (
             self._data.wiserhub.system.zigbee.network_channel
         )
-        attrs["last_updated"] = datetime.now()
 
         # Network Data
         attrs["node_id"] = self._device.node_id
@@ -425,14 +424,11 @@ class WiserSystemOperationModeSensor(WiserSensor):
 
     def __init__(self, data, device_id=0, sensor_type=""):
         """Initialise the operation mode sensor."""
-
         super().__init__(data, device_id, sensor_type)
-        self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await super().async_update()
-        self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
         self._state = self.mode
 
     @property
@@ -448,8 +444,26 @@ class WiserSystemOperationModeSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return the device state attributes."""
-        attrs = {"away_mode_temperature": self._away_temperature}
+        attrs = {}
+        attrs["last_updated"] = self._data.last_update_time
+        attrs["minutes_since_last_update"] = int((datetime.now() - self._data.last_update_time).total_seconds() / 60)
+        attrs["last_update_status"] = self._data.last_update_status
         return attrs
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub."""
+
+        await super().async_added_to_hass()
+
+        async def async_update_operation_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(False)
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateFailedMessage", async_update_operation_state
+            )
+        )
 
 
 class WiserSmartplugPower(WiserSensor):
@@ -468,7 +482,7 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             self._state = self._device.instantaneous_power
         else:
-            self._state = self._device.delivered_power
+            self._state = round(self._device.delivered_power / 1000, 2)
 
     @property
     def name(self):
@@ -501,11 +515,17 @@ class WiserSmartplugPower(WiserSensor):
     @property
     def state_class(self):
         if self._sensor_type == "Power":
-            return SensorStateClass.TOTAL
-        return SensorStateClass.MEASUREMENT
+            return SensorStateClass.MEASUREMENT
+        return SensorStateClass.TOTAL_INCREASING
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self) -> float:
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
         if self._sensor_type == "Power":
             return POWER_WATT
         return ENERGY_KILO_WATT_HOUR
@@ -560,7 +580,12 @@ class WiserLTSTempSensor(WiserSensor):
         return SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
         return TEMP_CELSIUS
 
     @property
@@ -623,7 +648,12 @@ class WiserLTSDemandSensor(WiserSensor):
         return SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self):
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
         return PERCENTAGE
 
     @property
