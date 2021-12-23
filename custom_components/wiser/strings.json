@@ -20,17 +20,20 @@
         },
         "abort": {
             "already_in_progress": "Wiser Heat Hub configuration is already in progress.",
-            "already_configured": "This device is already configured.",
+            "already_configured": "This device is already configured."
+        },
+        "error": {
             "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
             "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
-            "not_successful": "Unable to connect to the Wiser hub.",
-            "not_wiser_device": "This device is currently not supported.",
-            "one_instance_only": "Only 1 instance of the wiser hub is supported.  Check in ignored devices."
+            "timeout_error_discovery": "Timed out trying to connect to the Wiser Hub.  Check your hub is still online and try again.",
+            "unknown": "Unknown error connecting to the Wiser hub.  Please check the logs."
         }
     },
     "options": {
         "step": {
             "init": {
+                "title": "Wiser Heat Hub Options",
+                "description": "Amend Wiser parameters.",
                 "data": {
                     "heating_boost_temp": "Default Heating Boost Temperature",
                     "heating_boost_time": "Default Heating Boost Duration",
@@ -39,10 +42,9 @@
                     "setpoint_mode": "Setpoint Mode",
                     "moments": "Enable Moments Buttons",
                     "lts_sensors": "Enable LTS Sensors"
-                },
-                "description": "Amend Wiser parameters.",
-                "title": "Wiser Heat Hub Options"
+                }               
             }
         }
     }
 }
+
