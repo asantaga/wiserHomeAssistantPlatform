@@ -5,8 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 msparker@sky.com
 """
 import asyncio
-from datetime import timedelta
-from functools import partial
+from datetime import timedelta, datetime
 import json
 import logging
 import requests.exceptions
@@ -243,6 +242,8 @@ class WiserHubHandle:
         self.host = config_entry.data[CONF_HOST]
         self.secret = config_entry.data[CONF_PASSWORD]
         self.wiserhub = None
+        self.last_update_time = None
+        self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
         self.boost_temp = config_entry.options.get(CONF_HEATING_BOOST_TEMP, DEFAULT_BOOST_TEMP)
@@ -274,9 +275,12 @@ class WiserHubHandle:
             if result is not None:
                 _LOGGER.debug(f"Wiser Hub data updated - {self.wiserhub.system.name}")
                 # Send update notice to all components to update
+                self.last_update_time = datetime.now()
+                self.last_update_status = "Success"
                 dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateMessage")
                 return True
 
+            self.last_update_status = "Failed"
             _LOGGER.error(f"Unable to update from Wiser hub - {self.wiserhub.system.name}")
             return False
         except json.decoder.JSONDecodeError as ex:

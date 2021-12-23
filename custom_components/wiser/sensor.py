@@ -447,8 +447,9 @@ class WiserSystemOperationModeSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return the device state attributes."""
-        attrs = []
-        attrs["last_updated"] = datetime.now()
+        attrs = {}
+        attrs["last_updated"] = self._data.last_update_time
+        attrs["last_update_status"] = self._data.last_update_status
         return attrs
 
 
