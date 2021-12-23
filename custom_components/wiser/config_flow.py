@@ -121,9 +121,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
 
-        host = discovery_info.host
+        host = discovery_info.hostname
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
+
+        _LOGGER.info(discovery_info)
 
         await self.async_set_unique_id(get_unique_id(name))
         self._abort_if_unique_id_configured()
