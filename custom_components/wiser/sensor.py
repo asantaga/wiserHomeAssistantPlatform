@@ -424,14 +424,11 @@ class WiserSystemOperationModeSensor(WiserSensor):
 
     def __init__(self, data, device_id=0, sensor_type=""):
         """Initialise the operation mode sensor."""
-
         super().__init__(data, device_id, sensor_type)
-        self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await super().async_update()
-        self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
         self._state = self.mode
 
     @property
@@ -449,8 +446,24 @@ class WiserSystemOperationModeSensor(WiserSensor):
         """Return the device state attributes."""
         attrs = {}
         attrs["last_updated"] = self._data.last_update_time
+        attrs["minutes_since_last_update"] = int((datetime.now() - self._data.last_update_time).total_seconds() / 60)
         attrs["last_update_status"] = self._data.last_update_status
         return attrs
+
+    async def async_added_to_hass(self):
+        """Subscribe for update from the hub."""
+
+        await super().async_added_to_hass()
+
+        async def async_update_operation_state():
+            """Update sensor state."""
+            await self.async_update_ha_state(False)
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateFailedMessage", async_update_operation_state
+            )
+        )
 
 
 class WiserSmartplugPower(WiserSensor):

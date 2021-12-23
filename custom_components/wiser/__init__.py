@@ -242,7 +242,7 @@ class WiserHubHandle:
         self.host = config_entry.data[CONF_HOST]
         self.secret = config_entry.data[CONF_PASSWORD]
         self.wiserhub = None
-        self.last_update_time = None
+        self.last_update_time = datetime.now()
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
@@ -280,22 +280,22 @@ class WiserHubHandle:
                 dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateMessage")
                 return True
 
-            self.last_update_status = "Failed"
             _LOGGER.error(f"Unable to update from Wiser hub - {self.wiserhub.system.name}")
-            return False
         except json.decoder.JSONDecodeError as ex:
             _LOGGER.error(
                 f"Data not in JSON format when getting data from the Wiser hub. Error is {str(ex)}"
             )
-            return False
         except WiserHubConnectionError as ex:
             _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to timeout error")
             _LOGGER.debug(f"Error is {str(ex)}")
-            return False
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to unknown error")
             _LOGGER.debug(f"Error is {str(ex)}")
-            return False
+        
+        self.last_update_status = "Failed"
+        dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateFailedMessage")
+        return False
+
 
 
     @property
