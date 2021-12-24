@@ -520,7 +520,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.15
-    * Fix for isue with single TRV device if multiple in a room - issue [#194](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/194)
+    * Fix for issue with single TRV device if multiple in a room - issue [#194](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/194)
     * Fix for boost_all_rooms not setting temp correctly - issue [#180](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/180)
     * Add ability to set target temp or temp delta for boost - like in v2.7
 - 3.0.14
