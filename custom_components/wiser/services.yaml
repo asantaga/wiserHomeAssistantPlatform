@@ -19,17 +19,29 @@ boost_heating:
           max: 9999
           step: 1
           mode: box
-    temperature:
-      name: Temperature
+    temperature_delta:
+      name: Temperature Increase
       description: Set the increase in temperature for the boost period.
       example: 3.0
       default: 3.0
-      required: true
+      required: false
       selector:
         number:
           min: 0.1
           max: 5
-          step: 0.1
+          step: 0.5
+          unit_of_measurement: C
+    temperature:
+      name: Temperature
+      description: Set the room target temperature for the boost period.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 30
+          step: 0.5
           unit_of_measurement: C
 
 boost_hotwater:
