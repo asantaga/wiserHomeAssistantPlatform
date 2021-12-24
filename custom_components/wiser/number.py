@@ -47,7 +47,7 @@ class WiserAwayModeTempNumber(NumberEntity):
 
     @property
     def step(self) -> float:
-        return 0.1
+        return 0.5
 
     @property
     def mode(self) -> NumberMode:
