@@ -6,7 +6,7 @@
   "documentation": "https://github.com/msp1974/draytonWiserHAComponent/blob/master/Recipes.md",
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.0.14",
+  "version": "3.0.15",
   "requirements": ["wiserHeatAPIv2==0.0.11"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }

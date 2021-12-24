@@ -500,6 +500,8 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.15
+    * Fix for isue with single TRV device if multiple in a room - issue [#194](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/194)
 - 3.0.14
     * Fix error with smartplug total power not available in energy config - issue [#192](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/192)192
     * Fix issue with zeroconf not using hostname
@@ -510,10 +512,10 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 3.0
     * See above for long list of new functionality
 - 2.6beta6
-   * Fix for broken scheduler services - sorry all!
+    * Fix for broken scheduler services - sorry all!
 - 2.6beta5
-   * Amended manifest version to include 2 dot notation
-   * Fixed label issue on config for setpoint mode
+    * Amended manifest version to include 2 dot notation
+    * Fixed label issue on config for setpoint mode
 - 2.6beta4
    * Fixed issue caused by removal of ruamel.yaml from core
    * Added last updated attribute to wiserhub sensor
