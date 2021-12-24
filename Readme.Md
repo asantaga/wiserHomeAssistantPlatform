@@ -8,10 +8,29 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 
 For more information checkout the AMAZING community thread available on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
 
+---
+## Contents
+
+- [Minimum Requirements](#minimum-requirements)
+- [Updating to v3.0 from v2.x](#updating-to-v30---important-please-read)
+- [V3.0 New Features](#v30-new-features)
+- [Issues & Questions](#issues-and-questions)
+- [Functionality of this Integration](#functionality)
+- [Installing](#code-installation)
+- [Configuration](#configuration)
+- [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
+- [Network Topology](#network-topology)
+- [Battery Values](#battery-values)
+- [Community and Recipes](#community)
+- [Contributors](#contributors)
+- [Change Log](#change-log)
+
+
 ## Minimum Requirements
 
 Requires a minimum of HA 2021.12.  This is needed to support the new button functionality and changes to config flow.
 Requires the new WiserHeatAPIv2 api.
+
 
 ## Updating to v3.0 - IMPORTANT PLEASE READ!
 
@@ -26,7 +45,7 @@ In most cases, it will be easier to remove the old integration and add this from
 However, we hope that many of the things our community has had to create with scripts or automations will now have a much simpler way to do it anyway and we can better maintain this setup going forward so future upgrades will be straight forward.
 
 
-## v3.0 Update
+## v3.0 New Features
 
 We are very excited to bring you this massive update to our Wiser integration for Home Assistant.  Our user community has been hugely helpful in suggesting enhancements and sharing the way they use this integration and we love that you love it.
 
@@ -91,7 +110,7 @@ Below is a list of the new features in this upgrade (these are in addition to th
 - Long Term Stats
     - As listed in the categories above, we have added a number of LTS sensors for those in our community wanting to do more analysis of how their heating is performaing.  As HA only support these currently via sensors, this functionality can create a lot of entities.  Therefore, we have made it an optional feature that can be turned on and off in the integration config.
 
-# Breaking Changes
+## Breaking Changes
 
 - Many entity names and unique ids have changed meaning new entities will be created and the old ones will show as unavailable
 - Standardisation of entity attribute names format meaning some attribute names are now different
