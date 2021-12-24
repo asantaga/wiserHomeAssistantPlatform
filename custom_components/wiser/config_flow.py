@@ -125,8 +125,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
 
-        _LOGGER.info(discovery_info)
-
         await self.async_set_unique_id(get_unique_id(name))
         self._abort_if_unique_id_configured()
 

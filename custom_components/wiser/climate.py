@@ -108,7 +108,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             WISER_SERVICES["SERVICE_BOOST_HEATING"],
             {
                 vol.Required(ATTR_TIME_PERIOD, default=0): vol.Coerce(int),
-                vol.Required(ATTR_TEMPERATURE, default=0): vol.Coerce(float),
+                vol.Any(
+                    vol.Optional(ATTR_TEMPERATURE_DELTA, default=0),
+                    vol.Optional(ATTR_TEMPERATURE, default=0),
+                ): vol.Coerce(float)
             },
             "async_boost_heating"
         )
@@ -174,8 +177,6 @@ class WiserRoom(ClimateEntity):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        
-        #identifier = f"{self.data.wiserhub.system.name}-WiserRoom-{self._room_id}-Wiser {self.data.wiserhub.rooms.get_by_id(self._room_id).name}"
         return {
                 "name": get_device_name(self._data, self._room_id,"room"),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._room_id,"room"))},
@@ -349,12 +350,18 @@ class WiserRoom(ClimateEntity):
         return f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
 
     @callback
-    async def async_boost_heating(self, time_period: int, temperature: float) -> None:
+    async def async_boost_heating(self, time_period: int, temperature_delta = 0, temperature = 0) -> None:
         """Boost heating for room"""
-        _LOGGER.info(f"Boosting heating for {self._room.name} by {temperature}C for {time_period}m ")
-        await self.hass.async_add_executor_job(
-            self._room.boost, temperature, time_period
-        )
+        if temperature_delta > 0:
+            _LOGGER.info(f"Boosting heating for {self._room.name} by {temperature_delta}C for {time_period}m ")
+            await self.hass.async_add_executor_job(
+                self._room.boost, temperature_delta, time_period
+            )
+        if temperature > 0 and temperature_delta == 0:
+            _LOGGER.info(f"Boosting heating for {self._room.name} to {temperature}C for {time_period}m ")
+            await self.hass.async_add_executor_job(
+                self._room.set_target_temperature_for_duration, temperature, time_period
+            )
         await self.async_force_update()
 
     @callback

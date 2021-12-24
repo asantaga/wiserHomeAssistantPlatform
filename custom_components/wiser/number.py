@@ -60,6 +60,12 @@ class WiserAwayModeTempNumber(NumberEntity):
         return f"{get_device_name(self._data, 0, self._name)}"
 
     @property
+    def icon(self):
+        """Icon for device"""
+        return "mdi:thermometer-low"
+
+
+    @property
     def unique_id(self):
         return get_unique_id(self._data, "system", "number", self.name)
 
