@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.15
+# Drayton Wiser Home Assistant Integration v3.0.16
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -519,6 +519,12 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.16
+    * Added support for heating actuators in devices
+    * Added basic support for Shutters and Lights in devices
+    * Bump api to 0.0.13
+    * Improved handling of battery data
+    * Changed model to use product_type as model_identifier not consistantly supplied for all devices
 - 3.0.15
     * Fix for issue with single TRV device if multiple in a room - issue [#194](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/194)
     * Fix for boost_all_rooms not setting temp correctly - issue [#180](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/180)
