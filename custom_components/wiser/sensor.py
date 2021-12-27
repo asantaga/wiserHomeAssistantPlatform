@@ -182,10 +182,8 @@ class WiserBatterySensor(WiserSensor):
         """Initialise the battery sensor."""
         self._attr_device_class = SensorDeviceClass.BATTERY
         super().__init__(data, device_id, sensor_type)
-        self._state = "Unknown"
-        self._battery_voltage = 0
-        self._battery_level = None
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.battery.percent
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
