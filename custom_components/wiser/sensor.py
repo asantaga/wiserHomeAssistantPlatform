@@ -156,7 +156,7 @@ class WiserSensor(SensorEntity):
                 "name": get_device_name(self._data, 0),
                 "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
                 "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.system.model,
+                "model": self._data.wiserhub.system.product_type,
                 "sw_version": self._data.wiserhub.system.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -182,10 +182,8 @@ class WiserBatterySensor(WiserSensor):
         """Initialise the battery sensor."""
         self._attr_device_class = SensorDeviceClass.BATTERY
         super().__init__(data, device_id, sensor_type)
-        self._state = "Unknown"
-        self._battery_voltage = 0
-        self._battery_level = None
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.battery.percent
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
@@ -223,7 +221,7 @@ class WiserBatterySensor(WiserSensor):
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._device.model,
+                "model": self._device.product_type,
                 "sw_version": self._device.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -254,7 +252,7 @@ class WiserDeviceSignalSensor(WiserSensor):
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._device.model,
+                "model": self._device.product_type,
                 "sw_version": self._device.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -501,7 +499,7 @@ class WiserSmartplugPower(WiserSensor):
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._device.model,
+                "model": self._device.product_type,
                 "sw_version": self._device.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
