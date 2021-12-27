@@ -226,7 +226,7 @@ class WiserSystemSwitch(WiserSwitch):
                 "name": get_device_name(self._data, 0),
                 "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
                 "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.system.model,
+                "model": self._data.wiserhub.system.product_type,
                 "sw_version": self._data.wiserhub.system.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -349,7 +349,7 @@ class WiserDeviceSwitch(WiserSwitch):
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._device.model,
+                "model": self._device.product_type,
                 "sw_version": self._device.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -403,7 +403,7 @@ class WiserSmartPlugSwitch(WiserSwitch):
                 "name": get_device_name(self._data, self._smart_plug_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._smart_plug_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._smartplug.model,
+                "model": self._smartplug.product_type,
                 "sw_version": self._smartplug.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
@@ -483,7 +483,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
                 "name": get_device_name(self._data, self._smart_plug_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._smart_plug_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._smartplug.model,
+                "model": self._smartplug.product_type,
                 "sw_version": self._smartplug.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }

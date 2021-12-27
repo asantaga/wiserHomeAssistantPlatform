@@ -76,7 +76,7 @@ class WiserAwayModeTempNumber(NumberEntity):
                 "name": get_device_name(self._data, 0),
                 "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
                 "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.system.model,
+                "model": self._data.wiserhub.system.product_type,
                 "sw_version": self._data.wiserhub.system.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
