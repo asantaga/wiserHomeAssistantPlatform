@@ -521,6 +521,11 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 # Change log
 - 3.0.17
     * Fix for room not having a schedule causes climate entity to fail to load
+    * Fix for unknown device acting as repeater
+    * Added back controller signal sensor that was removed in v3.0
+    * Improved attributes for signal sensors
+    * Bumped api to 0.0.14
+    * Fix for HACs not properly showing documentation
 - 3.0.16
     * Added support for heating actuators in devices
     * Added basic support for Shutters and Lights in devices
