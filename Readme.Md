@@ -34,7 +34,7 @@ Requires the new WiserHeatAPIv2 api.
 
 ## Updating to v3.0 - IMPORTANT PLEASE READ!
 
-Some of the great new functionality above has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
+Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
 
 If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
 
