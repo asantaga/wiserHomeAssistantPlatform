@@ -251,6 +251,8 @@ class WiserDeviceSignalSensor(WiserSensor):
     @property
     def name(self):
         """Return the name of the sensor."""
+        if self._device_id == 0:
+            return f"{get_device_name(self._data, self._device_id, 'HeatHub')} Signal"
         return f"{get_device_name(self._data, self._device_id)} Signal"
     
     @property
