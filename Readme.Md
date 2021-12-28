@@ -478,8 +478,8 @@ Each TRV sensor now has three special network related attributes
 | ---------------- | ------------------------------------------------------------ |
 | `Node Id`        | The node Id of the device                                    |
 | `Parent Node Id` | If this value is zero (0) then the device is connected direct to the heathub. A non zero value points to the smartplug/repeater for which this device is being routed through. Smartplugs always have this value as zero |
-| `Hub Route`      | Calculated convenience attribute which the evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
-| `Repeater` | Which actual smartplug is actiing as repeater |
+| `Hub Route`      | Calculated convenience attribute which evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
+| `Repeater` | Which actual device is acting as repeater |
 
 
 
