@@ -7,6 +7,6 @@
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.0.17",
-  "requirements": ["wiserHeatAPIv2==0.0.13"],
+  "requirements": ["wiserHeatAPIv2==0.0.14"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }
