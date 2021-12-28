@@ -216,6 +216,8 @@ Mark & Angelo
 
 ![](docs/smartplug.PNG)
 
+![](docs/heatingactuator.PNG)
+
 
 # Code Installation
 
