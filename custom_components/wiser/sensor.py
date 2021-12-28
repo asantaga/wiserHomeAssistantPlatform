@@ -298,7 +298,11 @@ class WiserDeviceSignalSensor(WiserSensor):
                 attrs["hub_route"] = "direct"
             else:
                 attrs["hub_route"] = "repeater"
-                attrs["repeater"] = self._data.wiserhub.devices.get_by_node_id(device_data.parent_node_id).name
+                attrs["repeater"] = (
+                    self._data.wiserhub.devices.get_by_node_id(device_data.parent_node_id).name
+                    if self._data.wiserhub.devices.get_by_node_id(device_data.parent_node_id)
+                    else "Unknown"
+                )
 
 
         if self._device.signal.device_reception_rssi is not None:
