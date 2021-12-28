@@ -292,8 +292,11 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs["zigbee_channel"] = (self._data.wiserhub.system.zigbee.network_channel)
         attrs["displayed_signal_strength"] = self._device.signal.displayed_signal_strength
 
-        # For non controller device show zigbee signal info
+        # For non controller device
         if self._device_id != 0:
+            attrs["serial_number"] = self._device.serial_number
+            attrs["hub_route"] = "direct"
+
             if self._device.signal.device_reception_rssi is not None:
                 attrs["device_reception_RSSI"] = self._device.signal.device_reception_rssi
                 attrs["device_reception_LQI"] = self._device.signal.device_reception_lqi
@@ -303,25 +306,19 @@ class WiserDeviceSignalSensor(WiserSensor):
                 attrs["controller_reception_RSSI"] = self._device.signal.controller_reception_rssi
                 attrs["controller_reception_LQI"] = self._device.signal.controller_reception_lqi
                 attrs["controller_reception_percent"] = self._device.signal.controller_signal_strength
+
+            if self._device.parent_node_id > 0:
+                attrs["parent_node_id"] = self._device.parent_node_id
+                attrs["hub_route"] = "repeater"
+                attrs["repeater"] = (
+                    self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id).name
+                    if self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id)
+                    else "Unknown"
+                )
         else:
             # Show Wifi info
             attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
             attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
- 
-        # Add additional attributes for non controller devices
-        if self._device_id != 0:
-            attrs["serial_number"] = self._device.serial_number
-            attrs["hub_route"] = "direct"
-        
-        # hub route
-        if self._device.parent_node_id != 0 and self._device.parent_node_id > 0:
-            attrs["parent_node_id"] = self._device.parent_node_id
-            attrs["hub_route"] = "repeater"
-            attrs["repeater"] = (
-                self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id).name
-                if self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id)
-                else "Unknown"
-            )
 
         return attrs
 
