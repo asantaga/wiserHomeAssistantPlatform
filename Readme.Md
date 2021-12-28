@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.16
+# Drayton Wiser Home Assistant Integration v3.0.17
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -34,7 +34,7 @@ Requires the new WiserHeatAPIv2 api.
 
 ## Updating to v3.0 - IMPORTANT PLEASE READ!
 
-Some of the great new functionality above has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
+Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
 
 If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
 
@@ -139,68 +139,68 @@ Mark & Angelo
 
 - Support for [Home Assistant Component Store](https://community.home-assistant.io/t/custom-component-hacs/121727)
 
-- Support for Native Home Assistant Configurations (no more editing YAML!)
+- Support for hub discovery and UI config.  No YAML editing.
 
-- Support for Wiser Hub, iTRVs, Roomstats and SmartPlugs
+- Support for multiple hubs
+- Support for Wiser Hub, iTRVs, Roomstats, Heating Actuators and SmartPlugs
+- Basic sensor support for Dimmable Lights and Shutters
 
-- **Climate platforms**
-  
-    - List of climate entities for each Room
+- **Hub (System) Device**
+    - Various switches to control hub settings (Away Mode, Comfort Mode, Daylight Saving, Eco Mode, Valve Protection)
+    - Button to boost all rooms (time and temp in config)
+    - Button to cancel all overrides   
+    - Slider to set Away Mode target temperature
+    - Sensors for Cloud status, Heating on/off, Heating mode (Normal, Away), Wifi signal.
+    - Long Term Statistics sensor for Heating Channel demand % 
+    - Many attributes available
+    - Heating Operation Mode sensor has attributes to monitor update status
+
+- **Climate Devices**
+    - Climate entities for each Room
+    - Supports iTRVs, Roomstats and Heating Actuators (for electric heating)
     - Animated icons for the Rooms to let you know which rooms are actually being heated (credit @msp1974)
+    - Allows setting of heat mode (Auto, Heat/Manual, Off)
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
+    - Climate card shows countdown of boost time
     - Allows advancing schedule
-    - Displays icon if radiator is heating (heat flowing) or not
-    
-- **Service to set heating boost**
-  
-    - Services to get, set and copy heating, hot water and smart plug schedules (See instructions below)**
-    
-- **Switch platform(s)**
-  
-   - Allows the switching of various system switches including EcoMode, ComfortMode, AwayMode, Valve Protection and AwayModeAffectsWater
-   - Allows setting Window Detection, Device Lock and Indentify on room devices
-   - Allows the switching of the wiser system smartplugs
-   
-- **Sensor Platforms**
-  
-    - TRV Sensor
-        - Each TRV is represented by a Sensor platform. Many attributes are exposed including extensive information about the device, such as WIFI Signal strength, firmware version, battery levels and zigbee information (including if connection to hub is direct or via repeater) etc
-    - Room Thermostats Sensors 
-        - Displayed attributes include battery levels, humidity etc
-    - Smartplug displayed as a sensor, firmware etc
-        - Service providing ability to turn smartplug on, off or set to auto schedule 
-    - Heathub sensor
-        - Attributes include zigbee channel , see https://support.metageek.com/hc/en-us/articles/203845040-ZigBee-and-WiFi-Coexistence for information on how zigbee and WIFI co-exist
-    - Drayton Wiser Cloud Status Sensor 
-        - Nice to be able to have automation when things aren't working
-    - Heating Relay status Sensor 
-        - Nice to know when the heating is on/off. 
-          - This is nice to use in conjunction with the Climate platform when graphing data using Grafana
-    - Hot Water relay status Sensor
-        - Nice to know when the hot water is on/off. 
-        - Also a service which allows you to modify the state of the hotwater 
-    - Operation Mode Sensor (aka away sensor)
-        - This sensor returns the away status of the heathub, being either `away` or `normal`. 
-    - Battery Sensors for all the battery devices
-    
-- **Services**
+    - Allows setting Window Detection
+    - Long Term Stats sensors for Target Temp, Current Temp and Demand
+    - Many attributes available
 
-    - Following services are available for use with automation
+- **Hot Water**
+    - Sensor to show if hot water is on or off
+    - Sensor to show operation mode (Auto, Manual, Boost, Override etc)
+    - Selector to set hot water mode (Auto, Manual)
+    - Button to Boost hot water
+    - Button to override hot water
+    - Button to cancel hot water overrides
+
+- **iTRV, Roomstat, Heating Actuator, Smart Plug, Lights & Shutter Devices***
+    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Smart Plug, Light & Shutter
+    - Switches for Device Lock and Identify
+    - Sensor for battery (if device is battery powered)
+    - Sensor for Zigbee signal
+    - Switches to set Away Mode action and On/Off for Smart Plug
+    - Selector to set mode (Auto, Manual) for Smart Plug
+    - Many attributes available
+
+- **Moments**
+    - Buttons to activate Moments configured in the Wiser App
+
+- **Services**
+    - Supports standard services for entity types
+      - i.e. climate.set_temperature, climate.set_preset, climate.set_hvac_mode, button.press, select.option, switch.turn_on etc
+    - Following custom services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
     - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
     - Service `get_heating_schedule/set_heating_schedule/copy_heating_schedule`: Provides ability to get/set/copy schedules for rooms
     - Service `get_onoff_schedule/set_onoff_schedule/copy_onoff_schedule`: Provides ability to get/set/copy schedules hot water and smartplugs
     - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
-    - Service `set_hotwater_mode`: Provides ability to turn a hot water **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
-    - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub
+    - Service `set_hotwater_mode`: Provides ability to set hot water mode to **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
 
-- Support for Heathubs with No Hot Water Control 
-
-- Fully async operation
-
-    
 
 ## Sample Images
 
@@ -215,6 +215,8 @@ Mark & Angelo
 ![](docs/roomstat.PNG)
 
 ![](docs/smartplug.PNG)
+
+![](docs/heatingactuator.PNG)
 
 
 # Code Installation
@@ -476,8 +478,8 @@ Each TRV sensor now has three special network related attributes
 | ---------------- | ------------------------------------------------------------ |
 | `Node Id`        | The node Id of the device                                    |
 | `Parent Node Id` | If this value is zero (0) then the device is connected direct to the heathub. A non zero value points to the smartplug/repeater for which this device is being routed through. Smartplugs always have this value as zero |
-| `Hub Route`      | Calculated convenience attribute which the evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
-| `Repeater` | Which actual smartplug is actiing as repeater |
+| `Hub Route`      | Calculated convenience attribute which evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
+| `Repeater` | Which actual device is acting as repeater |
 
 
 
@@ -519,6 +521,13 @@ Special thanks to all the contributors to this project.  Special shout to
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.17
+    * Fix for room not having a schedule causes climate entity to fail to load
+    * Fix for unknown device acting as repeater
+    * Added back controller signal sensor that was removed in v3.0
+    * Improved attributes for signal sensors
+    * Bumped api to 0.0.14
+    * Fix for HACs not properly showing documentation
 - 3.0.16
     * Added support for heating actuators in devices
     * Added basic support for Shutters and Lights in devices

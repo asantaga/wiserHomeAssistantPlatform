@@ -38,6 +38,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Add signal sensors for all devices
     _LOGGER.debug("Setting up Device sensors")
+
+    # Add hub wifi signal sensor
+    wiser_sensors.append(
+        WiserDeviceSignalSensor(data, 0, "Controller")
+    )
     if data.wiserhub.devices:
         for device in data.wiserhub.devices.all:
             wiser_sensors.append(
@@ -237,12 +242,17 @@ class WiserDeviceSignalSensor(WiserSensor):
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await super().async_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        if self._device_id == 0:
+            self._device = self._data.wiserhub.system
+        else:
+            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._state = self._device.signal.displayed_signal_strength
 
     @property
     def name(self):
         """Return the name of the sensor."""
+        if self._device_id == 0:
+            return f"{get_device_name(self._data, self._device_id, 'HeatHub')} Signal"
         return f"{get_device_name(self._data, self._device_id)} Signal"
     
     @property
@@ -262,7 +272,7 @@ class WiserDeviceSignalSensor(WiserSensor):
         """Return icon for signal strength."""
         try:
             return SIGNAL_STRENGTH_ICONS[
-                self._data.wiserhub.devices.get_by_id(self._device_id).signal.displayed_signal_strength
+                self._device.signal.displayed_signal_strength
             ]
         except KeyError:
             # Handle anything else as no signal
@@ -272,47 +282,46 @@ class WiserDeviceSignalSensor(WiserSensor):
     def extra_state_attributes(self):
         """Return device state attributes."""
         attrs = {}
-        device_data = self._data.wiserhub.devices.get_by_id(self._device_id)
 
         # Generic attributes
         attrs["vendor"] = MANUFACTURER
         attrs["product_type"] = self._device.product_type
         attrs["model_identifier"] = self._device.model
-        attrs["displayed_signal_strength"] = self._device.signal.displayed_signal_strength
         attrs["firmware"] = self._device.firmware_version
-        attrs["serial_number"] = self._device.serial_number
 
-        # if controller then add the zigbee data to the controller info
-        attrs["zigbee_channel"] = (
-            self._data.wiserhub.system.zigbee.network_channel
-        )
-
-        # Network Data
+        # Zigbee Data
         attrs["node_id"] = self._device.node_id
+        attrs["zigbee_channel"] = (self._data.wiserhub.system.zigbee.network_channel)
         attrs["displayed_signal_strength"] = self._device.signal.displayed_signal_strength
 
-        if self._sensor_type in ["RoomStat", "iTRV"]:
-            attrs["parent_node_id"] = self._device.parent_node_id
-            # hub route
-            if self._device.parent_node_id == 0:
-                attrs["hub_route"] = "direct"
-            else:
+        # For non controller device
+        if self._device_id != 0:
+            attrs["serial_number"] = self._device.serial_number
+            attrs["hub_route"] = "direct"
+
+            if self._device.signal.device_reception_rssi is not None:
+                attrs["device_reception_RSSI"] = self._device.signal.device_reception_rssi
+                attrs["device_reception_LQI"] = self._device.signal.device_reception_lqi
+                attrs["device_reception_percent"] = self._device.signal.device_signal_strength
+
+            if self._device.signal.controller_reception_rssi is not None:
+                attrs["controller_reception_RSSI"] = self._device.signal.controller_reception_rssi
+                attrs["controller_reception_LQI"] = self._device.signal.controller_reception_lqi
+                attrs["controller_reception_percent"] = self._device.signal.controller_signal_strength
+
+            if self._device.parent_node_id > 0:
+                attrs["parent_node_id"] = self._device.parent_node_id
                 attrs["hub_route"] = "repeater"
-                attrs["repeater"] = self._data.wiserhub.devices.get_by_node_id(device_data.parent_node_id).name
+                attrs["repeater"] = (
+                    self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id).name
+                    if self._data.wiserhub.devices.get_by_node_id(self._device.parent_node_id)
+                    else "Unknown"
+                )
+        else:
+            # Show Wifi info
+            attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
+            attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
 
-
-        if self._device.signal.device_reception_rssi is not None:
-            attrs["device_reception_RSSI"] = self._device.signal.device_reception_rssi
-            attrs["device_reception_LQI"] = self._device.signal.device_reception_lqi
-
-        if self._device.signal.controller_reception_rssi is not None:
-            attrs["controller_reception_RSSI"] = self._device.signal.controller_reception_rssi
-            attrs["device_reception_LQI"] = self._device.signal.controller_reception_lqi
-
-        # Other
-        if self._sensor_type == "RoomStat":
-            attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_humidity
-            attrs["temperature"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_temperature
         return attrs
 
 
