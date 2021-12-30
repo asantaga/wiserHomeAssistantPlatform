@@ -131,7 +131,7 @@ class WiserSensor(SensorEntity):
 
     async def async_update(self):
         """Async Update."""
-        _LOGGER.debug(f"{self._device_name} device update requested")
+        _LOGGER.debug(f"{self.name} device update requested")
 
     @property
     def name(self):
