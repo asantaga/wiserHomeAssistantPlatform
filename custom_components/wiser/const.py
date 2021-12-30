@@ -7,7 +7,7 @@ Angelosantagata@gmail.com
 """
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
-VERSION = "3.0.17"
+VERSION = "3.0.18"
 WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number"]
 DATA = "data"
 UPDATE_TRACK = "update_track"

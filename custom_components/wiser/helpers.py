@@ -9,28 +9,37 @@ def get_device_name(data, id, type = "device"):
 
         if device.product_type == "iTRV":
             device_room = data.wiserhub.rooms.get_by_device_id(id)
-            # To enable creating seperate devices for multiple TRVs in a room - issue #194
-            if device_room.number_of_smartvalves > 1:
-                # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
-                # 1 is lowest device id, 2 next lowest etc
-                sv_index = device_room.smartvalve_ids.index(device.id) + 1
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{sv_index}"    
-            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            # If device not allocated to a room return type and id only
+            if device_room:
+                # To enable creating seperate devices for multiple TRVs in a room - issue #194
+                if device_room.number_of_smartvalves > 1:
+                    # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
+                    # 1 is lowest device id, 2 next lowest etc
+                    sv_index = device_room.smartvalve_ids.index(device.id) + 1
+                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{sv_index}"    
+                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(id)
-            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            # If device not allocated to a room return type and id only
+            if device_room:
+                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "HeatingActuator":
             device_room = data.wiserhub.rooms.get_by_device_id(id)
-            # To enable creating seperate devices for multiple Heating Actuators in a room
-            if device_room.number_of_heating_actuators > 1:
-                # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
-                # 1 is lowest device id, 2 next lowest etc
-                ha_index = device_room.heating_actuator_ids.index(device.id) + 1
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"   
-            device_room = data.wiserhub.rooms.get_by_device_id(id)
-            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            # If device not allocated to a room return type and id only
+            if device_room:
+                # To enable creating seperate devices for multiple Heating Actuators in a room
+                if device_room.number_of_heating_actuators > 1:
+                    # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
+                    # 1 is lowest device id, 2 next lowest etc
+                    ha_index = device_room.heating_actuator_ids.index(device.id) + 1
+                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"   
+                device_room = data.wiserhub.rooms.get_by_device_id(id)
+                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+            return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "SmartPlug":
             return f"{ENTITY_PREFIX} {device.name}"
