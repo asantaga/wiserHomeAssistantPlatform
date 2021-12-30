@@ -322,6 +322,11 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
             attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
 
+        # Other
+        if self._sensor_type == "RoomStat":
+            attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_humidity
+            attrs["temperature"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_temperature
+
         return attrs
 
 
