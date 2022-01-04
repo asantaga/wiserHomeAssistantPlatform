@@ -419,7 +419,9 @@ class WiserSmartPlugSwitch(WiserSwitch):
         attrs["output_state"] = "On" if self._smartplug.is_on else "Off"
         # Switches could be not allocated to room (issue:209)
         if  self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id).name        
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id).name
+        else:
+            attrs["room"] = "Unassigned"     
         attrs["scheduled_state"] = self._smartplug.scheduled_state
         if self._smartplug.schedule:
             attrs["next_schedule_change"] = str(self._smartplug.schedule.next.time)
