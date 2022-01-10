@@ -1,69 +1,223 @@
 boost_heating:
+  name: Boost Heating
   description: >
-    Set the boost mode ON defining the period of time and the desired target
-    temperature or temperature increase delta for the boost.  Setting the
-    temperature delta overrides any target temperature.
+    Boost the temperature in the selected rooms/areas.
+  target:
+    entity:
+      integration: wiser
+      domain: climate
   fields:
-    entity_id:
-      description: >
-        Enter the entity_id for the room required to set the boost mode.
-      example: climate.wiser_lounge
     time_period:
+      name: Time period
       description: Set the time period for the boost in minutes.
       example: 60
-    temperature:
-      description: Set the target temperature for the boost period.
-      example: 20.5
+      default: 60
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 9999
+          step: 1
+          mode: box
     temperature_delta:
-      description: Set the temperature increase for the boost period.
-      example: 2
+      name: Temperature Increase
+      description: Set the increase in temperature for the boost period.
+      example: 3.0
+      default: 3.0
+      required: false
+      selector:
+        number:
+          min: 0.1
+          max: 5
+          step: 0.5
+          unit_of_measurement: C
+    temperature:
+      name: Temperature
+      description: Set the room target temperature for the boost period.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 30
+          step: 0.5
+          unit_of_measurement: C
 
-get_schedule:
+boost_hotwater:
+  name: Boost Hot Water
   description: >
-    Read the schedule from a roomId and write to an output file in yaml
+    Boost the hot water for time specified.
+  target:
+    entity:
+      integration: wiser
+      domain: select
   fields:
-    entity_id:
-      description: Enter the entity_id for the room to read the schedule.
-      example: climate.wiser_lounge
+    time_period:
+      name: Time period
+      description: Set the time period for the boost in minutes.
+      example: 60
+      default: 60
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 1440
+          step: 1
+          mode: box
+
+get_heating_schedule:
+  name: Save Heating Schedule to File
+  description: >
+    Read the schedule from a room and write to an output file in yaml
+  target:
+    entity:
+      integration: wiser
+      domain: climate
+  fields:
     filename:
+      name: Filename
       description: >
         The filename to write out the yaml. See README.MD if running within a
         docker container.
+      required: true
       example: schedule1.yaml
+      selector:
+        text:
 
-set_schedule:
+set_heating_schedule:
+  name: Set Heating Schedule From File
   description: Read in the yaml schedule file and set the schedule in a room
+  target:
+    entity:
+      integration: wiser
+      domain: climate
   fields:
-    entity_id:
-      description: Enter the entity_id for the room to set the schedule.
-      example: climate.wiser_lounge
     filename:
+      name: Filename
       description: The filename to read the yaml schedule from.
+      required: true
       example: schedules/schedule1.yaml
+      selector:
+        text:
 
-copy_schedule:
+copy_heating_schedule:
+  name: Copy Heating Schedule
   description: Copy the schedule in a room to another room
+  target:
+    entity:
+      integration: wiser
+      domain: climate
   fields:
-    entity_id:
-      description: Enter the entity_id for the room to copy the schedule from.
-      example: climate.wiser_lounge
     to_entity_id:
+      name: To Entity
       description: Enter the entity_id for the room to copy the schedule to.
+      required: true
       example: climate.wiser_kitchen
+      selector:
+        entity:
+          domain: climate
 
-set_smartplug_mode:
-  description: Sets the mode of a smart plug
+get_onoff_schedule:
+  name: Save OnOff Schedule to File
+  description: >
+    Read the schedule from the hot water or a smartplug and write to an output file in yaml
+  target:
+    entity:
+      integration: wiser
+      domain: select
   fields:
-    entity_id:
-      description: Enter the entity_id for the smartplug.
-      example: switch.smartplug
-    plug_mode:
-      description: Enter the switch mode. Can be auto or manual.
-      example: manual
+    filename:
+      name: Filename
+      description: >
+        The filename to write out the yaml. See README.MD if running within a
+        docker container.
+      required: true
+      example: schedule1.yaml
+      selector:
+        text:
+
+set_onoff_schedule:
+  name: Set OnOff Schedule From File
+  description: Read in the yaml schedule file and set the schedule on the hot water or a smartplug 
+  target:
+    entity:
+      integration: wiser
+      domain: select
+  fields:
+    filename:
+      name: Filename
+      description: The filename to read the yaml schedule from.
+      required: true
+      example: schedules/schedule1.yaml
+      selector:
+        text:
+
+copy_onoff_schedule:
+  name: Copy OnOff Schedule
+  description: Copy the schedule from a smartplug to another smartplug
+  target:
+    entity:
+      integration: wiser
+      domain: select
+  fields:
+    to_entity_id:
+      name: To Entity
+      description: Enter the entity_id for the room to copy the schedule to.
+      required: true
+      example: select.wiser_hotwater_mode
+      selector:
+        entity:
+          domain: select
 
 set_hotwater_mode:
+  name: "Set Hot Water Mode"
   description: Sets the hot water mode
+  target:
+    entity:
+      integration: wiser
+      domain: select
   fields:
-    hotwater_mode:
-      description: Enter the mode can be on, off or auto.
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
       example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"
+
+set_smartplug_mode:
+  name: "Set Smartplug Mode"
+  description: Sets the smartplug mode
+  target:
+    entity:
+      integration: wiser
+      domain: select
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"
+
+remove_orphaned_entries:
+  name: Remove Orphaned Devices
+  description: Delete devices that no longer exist on Wiser
+  fields:
+    wiser_hub_id:
+      name: Wiser Hub Name
+      description: >-
+        The name of the wiser hub to remove orhpaned devices from.  
+        This can be found from the integration name.
+      example: WiserHeatxxxxxx
+      required: true
+      selector:
+        text:
