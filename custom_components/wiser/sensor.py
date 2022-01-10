@@ -321,6 +321,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             # Show Wifi info
             attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
             attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
+            attrs["wifi_SSID"] = self._device.network.ssid
+            attrs["wifi_IP"] = self._device.network.ip_address
 
         # Other
         if self._sensor_type == "RoomStat":
