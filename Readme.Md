@@ -1,78 +1,222 @@
-# Wiser Home Assistant Platform v2.7
+# Drayton Wiser Home Assistant Integration v3.0.18
+
+## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.
 
-For the latest version of the Wiser Home Assistant Platform please use the `master`  branch or better still install via HACS. if you want bleeding edge then checkout the `dev`  branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the **Manual Code Installation** described below.
+For the latest version of the Wiser Home Assistant Platform please use the master branch or better still install via HACS. if you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation described below.
 
 For more information checkout the AMAZING community thread available on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
 
+---
+## Contents
+
+- [Minimum Requirements](#minimum-requirements)
+- [Updating to v3.0 from v2.x](#updating-to-v30---important-please-read)
+- [V3.0 New Features](#v30-new-features)
+- [Issues & Questions](#issues-and-questions)
+- [Functionality of this Integration](#functionality)
+- [Installing](#code-installation)
+- [Configuration](#configuration)
+- [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
+- [Network Topology](#network-topology)
+- [Battery Values](#battery-values)
+- [Community and Recipes](#community)
+- [Contributors](#contributors)
+- [Change Log](#change-log)
+
+
+## Minimum Requirements
+
+Requires a minimum of HA 2021.12.  This is needed to support the new button functionality and changes to config flow.
+Requires the new WiserHeatAPIv2 api.
+
+
+## Updating to v3.0 - IMPORTANT PLEASE READ!
+
+Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
+
+If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
+
+We have tried hard to find a way to not have this as such a disruptive change but are unable to do so.  As such, please understand you may have quite a bit of work to reset your setup after upgrading to this.
+
+In most cases, it will be easier to remove the old integration and add this from new.
+
+However, we hope that many of the things our community has had to create with scripts or automations will now have a much simpler way to do it anyway and we can better maintain this setup going forward so future upgrades will be straight forward.
+
+
+## v3.0 New Features
+
+We are very excited to bring you this massive update to our Wiser integration for Home Assistant.  Our user community has been hugely helpful in suggesting enhancements and sharing the way they use this integration and we love that you love it.
+
+We have had a number of open issues for new feature requests for some time and the integration and the api were getting a little cumbersome to keep adding in these requests.
+
+As such, this v3.0 release is pretty much a full rewrite of both the api and the integration to enable us to more quickly and easily add new functionality as either our user community requests it or Wiser themselves add new things to the hub.
+
+Below is a list of the new features in this upgrade (these are in addition to the already existing great functionality!):
+
+
+- System Setup
+  - Hub discovery via zeroconf. Once you add the integration via HACs and restart, HA will discover the hub and display it in the integrations page. This also uses the dns name to talk to the hub so if it changes IP you will not need to reinstall.
+  - Support for multiple Wiser Hubs.  If you are lucky enough to have more than one house, you can add your multiple hubs to one HA instance.
+
+- Hub/System
+    - Button to boost all rooms
+    - Button to cancel all heating overrides
+    - Daylight saving setting can now be controlled
+    - Number slider to view and set Away Mode target temperature
+    - Attributes on Heating Operation sensor to monitor hub update success
+    - Support for Wiser Moments - see Moments below
+    - Long term stats sensors for heating channel and hotwater demand - see LTS sensors below
+
+- Hot Water
+    - Button to boost hot water
+    - Button to cancel hot water overrides
+    - Button to toggle on/off.  In auto mode this is an override until next schedule time.
+    - Hot water mode selector to allow setting via UI instead of just service
+    - Hot water operation mode sensor to show boost (with remaining time), override, away mode, auto or manual
+
+- Rooms
+    - New switches to control open window detection in each room
+    - Ability to advance the room schedule via the presets
+    - Long term stats sensors for temp, target_temp and room demand - see LTS sensors below
+    - Displays remaining boost time for room on climate entity
+    - Shows if EcoIQ or Comfort mode is driving room demand on climate entity
+    - Arributes now show next temp setting and time from schedule
+    - Attributes for is_boosted, is_override and is_heating to help with automations
+
+- Devices
+    - Turn on/off device lock
+    - Enable identify function to flash leds on TRV
+    - Device attributes now shows which smartplug is the zwave repeater
+    - Signal entity renamed to be more explanatory
+
+- SmartPlugs
+  - Drop down selector to set smartplug mode
+  - Switch to set smartplug to turn off when in away mode
+  - Power sensors for current and total power
+
+- Services
+    - Majority of services now utilise new HA functionality to make using them in scripts and automations much easier through the UI.
+    - New service to remove devices from HA if you have removed Rooms or Devices from Wiser
+    - New service to boost hotwater for custom time period
+    - New service to set smartplug mode
+    - Schedule save, set and copy are now split between heating and onoff schedules
+    - All new buttons, switches and selectors can be used with the relevant services for these entity types.
+
+- Moments
+    - Wiser have created a new feature called moments which are basically scenes.  Any moments you setup on the app will have a button within HA to activate too (you will need to restart HA to add new ones).  We don't enable this by default so you will need to enable moments in the integration config first.
+
+- Long Term Stats
+    - As listed in the categories above, we have added a number of LTS sensors for those in our community wanting to do more analysis of how their heating is performaing.  As HA only support these currently via sensors, this functionality can create a lot of entities.  Therefore, we have made it an optional feature that can be turned on and off in the integration config.
+
+## Breaking Changes
+
+- Many entity names and unique ids have changed meaning new entities will be created and the old ones will show as unavailable
+- Standardisation of entity attribute names format meaning some attribute names are now different
+- The structure and naming of some services has changed therefore scripts and automations will need updating
+
+
+
+
+## Issues and Questions
+
+As you can see, we have been oh so very busy adding new functions and trying to make it simple and intuitive.  We have done a lot of testing on this v3.0 release but as always, it is very hard to test all the possible setups out there.
+
+As such, if you find an issue or have a how do I question, please feel free to raise a github issue on our repo or post you query to our HA Community page.
+
+Issues
+https://github.com/asantaga/wiserHomeAssistantPlatform/issues
+
+Questions
+https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
+
+Hope you enjoy it!  
+Mark & Angelo
 
 
 ## Functionality 
 
 - Support for [Home Assistant Component Store](https://community.home-assistant.io/t/custom-component-hacs/121727)
 
-- Support for Native Home Assistant Configurations (no more editing YAML!)
+- Support for hub discovery and UI config.  No YAML editing.
 
-- Support for Wiser TRVs, Hub and SmartPlugs
+- Support for multiple hubs
+- Support for Wiser Hub, iTRVs, Roomstats, Heating Actuators and SmartPlugs
+- Basic sensor support for Dimmable Lights and Shutters
 
-- **Climate platforms**
-  
-    - List of climate entities for each Room
+- **Hub (System) Device**
+    - Various switches to control hub settings (Away Mode, Comfort Mode, Daylight Saving, Eco Mode, Valve Protection)
+    - Button to boost all rooms (time and temp in config)
+    - Button to cancel all overrides   
+    - Slider to set Away Mode target temperature
+    - Sensors for Cloud status, Heating on/off, Heating mode (Normal, Away), Wifi signal.
+    - Long Term Statistics sensor for Heating Channel demand % 
+    - Many attributes available
+    - Heating Operation Mode sensor has attributes to monitor update status
+
+- **Climate Devices**
+    - Climate entities for each Room
+    - Supports iTRVs, Roomstats and Heating Actuators (for electric heating)
     - Animated icons for the Rooms to let you know which rooms are actually being heated (credit @msp1974)
+    - Allows setting of heat mode (Auto, Heat/Manual, Off)
     - Allows setting of temperatures from HA
     - Allows setting of boost temperature using Home Assistant Presets
-    - Displays icon if radiator is heating (heat flowing) or not
-    
-- **Service to set heating boost**
-  
-    - Services to get, set and copy heating schedules (See instructions below)**
-    
-- **Switch platform(s)**
-  
-   - Allows the switching of various system switches including EcoMode, ComfortMode, AwayMode, Valve Protection and AwayModeAffectsWater   
-   - Allows the switching of the wiser system smartplugs
-   
-- **Sensor Platforms**
-  
-    - TRV Sensor
-        - Each TRV is represented by a Sensor platform. Many attributes are exposed including extensive information about the device, such as WIFI Signal strength, firmware version, battery levels and zigbee information (including if connection to hub is direct or via repeater) etc
-    - Room Thermostats Sensors 
-        - Displayed attributes include battery levels, humidity etc
-    - Smartplug displayed as a sensor, firmware etc
-        - Service providing ability to turn smartplug on, off or set to auto schedule 
-    - Heathub sensor
-        - Attributes include zigbee channel , see https://support.metageek.com/hc/en-us/articles/203845040-ZigBee-and-WiFi-Coexistence for information on how zigbee and WIFI co-exist
-    - Drayton Wiser Cloud Status Sensor 
-        - Nice to be able to have automation when things aren't working
-    - Heating Relay status Sensor 
-        - Nice to know when the heating is on/off. 
-          - This is nice to use in conjunction with the Climate platform when graphing data using Grafana
-    - Hot Water relay status Sensor
-        - Nice to know when the hot water is on/off. 
-        - Also a service which allows you to modify the state of the hotwater 
-    - Operation Mode Sensor (aka away sensor)
-        - This sensor returns the away status of the heathub, being either `away` or `normal`. 
-    - Battery Sensors for all the battery devices
-    
-- **Services**
+    - Climate card shows countdown of boost time
+    - Allows advancing schedule
+    - Allows setting Window Detection
+    - Long Term Stats sensors for Target Temp, Current Temp and Demand
+    - Many attributes available
 
-    - Following services are available for use with automation
+- **Hot Water**
+    - Sensor to show if hot water is on or off
+    - Sensor to show operation mode (Auto, Manual, Boost, Override etc)
+    - Selector to set hot water mode (Auto, Manual)
+    - Button to Boost hot water
+    - Button to override hot water
+    - Button to cancel hot water overrides
+
+- **iTRV, Roomstat, Heating Actuator, Smart Plug, Lights & Shutter Devices***
+    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Smart Plug, Light & Shutter
+    - Switches for Device Lock and Identify
+    - Sensor for battery (if device is battery powered)
+    - Sensor for Zigbee signal
+    - Switches to set Away Mode action and On/Off for Smart Plug
+    - Selector to set mode (Auto, Manual) for Smart Plug
+    - Many attributes available
+
+- **Moments**
+    - Buttons to activate Moments configured in the Wiser App
+
+- **Services**
+    - Supports standard services for entity types
+      - i.e. climate.set_temperature, climate.set_preset, climate.set_hvac_mode, button.press, select.option, switch.turn_on etc
+    - Following custom services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
-    - Service `get_schedule/set_schedule`: Provides ability to get/set schedules for rooms, hot water and smartplugs
+    - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
+    - Service `get_heating_schedule/set_heating_schedule/copy_heating_schedule`: Provides ability to get/set/copy schedules for rooms
+    - Service `get_onoff_schedule/set_onoff_schedule/copy_onoff_schedule`: Provides ability to get/set/copy schedules hot water and smartplugs
     - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
-    - Service `set_hotwater_mode`: Provides ability to turn a hot water **on**/**off** or **auto**. Valid values include `on`, `off` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `set_hotwater_mode`: Provides ability to set hot water mode to **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
 
-- Support for Heathubs with No Hot Water Control 
-
-- Fully async operation
-
-    
 
 ## Sample Images
 
-![](https://raw.githubusercontent.com/asantaga/wiserHomeAssistantPlatform/master/docs/homeassistant_sample.jpg)
+![](docs/screenshot.PNG)
+
+![](docs/hub.PNG)
+
+![](docs/room.PNG)
+
+![](docs/trv.PNG)
+
+![](docs/roomstat.PNG)
+
+![](docs/smartplug.PNG)
+
+![](docs/heatingactuator.PNG)
 
 
 # Code Installation
@@ -107,69 +251,44 @@ Reference https://it.knightnet.org.uk/kb/nr-qa/drayton-wiser-heating-control/#co
 Before you can use the component you need to find the HeatHub secret key, this involves a couple of steps.
 
 
-1. Press the setup button on your HeatHub, the light will start flashing
+1. On your hub, press the setup button and the led should flash.
+2. Use your phone or tablet and connect to the wifi SSID (you should now see available) that is Wiserxx_xxxxxx
+3. Once connected to this wifi network, open your browser and go to http://192.168.8.1/secret 1.
+4. You can then copy your key to an email to send to another device or copy and paste into the HA config if setting up integration via your phone/tablet.
+5. When finished, either wait for hub to revert to led on constant or repower it (quicker to repower). Must be in non flashing mode to setup integration.
 
-2. Look for the Wi-Fi network (SSID) called **‘WiserHeatXXX’** where XXX is random
+6. Configure using Home Assistant Configuration -> Integrations where your hub should have been auto discovered
 
-3. Connect to the network from a Windows/Linux/Mac machine
+![](docs/discovery.PNG)
 
-4. Execute the following REST call 
-   * For Windows use
-      `Invoke-RestMethod -Method Get -UseBasicParsing -Uri http://192.168.8.1/secret/` 
-   * For Linux (or Windows WSL) use 
-     `curl http://192.168.8.1/secret`
 
-   This will return a string which will contain your system secret, obviously dont share this...
 
-5. Press the setup button on the HeatHub again and it will go back to normal operations
 
-6. Copy the secret and save it somewhere.
+## Config Options
+Select the configure link from the integrations page.  This will then show the config screen - now configure it appropriately.
 
-7. Find Your HEATHUB IP
-    Using your router, or some other method, identify the IP address of your HeatHub. On many routers it usually identifies itself as the something like ``WiserHeatXXXXXX`` 
+![](docs/config.PNG)
 
-    **We recommend you configure your router so that it assigns a FIXED IP address to the Wiser HeatHub. Whilst it "shouldnt" change IP address some people have noticed it has/does, perhaps when wiser issue a firmware update. Most routers allow you to reserve an IP address to a MAC address, this setting is often (like on Virgin Media Routers) done in the DHCP section.**   
+`Default Heating Boost Temperature` is the delta temperature above the current room temperature the radiator should be set to when boosted, default is 2
 
-8. Configure using Home Assistant Configuration Assistant "Set up new integration"
+`Default Heating Boost Duration` is the time (in minutes) for which a heating boost should be active for, default is 60 mins
 
-    ![](docs/add_configuration_image.png)
+`Default Hot Water Boost Duration` is the time (in minutes) for which a hot water boost should be active for, default is 60 mins
 
-9. This will then show the config screen for Wiser Heat Hub, now configure it appropriately.
+`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
 
-    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image2.png)
+`Enable Moments Buttons` is to create buttons for Moments you have setup on the wiser app.  Default is unticked.
 
-    ```minimum``` is the bottom minimum temperature to be recorded, the default is -5
+`Enable LTS Sensors` is to create sensors for LTS for rooms and hub heating and hot water demand.  Default is unticked.
 
-    ```boost_temp``` is the delta temperature the radiator should be set to when boosted, default is 2
-
-    ```boost_time``` is the time (in seconds) for which a boost should be active for, default is 30mins
-
-    ```setpoint_mode``` modifies the way setpoint works. If left to default the n the functionality is the same as the Wiser app, if set to 'boost' then when you set a new setpoint it will only take affect for the normal "boost" time.
-
-10. When added, you should something like see this in integrations
-    ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image3.png)
-
-11. Clicking on it should show you this and you can now add the devices to your Home Assistant Lovelace UI as you please
-     ![](Z:\src\ha_dev\venv_wiser\homeassistant\src\docs\add_configuration_image4.png)
-
-12. **Alternatively** you can also configure the integration using YAML. Here is a sample config, replace the HEATHUB AND PASSWORD appropriately.
-
-```yaml
-wiser:
-  host: <ENTER YOUR HEATHUB IP HERE>
-  password: <ENTER YOUR SECRET TOKEN, OBTAINED FROM STEP THREE HERE>
-  scan_interval: 300
-  minimum: -5
-  boost_temp: 2
-  boost_time: 30
-```
+`Setpoint Mode` modifies the way setpoint works. If left to default then the functionality is the same as the Wiser app, if set to 'boost' then when you set a new setpoint it will only take affect for the default "boost" time.
 
 
 ## Managing Schedules with Home Assistant
 
 
 ### Getting a Schedule
-Use the service `wiser.get_schedule`
+Use the service `Save Schedule To File`
 
 This will require you to provide the entity ID of the wiser device and a file to copy this schedule to.
 It is recommended to create a directory in your config directory to store these.  
@@ -177,15 +296,15 @@ See below for information on selecting the correct entity.
 
 Note : If you are running HA within a docker container then the directory will be absolute to the container, if you have mapped the config directory to a local directory then all is good but the directory name given to the service must be a docker container address.
 
-E.g. if you specify the filename as `/config/schedule.yaml` then `get_schedule` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
+E.g. if you specify the filename as `/config/schedule.yaml` then `Save Schedule to File` writes the file into the directory within the container. Providing you have mapped the config directory (using the -v or volumes: in docker-compose) then you can read this from a host directory (e.g. /home/haconfig.
 
 ### Setting a Schedule
-Use the service `wiser.set_schedule`
+Use the service `Set Schedule From File`
 
 This will require you to provide the entity ID of the wiser device and a file containing the schedule.  
 See below for information on selecting the correct entity.
 
-A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the `wiser.get_schedule` service looks like below:
+A good place to start is to get a schedule from a device and see the file structure.  You can add times and temps within each day as you see fit.  As file created using the `Save Schedule To File` service looks like below:
 ```yaml
 Name: Dining Room
 Description: Schedule for Dining Room
@@ -338,7 +457,7 @@ Tuesday:
 
 
 ### Copying a Schedule
-Use the service `wiser.copy_schedule`
+Use the service `Copy Schedule`
 
 This will require you to provide an entity ID of the device to copy from and the entity ID of the device to copy to and will copy the schedule between them.
 
@@ -357,15 +476,16 @@ Each TRV sensor now has three special network related attributes
 
 | Attribute        | Meaning                                                      |
 | ---------------- | ------------------------------------------------------------ |
-| `node_id`        | The node Id of the device                                    |
-| `parent_node_id` | If this value is zero (0) then the device is connected direct to the heathub. A non zero value points to the smartplug/repeater for which this device is being routed through. Smartplugs always have this value as zero |
-| `hub_route`      | Calculated convenience attribute which the evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
+| `Node Id`        | The node Id of the device                                    |
+| `Parent Node Id` | If this value is zero (0) then the device is connected direct to the heathub. A non zero value points to the smartplug/repeater for which this device is being routed through. Smartplugs always have this value as zero |
+| `Hub Route`      | Calculated convenience attribute which evaluates to either `direct` or `repeater` based on if the device is connected direct or not to the heathub |
+| `Repeater` | Which actual device is acting as repeater |
 
 
 
 ## Battery Values
 
-For each battery driven device sensor the following attributes are available `battery_voltage`, `battery_percentage` and `battery_level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or *OneThird* battery level. Given that RoomStats do not need to drive a valve, their battery levels can be lower.
+For each battery driven device sensor the following attributes are available `Battery Voltage`, `Battery Percentage` and `Battery Level`. From conversations with Wiser technical support they recommend changing the batteries for any TRV when it reaches battery voltage of "26" or *OneThird* battery level. Given that RoomStats do not need to drive a valve, their battery levels can be lower.
 
 An obvious ideal candidate for a Home Assistant automation to remind you to change the batteries :-)
 
@@ -383,13 +503,13 @@ Checkout the community thread on https://community.home-assistant.io/t/drayton-w
 
 Special thanks for many contributors to this project!
 
-Angelo, Mark and the community at large.
+Angelo, Mark and Team
 
 # Contributors
 
 Special thanks to all the contributors to this project.  Special shout to 
 
-- @msp1974     : Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more! Mark is now part of the core team helping me out whilst I deal with screaming babies wanting food :-)
+- @msp1974     : V3, Animated graphics showing which rooms are being heated, Display Presets, support boost (PR38), Async Mode rewrite and loads more! Mark is now part of the core team helping me out whilst I deal with screaming babies wanting food :-)
 - @angrycamel  : Home/Away Sensor
 - @jchasey     : Doc changes and support for custom component updater
 - @sjtbham     : Debugging
@@ -403,13 +523,42 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.18
+    * Fix for devices that have no room association
+    * Added back humidity and temp attributes to RoomStat signal sensor (to be made sensor entities in a future release)
+- 3.0.17
+    * Fix for room not having a schedule causes climate entity to fail to load
+    * Fix for unknown device acting as repeater
+    * Added back controller signal sensor that was removed in v3.0
+    * Improved attributes for signal sensors
+    * Bumped api to 0.0.14
+    * Fix for HACs not properly showing documentation
+- 3.0.16
+    * Added support for heating actuators in devices
+    * Added basic support for Shutters and Lights in devices
+    * Bump api to 0.0.13
+    * Improved handling of battery data
+    * Changed model to use product_type as model_identifier not consistantly supplied for all devices
+- 3.0.15
+    * Fix for issue with single TRV device if multiple in a room - issue [#194](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/194)
+    * Fix for boost_all_rooms not setting temp correctly - issue [#180](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/180)
+    * Add ability to set target temp or temp delta for boost - like in v2.7
+- 3.0.14
+    * Fix error with smartplug total power not available in energy config - issue [#192](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/192)192
+    * Fix issue with zeroconf not using hostname
+    * Fix issues with zeroconf not reporting errors on setup - issue #189
+    * Add away mode target temperature number slider to view and set away mode temp - issue [#190](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/190)
+    * Removed last_updated attribute from device signal entities
+    * Added last updated, mins since last updated and last update status attributes to Heating Operation sensor - issue [#191](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/191)
+- 3.0
+    * See above for long list of new functionality
 = 2.7 
    * Various bug fixes and prep for V3 :-) 
 - 2.6beta6
-   * Fix for broken scheduler services - sorry all!
+    * Fix for broken scheduler services - sorry all!
 - 2.6beta5
-   * Amended manifest version to include 2 dot notation
-   * Fixed label issue on config for setpoint mode
+    * Amended manifest version to include 2 dot notation
+    * Fixed label issue on config for setpoint mode
 - 2.6beta4
    * Fixed issue caused by removal of ruamel.yaml from core
    * Added last updated attribute to wiserhub sensor
@@ -499,4 +648,3 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 1.3
     * Added ability to set temperature
     * Added ability to set room mode (auto,boost,manual)
-
