@@ -162,7 +162,6 @@ class WiserSwitch(SwitchEntity):
     @property
     def is_on(self):
         """Return true if device is on."""
-        _LOGGER.debug("%s: %s", self._name, self._is_on)
         return self._is_on
 
     async def async_turn_on(self, **kwargs):
@@ -198,7 +197,7 @@ class WiserSystemSwitch(WiserSwitch):
 
     async def async_update(self):
         """Async Update to HA."""
-        _LOGGER.debug("Wiser %s Switch Update requested", self._name)
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._is_on = getattr(self._data.wiserhub.system, self._key)
         if self._name == "Away Mode":
             self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
@@ -253,7 +252,7 @@ class WiserRoomSwitch(WiserSwitch):
 
     async def async_update(self):
         """Async Update to HA."""
-        _LOGGER.debug("Wiser %s Switch Update requested", self._name)
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._is_on = getattr(self._room, self._key)
 
@@ -307,7 +306,7 @@ class WiserDeviceSwitch(WiserSwitch):
 
     async def async_update(self):
         """Async Update to HA."""
-        _LOGGER.debug("Wiser %s Switch Update requested", self._name)
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._is_on = getattr(self._device, self._key)
 
@@ -377,7 +376,7 @@ class WiserSmartPlugSwitch(WiserSwitch):
 
     async def async_update(self):
         """Async Update to HA."""
-        _LOGGER.debug("Wiser %s Switch Update requested", self._name)
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = self._smartplug.is_on
 
@@ -461,7 +460,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
 
     async def async_update(self):
         """Async Update to HA."""
-        _LOGGER.debug("Wiser %s Away Action Switch Update requested", self._name)
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = True if self._smartplug.away_mode_action == "Off" else False
 

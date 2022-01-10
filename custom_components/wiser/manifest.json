@@ -6,7 +6,7 @@
   "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/v3/Readme.Md",
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.0.18",
-  "requirements": ["wiserHeatAPIv2==0.0.15"],
+  "version": "3.0.19",
+  "requirements": ["wiserHeatAPIv2==0.0.16"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }

@@ -131,7 +131,7 @@ class WiserSensor(SensorEntity):
 
     async def async_update(self):
         """Async Update."""
-        _LOGGER.debug(f"{self._device_name} device update requested")
+        _LOGGER.debug(f"{self.name} device update requested")
 
     @property
     def name(self):
@@ -321,11 +321,15 @@ class WiserDeviceSignalSensor(WiserSensor):
             # Show Wifi info
             attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
             attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
+            attrs["wifi_SSID"] = self._device.network.ssid
+            attrs["wifi_IP"] = self._device.network.ip_address
 
         # Other
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_humidity
-            attrs["temperature"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_temperature
+
+        if self._sensor_type in ["iTRV", "RoomStat", "HeatingActuator"]:
+            attrs["temperature"] = self._data.wiserhub.devices.get_by_id(self._device_id).current_temperature
 
         return attrs
 

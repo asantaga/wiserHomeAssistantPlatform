@@ -121,7 +121,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
 
-        host = discovery_info.hostname
+        host = discovery_info.host
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
 
