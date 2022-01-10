@@ -260,7 +260,6 @@ class WiserHubHandle:
     def connect(self):
         """Connect to Wiser Hub."""
         self.wiserhub = WiserAPI(self.host, self.secret)
-        self._hass.async_create_task(self.async_update())
         return True
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
