@@ -27,7 +27,7 @@ boost_heating:
       required: false
       selector:
         number:
-          min: 0.1
+          min: 0.5
           max: 5
           step: 0.5
           unit_of_measurement: C
