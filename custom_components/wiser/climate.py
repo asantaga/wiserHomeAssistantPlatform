@@ -360,6 +360,10 @@ class WiserRoom(ClimateEntity):
     @callback
     async def async_boost_heating(self, time_period: int, temperature_delta = 0, temperature = 0) -> None:
         """Boost heating for room"""
+        # If neither temperature_delta or temperature set then use config boost temp. Issue #216
+        if temperature_delta == 0 and temperature == 0:
+            temperature_delta = self._data.boost_temp
+
         if temperature_delta > 0:
             _LOGGER.info(f"Boosting heating for {self._room.name} by {temperature_delta}C for {time_period}m ")
             await self.hass.async_add_executor_job(
