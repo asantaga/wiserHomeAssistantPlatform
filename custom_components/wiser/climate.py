@@ -255,20 +255,23 @@ class WiserRoom(ClimateEntity):
         _LOGGER.debug(
                 f"Setting Preset Mode {preset_mode} for {self._room.name}"
             )
-        if preset_mode == "Advance Schedule":
-            await self.hass.async_add_executor_job(
-                self._room.schedule_advance
-            )
-        elif WISER_PRESETS[preset_mode] == 0:
-            await self.hass.async_add_executor_job(
-                self._room.cancel_overrides
-            )
-        else:
-            boost_time = WISER_PRESETS[preset_mode]
-            boost_temp = self._data.boost_temp
-            await self.hass.async_add_executor_job(
-                self._room.boost, boost_temp, boost_time
-            )
+        try:
+            if preset_mode == "Advance Schedule":
+                await self.hass.async_add_executor_job(
+                    self._room.schedule_advance
+                )
+            elif WISER_PRESETS[preset_mode] == 0:
+                await self.hass.async_add_executor_job(
+                    self._room.cancel_overrides
+                )
+            else:
+                boost_time = WISER_PRESETS[preset_mode]
+                boost_temp = self._data.boost_temp
+                await self.hass.async_add_executor_job(
+                    self._room.boost, boost_temp, boost_time
+                )
+        except KeyError:
+            _LOGGER.error(f"Invalid preset mode.  Options are {self.preset_modes}")
         
         await self.async_force_update()
         return True
