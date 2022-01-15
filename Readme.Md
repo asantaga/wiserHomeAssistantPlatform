@@ -527,6 +527,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Fix error on load if SmartPlug does not belong to a room - issue #209
     * Added iTRV measured temperature to iTRV signal entity attributes (to be made sensor entities in a future release) - issue [#211](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/211)
     * Fixed issue where boost service did not default to config boost temp if no temperature_delta or temperature value passed - issue [#216](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/216)
+    * Fixed issue whereby UI temp increase step was x.1 due to min value issue
     * Added additional wifi information attributes to Hub signal entity
     * Reverted connection to hub to use IP address instead of DNS name due to high number of issues using this method - issue #210
     * Removed unnecessary hub update on component load during server restart
