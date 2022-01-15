@@ -210,7 +210,10 @@ class WiserRoom(ClimateEntity):
         _LOGGER.debug(
             f"Setting HVAC mode to {hvac_mode} for {self._room.name}"
         )
-        self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+        try:
+            self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+        except KeyError:
+            _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
         self.hass.async_create_task(
             self.async_force_update()
         )
@@ -255,20 +258,23 @@ class WiserRoom(ClimateEntity):
         _LOGGER.debug(
                 f"Setting Preset Mode {preset_mode} for {self._room.name}"
             )
-        if preset_mode == "Advance Schedule":
-            await self.hass.async_add_executor_job(
-                self._room.schedule_advance
-            )
-        elif WISER_PRESETS[preset_mode] == 0:
-            await self.hass.async_add_executor_job(
-                self._room.cancel_overrides
-            )
-        else:
-            boost_time = WISER_PRESETS[preset_mode]
-            boost_temp = self._data.boost_temp
-            await self.hass.async_add_executor_job(
-                self._room.boost, boost_temp, boost_time
-            )
+        try:
+            if preset_mode == "Advance Schedule":
+                await self.hass.async_add_executor_job(
+                    self._room.schedule_advance
+                )
+            elif WISER_PRESETS[preset_mode] == 0:
+                await self.hass.async_add_executor_job(
+                    self._room.cancel_overrides
+                )
+            else:
+                boost_time = WISER_PRESETS[preset_mode]
+                boost_temp = self._data.boost_temp
+                await self.hass.async_add_executor_job(
+                    self._room.boost, boost_temp, boost_time
+                )
+        except KeyError:
+            _LOGGER.error(f"Invalid preset mode.  Options are {self.preset_modes}")
         
         await self.async_force_update()
         return True
@@ -354,6 +360,10 @@ class WiserRoom(ClimateEntity):
     @callback
     async def async_boost_heating(self, time_period: int, temperature_delta = 0, temperature = 0) -> None:
         """Boost heating for room"""
+        # If neither temperature_delta or temperature set then use config boost temp. Issue #216
+        if temperature_delta == 0 and temperature == 0:
+            temperature_delta = self._data.boost_temp
+
         if temperature_delta > 0:
             _LOGGER.info(f"Boosting heating for {self._room.name} by {temperature_delta}C for {time_period}m ")
             await self.hass.async_add_executor_job(
