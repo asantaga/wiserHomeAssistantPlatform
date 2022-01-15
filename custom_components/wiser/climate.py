@@ -210,7 +210,10 @@ class WiserRoom(ClimateEntity):
         _LOGGER.debug(
             f"Setting HVAC mode to {hvac_mode} for {self._room.name}"
         )
-        self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+        try:
+            self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+        except KeyError:
+            _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
         self.hass.async_create_task(
             self.async_force_update()
         )
