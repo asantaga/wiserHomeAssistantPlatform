@@ -489,7 +489,7 @@ class WiserSmartplugPower(WiserSensor):
         """Initialise the operation mode sensor."""
         super().__init__(data, device_id, sensor_type)
         self._device = data.wiserhub.devices.smartplugs.get_by_id(device_id)
-
+        self._last_delivered_power = 0
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
@@ -498,7 +498,12 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             self._state = self._device.instantaneous_power
         else:
-            self._state = round(self._device.delivered_power / 1000, 2)
+            # Fix for hub returning 0 value in some situations causing issues with energy
+            # monitoring showing high usage
+            # Issue 223
+            if self._device.delivered_power > self._last_delivered_power:
+                self._state = round(self._device.delivered_power / 1000, 2)
+                self._last_delivered_power = self._device.delivered_power
 
     @property
     def name(self):
