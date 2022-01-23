@@ -120,32 +120,19 @@ async def async_setup_entry(hass, config_entry):
 
     try:
         await hass.async_add_executor_job(data.connect)
-    except (
-        WiserHubConnectionError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.ChunkedEncodingError,
-        requests.exceptions.InvalidHeader,
-        requests.exceptions.ProxyError
-    ):
-        _LOGGER.error("Connection error trying to connect to wiser hub")
-        raise ConfigEntryNotReady
-    except (
-        KeyError,
-        WiserHubAuthenticationError
-    ):
-        _LOGGER.error("Failed to login to wiser hub")
+    except (WiserHubConnectionError, WiserHubRESTError) as ex:
+        _LOGGER.error(ex)
+        raise ConfigEntryNotReady("Unable to connect to the Wiser Hub")
+    except WiserHubAuthenticationError as ex:
+        _LOGGER.error(ex)
         return False
-    except RuntimeError as exr:
-        _LOGGER.error(f"Failed to setup wiser hub: {exr}")
-        return ConfigEntryNotReady
-    except requests.exceptions.HTTPError as exh:
-        if exh.response.status_code > 400 and exh.response.status_code < 500:
-            _LOGGER.error(f"Failed to login to wiser hub: {exh}")
-            return False
-        raise ConfigEntryNotReady
+    except Exception as ex:  # pylint: disable=broad-except
+        _LOGGER.error(f"An unknown error occurred trying to update from Wiser hub {config_entry.data[CONF_HOST]}")
+        _LOGGER.debug(f"Error is {str(ex)}")
+        raise ConfigEntryNotReady("Unknown error connecting to the Wiser Hub")
 
-    # Do first update
     await hass.async_add_executor_job(data.update)
+
 
     # Poll for updates in the background
     update_track = async_track_time_interval(
@@ -271,7 +258,7 @@ class WiserHubHandle:
         """Update from Wiser Hub."""
         try:
             result = await self._hass.async_add_executor_job(self.wiserhub.read_hub_data)
-            if result is not None:
+            if result:
                 _LOGGER.debug(f"Wiser Hub data updated - {self.wiserhub.system.name}")
                 # Send update notice to all components to update
                 self.last_update_time = datetime.now()
@@ -280,15 +267,11 @@ class WiserHubHandle:
                 return True
 
             _LOGGER.error(f"Unable to update from Wiser hub - {self.wiserhub.system.name}")
-        except json.decoder.JSONDecodeError as ex:
-            _LOGGER.error(
-                f"Data not in JSON format when getting data from the Wiser hub. Error is {str(ex)}"
-            )
-        except WiserHubConnectionError as ex:
-            _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to timeout error")
-            _LOGGER.debug(f"Error is {str(ex)}")
+
+        except (WiserHubConnectionError, WiserHubAuthenticationError, WiserHubRESTError) as ex:
+            _LOGGER.error(ex)
         except Exception as ex:  # pylint: disable=broad-except
-            _LOGGER.error(f"Unable to update from Wiser hub {self.wiserhub.system.name} due to unknown error")
+            _LOGGER.error(f"An unknown error occurred trying to update from Wiser hub {self.wiserhub.system.name}")
             _LOGGER.debug(f"Error is {str(ex)}")
         
         self.last_update_status = "Failed"
