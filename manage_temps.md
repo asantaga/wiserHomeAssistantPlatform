@@ -59,7 +59,7 @@ condition:
       %}
         {% if loop.first %}
           {# If sensor temp reading > schedule set and heating and boosted #}
-          {% if states(entity_id)|float - state_attr(wiser_entity_id, 'current_schedule_temp') > 0.5
+          {% if state_attr(wiser_entity_id, 'current_schedule_temp') - states(entity_id)|float > 0.5
               and not state_attr(wiser_entity_id, 'is_heating')
               and not state_attr(wiser_entity_id, 'is_boosted')
           %}
