@@ -96,7 +96,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     if data.wiserhub.rooms:
         _LOGGER.debug("Setting up Room climate entities")
         wiser_rooms = [
-            WiserRoom(data, room.id) for room in data.wiserhub.rooms.all if len(room.devices) > 0
+            WiserRoom(hass, data, room.id) for room in data.wiserhub.rooms.all if len(room.devices) > 0
         ]
         async_add_entities(wiser_rooms, True)
 
@@ -144,12 +144,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserRoom(ClimateEntity):
     """WiserRoom ClientEntity Object."""
 
-    def __init__(self, data, room_id):
+    def __init__(self, hass, data, room_id):
         """Initialize the sensor."""
+        self._hass = hass
         self._data = data
         self._room_id = room_id
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
+        self._is_heating = self._room.is_heating
+        self._current_temp = self._room.current_temperature
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -161,9 +164,14 @@ class WiserRoom(ClimateEntity):
     async def async_update(self):
         """Async update method."""
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        await self.async_fire_events()
+        # Vars to support change fired events
+        self._is_heating = self._room.is_heating
+        self._current_temp = self._room.current_temperature
+
         if not self._room.is_boosted:
             self._boosted_time = 0
-    
+
     @property
     def current_temperature(self):
         """Return current temp from data."""
@@ -357,6 +365,31 @@ class WiserRoom(ClimateEntity):
     def unique_id(self):
         """Return unique Id."""
         return f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
+
+    async def async_fire_events(self):
+        # Fire event if is_heating status changed
+        if self._is_heating != self._room.is_heating:
+            self._hass.bus.fire("wiser_room_is_heating_status_changed", {
+                "entity_id": self.entity_id,
+                "is_heating": self._room.is_heating,
+                "is_boosted": self._room.is_boosted,
+                "target": self._room.current_target_temperature, 
+                "temp": self._room.current_temperature
+                }
+            )
+
+        # Fire event if room temp changes by more than 0.5C
+        if abs(self._room.current_temperature - self._current_temp) >= 0.5:
+            self._hass.bus.fire("wiser_room_temperature_changed", {
+                "entity_id": self.entity_id,
+                "is_heating": self._room.is_heating,
+                "is_boosted": self._room.is_boosted,
+                "target": self._room.current_target_temperature,
+                "previous_temp": self._current_temp,
+                "temp": self._room.current_temperature
+                }
+            )
+
 
     @callback
     async def async_boost_heating(self, time_period: int, temperature_delta = 0, temperature = 0) -> None:
