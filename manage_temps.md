@@ -29,9 +29,6 @@ condition:
       and trigger.event.data.entity_id in integration_entities('zha')
       }}
 action:
-  - service: persistent_notification.create
-    data:
-      message: Temp sensor triggered {{trigger.event.data.entity_id}}
   - event: custom_temp_sensor_changed
     event_data:
       entity_id: '{{trigger.event.data.entity_id}}'
@@ -84,19 +81,6 @@ action:
         %}
           {% if loop.first %}
                {{ wiser_entity_id }}
-          {% endif %}
-        {% endfor %}
-  - service: persistent_notification.create
-    data_template:
-      message: >
-        {% set entity_id = trigger.event.data.entity_id %}  
-        {# Get wiser climate entity in same area #}  
-        {%- for wiser_entity_id in area_entities(area_name(entity_id))
-            if wiser_entity_id.startswith('climate.') 
-                and wiser_entity_id in integration_entities('wiser')
-        %}
-          {% if loop.first %}
-               {{ wiser_entity_id }} state changed
           {% endif %}
         {% endfor %}
 mode: single
