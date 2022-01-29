@@ -153,6 +153,7 @@ class WiserRoom(ClimateEntity):
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
         self._current_temp = self._room.current_temperature
+        self._boost_time_remaining = int(self._room.boost_time_remaining/60)
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -168,6 +169,7 @@ class WiserRoom(ClimateEntity):
         # Vars to support change fired events
         self._is_heating = self._room.is_heating
         self._current_temp = self._room.current_temperature
+        self._boost_time_remaining = int(self._room.boost_time_remaining/60)
 
         if not self._room.is_boosted:
             self._boosted_time = 0
@@ -379,13 +381,29 @@ class WiserRoom(ClimateEntity):
             )
 
         # Fire event if room temp changes by more than 0.5C
-        if abs(self._room.current_temperature - self._current_temp) >= 0.5:
+        if self._room.current_temperature != self._current_temp:
             self._hass.bus.fire("wiser_room_temperature_changed", {
                 "entity_id": self.entity_id,
                 "is_heating": self._room.is_heating,
                 "is_boosted": self._room.is_boosted,
                 "target": self._room.current_target_temperature,
                 "previous_temp": self._current_temp,
+                "temp": self._room.current_temperature
+                }
+            )
+
+        # Fire event if room boost remaining time changes
+        if(
+            self._room.is_boosted
+            and int(self._room.boost_time_remaining/60) != self._boost_time_remaining
+        ):
+            self._hass.bus.fire("wiser_room_boost_time_remaining_changed", {
+                "entity_id": self.entity_id,
+                "is_heating": self._room.is_heating,
+                "is_boosted": self._room.is_boosted,
+                "boost_time_remaining": int(self._room.boost_time_remaining/60),
+                "target": self._room.current_target_temperature,
+                "scheduled_target": self._room.schedule.current_setting,
                 "temp": self._room.current_temperature
                 }
             )
