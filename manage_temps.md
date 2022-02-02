@@ -1,135 +1,146 @@
 # Using External Temp Sensor to Manage Room Temp Accuracy
 
-The basic premise of these scripts is to monitor a series of external temperature sensors and fire an event when their reading changes.
+The basic premise of this automation is to monitor a series of external temperature sensors and boost wiser room heating to reach the correct temperature as set by the schedule.
 
-Automation 1 is basically filtering all HA state change events to capture only those from your specific temp sensors.  When it detects one of your sensors has changed temp reading, it raises and event which is the in turn picked up by Automation 2 & 3.
+On updates from the external temp sensor, it will compare this to the scheduled temp of the Wiser climate device (aka room).  If the room is not already heating or boosted, it will boost the room by 1.5x the difference.  I have found this to give pretty good results but this may need tweakign for your own situation.
 
-In order for this to work, all you need to do is have your temp sensor and the wiser climate devices in the same HA Area, as it looks for a Wiser climate device in the same Area as the temp sensor.
+It will also look if the current room temp is within 0.5C of the scheduled temp and cancel any boost if it is.  Again, this number can be changed but will involve a number of places to change it.
 
-Adding new climate devices or temp sensors (providing they are of the same type you already have) should require no changes to any of these scripts.
+## There are 3 requirements for this automation to work:
 
-If you have rooms that have Wiser in them but no seperate sensor, then that is also fine as it is driven by the sensor.
+1) You need at least version 3.0.20 of the Wiser integration for HA.  It uses the 'current scheduled temp' attribute that was new in this version.
+2) That your temperature sensors are setup in HA Areas with the Wiser Climate device you wish to control in the same area, as it looks for a Wiser climate device in the same Area as the temp sensor that triggered a state update to get the scheduled temp and set a boost.
+3) The first condition in the automation may/will need to be adjusted to filter your specific temp sensors.  I am using Aqara sensors via the ZHA integration.
 
 
-# Automation 1
+Adding new climate devices or temp sensors (providing they are of the same type you already have) should require no changes to this automation.
 
-Depending on your sensors you are using, you may need to modify this script.  I am using Aqara sensors connected via ZHA integration.  The value template in the condition is where you will need to modifiy to filter this to your specific sensors.
+If you have rooms that have Wiser in them but no seperate sensor, then that is also fine as it is driven by the sensor updating its reading.  If it's not there, no reading updates!
 
 ```
-alias: Fire Event when room monitoring temp sensors change reading
-description: ''
+alias: Adjust Wiser Boost for Ext Temp Sensor Heat Management
+description: Uses External Temp Sensor To Achieve Target Temp in Room
 trigger:
   - platform: event
     event_type: state_changed
 condition:
-  - condition: template
-    value_template: |-
-      {{ 
-      trigger.event.data.new_state.attributes.device_class == 'temperature'
-      and trigger.event.data.entity_id in integration_entities('zha')
-      }}
-action:
-  - event: custom_temp_sensor_changed
-    event_data:
-      entity_id: '{{trigger.event.data.entity_id}}'
-      old_temp: '{{trigger.event.data.old_state.state}}'
-      new_temp: '{{trigger.event.data.new_state.state}}'
-mode: single
-
-```
-
-
-# Automation 2
-Create an automation with this yaml below.  Apart from maybe changing the 0.5C delta parameter (which is the required difference between the temp sensor reading and the scheduled temp) this is generic to all wiser setups (I think!?)
-
-```
-alias: Boost Heating to Meet True Target Temp
-description: ''
-trigger:
-  - platform: event
-    event_type: custom_temp_sensor_changed
-condition:
-  - condition: template
-    value_template: |-
-      {% set entity_id = trigger.event.data.entity_id %}
-      {# Get wiser climate entity in same area #}
-      {%- for wiser_entity_id in area_entities(area_name(entity_id))
-          if wiser_entity_id.startswith('climate.') 
-              and wiser_entity_id in integration_entities('wiser')
-      %}
-        {% if loop.first %}
-          {# If sensor temp reading > schedule set and heating and boosted #}
-          {% if state_attr(wiser_entity_id, 'current_schedule_temp') - states(entity_id)|float > 0.5
-              and not state_attr(wiser_entity_id, 'is_heating')
-              and not state_attr(wiser_entity_id, 'is_boosted')
+  - condition: and
+    conditions:
+      - condition: template
+        value_template: |-
+          {% if trigger.event.data.entity_id in integration_entities('zha') and 
+              trigger.event.data.entity_id.startswith('sensor.lumi') 
+              and trigger.event.data.entity_id.endswith('temperature')
           %}
             True
           {% endif %}
-        {% endif %}
-      {% endfor %}
+      - condition: template
+        value_template: |-
+          {% set trigger_entity = trigger.event.data.entity_id %}
+
+          {# find corresponding room climate sensor #}
+          {% for wiser_climate in area_entities(area_name(trigger_entity))
+              if wiser_climate.startswith('climate.') 
+                  and wiser_climate in integration_entities('wiser')
+          %}
+            {% if loop.first %}
+              {% set sensor_temp = states(trigger_entity)|float %}
+              {% set schedule_temp = state_attr(wiser_climate, 'current_schedule_temp')|float %}
+               {% 
+                if (
+                    (schedule_temp - sensor_temp) > 0.5 
+                    and not state_attr(wiser_climate, 'is_heating')
+                    and not state_attr(wiser_climate, 'is_boosted')
+                  )
+                  or
+                  (
+                    (schedule_temp - sensor_temp) < 0.5 
+                    and state_attr(wiser_climate, 'is_boosted')
+                  )
+              %}
+                True    
+              {% endif %}
+            {% endif %}
+          {% endfor %}
 action:
   - service: wiser.boost_heating
-    data:
-      time_period: 30
-      temperature_delta: 2
-      entity_id: >
-        {% set entity_id = trigger.event.data.entity_id %}  
-        {# Get wiser climate entity in same area #}  
-        {%- for wiser_entity_id in area_entities(area_name(entity_id))
-            if wiser_entity_id.startswith('climate.') 
-                and wiser_entity_id in integration_entities('wiser')
+    data_template:
+      entity_id: >-
+        {% set sensor = trigger.event.data.entity_id %} {% for wiser_climate in
+        area_entities(area_name(sensor))
+              if wiser_climate.startswith('climate.') 
+              and wiser_climate in integration_entities('wiser') 
+        %}
+          {% if loop.first %}{{wiser_climate}}{% endif %}
+        {% endfor %}
+      time_period: >-
+        {% set sensor = trigger.event.data.entity_id %} {% for wiser_climate in
+        area_entities(area_name(sensor))
+              if wiser_climate.startswith('climate.') 
+              and wiser_climate in integration_entities('wiser') 
         %}
           {% if loop.first %}
-               {{ wiser_entity_id }}
+            {% set sensor_temp = states(sensor)|float %}
+            {% set schedule_temp = state_attr(wiser_climate, 'current_schedule_temp')|float %}
+            {% set delta = (schedule_temp - sensor_temp)|round(1) %}
+            {% if delta < 0.5 %}
+              0
+            {% else %}
+              30
+            {% endif %}
           {% endif %}
         {% endfor %}
-mode: single
-
-```
-
-# Automation 3
-Same as Step 2.  This script is generic and can be used for all Wiser setups.
-
-```
-alias: Cancel Boost if Target Room Temp Reached
-description: ''
-trigger:
-  - platform: event
-    event_type: custom_temp_sensor_changed
-condition:
-  - condition: template
-    value_template: |-
-      {% set entity_id = trigger.event.data.entity_id %}
-      {# Get wiser climate entity in same area #}
-      {%- for wiser_entity_id in area_entities(area_name(entity_id))
-          if wiser_entity_id.startswith('climate.') 
-              and wiser_entity_id in integration_entities('wiser')
-      %}
-        {% if loop.first %}
-          {# If sensor temp reading > schedule set and heating and boosted #}
-          {% if states(entity_id)|float - state_attr(wiser_entity_id, 'current_schedule_temp') > 0.5
-              and state_attr(wiser_entity_id, 'is_heating')
-              and state_attr(wiser_entity_id, 'is_boosted')
-          %}
-            True
-          {% endif %}
-        {% endif %}
-      {% endfor %}
-action:
-  - service: climate.set_preset_mode
-    data:
-      entity_id: >
-        {% set entity_id = trigger.event.data.entity_id %}  {# Get wiser climate
-        entity in same area #}  {%- for wiser_entity_id in
-        area_entities(area_name(entity_id))
-            if wiser_entity_id.startswith('climate.') 
-                and wiser_entity_id in integration_entities('wiser')
+      temperature_delta: >-
+        {% set sensor = trigger.event.data.entity_id %} {% for wiser_climate in
+        area_entities(area_name(sensor))
+              if wiser_climate.startswith('climate.') 
+              and wiser_climate in integration_entities('wiser') 
         %}
           {% if loop.first %}
-               {{ wiser_entity_id }}
+            {% set sensor_temp = states(sensor)|float %}
+            {% set schedule_temp = state_attr(wiser_climate, 'current_schedule_temp')|float %}
+            {% set delta = (schedule_temp - sensor_temp)|round(1) %}
+            {% if delta < 0.5 %}
+              {% set delta = 0 %}
+            {% endif %}
+            {% set boost_delta = (((delta * 1.5) * 2 )|round(0)/2) %}
+            {{boost_delta}}
           {% endif %}
         {% endfor %}
-      preset_mode: Cancel Overrides
-mode: single
-
+  - service: logbook.log
+    data_template:
+      name: Wiser Temp Boost by Ext Sensor
+      message: |-
+        {% set sensor = trigger.event.data.entity_id %}  {% for wiser_climate in
+              area_entities(area_name(sensor))
+              if wiser_climate.startswith('climate.') 
+              and wiser_climate in integration_entities('wiser') 
+        %}
+          {% if loop.first %}
+            {% set sensor_temp = states(sensor)|float %}
+            {% set schedule_temp = state_attr(wiser_climate, 'current_schedule_temp')|float %}
+            {% set delta = (schedule_temp - sensor_temp)|round(1) %}
+            Sensor Temp - {{sensor_temp}}°C, 
+            Schedule Temp - {{schedule_temp}}°C, 
+            {% if delta < 0.5 %}
+              Boost Cancelled
+            {% else %}
+              {% set boost_delta = (((delta * 1.5) * 2 )|round(0)/2)|round(1) %}
+              Boosted By {{boost_delta}}°C
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      entity_id: |-
+        {% set sensor = trigger.event.data.entity_id %}  {% for wiser_climate in
+              area_entities(area_name(sensor))
+              if wiser_climate.startswith('climate.') 
+              and wiser_climate in integration_entities('wiser') 
+        %}
+          {% if loop.first %}
+            {{wiser_climate}}
+          {% endif %}
+        {% endfor %}
+      domain: wiser
+mode: queued
+max: 10
 ```
