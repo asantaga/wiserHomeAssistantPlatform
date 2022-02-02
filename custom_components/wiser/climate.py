@@ -368,12 +368,13 @@ class WiserRoom(ClimateEntity):
     async def async_fire_events(self):
         # Fire event if is_heating status changed
         if self._is_heating != self._room.is_heating:
-            self._hass.bus.fire("wiser_room_is_heating_status_changed", {
+            self._hass.bus.fire("wiser_room_heating_status_changed", {
                 "entity_id": self.entity_id,
                 "is_heating": self._room.is_heating,
                 "is_boosted": self._room.is_boosted,
-                "target": self._room.current_target_temperature, 
-                "temp": self._room.current_temperature
+                "scheduled_temperature": self._room.schedule.current_setting,
+                "target_temperature": self._room.current_target_temperature, 
+                "current_temperature": self._room.current_temperature
                 }
             )
 
