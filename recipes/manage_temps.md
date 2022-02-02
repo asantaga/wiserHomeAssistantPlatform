@@ -17,7 +17,7 @@ Adding new climate devices or temp sensors (providing they are of the same type 
 
 If you have rooms that have Wiser in them but no seperate sensor, then that is also fine as it is driven by the sensor updating its reading.  If it's not there, no reading updates!
 
-```
+```yaml
 alias: Adjust Wiser Boost for Ext Temp Sensor Heat Management
 description: Uses External Temp Sensor To Achieve Target Temp in Room
 trigger:
