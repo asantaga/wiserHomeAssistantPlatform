@@ -152,11 +152,8 @@ class WiserRoom(ClimateEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
-        self._current_temp = self._room.current_temperature
-        self._boost_time_remaining = int(self._room.boost_time_remaining/60)
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
-
 
     async def async_force_update(self):
         _LOGGER.debug(f"{self._room.name} requested hub update")
@@ -166,10 +163,9 @@ class WiserRoom(ClimateEntity):
         """Async update method."""
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         await self.async_fire_events()
+
         # Vars to support change fired events
         self._is_heating = self._room.is_heating
-        self._current_temp = self._room.current_temperature
-        self._boost_time_remaining = int(self._room.boost_time_remaining/60)
 
         if not self._room.is_boosted:
             self._boosted_time = 0
@@ -368,6 +364,7 @@ class WiserRoom(ClimateEntity):
         """Return unique Id."""
         return f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
 
+
     async def async_fire_events(self):
         # Fire event if is_heating status changed
         if self._is_heating != self._room.is_heating:
@@ -379,35 +376,6 @@ class WiserRoom(ClimateEntity):
                 "temp": self._room.current_temperature
                 }
             )
-
-        # Fire event if room temp changes by more than 0.5C
-        if self._room.current_temperature != self._current_temp:
-            self._hass.bus.fire("wiser_room_temperature_changed", {
-                "entity_id": self.entity_id,
-                "is_heating": self._room.is_heating,
-                "is_boosted": self._room.is_boosted,
-                "target": self._room.current_target_temperature,
-                "previous_temp": self._current_temp,
-                "temp": self._room.current_temperature
-                }
-            )
-
-        # Fire event if room boost remaining time changes
-        if(
-            self._room.is_boosted
-            and int(self._room.boost_time_remaining/60) != self._boost_time_remaining
-        ):
-            self._hass.bus.fire("wiser_room_boost_time_remaining_changed", {
-                "entity_id": self.entity_id,
-                "is_heating": self._room.is_heating,
-                "is_boosted": self._room.is_boosted,
-                "boost_time_remaining": int(self._room.boost_time_remaining/60),
-                "target": self._room.current_target_temperature,
-                "scheduled_target": self._room.schedule.current_setting,
-                "temp": self._room.current_temperature
-                }
-            )
-
 
     @callback
     async def async_boost_heating(self, time_period: int, temperature_delta = 0, temperature = 0) -> None:
