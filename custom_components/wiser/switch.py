@@ -194,6 +194,7 @@ class WiserSystemSwitch(WiserSwitch):
         """Initialize the sensor."""
         super().__init__(data, name, key, "system", icon)
         self._away_temperature = None
+        self._is_on = getattr(self._data.wiserhub.system, self._key)
 
     async def async_update(self):
         """Async Update to HA."""
@@ -249,6 +250,7 @@ class WiserRoomSwitch(WiserSwitch):
         self._room_id = room_id
         super().__init__(data, name, key, "room", icon)
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        self._is_on = getattr(self._room, self._key)
 
     async def async_update(self):
         """Async Update to HA."""
@@ -303,6 +305,7 @@ class WiserDeviceSwitch(WiserSwitch):
         self._device_id = device_id
         super().__init__(data, name, key, "device-switch", icon)
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._is_on = getattr(self._device, self._key)
 
     async def async_update(self):
         """Async Update to HA."""
@@ -369,6 +372,7 @@ class WiserSmartPlugSwitch(WiserSwitch):
         self._smart_plug_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+        self._is_on = self._smartplug.is_on
 
     async def async_force_update(self):
         await asyncio.sleep(2)
@@ -453,6 +457,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
         self._smart_plug_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+        self._is_on = True if self._smartplug.away_mode_action == "Off" else False
 
     async def async_force_update(self):
         await asyncio.sleep(2)

@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.19
+# Drayton Wiser Home Assistant Integration v3.0.20
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -167,6 +167,7 @@ Mark & Angelo
     - Allows setting Window Detection
     - Long Term Stats sensors for Target Temp, Current Temp and Demand
     - Many attributes available
+    - Fires wiser_room_heating_status_changed event when room starts or stops heating
 
 - **Hot Water**
     - Sensor to show if hot water is on or off
@@ -523,6 +524,13 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.20
+    * Bump api to 0.0.17
+    * Improvements to connection handling and error reporting
+    * Added attribute on climate entity for current schedule temperature setting
+    * Added event to fire when room heating status changes (wiser_room_heating_status_changed)
+    * Fix - switches do not always show state at restart
+    * Fix - only update delivered power on SmartPlugs if above 0 to fix sporadic issue where value goes to 0 on hub update.
 - 3.0.19
     * Fix error on load if SmartPlug does not belong to a room - issue #209
     * Added iTRV measured temperature to iTRV signal entity attributes (to be made sensor entities in a future release) - issue [#211](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/211)

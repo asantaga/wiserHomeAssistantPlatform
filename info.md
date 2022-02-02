@@ -1,3 +1,7 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+![GitHub all releases](https://img.shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/total)
+![GitHub release (latest)](https://img.shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total)
+
 {% if prerelease %}
 ### Please note: This is a Beta version and may have some instabilities.
 {% endif %}
