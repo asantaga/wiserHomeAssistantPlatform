@@ -9,7 +9,7 @@ DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 
 VERSION = "3.0.20"
-WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number", "light"]
+WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number"]
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
