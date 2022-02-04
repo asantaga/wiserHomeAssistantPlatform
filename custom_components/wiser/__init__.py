@@ -73,7 +73,9 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 CONF_HUB_ID = "wiser_hub_id"
+CONF_ENDPOINT = "wiser_hub_endpoint"
 SERVICE_REMOVE_ORPHANED_ENTRIES = "remove_orphaned_entries"
+SERVICE_OUTPUT_HUB_JSON = "output_hub_json"
 
 SELECT_HUB_SCHEMA = vol.All(vol.Schema({vol.Required(CONF_HUB_ID): str}))
 
@@ -166,11 +168,25 @@ async def async_setup_entry(hass, config_entry):
                 data.async_remove_orphaned_entries(entry_id, service.data[CONF_HUB_ID])
             )
 
+    @callback
+    def output_hub_json(service):
+        for entry_id in hass.data[DOMAIN]:
+            hass.async_create_task(
+                data.async_output_hub_json(entry_id, service.data[CONF_HUB_ID])
+            )
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_REMOVE_ORPHANED_ENTRIES,
         remove_orphaned_entries_service,
         schema=SELECT_HUB_SCHEMA,
+    )
+
+    hass.services.async_register (
+        DOMAIN,
+        SERVICE_OUTPUT_HUB_JSON,
+        output_hub_json,
+        schema=SELECT_HUB_SCHEMA
     )
 
     # Add hub as device
@@ -337,4 +353,19 @@ class WiserHubHandle:
                 ):
                     _LOGGER.info(f"Removed {device_id}")
                     device_registry.async_remove_device(device_id)
-                    
+
+    @callback
+    async def async_output_hub_json(self, entry_id, wiser_hub_id: str):
+        """Output hub jsondata from endpoint"""
+        api = self._hass.data[DOMAIN][entry_id]["data"]
+        wiserhub = api.wiserhub
+
+        if wiserhub.system.name == wiser_hub_id:
+            _LOGGER.info(f"Outputing json data from {wiser_hub_id}")
+            for endpoint in ['domain','network','schedules']:
+                if await self._hass.async_add_executor_job(
+                    wiserhub.output_raw_hub_data, endpoint, f"{endpoint}-{datetime.now().strftime('%Y%m%d-%H%M%S')}", self._hass.config.config_dir
+                ):
+                    _LOGGER.info(f"Written hub {endpoint} data to the wiser_data subdirectory in your config directory")
+
+            
