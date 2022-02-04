@@ -232,7 +232,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     default=self.config_entry.options.get(
                         CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE
                     ),
-                ): vol.In([DEFAULT_SETPOINT_MODE, "boost"]),
+                ): vol.In([DEFAULT_SETPOINT_MODE, "boost", "boost in auto mode only"]),
             }
         )
         return self.async_show_form(step_id="init", data_schema=data_schema)

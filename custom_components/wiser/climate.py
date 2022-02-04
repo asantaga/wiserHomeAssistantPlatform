@@ -341,13 +341,15 @@ class WiserRoom(ClimateEntity):
         if target_temperature is None:
             return False
 
-        if self._data.setpoint_mode == "boost":
-            _LOGGER.debug(f"Setting temperature for {self.name} to {target_temperature} using boost")
+        if (self._data.setpoint_mode == "boost" 
+            or (self._data.setpoint_mode == "boost in auto mode only" and self.state == HVAC_MODE_AUTO)
+        ):
+            _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature} using boost")
             await self.hass.async_add_executor_job(
                 self._room.set_target_temperature_for_duration, target_temperature, self._data.boost_time
             )
         else:
-            _LOGGER.debug(f"Setting temperature for {self.name} to {target_temperature}")
+            _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature}")
             await self.hass.async_add_executor_job(
                 self._room.set_target_temperature, target_temperature
             )
