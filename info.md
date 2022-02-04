@@ -1,6 +1,4 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
-![GitHub all releases](https://img.shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/total)
-![GitHub release (latest)](https://img.shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total)
 
 {% if prerelease %}
 ### Please note: This is a Beta version and may have some instabilities.
@@ -80,6 +78,7 @@ This integration allows visibility and control of the Drayton Wiser system in Ho
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
     - Service `set_hotwater_mode`: Provides ability to set hot water mode to **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
+    - Service `output_hub_json`: Provides ability to write the json data (anonymised) to files for debug purposes.
 
 
 ## Sample Images
