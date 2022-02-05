@@ -29,6 +29,10 @@ DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
 
+# Setpoint Modes
+SETPOINT_MODE_BOOST = "boost"
+SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
+
 # Custom Configs
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
 CONF_HEATING_BOOST_TIME = "heating_boost_time"
