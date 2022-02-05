@@ -527,7 +527,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.21
-    * Bump api to 0.0.18
+    * Bump api to 0.0.20
     * Fix - boost is not cancelled when changing mode
     * Added - service to output hub json to files for debug
     * Added - setpoint mode to only boost in auto
