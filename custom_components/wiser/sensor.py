@@ -498,7 +498,7 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             self._state = self._device.instantaneous_power
         else:
-            # Fix for hub returning 0 value in some situations causing issues with energy
+            # Fix for api/hub returning 0 value in some situations causing issues with energy
             # monitoring showing high usage
             # Issue 223
             if self._device.delivered_power > -1:
