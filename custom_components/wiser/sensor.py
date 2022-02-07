@@ -501,9 +501,11 @@ class WiserSmartplugPower(WiserSensor):
             # Fix for hub returning 0 value in some situations causing issues with energy
             # monitoring showing high usage
             # Issue 223
-            if self._device.delivered_power > self._last_delivered_power:
+            if self._device.delivered_power > -1:
                 self._state = round(self._device.delivered_power / 1000, 2)
                 self._last_delivered_power = self._device.delivered_power
+            else:
+                self._state = self._last_delivered_power
 
     @property
     def name(self):
