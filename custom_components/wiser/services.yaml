@@ -221,3 +221,18 @@ remove_orphaned_entries:
       required: true
       selector:
         text:
+
+output_hub_json:
+  name: Output Hub Json Data To File
+  description: Write anonymised hub json data to file for debug purposes
+  fields:
+    wiser_hub_id:
+      name: Wiser Hub Name
+      description: >-
+        The name of the wiser hub to get json data from.  
+        This can be found from the integration name.
+      example: WiserHeatxxxxxx
+      required: true
+      selector:
+        text:
+

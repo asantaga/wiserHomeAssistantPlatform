@@ -33,6 +33,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETPOINT_MODE,
     DOMAIN,
+    SETPOINT_MODE_BOOST,
+    SETPOINT_MODE_BOOST_AUTO
 )
 
 import logging
@@ -232,7 +234,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     default=self.config_entry.options.get(
                         CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE
                     ),
-                ): vol.In([DEFAULT_SETPOINT_MODE, "boost"]),
+                ): vol.In([DEFAULT_SETPOINT_MODE, SETPOINT_MODE_BOOST,  SETPOINT_MODE_BOOST_AUTO]),
             }
         )
         return self.async_show_form(step_id="init", data_schema=data_schema)

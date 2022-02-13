@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.20
+# Drayton Wiser Home Assistant Integration v3.0.21
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -102,6 +102,7 @@ Below is a list of the new features in this upgrade (these are in addition to th
     - New service to boost hotwater for custom time period
     - New service to set smartplug mode
     - Schedule save, set and copy are now split between heating and onoff schedules
+    - New service to write the hub json output to files in wiser_data folder in config dir
     - All new buttons, switches and selectors can be used with the relevant services for these entity types.
 
 - Moments
@@ -201,6 +202,7 @@ Mark & Angelo
         - NB : Setting the smartplug "state" is done by setting the state of the switch component.
     - Service `set_hotwater_mode`: Provides ability to set hot water mode to **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
+    - Service `output_hub_json`: Provides ability to output hub json to 3 files to enable easier debugging
 
 
 ## Sample Images
@@ -524,6 +526,11 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.21
+    * Bump api to 0.0.20
+    * Fix - boost is not cancelled when changing mode
+    * Added - service to output hub json to files for debug
+    * Added - setpoint mode to only boost in auto
 - 3.0.20
     * Bump api to 0.0.17
     * Improvements to connection handling and error reporting

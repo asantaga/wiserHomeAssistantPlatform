@@ -7,7 +7,8 @@ Angelosantagata@gmail.com
 """
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
-VERSION = "3.0.20"
+
+VERSION = "3.0.21"
 WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number"]
 DATA = "data"
 UPDATE_TRACK = "update_track"
@@ -27,6 +28,10 @@ DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
+
+# Setpoint Modes
+SETPOINT_MODE_BOOST = "boost"
+SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
