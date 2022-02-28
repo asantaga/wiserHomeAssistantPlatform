@@ -648,7 +648,7 @@ class WiserLTSHumiditySensor(WiserSensor):
     @property
     def icon(self):
         """Return icon for sensor"""
-        return "mdi:home-thermometer-outline"
+        return "mdi:water-percent"
 
     @property
     def device_class(self):
