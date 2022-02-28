@@ -526,6 +526,10 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.22
+    * Bump api to 0.0.22 to fix ruamel.yaml install errors on some HA linux platforms
+    * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
+    * Added LTS sensor for Roomstat humidity
 - 3.0.21
     * Bump api to 0.0.20
     * Fix - boost is not cancelled when changing mode
