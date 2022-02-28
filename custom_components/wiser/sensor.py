@@ -100,6 +100,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 WiserLTSDemandSensor(data, temp_device.id, "room")
             ])
 
+        # Add humidity sensor for Roomstat
+        for roomstat in data.wiserhub.devices.roomstats.all:
+            wiser_sensors.append(
+                WiserLTSHumiditySensor(data, roomstat.id)
+            )
+
         # Add heating channels demand
         for channel in data.wiserhub.heating_channels.all:
             wiser_sensors.append(
@@ -610,6 +616,56 @@ class WiserLTSTempSensor(WiserSensor):
     @property
     def native_unit_of_measurement(self):
         return TEMP_CELSIUS
+
+    @property
+    def entity_category(self):
+        return 'diagnostic'
+
+
+class WiserLTSHumiditySensor(WiserSensor):
+    """Sensor for long term stats for room temp and target temp"""
+
+    def __init__(self, data, id):
+        """Initialise the LTS Humidity."""
+        super().__init__(data, id, f"LTS Humidity {data.wiserhub.rooms.get_by_id(data.wiserhub.devices.get_by_id(id).room_id).name}")
+    
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+        self._state = self._data.wiserhub.devices.get_by_id(self._device_id).current_humidity
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._data.wiserhub.devices.get_by_id(self._device_id).room_id,"room"),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._data.wiserhub.devices.get_by_id(self._device_id).room_id,"room"))},
+                "manufacturer": MANUFACTURER,
+                "model": "Room",
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
+
+    @property
+    def icon(self):
+        """Return icon for sensor"""
+        return "mdi:home-thermometer-outline"
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.HUMIDITY
+
+    @property
+    def state_class(self):
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
+        return '%'
 
     @property
     def entity_category(self):
