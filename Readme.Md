@@ -527,7 +527,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.22
-    * Bump api to 0.0.22 to fix ruamel.yaml install errors on some HA linux platforms
+    * Bump api to 0.0.23 to fix ruamel.yaml install errors on some HA linux platforms
     * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
     * Added LTS sensor for Roomstat humidity
 - 3.0.21
