@@ -10,7 +10,7 @@ import logging
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass, SensorEntity
 from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity import EntityCategory
 import voluptuous as vol
 
 from .const import (
@@ -619,8 +619,7 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def entity_category(self):
-        return 'diagnostic'
-
+        return EntityCategory.DIAGNOSTIC
 
 class WiserLTSHumiditySensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
@@ -669,7 +668,7 @@ class WiserLTSHumiditySensor(WiserSensor):
 
     @property
     def entity_category(self):
-        return 'diagnostic'
+        return EntityCategory.DIAGNOSTIC
 
 
 class WiserLTSDemandSensor(WiserSensor):
@@ -737,4 +736,4 @@ class WiserLTSDemandSensor(WiserSensor):
 
     @property
     def entity_category(self):
-        return 'diagnostic'
+        return EntityCategory.DIAGNOSTIC
