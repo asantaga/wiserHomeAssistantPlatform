@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.21
+# Drayton Wiser Home Assistant Integration v3.0.22
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -125,6 +125,8 @@ Below is a list of the new features in this upgrade (these are in addition to th
 As you can see, we have been oh so very busy adding new functions and trying to make it simple and intuitive.  We have done a lot of testing on this v3.0 release but as always, it is very hard to test all the possible setups out there.
 
 As such, if you find an issue or have a how do I question, please feel free to raise a github issue on our repo or post you query to our HA Community page.
+
+NOTE: It can really help diagnose an issue to be provided with an output from your hub to run in our mock hub server.  The integration has a service to create this in 3 files with all sensitive information anonymised to allow upload to our github issues tracker.  Please see [here](#providing-your-hub-output-as-json-files) how to run this.
 
 Issues
 https://github.com/asantaga/wiserHomeAssistantPlatform/issues
@@ -471,6 +473,19 @@ This will require you to provide an entity ID of the device to copy from and the
 - Smartplug on/off schedules - use the switch entity of the smart plug eg switch.smartplug1
 
 
+## Providing Your Hub Output as Json Files
+
+The integration contains a service to make it easy to provide your hub data for us to test in our mock server for issues you are experiencing.  This can save a lot of back and forth if we can use your data to recreate a problem.  The outputs created have all sensitive data anonymised so you can be comfortable posting to our git issues tracker.
+
+In order to create these files do the following:
+
+1) In developer tools, go to services
+2) Select the Output Hub Json Data to File service
+3) Enter your Wiser hub name in the field Wiser Hub Name.  This can be found from Configuration->Integrations and is the WiserHeatxxxxxx name shown on the integration box for Wiser in this screen.
+4) Select Call Service
+5) This will output 3 files - domain.json, schedule.json, network.json in a directory wiser_data in your config directory.  These can be uploaded to an issue on github.
+
+
 ## Network Topology
 
 With V1.9 for TRVs you can now determine if the TRV is connected to the heathub directly or via a smartplug repeater. 
@@ -526,6 +541,11 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.22
+    * Bump api to 0.0.23 to fix ruamel.yaml install errors on some HA linux platforms
+    * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
+    * Fix for issue [#237](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/237)
+    * Added LTS sensor for Roomstat humidity
 - 3.0.21
     * Bump api to 0.0.20
     * Fix - boost is not cancelled when changing mode

@@ -376,7 +376,7 @@ class WiserRoom(ClimateEntity):
                 "entity_id": self.entity_id,
                 "is_heating": self._room.is_heating,
                 "is_boosted": self._room.is_boosted,
-                "scheduled_temperature": self._room.schedule.current_setting,
+                "scheduled_temperature": self._room.scheduled_target_temperature,
                 "target_temperature": self._room.current_target_temperature, 
                 "current_temperature": self._room.current_temperature
                 }
