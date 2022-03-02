@@ -334,7 +334,7 @@ class WiserDeviceSignalSensor(WiserSensor):
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(self._device_id).current_humidity
 
-        if self._sensor_type in ["iTRV", "RoomStat", "HeatingActuator"]:
+        if self._sensor_type in ["iTRV", "RoomStat", "HeatingActuator", "UnderFloorHeating"]:
             attrs["temperature"] = self._data.wiserhub.devices.get_by_id(self._device_id).current_temperature
 
         return attrs
