@@ -541,6 +541,10 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.23
+    * Bump api to 0.0.24
+    * Added support for Under Fllor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
+    * Fix issue of reported current temperature not going below 5C - issue [#235](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/235)
 - 3.0.22
     * Bump api to 0.0.23 to fix ruamel.yaml install errors on some HA linux platforms
     * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
