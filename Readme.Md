@@ -1,4 +1,4 @@
-# Drayton Wiser Home Assistant Integration v3.0.22
+# Drayton Wiser Home Assistant Integration v3.0.23
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
