@@ -317,7 +317,7 @@ class WiserRoom(ClimateEntity):
         # Room can have no schedule
         if self._room.schedule:
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
-            attrs["next schedule change"] = str(self._room.schedule.next.time)
+            attrs["next_schedule_change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
         attrs["is_boosted"] = self._room.is_boosted
         attrs["is_override"] = self._room.is_override
