@@ -109,7 +109,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         platform.async_register_entity_service(
             WISER_SERVICES["SERVICE_BOOST_HEATING"],
             {
-                vol.Required(ATTR_TIME_PERIOD, default=0): vol.Coerce(int),
+                vol.Required(ATTR_TIME_PERIOD, default=data.boost_time): vol.Coerce(int),
                 vol.Any(
                     vol.Optional(ATTR_TEMPERATURE_DELTA, default=0),
                     vol.Optional(ATTR_TEMPERATURE, default=0),
