@@ -18,6 +18,7 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     SIGNAL_STRENGTH_ICONS,
+    VERSION
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
 
@@ -329,6 +330,10 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["wifi_strength_percent"] = self._device.signal.controller_signal_strength
             attrs["wifi_SSID"] = self._device.network.ssid
             attrs["wifi_IP"] = self._device.network.ip_address
+
+            # Show integration and api version info
+            attrs["api_version"] = self._data.wiserhub.version
+            attrs["integration_version"] = VERSION
 
         # Other
         if self._sensor_type == "RoomStat":
