@@ -542,9 +542,11 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.23
-    * Bump api to 0.0.24
-    * Added support for Under Fllor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
+    * Bump api to 0.0.25
+    * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
     * Fix issue of reported current temperature not going below 5C - issue [#235](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/235)
+    * Fix for boost heating service not using detault boost time if no time period supplied - issue [#242](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/242)
+    * Fix for next schedule change attribute not using underscore formatting - issue [#243](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/243)
 - 3.0.22
     * Bump api to 0.0.23 to fix ruamel.yaml install errors on some HA linux platforms
     * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
