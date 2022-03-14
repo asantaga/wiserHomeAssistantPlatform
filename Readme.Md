@@ -180,8 +180,8 @@ Mark & Angelo
     - Button to override hot water
     - Button to cancel hot water overrides
 
-- **iTRV, Roomstat, Heating Actuator, Smart Plug, Lights & Shutter Devices***
-    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Smart Plug, Light & Shutter
+- **iTRV, Roomstat, Heating Actuator, UnderFloorHeating, Smart Plug, Lights & Shutter Devices***
+    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Under Floor Heating Controller, Smart Plug, Light & Shutter
     - Switches for Device Lock and Identify
     - Sensor for battery (if device is battery powered)
     - Sensor for Zigbee signal
@@ -469,8 +469,10 @@ This will require you to provide an entity ID of the device to copy from and the
 
 ### What Entity Should I Choose?
 - Room heating schedules - use the climate entity of the room.  eg climate.lounge
-- Hot water on/off schedule - use the sensor.hotwater entity
-- Smartplug on/off schedules - use the switch entity of the smart plug eg switch.smartplug1
+- Hot water on/off schedule - use the Hot Water Mode entity
+- Smartplug on/off schedules - use the switch entity or Smartplug Mode entity of the smart plug eg switch.smartplug1, select.smartplug1_mode
+- Lights - use the light entity for the light
+- Shutters - use the cover entity for the shutter
 
 
 ## Providing Your Hub Output as Json Files
@@ -544,9 +546,11 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 3.0.23
     * Bump api to 0.0.25
     * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
-    * Fix issue of reported current temperature not going below 5C - issue [#235](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/235)
+    * Fix for reported current temperature not going below 5C - issue [#235](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/235)
     * Fix for boost heating service not using detault boost time if no time period supplied - issue [#242](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/242)
     * Fix for next schedule change attribute not using underscore formatting - issue [#243](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/243)
+    * Simplified get, set and copy schedules to be a single service instead of by type.  See [Managing Schedules](#managing-schedules-with-home-assistant)
+    * Deprecated services to handle schedules by type.  These will be removed in an upcoming version.
 - 3.0.22
     * Bump api to 0.0.23 to fix ruamel.yaml install errors on some HA linux platforms
     * Fix error in event firing when room has no schedule - issue [#236](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/236)
