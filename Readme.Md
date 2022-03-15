@@ -291,6 +291,10 @@ Select the configure link from the integrations page.  This will then show the c
 
 ## Managing Schedules with Home Assistant
 
+v3.0.23 deprecates previous different services for Heating and OnOff schedule types in favor of a single service for each of get, set and copy that works with all schedule types, including the upcomming support for lights and shutters for the Continental European version of the hub and devices.
+
+NOTE: In developer tools it is possible to select devices and areas in addition to entities.  This is currently not supported but maybe supported in a future version.  For now you will get an error that states Invalid data for call_service at pos 1: extra keys not allowed @ data['device_id'] or @data['area_id']
+
 
 ### Getting a Schedule
 Use the service `Save Schedule To File`
@@ -546,6 +550,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 3.0.23
     * Bump api to 0.0.25
     * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
+    * Added integration and api version information to Hub Signal entity - isse [#240](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/240)
     * Fix for reported current temperature not going below 5C - issue [#235](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/235)
     * Fix for boost heating service not using detault boost time if no time period supplied - issue [#242](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/242)
     * Fix for next schedule change attribute not using underscore formatting - issue [#243](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/243)
