@@ -267,9 +267,12 @@ class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
         return self._smartplug.mode
 
     def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting smartplug mode to {option}")
-        self._smartplug.mode = option
-        self.hass.async_create_task(self.async_force_update())
+        if option and option in self._options:
+            _LOGGER.debug("Setting smartplug mode to {option}")
+            self._smartplug.mode = option
+            self.hass.async_create_task(self.async_force_update())
+        else:
+            _LOGGER.error(f"{option} is not a valid Smart Plug mode.  Please choose from {self._options}")
     
     @property
     def unique_id(self):
