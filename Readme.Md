@@ -475,8 +475,8 @@ This will require you to provide an entity ID of the device to copy from and the
 - Room heating schedules - use the climate entity of the room.  eg climate.lounge
 - Hot water on/off schedule - use the Hot Water Mode entity
 - Smartplug on/off schedules - use the switch entity or Smartplug Mode entity of the smart plug eg switch.smartplug1, select.smartplug1_mode
-- Lights - use the light entity for the light
-- Shutters - use the cover entity for the shutter
+- Lights - use the light entity for the light eg. light.lounge
+- Shutters - use the cover entity for the shutter eg. cover.lounge_blinds
 
 
 ## Providing Your Hub Output as Json Files
