@@ -185,6 +185,50 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         """Return current temp from data."""
         return self._room.current_humidity
 
+    # Added by LGO44
+  
+    @property
+
+    def heating_type(self):
+        """Return heating type from data."""
+        return self._room.heating_type
+
+    @property
+    def heating_rate(self):
+        """Return heating rate from data."""
+        return self._room.heating_rate
+
+    @property
+    def demand_type(self):
+        """Return demand type from data."""
+        return self._room.demand_type
+
+    @property
+    def comfort_mode_score(self):
+        """Return comfort_mode_score from data."""
+        return self._room.comfort_mode_score
+
+    @property
+    def control_direction(self):
+        """Return control_direction from data."""
+        return self._room.control_direction        
+
+    @property
+    def displayed_setpoint(self):
+        """Return displayed_setpoint from data."""
+        return self._room.displayed_setpoint
+
+    @property
+    def target_temperature_origin(self):
+        """Return target_temperature_origin from data."""
+        return self._room.target_temperature_origin        
+
+    @property
+    def number_of_heating_actuators(self):
+        """Return number_of_heating_actuators from data."""
+        return self._room.number_of_heating_actuators
+
+    # End Added by LGO44
     @property
     def device_info(self):
         """Return device specific attributes."""
@@ -306,25 +350,39 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         # Generic attributes
         attrs = super().state_attributes
 
+        # Settings
+        attrs["window_state"] = self._room.window_state
+        attrs["window_detection_active"] = self._room.window_detection_active
+        attrs["away_mode_supressed"] = self._room.away_mode_suppressed
+        attrs["heating_type"] = self._room.heating_type
+        attrs["number_of_heating_actuators"] = self._room.number_of_heating_actuators
+        attrs["demand_type"] = self._room.demand_type
+
+        # Status
+        attrs["target_temperature_origin"] = self._room.target_temperature_origin
+        attrs["is_boosted"] = self._room.is_boosted
+        attrs["is_override"] = self._room.is_override
+        attrs["is_heating"] = self._room.is_heating
+        attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
+        attrs["heating_rate"] = self._room.heating_rate
+
         # If boosted show boost end time
         if self._room.is_boosted:
             attrs["boost_end"] = self._room.boost_end_time
 
         attrs["boost_time_remaining"] = int(self._room.boost_time_remaining/60)
-        attrs["percentage_demand"] = self._room.percentage_demand
-        attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
-        attrs["heating_rate"] = self._room.heating_rate
-        attrs["window_state"] = self._room.window_state
-        attrs["window_detection_active"] = self._room.window_detection_active
-        attrs["away_mode_supressed"] = self._room.away_mode_suppressed
+        attrs["percentage_demand"] = self._room.percentage_demand        
+        attrs["comfort_mode_score"] = self._room.comfort_mode_score
+        attrs["control_direction"] = self._room.control_direction
+        attrs["displayed_setpoint"] = self._room.displayed_setpoint
+
         # Room can have no schedule
         if self._room.schedule:
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
+            attrs["next_day_change"] = str(self._room.schedule.next.day)
             attrs["next_schedule_change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
-        attrs["is_boosted"] = self._room.is_boosted
-        attrs["is_override"] = self._room.is_override
-        attrs["is_heating"] = self._room.is_heating
+
         return attrs
 
     @property

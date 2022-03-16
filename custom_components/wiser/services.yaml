@@ -114,9 +114,8 @@ copy_schedule:
       selector:
         entity:
           integration: wiser
-
 get_heating_schedule:
-  name: Save Heating Schedule to File (Deprecated)
+  name: Save Heating Schedule to File
   description: >
     Read the schedule from a room and write to an output file in yaml
   target:
@@ -135,7 +134,7 @@ get_heating_schedule:
         text:
 
 set_heating_schedule:
-  name: Set Heating Schedule From File (Deprecated)
+  name: Set Heating Schedule From File
   description: Read in the yaml schedule file and set the schedule in a room
   target:
     entity:
@@ -151,7 +150,7 @@ set_heating_schedule:
         text:
 
 copy_heating_schedule:
-  name: Copy Heating Schedule (Deprecated)
+  name: Copy Heating Schedule
   description: Copy the schedule in a room to another room
   target:
     entity:
@@ -168,7 +167,7 @@ copy_heating_schedule:
           domain: climate
 
 get_onoff_schedule:
-  name: Save OnOff Schedule to File (Deprecated)
+  name: Save OnOff Schedule to File
   description: >
     Read the schedule from the hot water or a smartplug and write to an output file in yaml
   target:
@@ -187,7 +186,7 @@ get_onoff_schedule:
         text:
 
 set_onoff_schedule:
-  name: Set OnOff Schedule From File (Deprecated)
+  name: Set OnOff Schedule From File
   description: Read in the yaml schedule file and set the schedule on the hot water or a smartplug 
   target:
     entity:
@@ -203,7 +202,7 @@ set_onoff_schedule:
         text:
 
 copy_onoff_schedule:
-  name: Copy OnOff Schedule (Deprecated)
+  name: Copy OnOff Schedule
   description: Copy the schedule from a smartplug to another smartplug
   target:
     entity:
@@ -271,6 +270,7 @@ remove_orphaned_entries:
       selector:
         text:
 
+
 output_hub_json:
   name: Output Hub Json Data To File
   description: Write anonymised hub json data to file for debug purposes
@@ -285,3 +285,155 @@ output_hub_json:
       selector:
         text:
 
+        
+get_light_schedule:
+  name: Save Light Schedule to File
+  description: >
+    Read the schedule from a light and write to an output file in yaml
+  target:
+    entity:
+      integration: wiser
+      domain: light
+  fields:
+    filename:
+      name: Filename
+      description: >
+        The filename to write out the yaml. See README.MD if running within a
+        docker container.
+      required: true
+      example: schedule_light1.yaml
+      selector:
+        text:
+
+set_light_schedule:
+  name: Set Light Schedule From File
+  description: Read in the yaml schedule file and set the schedule on the shutter 
+  target:
+    entity:
+      integration: wiser
+      domain: light
+    filename:
+      name: Filename
+      description: The filename to read the yaml schedule from.
+      required: true
+      example: schedules/schedule1.yaml
+      selector:
+        text:
+        
+set_light_mode:
+  name: "Set Light Mode"
+  description: Sets the light mode
+  target:
+    entity:
+      integration: wiser
+      domain: light
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"
+            
+set_dimmable_light_percentage:
+  name: dimmable_light_percentage
+  description: >
+     Amend te percentage of light.
+  target:
+    entity:
+      integration: wiser
+      domain: light
+  fields:
+    percentage:
+      name: Percentage
+      description: Set the light target for a dimmable light.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 1.0
+          unit_if_measurement: '%'
+                   
+
+get_shutter_schedule:
+  name: Save Shutter Schedule to File
+  description: >
+    Read the schedule from a shutter and write to an output file in yaml
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    filename:
+      name: Filename
+      description: >
+        The filename to write out the yaml. See README.MD if running within a
+        docker container.
+      required: true
+      example: schedule_shutter1.yaml
+      selector:
+        text:
+        
+set_shutter_schedule:
+  name: Set Shutter Schedule From File
+  description: Read in the yaml schedule file and set the schedule on the shutter 
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    filename:
+      name: Filename
+      description: The filename to read the yaml schedule from.
+      required: true
+      example: schedules/schedule1.yaml
+      selector:
+        text:
+        
+set_shutter_mode:
+  name: "Set Shutter Mode"
+  description: Sets the shutter mode
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"        
+
+set_shutter_target_lift:
+  name: shutter_target_lift
+  description: >
+     Amend the target lift of shutter.
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    percentage:
+      name: Percentage
+      description: Set the target position for a shutter.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 1.0
+          unit_if_measurement: '%'
