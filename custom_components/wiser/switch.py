@@ -6,7 +6,6 @@ Angelosantagata@gmail.com
 """
 import asyncio
 import logging
-from custom_components.wiser.schedules import WiserScheduleEntity
 import voluptuous as vol
 
 from homeassistant.components.switch import SwitchEntity
@@ -16,6 +15,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DATA, DOMAIN, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
+from custom_components.wiser.schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,15 +103,28 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             wiser_switches.append(
                 WiserSystemSwitch(data, switch["name"], switch["key"], switch["icon"])
             )
+       
         elif switch["type"] == "device":
             for device in [device for device in data.wiserhub.devices.all if hasattr(device, switch["key"])]:
                 wiser_switches.append(
                     WiserDeviceSwitch(data, switch["name"], switch["key"], switch["icon"], device.id )
                 )
         
+     # Add Lights (if any)
+    for light in data.wiserhub.devices.lights.all:
+        wiser_switches.extend([
+            #WiserLightSwitch(data, light.id, f"Wiser {light.name}"),
+            WiserLightAwayActionSwitch(data, light.id, f"Wiser {light.name}")    
+        ])
+   
+    # Add Shutters (if any)
+    for shutter in data.wiserhub.devices.shutters.all:
+        wiser_switches.extend([
+            #WiserShutterSwitch(data, shutter.id, f"Wiser {shutter.name}"),
+            WiserShutterAwayActionSwitch(data, shutter.id, f"Wiser {shutter.name}")    
+        ])
     
-
-
+   
     # Add SmartPlugs (if any)
     for plug in data.wiserhub.devices.smartplugs.all:
         wiser_switches.extend([
@@ -427,9 +440,12 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         if  self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id) is not None:
             attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id).name
         else:
-            attrs["room"] = "Unassigned"     
+            attrs["room"] = "Unassigned"   
+        attrs["away_mode_action"] = self._smartplug.away_mode_action      
         attrs["scheduled_state"] = self._smartplug.scheduled_state
+        #attrs["schedule_id"] = self._smartplug.schedule_id
         if self._smartplug.schedule:
+            attrs["next_day_change"] = str(self._smartplug.schedule.next.day)
             attrs["next_schedule_change"] = str(self._smartplug.schedule.next.time)
             attrs["next_schedule_state"] = self._smartplug.schedule.next.setting
         return attrs
@@ -514,3 +530,344 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
         )
         await self.async_force_update()
         return True
+
+class WiserLightSwitch(WiserSwitch):
+    """Light SwitchEntity Class."""
+
+    def __init__(self, data, lightId, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._light_id = lightId
+        super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
+        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._is_on = self._light.is_on
+
+        
+
+    async def async_force_update(self):
+        await asyncio.sleep(2)
+        await self._data.async_update(no_throttle=True)
+
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug(f"Wiser {self.name} Light Update requested")
+        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._is_dimmable = self._light.is_dimmable
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._light_id)} Switch"
+    
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, 
+            self._light.product_type, 
+            self.name,
+            self._light_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._light_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._light_id))},
+                "manufacturer": MANUFACTURER,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+                
+            }                
+                
+        """ "manufacturer": MANUFACTURER,
+        "model": self._dimmablelight.product_type,
+        "sw_version": self._dimmablelight.firmware_version,
+        "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }                                                                """
+
+    @property
+    def extra_state_attributes(self):
+        """Return set of device state attributes."""
+        attrs = {}
+        attrs["control_source"] = self._light.control_source
+        attrs["current_state"] = self._light.current_state
+        attrs["mode"] = self._light.mode
+        attrs["name"] = self._light.name
+        attrs["current_state"] = "On" if self._light.is_on else "Off"
+        attrs["current_level"] = self._light.current_level
+        attrs["current_percentage"] = self._light.current_percentage
+        # Switches could be not allocated to room (issue:209)
+        if  self._data.wiserhub.rooms.get_by_id(self._light.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._light.room_id).name
+        else:
+            attrs["room"] = "Unassigned"     
+        ###attrs["target_state"] = self._light.target_state
+        if self._light.schedule:
+            attrs["next_schedule_change"] = str(self._light.schedule.next.time)
+            attrs["next_schedule_state"] = self._light.schedule.next.setting     
+        return attrs
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        """ await self.hass.async_add_executor_job(
+            self._light.turn_on  """
+            
+        """await self.hass.async_add_executor_job(
+            setattr, self._light, "current_state", "On"  
+        )    """
+        await self.hass.async_add_executor_job(
+            self._light.turn_on     
+        )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+        """await self.hass.async_add_executor_job(
+            self._light.turn_off                    """
+            
+        """await self.hass.async_add_executor_job(
+            setattr, self._light, "current_state", "Off"    
+        ) """
+        
+        await self.hass.async_add_executor_job(
+            self._light.turn_off     
+        )
+        await self.async_force_update()
+        return True
+
+
+class WiserLightAwayActionSwitch(WiserSwitch):
+    """Plug SwitchEntity Class."""
+
+    def __init__(self, data, LightId, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._light_id = LightId
+        super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
+        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._is_on = True if self._light.away_mode_action == "Off" else False
+        
+
+    async def async_force_update(self):
+        await asyncio.sleep(2)
+        await self._data.async_update(no_throttle=True)
+
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
+        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._is_on = True if self._light.away_mode_action == "Off" else False
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
+    
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, 
+            self._light.product_type, 
+            self.name,
+            self._light_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._light_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._light_id))},
+                "manufacturer": MANUFACTURER,
+                "model": self._light.product_type,
+                "sw_version": self._light.firmware_version,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        await self.hass.async_add_executor_job(
+            setattr, self._light, "away_mode_action", "Off"
+        )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+        await self.hass.async_add_executor_job(
+            setattr, self._light, "away_mode_action", "NoChange"
+        )
+        await self.async_force_update()
+        return True        
+
+
+class WiserShutterSwitch(WiserSwitch):
+    """Light SwitchEntity Class."""
+
+    def __init__(self, data, shutterId, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._shutter_id = shutterId
+        super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        #self._is_on = self._light.is_on
+
+        
+
+    async def async_force_update(self):
+        await asyncio.sleep(2)
+        await self._data.async_update(no_throttle=True)
+
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug(f"Wiser {self.name} Shutter Update requested")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        #self._is_dimmable = self._light.is_dimmable
+        
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._shutter_id)} Switch"
+    
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, 
+            self._shutter.product_type, 
+            self.name,
+            self._shutter_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._shutter_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+                "manufacturer": MANUFACTURER,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+                
+            }                
+                
+        """ "manufacturer": MANUFACTURER,
+        "model": self._dimmablelight.product_type,
+        "sw_version": self._dimmablelight.firmware_version,
+        "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }                                                                """
+
+    @property
+    def extra_state_attributes(self):
+        """Return set of device state attributes."""
+        attrs = {}
+        attrs["control_source"] = self._shutter.control_source
+        #attrs["current_state"] = self._shutter.current_state
+        attrs["mode"] = self._shutter.mode
+        attrs["name"] = self._shutter.name
+        #attrs["current_state"] = "On" if self._shutter.is_on else "Off"
+        attrs["current_lift"] = self._shutter.current_lift
+        attrs["manual_lift"] = self._shutter.manual_lift
+        # Switches could be not allocated to room (issue:209)
+        if  self._data.wiserhub.rooms.get_by_id(self._shutter.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._shutter.room_id).name
+        else:
+            attrs["room"] = "Unassigned"     
+        ###attrs["target_state"] = self._shutter.target_state
+        if self._shutter.schedule:
+            attrs["next_schedule_change"] = str(self._shutter.schedule.next.time)
+            attrs["next_schedule_state"] = self._shutter.schedule.next.setting
+            #attrs["schedule_id"] = self._shutter.schedule_id
+        return attrs
+
+    #async def async_turn_on(self, **kwargs):
+    async def async_open(self, **kwargs):
+        """Turn the device on."""
+        """ await self.hass.async_add_executor_job(
+            self._light.turn_on  """
+        await self.hass.async_add_executor_job(
+            #setattr, self._shutter, "current_lift", "On" 
+            setattr, self._shutter, "current_lift", 100  
+        )
+        await self.async_force_update()
+        return True
+
+    #async def async_turn_off(self, **kwargs):
+    async def async_close(self, **kwargs):
+        """Turn the device off."""
+        """await self.hass.async_add_executor_job(
+            self._light.turn_off                    """
+        await self.hass.async_add_executor_job(
+            #setattr, self._shutter, "current_lift", "Off" 
+            setattr, self._shutter, "current_lift", 0    
+  
+        )
+        await self.async_force_update()
+        return True
+
+
+class WiserShutterAwayActionSwitch(WiserSwitch):
+    """Plug SwitchEntity Class."""
+
+    def __init__(self, data, ShutterId, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._shutter_id = ShutterId
+        super().__init__(data, name, "", "shutter", "mdi:window-shutter")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.away_mode_action == "Off" else False
+        
+
+    async def async_force_update(self):
+        await asyncio.sleep(2)
+        await self._data.async_update(no_throttle=True)
+
+    async def async_update(self):
+        """Async Update to HA."""
+        _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.away_mode_action == "Close" else False
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._shutter_id)} Away Mode Turns Off"
+    
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, 
+            self._shutter.product_type, 
+            self.name,
+            self._shutter_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+                "name": get_device_name(self._data, self._shutter_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+                "manufacturer": MANUFACTURER,
+                "model": self._shutter.product_type,
+                "sw_version": self._shutter.firmware_version,
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        await self.hass.async_add_executor_job(
+            setattr, self._shutter, "away_mode_action", "Close"
+        )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+        await self.hass.async_add_executor_job(
+            setattr, self._shutter, "away_mode_action", "NoChange"
+        )
+        await self.async_force_update()
+        return True        

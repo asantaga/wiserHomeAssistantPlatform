@@ -114,7 +114,6 @@ copy_schedule:
       selector:
         entity:
           integration: wiser
-
 get_heating_schedule:
   name: Save Heating Schedule to File (Deprecated)
   description: >
@@ -271,6 +270,7 @@ remove_orphaned_entries:
       selector:
         text:
 
+
 output_hub_json:
   name: Output Hub Json Data To File
   description: Write anonymised hub json data to file for debug purposes
@@ -284,4 +284,67 @@ output_hub_json:
       required: true
       selector:
         text:
+        
+set_light_mode:
+  name: "Set Light Mode"
+  description: Sets the light mode
+  target:
+    entity:
+      integration: wiser
+      domain: light
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"
+            
+set_dimmable_light_percentage:
+  name: dimmable_light_percentage
+  description: >
+     Amend te percentage of light.
+  target:
+    entity:
+      integration: wiser
+      domain: light
+  fields:
+    percentage:
+      name: Percentage
+      description: Set the light target for a dimmable light.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 1.0
+          unit_if_measurement: '%'
+                   
 
+set_shutter_target_lift:
+  name: shutter_target_lift
+  description: >
+     Amend the target lift of shutter.
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    percentage:
+      name: Percentage
+      description: Set the target position for a shutter.
+      example: 21.0
+      default: 21.0
+      required: false
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 1.0
+          unit_if_measurement: '%'

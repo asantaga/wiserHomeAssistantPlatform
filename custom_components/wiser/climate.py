@@ -157,6 +157,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
 
+
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
     async def async_force_update(self):
@@ -167,6 +168,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         """Async update method."""
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
+        
 
         # Vars to support change fired events
         self._is_heating = self._room.is_heating
@@ -184,6 +186,50 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
     def current_humidity(self):
         """Return current temp from data."""
         return self._room.current_humidity
+
+    # Added by LGO44
+    
+    @property
+    def heating_type(self):
+        """Return heating type from data."""
+        return self._room.heating_type
+
+    @property
+    def heating_rate(self):
+        """Return heating rate from data."""
+        return self._room.heating_rate
+
+    @property
+    def demand_type(self):
+        """Return demand type from data."""
+        return self._room.demand_type
+
+    @property
+    def comfort_mode_score(self):
+        """Return comfort_mode_score from data."""
+        return self._room.comfort_mode_score
+
+    @property
+    def control_direction(self):
+        """Return control_direction from data."""
+        return self._room.control_direction        
+
+    @property
+    def displayed_setpoint(self):
+        """Return displayed_setpoint from data."""
+        return self._room.displayed_setpoint
+
+    @property
+    def target_temperature_origin(self):
+        """Return target_temperature_origin from data."""
+        return self._room.target_temperature_origin        
+
+    @property
+    def number_of_heating_actuators(self):
+        """Return number_of_heating_actuators from data."""
+        return self._room.number_of_heating_actuators
+
+    # End Added by LGO44
 
     @property
     def device_info(self):
@@ -306,25 +352,39 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         # Generic attributes
         attrs = super().state_attributes
 
+        # Settings
+        attrs["window_state"] = self._room.window_state
+        attrs["window_detection_active"] = self._room.window_detection_active
+        attrs["away_mode_supressed"] = self._room.away_mode_suppressed
+        attrs["heating_type"] = self._room.heating_type
+        attrs["number_of_heating_actuators"] = self._room.number_of_heating_actuators
+        attrs["demand_type"] = self._room.demand_type
+        # Status
+        attrs["target_temperature_origin"] = self._room.target_temperature_origin
+        attrs["is_boosted"] = self._room.is_boosted
+        attrs["is_override"] = self._room.is_override
+        attrs["is_heating"] = self._room.is_heating
+        attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
+        attrs["heating_rate"] = self._room.heating_rate
+
         # If boosted show boost end time
         if self._room.is_boosted:
             attrs["boost_end"] = self._room.boost_end_time
 
         attrs["boost_time_remaining"] = int(self._room.boost_time_remaining/60)
         attrs["percentage_demand"] = self._room.percentage_demand
-        attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
-        attrs["heating_rate"] = self._room.heating_rate
-        attrs["window_state"] = self._room.window_state
-        attrs["window_detection_active"] = self._room.window_detection_active
-        attrs["away_mode_supressed"] = self._room.away_mode_suppressed
+        
+        attrs["comfort_mode_score"] = self._room.comfort_mode_score
+        attrs["control_direction"] = self._room.control_direction
+        attrs["displayed_setpoint"] = self._room.displayed_setpoint
+        
+        
         # Room can have no schedule
         if self._room.schedule:
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
-            attrs["next_schedule_change"] = str(self._room.schedule.next.time)
+            attrs["next schedule change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
-        attrs["is_boosted"] = self._room.is_boosted
-        attrs["is_override"] = self._room.is_override
-        attrs["is_heating"] = self._room.is_heating
+
         return attrs
 
     @property
@@ -379,7 +439,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
                 "entity_id": self.entity_id,
                 "is_heating": self._room.is_heating,
                 "is_boosted": self._room.is_boosted,
-                "scheduled_temperature": self._room.scheduled_target_temperature,
+                "scheduled_temperature": self._room.schedule.current_setting,
                 "target_temperature": self._room.current_target_temperature, 
                 "current_temperature": self._room.current_temperature
                 }
@@ -404,6 +464,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             )
         await self.async_force_update()
 
+ 
     @callback
     async def async_get_schedule(self, filename: str) -> None:
         _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
@@ -417,7 +478,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
 
     @callback
     async def async_set_schedule(self, filename: str) -> None:
-        _LOGGER.warning(f"The Set Heating Schedule from File service is deprecated and will be removed in a future release.  Please use the Set Schedule from File service instead")
+        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
+
         try:
             _LOGGER.info(f"Setting {self._room.name} schedule from file {filename}")
             await self.hass.async_add_executor_job(
@@ -429,7 +491,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
 
     @callback
     async def async_copy_schedule(self, to_entity_id)-> None:
-        _LOGGER.warning(f"The Copy Heating Schedule service is deprecated and will be removed in a future release.  Please use the Copy Schedule service instead")
+        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
+
         to_room_name = to_entity_id.replace("climate.wiser_","").replace("_"," ")
         try:
             # Add Check that to_entity is of same type as from_entity
@@ -440,6 +503,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             await self.async_force_update()
         except:
             _LOGGER.error(f"Error copying schedule from {self._room.name} to {to_room_name}")
+
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""
