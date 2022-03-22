@@ -47,7 +47,7 @@ def get_device_name(data, id, type = "device"):
         if device.product_type == "SmartPlug":
             return f"{ENTITY_PREFIX} {device.name}"
 
-        if device.product_type in ["Shutter","Light", "DimmableLight"]:
+        if device.product_type in ["Shutter", "Light", "DimmableLight"]:
             device_room = data.wiserhub.rooms.get_by_device_id(id)
              # If device not allocated to a room return type and id only
             if device_room:
