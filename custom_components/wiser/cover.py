@@ -230,3 +230,4 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
                 self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
             )
         )
+        
