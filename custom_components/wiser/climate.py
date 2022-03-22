@@ -185,50 +185,6 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         """Return current temp from data."""
         return self._room.current_humidity
 
-    # Added by LGO44
-  
-    @property
-
-    def heating_type(self):
-        """Return heating type from data."""
-        return self._room.heating_type
-
-    @property
-    def heating_rate(self):
-        """Return heating rate from data."""
-        return self._room.heating_rate
-
-    @property
-    def demand_type(self):
-        """Return demand type from data."""
-        return self._room.demand_type
-
-    @property
-    def comfort_mode_score(self):
-        """Return comfort_mode_score from data."""
-        return self._room.comfort_mode_score
-
-    @property
-    def control_direction(self):
-        """Return control_direction from data."""
-        return self._room.control_direction        
-
-    @property
-    def displayed_setpoint(self):
-        """Return displayed_setpoint from data."""
-        return self._room.displayed_setpoint
-
-    @property
-    def target_temperature_origin(self):
-        """Return target_temperature_origin from data."""
-        return self._room.target_temperature_origin        
-
-    @property
-    def number_of_heating_actuators(self):
-        """Return number_of_heating_actuators from data."""
-        return self._room.number_of_heating_actuators
-
-    # End Added by LGO44
     @property
     def device_info(self):
         """Return device specific attributes."""
