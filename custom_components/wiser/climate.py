@@ -42,6 +42,7 @@ from .const import (
     WISER_SERVICES
 )
 from .helpers import get_device_name, get_identifier
+from .schedules import WiserScheduleEntity
 
 import logging
 _LOGGER = logging.getLogger(__name__)
@@ -109,7 +110,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         platform.async_register_entity_service(
             WISER_SERVICES["SERVICE_BOOST_HEATING"],
             {
-                vol.Required(ATTR_TIME_PERIOD, default=0): vol.Coerce(int),
+                vol.Required(ATTR_TIME_PERIOD, default=data.boost_time): vol.Coerce(int),
                 vol.Any(
                     vol.Optional(ATTR_TEMPERATURE_DELTA, default=0),
                     vol.Optional(ATTR_TEMPERATURE, default=0),
@@ -143,7 +144,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         )
 
 
-class WiserRoom(ClimateEntity):
+class WiserRoom(ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
     def __init__(self, hass, data, room_id):
@@ -154,6 +155,7 @@ class WiserRoom(ClimateEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
+        self._schedule = self._room.schedule
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -164,10 +166,11 @@ class WiserRoom(ClimateEntity):
     async def async_update(self):
         """Async update method."""
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
-        await self.async_fire_events()
+        self._schedule = self._room.schedule
 
         # Vars to support change fired events
         self._is_heating = self._room.is_heating
+        await self.async_fire_events()
 
         if not self._room.is_boosted:
             self._boosted_time = 0
@@ -317,7 +320,7 @@ class WiserRoom(ClimateEntity):
         # Room can have no schedule
         if self._room.schedule:
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
-            attrs["next schedule change"] = str(self._room.schedule.next.time)
+            attrs["next_schedule_change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
         attrs["is_boosted"] = self._room.is_boosted
         attrs["is_override"] = self._room.is_override
@@ -402,16 +405,8 @@ class WiserRoom(ClimateEntity):
         await self.async_force_update()
 
     @callback
-    async def async_advance_schedule(self) -> None:
-        """Advance to next schedule setting for room"""
-        _LOGGER.info(f"Advancing room schedule for  {self._room.name}")
-        await self.hass.async_add_executor_job(
-            self._room.schedule_advance
-        )
-        await self.async_force_update()
-
-    @callback
     async def async_get_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
         try:
             _LOGGER.info(f"Saving {self._room.name} schedule to file {filename}")
             await self.hass.async_add_executor_job(
@@ -422,6 +417,7 @@ class WiserRoom(ClimateEntity):
 
     @callback
     async def async_set_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Set Heating Schedule from File service is deprecated and will be removed in a future release.  Please use the Set Schedule from File service instead")
         try:
             _LOGGER.info(f"Setting {self._room.name} schedule from file {filename}")
             await self.hass.async_add_executor_job(
@@ -433,6 +429,7 @@ class WiserRoom(ClimateEntity):
 
     @callback
     async def async_copy_schedule(self, to_entity_id)-> None:
+        _LOGGER.warning(f"The Copy Heating Schedule service is deprecated and will be removed in a future release.  Please use the Copy Schedule service instead")
         to_room_name = to_entity_id.replace("climate.wiser_","").replace("_"," ")
         try:
             # Add Check that to_entity is of same type as from_entity
@@ -443,7 +440,6 @@ class WiserRoom(ClimateEntity):
             await self.async_force_update()
         except:
             _LOGGER.error(f"Error copying schedule from {self._room.name} to {to_room_name}")
-
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""

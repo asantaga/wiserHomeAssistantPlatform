@@ -8,7 +8,7 @@ Angelosantagata@gmail.com
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 
-VERSION = "3.0.22"
+VERSION = "3.0.23"
 WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number"]
 DATA = "data"
 UPDATE_TRACK = "update_track"
@@ -59,6 +59,9 @@ WISER_SERVICES = {
     "SERVICE_BOOST_HOTWATER": "boost_hotwater",
     "SERVICE_COPY_HEATING_SCHEDULE": "copy_heating_schedule",
     "SERVICE_COPY_ONOFF_SCHEDULE": "copy_onoff_schedule",
+    "SERVICE_COPY_SCHEDULE": "copy_schedule",
+    "SERVICE_GET_SCHEDULE": "get_schedule",
+    "SERVICE_SET_SCHEDULE": "set_schedule",
     "SERVICE_GET_HEATING_SCHEDULE": "get_heating_schedule",
     "SERVICE_GET_ONOFF_SCHEDULE": "get_onoff_schedule",
     "SERVICE_SET_HEATING_SCHEDULE": "set_heating_schedule",

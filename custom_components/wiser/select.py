@@ -12,6 +12,7 @@ from .climate import (
     ATTR_FILENAME
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
+from .schedules import WiserScheduleEntity
 
 import voluptuous as vol
 from homeassistant.const import ATTR_MODE
@@ -154,17 +155,19 @@ class WiserSelectEntity(SelectEntity):
         )
 
 
-class WiserHotWaterModeSelect(WiserSelectEntity):
+class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
     def __init__(self, data):
         """Initialize the sensor."""
         super().__init__(data)
         self._hotwater = self._data.wiserhub.hotwater
         self._options = self._hotwater.available_modes
+        self._schedule = self._hotwater.schedule
 
     async def async_update(self):
         """Async update method."""
         self._hotwater = self._data.wiserhub.hotwater
+        self._schedule = self._hotwater.schedule
     
     @property
     def name(self):
@@ -216,6 +219,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity):
 
     @callback
     async def async_get_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
         try:
             _LOGGER.info(f"Saving hot water schedule to file {filename}")
             await self.hass.async_add_executor_job(
@@ -226,6 +230,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity):
 
     @callback
     async def async_set_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Set Heating Schedule from File service is deprecated and will be removed in a future release.  Please use the Set Schedule from File service instead")
         try:
             _LOGGER.info(f"Setting hotwater schedule from file {filename}")
             await self.hass.async_add_executor_job(
@@ -236,7 +241,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity):
             _LOGGER.error(f"Error setting hotwater schedule from file {filename}.  Error is {ex}")
 
 
-class WiserSmartPlugModeSelect(WiserSelectEntity):
+class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
     def __init__(self, data, smartplug_id):
         """Initialize the sensor."""
@@ -244,11 +249,13 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
         super().__init__(data)
         self._smartplug = self._data.wiserhub.devices.smartplugs.get_by_id(self._smartplug_id)
         self._options = self._smartplug.available_modes
+        self._schedule = self._smartplug.schedule
 
 
     async def async_update(self):
         """Async update method."""
         self._smartplug = self._data.wiserhub.devices.smartplugs.get_by_id(self._smartplug_id)
+        self._schedule = self._smartplug.schedule
     
     @property
     def name(self):
@@ -260,9 +267,12 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
         return self._smartplug.mode
 
     def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting smartplug mode to {option}")
-        self._smartplug.mode = option
-        self.hass.async_create_task(self.async_force_update())
+        if option and option in self._options:
+            _LOGGER.debug("Setting smartplug mode to {option}")
+            self._smartplug.mode = option
+            self.hass.async_create_task(self.async_force_update())
+        else:
+            _LOGGER.error(f"{option} is not a valid Smart Plug mode.  Please choose from {self._options}")
     
     @property
     def unique_id(self):
@@ -291,6 +301,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
 
     @callback
     async def async_get_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
         try:
             if self._smartplug.schedule:
                 _LOGGER.info(f"Saving {self._smartplug.name} schedule to file {filename}")
@@ -304,6 +315,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
 
     @callback
     async def async_set_schedule(self, filename: str) -> None:
+        _LOGGER.warning(f"The Set Heating Schedule from File service is deprecated and will be removed in a future release.  Please use the Set Schedule from File service instead")
         try:
             if self._smartplug.schedule:
                 _LOGGER.info(f"Setting {self._smartplug.name} schedule from file {filename}")
@@ -318,6 +330,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity):
 
     @callback
     async def async_copy_schedule(self, to_entity_id)-> None:
+        _LOGGER.warning(f"The Copy Heating Schedule service is deprecated and will be removed in a future release.  Please use the Copy Schedule service instead")
         to_smartplug_name = to_entity_id.replace("select.wiser_","").replace("_mode","").replace("_"," ")
         try:
             if self._smartplug.schedule:

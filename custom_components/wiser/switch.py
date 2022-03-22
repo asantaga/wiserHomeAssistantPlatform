@@ -6,6 +6,7 @@ Angelosantagata@gmail.com
 """
 import asyncio
 import logging
+from custom_components.wiser.schedules import WiserScheduleEntity
 import voluptuous as vol
 
 from homeassistant.components.switch import SwitchEntity
@@ -363,7 +364,7 @@ class WiserDeviceSwitch(WiserSwitch):
         return attrs
 
 
-class WiserSmartPlugSwitch(WiserSwitch):
+class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     """Plug SwitchEntity Class."""
 
     def __init__(self, data, plugId, name):
@@ -372,6 +373,7 @@ class WiserSmartPlugSwitch(WiserSwitch):
         self._smart_plug_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+        self._schedule = self._smartplug.schedule
         self._is_on = self._smartplug.is_on
 
     async def async_force_update(self):
@@ -382,6 +384,7 @@ class WiserSmartPlugSwitch(WiserSwitch):
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
+        self._schedule = self._smartplug.schedule
         self._is_on = self._smartplug.is_on
 
     @property

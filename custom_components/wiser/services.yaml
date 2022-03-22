@@ -66,8 +66,78 @@ boost_hotwater:
           step: 1
           mode: box
 
+get_schedule:
+  name: Save Wiser Schedule to File
+  description: >
+    Read the schedule from a room or device and write to an output file in yaml
+  fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+    filename:
+      name: Filename
+      description: >
+        The filename to write out the yaml. See README.MD if running within a
+        docker container.
+      required: true
+      example: "config/schedules/{{ entity_id.name }}.yaml"
+      selector:
+        text:
+
+set_schedule:
+  name: Set Schedule From File
+  description: Read in the yaml schedule file and set the schedule
+  fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+    filename:
+      name: Filename
+      description: The filename to read the yaml schedule from.
+      required: true
+      example: schedules/schedule1.yaml
+      selector:
+        text:
+
+copy_schedule:
+  name: Copy Schedule
+  description: Copy the schedule from one to another in the same type
+  fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+    to_entity_id:
+      name: To Entity
+      description: Enter the entity_id for the room to copy the schedule to.
+      required: true
+      example: climate.wiser_kitchen
+      selector:
+        entity:
+          integration: wiser
+
 get_heating_schedule:
-  name: Save Heating Schedule to File
+  name: Save Heating Schedule to File (Deprecated)
   description: >
     Read the schedule from a room and write to an output file in yaml
   target:
@@ -86,7 +156,7 @@ get_heating_schedule:
         text:
 
 set_heating_schedule:
-  name: Set Heating Schedule From File
+  name: Set Heating Schedule From File (Deprecated)
   description: Read in the yaml schedule file and set the schedule in a room
   target:
     entity:
@@ -102,7 +172,7 @@ set_heating_schedule:
         text:
 
 copy_heating_schedule:
-  name: Copy Heating Schedule
+  name: Copy Heating Schedule (Deprecated)
   description: Copy the schedule in a room to another room
   target:
     entity:
@@ -119,7 +189,7 @@ copy_heating_schedule:
           domain: climate
 
 get_onoff_schedule:
-  name: Save OnOff Schedule to File
+  name: Save OnOff Schedule to File (Deprecated)
   description: >
     Read the schedule from the hot water or a smartplug and write to an output file in yaml
   target:
@@ -138,7 +208,7 @@ get_onoff_schedule:
         text:
 
 set_onoff_schedule:
-  name: Set OnOff Schedule From File
+  name: Set OnOff Schedule From File (Deprecated)
   description: Read in the yaml schedule file and set the schedule on the hot water or a smartplug 
   target:
     entity:
@@ -154,7 +224,7 @@ set_onoff_schedule:
         text:
 
 copy_onoff_schedule:
-  name: Copy OnOff Schedule
+  name: Copy OnOff Schedule (Deprecated)
   description: Copy the schedule from a smartplug to another smartplug
   target:
     entity:

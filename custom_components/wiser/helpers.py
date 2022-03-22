@@ -27,6 +27,9 @@ def get_device_name(data, id, type = "device"):
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
+        if device.product_type == "UnderFloorHeating":
+            return f"{ENTITY_PREFIX} {device.name}"
+
         if device.product_type == "HeatingActuator":
             device_room = data.wiserhub.rooms.get_by_device_id(id)
             # If device not allocated to a room return type and id only
