@@ -70,10 +70,17 @@ get_schedule:
   name: Save Wiser Schedule to File
   description: >
     Read the schedule from a room or device and write to an output file in yaml
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     filename:
       name: Filename
       description: >
@@ -87,10 +94,17 @@ get_schedule:
 set_schedule:
   name: Set Schedule From File
   description: Read in the yaml schedule file and set the schedule
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     filename:
       name: Filename
       description: The filename to read the yaml schedule from.
@@ -102,10 +116,17 @@ set_schedule:
 copy_schedule:
   name: Copy Schedule
   description: Copy the schedule from one to another in the same type
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     to_entity_id:
       name: To Entity
       description: Enter the entity_id for the room to copy the schedule to.
