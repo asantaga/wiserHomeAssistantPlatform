@@ -1,6 +1,5 @@
 import logging
 
-
 from .const import (
     ATTR_TIME_PERIOD,
     DATA,
@@ -9,26 +8,22 @@ from .const import (
     MANUFACTURER,
     WISER_SERVICES
 )
-from .climate import (
-    ATTR_COPYTO_ENTITY_ID,
-    ATTR_FILENAME
-)
+
 from .helpers import get_device_name, get_unique_id, get_identifier
 from .schedules import WiserScheduleEntity
 
 import voluptuous as vol
 from homeassistant.const import ATTR_MODE
 from homeassistant.components.select import SelectEntity
-from homeassistant.components.water_heater import SUPPORT_OPERATION_MODE
 from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
-    data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     wiser_selects = []
 
     if data.wiserhub.hotwater:
@@ -43,9 +38,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 WiserSmartPlugModeSelect(data, plug.id)
             ])
     
-    """Added by LGO44"""
-    # Add select for Electrical device   
-
     if data.wiserhub.devices.lights.count > 0:
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
@@ -54,16 +46,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             ])
 
     if data.wiserhub.devices.shutters.count > 0:
-        _LOGGER.debug("Setting up Light mode select")
+        _LOGGER.debug("Setting up Shutter mode select")
         for shutter in data.wiserhub.devices.shutters.all:
             wiser_selects.extend([
                 WiserShutterModeSelect(data, shutter.id)
             ])
- 
-
-    """End Added by LGO44"""
 
     async_add_entities(wiser_selects)
+
 
     # Setup services
     platform = entity_platform.async_get_current_platform()
@@ -111,33 +101,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             },
             "async_set_mode"
         )
-    # new schedule management
-    """
-    if data.wiserhub.hotwater or data.wiserhub.devices.smartplugs:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_GET_ONOFF_SCHEDULE"],
-            {
-                vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-            },
-            "async_get_schedule"
-        )
 
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_ONOFF_SCHEDULE"],
-            {
-                vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-            },
-            "async_set_schedule"
-        )
-
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_COPY_ONOFF_SCHEDULE"],
-            {
-                vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
-            },
-            "async_copy_schedule"
-        )
-    """
 
 class WiserSelectEntity(SelectEntity):
     def __init__(self, data):
@@ -169,18 +133,6 @@ class WiserSelectEntity(SelectEntity):
     @callback
     async def async_boost(self, time_period: int):
         _LOGGER.error(f"Boost service is not available on this entity")
-
-    @callback
-    async def async_get_schedule(self, filename: str) -> None:
-        _LOGGER.error(f"Get schedule service is not available on this entity")
-
-    @callback
-    async def async_set_schedule(self, filename: str) -> None:
-        _LOGGER.error(f"Set schedule service is not available on this entity")
-
-    @callback
-    async def async_copy_schedule(self, to_entity_id)-> None:
-        _LOGGER.error(f"Copy schedule service is not available on this entity")
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""
@@ -258,34 +210,6 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         )
         await self.async_force_update()
 
-    # schedules new management
-    """
-
-    @callback
-    async def async_get_schedule(self, filename: str) -> None:
-        try:
-            _LOGGER.info(f"Saving hot water schedule to file {filename}")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.schedule.save_schedule_to_yaml_file, filename
-            )
-        except Exception as ex:
-            _LOGGER.error(f"Error saving hotwater schedule to file {filename}.  Error is {ex}")
-
-    @callback
-    async def async_set_schedule(self, filename: str) -> None:
-        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
-        try:
-            _LOGGER.info(f"Setting hotwater schedule from file {filename}")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.schedule.set_schedule_from_yaml_file, filename
-            )
-            await self.async_force_update()
-        except Exception as ex:
-            _LOGGER.error(f"Error setting hotwater schedule from file {filename}.  Error is {ex}")
-
-    # schedules new management
-    """
-
 
 class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
 
@@ -344,6 +268,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
             self.select_option, mode
         )
         await self.async_force_update()
+        
 
 class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
 
