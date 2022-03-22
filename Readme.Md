@@ -1,6 +1,6 @@
 # Drayton Wiser Home Assistant Integration v3.0.24
 
-### Add documentation for shutters and lights!!!!
+### Add documentation for shutters and lights!!!!  Note breaking change removal of deprecated services.
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
