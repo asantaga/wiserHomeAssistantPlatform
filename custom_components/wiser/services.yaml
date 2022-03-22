@@ -70,10 +70,17 @@ get_schedule:
   name: Save Wiser Schedule to File
   description: >
     Read the schedule from a room or device and write to an output file in yaml
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     filename:
       name: Filename
       description: >
@@ -87,10 +94,17 @@ get_schedule:
 set_schedule:
   name: Set Schedule From File
   description: Read in the yaml schedule file and set the schedule
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     filename:
       name: Filename
       description: The filename to read the yaml schedule from.
@@ -102,10 +116,17 @@ set_schedule:
 copy_schedule:
   name: Copy Schedule
   description: Copy the schedule from one to another in the same type
-  target:
-    entity:
-      integration: wiser
   fields:
+    entity:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
     to_entity_id:
       name: To Entity
       description: Enter the entity_id for the room to copy the schedule to.
@@ -325,7 +346,25 @@ set_dimmable_light_percentage:
           max: 100.0
           step: 1.0
           unit_if_measurement: '%'
-                   
+        
+set_shutter_mode:
+  name: "Set Shutter Mode"
+  description: Sets the shutter mode
+  target:
+    entity:
+      integration: wiser
+      domain: cover
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"        
 
 set_shutter_target_lift:
   name: shutter_target_lift

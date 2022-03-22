@@ -1,4 +1,6 @@
-# Drayton Wiser Home Assistant Integration v3.0.23
+# Drayton Wiser Home Assistant Integration v3.0.24
+
+### Add documentation for shutters and lights!!!!  Note breaking change removal of deprecated services.
 
 ## IMPORTANT - PLEASE READ 'UPDATING TO V3.0' BELOW BEFORE UPGRADING!
 
@@ -547,6 +549,8 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.24
+    * Add shutter and dimable light support - thanks @LGO44
 - 3.0.23
     * Bump api to 0.0.25
     * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)

@@ -372,17 +372,16 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             attrs["boost_end"] = self._room.boost_end_time
 
         attrs["boost_time_remaining"] = int(self._room.boost_time_remaining/60)
-        attrs["percentage_demand"] = self._room.percentage_demand
-        
+        attrs["percentage_demand"] = self._room.percentage_demand        
         attrs["comfort_mode_score"] = self._room.comfort_mode_score
         attrs["control_direction"] = self._room.control_direction
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
-        
-        
+
         # Room can have no schedule
         if self._room.schedule:
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
-            attrs["next schedule change"] = str(self._room.schedule.next.time)
+            attrs["next_day_change"] = str(self._room.schedule.next.day)
+            attrs["next_schedule_change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
 
         return attrs
