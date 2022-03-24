@@ -315,7 +315,7 @@ set_light_mode:
   target:
     entity:
       integration: wiser
-      domain: light
+      domain: select
   fields:
     mode:
       name: "Mode"
@@ -328,35 +328,13 @@ set_light_mode:
             - "Auto"
             - "Manual"
             
-set_dimmable_light_percentage:
-  name: dimmable_light_percentage
-  description: >
-     Amend te percentage of light.
-  target:
-    entity:
-      integration: wiser
-      domain: light
-  fields:
-    percentage:
-      name: Percentage
-      description: Set the light target for a dimmable light.
-      example: 21.0
-      default: 21.0
-      required: false
-      selector:
-        number:
-          min: 0.0
-          max: 100.0
-          step: 1.0
-          unit_if_measurement: '%'
-        
 set_shutter_mode:
   name: "Set Shutter Mode"
   description: Sets the shutter mode
   target:
     entity:
       integration: wiser
-      domain: cover
+      domain: select
   fields:
     mode:
       name: "Mode"
@@ -368,25 +346,3 @@ set_shutter_mode:
           options:
             - "Auto"
             - "Manual"        
-
-set_shutter_target_lift:
-  name: shutter_target_lift
-  description: >
-     Amend the target lift of shutter.
-  target:
-    entity:
-      integration: wiser
-      domain: cover
-  fields:
-    percentage:
-      name: Percentage
-      description: Set the target position for a shutter.
-      example: 21.0
-      default: 21.0
-      required: false
-      selector:
-        number:
-          min: 0.0
-          max: 100.0
-          step: 1.0
-          unit_if_measurement: '%'
