@@ -71,7 +71,7 @@ get_schedule:
   description: >
     Read the schedule from a room or device and write to an output file in yaml
   fields:
-    entity:
+    entity_id:
       name: Entity
       description: A wiser entity
       required: true

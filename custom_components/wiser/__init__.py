@@ -66,7 +66,6 @@ _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
-ATTR_ENTITY = "entity"
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 CONF_HUB_ID = "wiser_hub_id"
@@ -76,21 +75,21 @@ SERVICE_OUTPUT_HUB_JSON = "output_hub_json"
 
 GET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
     }
 )
 
 SET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_FILENAME): vol.Coerce(str),
     }
 )
 
 COPY_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
     }
 )
@@ -190,7 +189,7 @@ async def async_setup_entry(hass, config_entry):
     @callback
     def get_schedule(service_call):
         """Handle the service call."""
-        entity_id = service_call.data[ATTR_ENTITY]
+        entity_id = service_call.data[ATTR_ENTITY_ID]
         filename = (
             service_call.data[ATTR_FILENAME]
             if service_call.data[ATTR_FILENAME] != ""
@@ -205,7 +204,7 @@ async def async_setup_entry(hass, config_entry):
     @callback
     def set_schedule(service_call):
         """Handle the service call."""
-        entity_id = service_call.data[ATTR_ENTITY]
+        entity_id = service_call.data[ATTR_ENTITY_ID]
         filename = service_call.data[ATTR_FILENAME]
         entity = get_entity_from_entity_id(entity_id)
         if hasattr(entity, "set_schedule"):
@@ -216,7 +215,7 @@ async def async_setup_entry(hass, config_entry):
     @callback
     def copy_schedule(service_call):
         """Handle the service call"""
-        entity_id = service_call.data[ATTR_ENTITY]
+        entity_id = service_call.data[ATTR_ENTITY_ID]
         to_entity_id = service_call.data[ATTR_COPYTO_ENTITY_ID]
 
         if entity_id and to_entity_id:
