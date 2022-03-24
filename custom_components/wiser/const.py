@@ -66,6 +66,7 @@ WISER_SERVICES = {
     "SERVICE_GET_ONOFF_SCHEDULE": "get_onoff_schedule",
     "SERVICE_SET_HEATING_SCHEDULE": "set_heating_schedule",
     "SERVICE_SET_ONOFF_SCHEDULE": "set_onoff_schedule",
+    "SERVICE_SET_DEVICE_MODE": "set_device_mode",
     "SERVICE_SET_HOTWATER_MODE": "set_hotwater_mode",
     "SERVICE_SET_SMARTPLUG_MODE": "set_smartplug_mode",
     "SERVICE_SET_LIGHT_MODE": "set_light_mode",

@@ -245,7 +245,26 @@ copy_onoff_schedule:
 
 set_hotwater_mode:
   name: "Set Hot Water Mode"
-  description: Sets the hot water mode
+  description: Sets the hot water mode (Deprecated)
+  target:
+    entity:
+      integration: wiser
+      domain: select
+  fields:
+    mode:
+      name: "Mode"
+      description: Enter the mode which can be manual or auto.
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - "Auto"
+            - "Manual"
+
+set_device_mode:
+  name: "Set Device Mode"
+  description: Sets the device mode to auto or manual
   target:
     entity:
       integration: wiser
@@ -264,7 +283,7 @@ set_hotwater_mode:
 
 set_smartplug_mode:
   name: "Set Smartplug Mode"
-  description: Sets the smartplug mode
+  description: Sets the smartplug mode (Deprecated)
   target:
     entity:
       integration: wiser
@@ -280,45 +299,6 @@ set_smartplug_mode:
           options:
             - "Auto"
             - "Manual"
-
-set_light_mode:
-  name: "Set Light Mode"
-  description: Sets the light mode
-  target:
-    entity:
-      integration: wiser
-      domain: select
-  fields:
-    mode:
-      name: "Mode"
-      description: Enter the mode which can be manual or auto.
-      required: true
-      example: auto
-      selector:
-        select:
-          options:
-            - "Auto"
-            - "Manual"
-            
-set_shutter_mode:
-  name: "Set Shutter Mode"
-  description: Sets the shutter mode
-  target:
-    entity:
-      integration: wiser
-      domain: select
-  fields:
-    mode:
-      name: "Mode"
-      description: Enter the mode which can be manual or auto.
-      required: true
-      example: auto
-      selector:
-        select:
-          options:
-            - "Auto"
-            - "Manual"        
-
 
 remove_orphaned_entries:
   name: Remove Orphaned Devices

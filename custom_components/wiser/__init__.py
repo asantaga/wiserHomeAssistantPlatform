@@ -19,6 +19,7 @@ from wiserHeatAPIv2.wiserhub import (
 
 from homeassistant.const import (
     ATTR_ENTITY_ID,
+    ATTR_MODE,
     CONF_HOST,
     CONF_MINIMUM,
     CONF_NAME,
@@ -89,15 +90,15 @@ SET_SCHEDULE_SCHEMA = vol.Schema(
 
 COPY_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_ids,
     }
 )
 
-COPY_SCHEDULE_SCHEMA = vol.Schema(
+SET_DEVICE_MODE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_MODE): vol.Coerce(str),
     }
 )
 
@@ -250,7 +251,23 @@ async def async_setup_entry(hass, config_entry):
             else:
                 _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
 
-
+    @callback
+    def set_device_mode(service_call):
+        """Handle the service call."""
+        entity_ids = service_call.data[ATTR_ENTITY_ID]
+        mode = service_call.data[ATTR_MODE]
+        for entity_id in entity_ids:
+            entity = get_entity_from_entity_id(entity_id)
+            if entity:
+                if hasattr(entity, "set_mode"):
+                    if mode.lower() in [option.lower() for option in entity._options]:
+                        getattr(entity, "set_mode")(mode)
+                    else:
+                        _LOGGER.error(F"{mode} is not a valid mode for this device.  Options are {entity._options}")
+                else:
+                    _LOGGER.error(f"Cannot set mode for entity {entity_id}.  Please see integration instructions for entities to choose")
+            else:
+                _LOGGER.error(f"Invalid entity. {entity_id} does not exist in this integration")
 
     @callback
     def remove_orphaned_entries_service(service):
@@ -285,6 +302,13 @@ async def async_setup_entry(hass, config_entry):
         WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
         copy_schedule,
         schema=COPY_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SET_DEVICE_MODE"],
+        set_device_mode,
+        schema=SET_DEVICE_MODE_SCHEMA,
     )
 
     hass.services.async_register(

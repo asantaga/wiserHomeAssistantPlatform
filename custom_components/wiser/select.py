@@ -1,3 +1,4 @@
+from faulthandler import cancel_dump_traceback_later
 import logging
 
 from .const import (
@@ -84,24 +85,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             "async_set_mode"
         )
     
-    if data.wiserhub.devices.lights:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_LIGHT_MODE"],
-            {
-                vol.Required(ATTR_MODE): vol.In(data.wiserhub.devices.lights.available_modes),
-            },
-            "async_set_mode"
-        )
-    
-    if data.wiserhub.devices.shutters:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_SHUTTER_MODE"],
-            {
-                vol.Required(ATTR_MODE): vol.In(data.wiserhub.devices.shutters.available_modes),
-            },
-            "async_set_mode"
-        )
-
 
 class WiserSelectEntity(SelectEntity):
     def __init__(self, data):
@@ -125,6 +108,12 @@ class WiserSelectEntity(SelectEntity):
     @property
     def options(self) -> list[str]:
         return self._options
+
+    @callback
+    def set_mode(self, mode):
+        self.hass.async_create_task(
+            self.async_set_mode(mode.title())
+        )
 
     @callback
     async def async_set_mode(self, mode):
@@ -268,7 +257,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
             self.select_option, mode
         )
         await self.async_force_update()
-        
+
 
 class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
 
