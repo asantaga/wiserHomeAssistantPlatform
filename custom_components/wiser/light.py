@@ -29,6 +29,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 wiser_lights.append(
                     WiserDimmableLight(data, light.id)
                 )
+            else:
+                wiser_lights.append(
+                    WiserOnOffLight(data, light.id)
+                )
         async_add_entities(wiser_lights, True)
 
 
@@ -200,3 +204,65 @@ class WiserDimmableLight(WiserLight):
             attrs["next_schedule_percentage"] = self._light.schedule.next.setting    
         return attrs
   
+class WiserOnOffLight(WiserLight):
+    """A Class for an Wiser onofflight entity."""
+    def __init__(self, data, light_id):
+        """Initialize the sensor."""
+        super().__init__(data, light_id)
+
+    async def async_turn_on(self, **kwargs):
+        """Turn light on."""
+        await self.hass.async_add_executor_job(
+                self._light.turn_on
+            )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn light off."""
+        await self.hass.async_add_executor_job(
+            self._light.turn_off
+        )
+        await self.async_force_update()
+        return True
+
+    @property
+    def extra_state_attributes(self):
+        """Return state attributes."""
+        attrs = super().extra_state_attributes
+        # Room
+        if  self._data.wiserhub.rooms.get_by_id(self._light.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._light.room_id).name
+        else:
+            attrs["room"] = "Unassigned" 
+        # Identification
+        attrs["name"] = self._light.name
+        attrs["model"] = self._light.model
+        attrs["product_type"] = self._light.product_type
+        attrs["product_identifier"] = self._light.product_identifier
+        attrs["product_model"] = self._light.product_model
+        attrs["serial_number"] = self._light.serial_number
+        attrs["firmware"] = self._light.firmware_version                
+               
+        # Settings
+        attrs["is_dimmable"] = self._light.is_dimmable
+        attrs["mode"] = self._light.mode
+        attrs["away_mode_action"] = self._light.away_mode_action
+ 
+        #Command State
+        attrs["control_source"] = self._light.control_source  
+
+        #Status 
+        attrs["current_state"] = self._light.current_state    
+        attrs["target_state"] = self._light.target_state
+        attrs["target_percentage"] = self._light.target_percentage
+        attrs["manual_level"] = self._light.manual_level
+        
+        #Schedule
+        attrs["schedule_id"] = self._light.schedule_id
+        if self._light.schedule:
+            attrs["next_day_change"] = str(self._light.schedule.next.day)
+            attrs["next_schedule_change"] = str(self._light.schedule.next.time)
+            attrs["next_schedule_percentage"] = self._light.schedule.next.setting    
+        return attrs
+    
