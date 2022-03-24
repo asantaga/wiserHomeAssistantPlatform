@@ -66,6 +66,7 @@ _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
+ATTR_ENTITY = "entity"
 ATTR_FILENAME = "filename"
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
 CONF_HUB_ID = "wiser_hub_id"
@@ -75,21 +76,21 @@ SERVICE_OUTPUT_HUB_JSON = "output_hub_json"
 
 GET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_ENTITY): cv.entity_id,
         vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
     }
 )
 
 SET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_ENTITY): cv.entity_id,
         vol.Required(ATTR_FILENAME): vol.Coerce(str),
     }
 )
 
 COPY_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_ENTITY): cv.entity_id,
         vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
     }
 )
@@ -178,53 +179,50 @@ async def async_setup_entry(hass, config_entry):
         )
 
     # Initialise global services
-    def get_entity_from_entity_id(entity_id: str):
+    def get_entity_from_entity_id(entity: str):
         """Get wiser entity from entity_id"""
-        domain = entity_id.split(".", 1)[0]
+        domain = entity.split(".", 1)[0]
         entity_comp = hass.data.get("entity_components", {}).get(domain)
         if entity_comp:
-            return entity_comp.get_entity(entity_id)
+            return entity_comp.get_entity(entity)
         return None
 
     @callback
     def get_schedule(service_call):
         """Handle the service call."""
-        entity_ids = service_call.data[ATTR_ENTITY_ID]
-        for entity_id in entity_ids:
-            filename = (
-                service_call.data[ATTR_FILENAME]
-                if service_call.data[ATTR_FILENAME] != ""
-                else (hass.config.config_dir + "/schedules/schedule_" + entity_id.split(".", 1)[1] + ".yaml")
-            )
-            entity = get_entity_from_entity_id(entity_id)
-            if hasattr(entity, "get_schedule"):
-                getattr(entity, "get_schedule")(filename)
-            else:
-                _LOGGER.error(f"Cannot save schedule from entity {entity_id}.  Please see integration instructions for entities to choose")
+        entity_id = service_call.data[ATTR_ENTITY]
+        filename = (
+            service_call.data[ATTR_FILENAME]
+            if service_call.data[ATTR_FILENAME] != ""
+            else (hass.config.config_dir + "/schedules/schedule_" + entity_id.split(".", 1)[1] + ".yaml")
+        )
+        entity = get_entity_from_entity_id(entity_id)
+        if hasattr(entity, "get_schedule"):
+            getattr(entity, "get_schedule")(filename)
+        else:
+            _LOGGER.error(f"Cannot save schedule from entity {entity_id}.  Please see integration instructions for entities to choose")
 
     @callback
     def set_schedule(service_call):
         """Handle the service call."""
-        entity_ids = service_call.data[ATTR_ENTITY_ID]
-        for entity_id in entity_ids:
-            filename = service_call.data[ATTR_FILENAME]
-            entity = get_entity_from_entity_id(entity_id)
-            if hasattr(entity, "set_schedule"):
-                getattr(entity, "set_schedule")(filename)
-            else:
-                _LOGGER.error(f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose")
+        entity_id = service_call.data[ATTR_ENTITY]
+        filename = service_call.data[ATTR_FILENAME]
+        entity = get_entity_from_entity_id(entity_id)
+        if hasattr(entity, "set_schedule"):
+            getattr(entity, "set_schedule")(filename)
+        else:
+            _LOGGER.error(f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose")
 
     @callback
     def copy_schedule(service_call):
         """Handle the service call"""
-        entity_ids = service_call.data[ATTR_ENTITY_ID]
+        entity_id = service_call.data[ATTR_ENTITY]
         to_entity_id = service_call.data[ATTR_COPYTO_ENTITY_ID]
 
-        if len(entity_ids) == 1:
-            from_entity = get_entity_from_entity_id(entity_ids[0])
+        if entity_id and to_entity_id:
+            from_entity = get_entity_from_entity_id(entity_id)
             to_entity = get_entity_from_entity_id(to_entity_id)
 
-            #TODO: Validate they are on same hub - be able to copy across hubs?
             if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
                 if hasattr(to_entity, "_schedule") and to_entity._schedule:
                     if hasattr(from_entity, "copy_schedule"):

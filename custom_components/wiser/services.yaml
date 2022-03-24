@@ -67,7 +67,7 @@ boost_hotwater:
           mode: box
 
 get_schedule:
-  name: Save Wiser Schedule to File
+  name: Save Schedule to File
   description: >
     Read the schedule from a room or device and write to an output file in yaml
   fields:
