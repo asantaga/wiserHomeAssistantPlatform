@@ -634,7 +634,6 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def entity_category(self):
-        #return 'diagnostic'
         return EntityCategory.DIAGNOSTIC
 
 class WiserLTSHumiditySensor(WiserSensor):
@@ -752,7 +751,6 @@ class WiserLTSDemandSensor(WiserSensor):
 
     @property
     def entity_category(self):
-        #return 'diagnostic'
         return EntityCategory.DIAGNOSTIC
 
 
