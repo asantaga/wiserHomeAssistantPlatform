@@ -75,22 +75,29 @@ SERVICE_OUTPUT_HUB_JSON = "output_hub_json"
 
 GET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
         vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
     }
 )
 
 SET_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
         vol.Required(ATTR_FILENAME): vol.Coerce(str),
     }
 )
 
 COPY_SCHEDULE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
         vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
+    }
+)
+
+COPY_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_ids,
     }
 )
 
@@ -189,51 +196,59 @@ async def async_setup_entry(hass, config_entry):
     @callback
     def get_schedule(service_call):
         """Handle the service call."""
-        entity_id = service_call.data[ATTR_ENTITY_ID]
-        filename = (
-            service_call.data[ATTR_FILENAME]
-            if service_call.data[ATTR_FILENAME] != ""
-            else (hass.config.config_dir + "/schedules/schedule_" + entity_id.split(".", 1)[1] + ".yaml")
-        )
-        entity = get_entity_from_entity_id(entity_id)
-        if hasattr(entity, "get_schedule"):
-            getattr(entity, "get_schedule")(filename)
-        else:
-            _LOGGER.error(f"Cannot save schedule from entity {entity_id}.  Please see integration instructions for entities to choose")
+        entity_ids = service_call.data[ATTR_ENTITY_ID]
+        for entity_id in entity_ids:
+            filename = (
+                service_call.data[ATTR_FILENAME]
+                if service_call.data[ATTR_FILENAME] != ""
+                else (hass.config.config_dir + "/schedules/schedule_" + entity_id.split(".", 1)[1] + ".yaml")
+            )
+            entity = get_entity_from_entity_id(entity_id)
+            if entity:
+                if hasattr(entity, "get_schedule"):
+                    getattr(entity, "get_schedule")(filename)
+                else:
+                    _LOGGER.error(f"Cannot save schedule from entity {entity_id}.  Please see integration instructions for entities to choose")
+            else:
+                _LOGGER.error(f"Invalid entity. {entity_id} does not exist in this integration")
 
     @callback
     def set_schedule(service_call):
         """Handle the service call."""
-        entity_id = service_call.data[ATTR_ENTITY_ID]
-        filename = service_call.data[ATTR_FILENAME]
-        entity = get_entity_from_entity_id(entity_id)
-        if hasattr(entity, "set_schedule"):
-            getattr(entity, "set_schedule")(filename)
-        else:
-            _LOGGER.error(f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose")
+        entity_ids = service_call.data[ATTR_ENTITY_ID]
+        for entity_id in entity_ids:
+            filename = service_call.data[ATTR_FILENAME]
+            entity = get_entity_from_entity_id(entity_id)
+            if entity:
+                if hasattr(entity, "set_schedule"):
+                    getattr(entity, "set_schedule")(filename)
+                else:
+                    _LOGGER.error(f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose")
+            else:
+                _LOGGER.error(f"Invalid entity. {entity_id} does not exist in this integration")
 
     @callback
     def copy_schedule(service_call):
         """Handle the service call"""
         entity_id = service_call.data[ATTR_ENTITY_ID]
-        to_entity_id = service_call.data[ATTR_COPYTO_ENTITY_ID]
-
-        if entity_id and to_entity_id:
+        to_entity_ids = service_call.data[ATTR_COPYTO_ENTITY_ID]
+        for to_entity_id in to_entity_ids:
             from_entity = get_entity_from_entity_id(entity_id)
             to_entity = get_entity_from_entity_id(to_entity_id)
 
-            if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
-                if hasattr(to_entity, "_schedule") and to_entity._schedule:
-                    if hasattr(from_entity, "copy_schedule"):
-                        getattr(from_entity, "copy_schedule")(to_entity._schedule.id, to_entity._schedule.name)
+            if from_entity and to_entity:
+                if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
+                    if hasattr(to_entity, "_schedule") and to_entity._schedule:
+                        if hasattr(from_entity, "copy_schedule"):
+                            getattr(from_entity, "copy_schedule")(to_entity._schedule.id, to_entity._schedule.name)
+                        else:
+                            _LOGGER.error(f"Cannot copy schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
                     else:
-                        _LOGGER.error(f"Cannot copy schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
+                        _LOGGER.error(f"Cannot copy schedule to entity {to_entity_id}.  Please see integration instructions for entities to choose")
                 else:
-                    _LOGGER.error(f"Cannot copy schedule to entity {to_entity_id}.  Please see integration instructions for entities to choose")
+                    _LOGGER.error("You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead")
             else:
-                _LOGGER.error("You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead")
-        else:
-            _LOGGER.error(f"Cannot copy schedule from multiple entities. Please select only one")
+                _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
 
 
 

@@ -86,7 +86,7 @@ get_schedule:
       description: >
         The filename to write out the yaml. See README.MD if running within a
         docker container.
-      required: true
+      required: false
       example: "config/schedules/{{ entity_id.name }}.yaml"
       selector:
         text:
@@ -95,7 +95,7 @@ set_schedule:
   name: Set Schedule From File
   description: Read in the yaml schedule file and set the schedule
   fields:
-    entity:
+    entity_id:
       name: Entity
       description: A wiser entity
       required: true
@@ -117,7 +117,7 @@ copy_schedule:
   name: Copy Schedule
   description: Copy the schedule from one to another in the same type
   fields:
-    entity:
+    entity_id:
       name: Entity
       description: A wiser entity
       required: true
@@ -135,6 +135,9 @@ copy_schedule:
       selector:
         entity:
           integration: wiser
+          domain: 
+          - climate
+          - select
 
 get_heating_schedule:
   name: Save Heating Schedule to File (Deprecated)
