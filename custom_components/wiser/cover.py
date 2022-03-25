@@ -193,7 +193,7 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
         """Move the cover to a specific position."""
         position = kwargs[ATTR_POSITION]
         await self.hass.async_add_executor_job(
-            self._shutter.current_lift, position
+            setattr, self._shutter, "current_lift", position
         )
         await self.async_force_update()
 
@@ -230,4 +230,3 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
                 self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
             )
         )
-        
