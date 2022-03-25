@@ -265,11 +265,15 @@ set_hotwater_mode:
 set_device_mode:
   name: "Set Device Mode"
   description: Sets the device mode to auto or manual
-  target:
-    entity:
-      integration: wiser
-      domain: select
   fields:
+    entity_id:
+      name: Entity
+      description: A wiser mode entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: select
     mode:
       name: "Mode"
       description: Enter the mode which can be manual or auto.
