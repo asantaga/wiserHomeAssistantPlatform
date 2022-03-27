@@ -349,9 +349,11 @@ async def async_unload_entry(hass, config_entry):
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_ORPHANED_ENTRIES)
+    hass.services.async_remove(DOMAIN, SERVICE_OUTPUT_HUB_JSON)
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_GET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_SET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_COPY_SCHEDULE"])
+    hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_SET_DEVICE_MODE"])
 
     _LOGGER.debug("Unloading Wiser Component")
     # Unload a config entry
@@ -432,8 +434,6 @@ class WiserHubHandle:
         self.last_update_status = "Failed"
         dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateFailedMessage")
         return False
-
-
 
     @property
     def unique_id(self):
