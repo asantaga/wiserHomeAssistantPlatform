@@ -209,7 +209,7 @@ class WiserDimmableLight(WiserLight):
         attrs["override_level"] = self._light.override_level
         
         #Schedule
-        if self._light.schedule:
+        if self._light.schedule.id:
             del attrs["next_schedule_state"]
             attrs["next_schedule_percentage"] = self._light.schedule.next.setting    
         return attrs
