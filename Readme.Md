@@ -208,7 +208,7 @@ Select the configure link from the integrations page.  This will then show the c
 `Enable LTS Sensors` is to create sensors for LTS for rooms and hub heating and hot water demand.  Default is unticked.
 
 `Setpoint Mode` modifies the way setpoint works. There are 3 options:
-  - Default - the functionality is the same as the Wiser app
+  - Normal - the functionality is the same as the Wiser app
   - Boost - when you set a new setpoint it will only take affect for the default "boost" time.
   - Boost Only in Auto - same as the boost mode but will only do this if in auto mode.  In manual mode, it will set the temp as per default mode.
 
