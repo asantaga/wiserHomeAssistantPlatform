@@ -1,8 +1,6 @@
 # Wiser Home Assistant Integration v3.0.24
 
-### Add documentation for shutters and lights!!!!  Note breaking change removal of deprecated services.
-
-This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub, including support for lights and blinds under the Schneider Electric brand.
+This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
 For the latest version of the Wiser Home Assistant Platform please use the master branch or better still install via HACS. if you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation described below.
 
@@ -122,7 +120,7 @@ Mark & Angelo
     - The following custom services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
     - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
-    - Service `get_schedule/set_schedule/copy_schedule`: Provides ability to get/set/copy schedules for rooms, hotwater, lights and shutters
+    - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
     - Service `output_hub_json`: Provides ability to output hub json to 3 anonymised files to enable easier debugging
@@ -423,12 +421,18 @@ This will require you to provide an entity ID of the device to copy from and the
 Providing the schedule type is the same, you can supply multiple to_entities and the service will copy to them all.
 
 
+### Assigning a Schedule
+Use the service `assign_schedule`
+
+You can either provide an entity ID to reference the schedule attached to that entity or provide and schedule ID
+
+
 ### What Entity Should I Choose?
 - Room heating schedules - use the climate entity of the room.  eg climate.lounge
-- Hot water on/off schedule - use the Hot Water Mode entity
-- Smartplug on/off schedules - use the switch entity or Smartplug Mode entity of the smart plug eg switch.smartplug1, select.smartplug1_mode
-- Lights - use the light entity for the light eg. light.lounge
-- Shutters - use the cover entity for the shutter eg. cover.lounge_blinds
+- Hot water on/off schedule - use the Hot Water Mode select entity eg select.hotwater_mode
+- Smartplug on/off schedules - use the Smartplug Mode select entity of the smart plug eg select.smartplug1_mode
+- Lights - use the Light Mode select entity for the light eg. select.lounge_light_mode
+- Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
 
 
 ## Providing Your Hub Output as Json Files
@@ -500,7 +504,12 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.24
-    * Add shutter and dimable light support - thanks @LGO44
+    * Bump api to 0.0.27
+    * Add shutter, light and dimable light support - thanks @LGO44
+    * Add new service to assign schedules to rooms or devices
+    * Add schedule id and name to all schedule capable entities
+    * BREAKING CHANGE: Previously deprecated services for get/set/copy_heating_schedule and get/set/copy_onoff_schedule and set_hotwater_mode and set_smartplug mode have been removed and replaced with get/set/copy_schedule and set_device_mode respectively.
+
 - 3.0.23
     * Bump api to 0.0.25
     * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)
