@@ -119,30 +119,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             "async_boost_heating"
         )
 
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_GET_HEATING_SCHEDULE"],
-            {
-                vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-            },
-            "async_get_schedule"
-        )
-
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_HEATING_SCHEDULE"],
-            {
-                vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-            },
-            "async_set_schedule"
-        )
-
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_COPY_HEATING_SCHEDULE"],
-            {
-                vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_id,
-            },
-            "async_copy_schedule"
-        )
-
 
 class WiserRoom(ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
@@ -419,43 +395,6 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
                 self._room.set_target_temperature_for_duration, temperature, time_period
             )
         await self.async_force_update()
-
-    @callback
-    async def async_get_schedule(self, filename: str) -> None:
-        _LOGGER.warning(f"The Save Heating Schedule to File service is deprecated and will be removed in a future release.  Please use the Save Schedule to File service instead")
-        try:
-            _LOGGER.info(f"Saving {self._room.name} schedule to file {filename}")
-            await self.hass.async_add_executor_job(
-                self._room.schedule.save_schedule_to_yaml_file, filename
-            )
-        except:
-            _LOGGER.error(f"Saving {self._room.name} schedule to file {filename}")
-
-    @callback
-    async def async_set_schedule(self, filename: str) -> None:
-        _LOGGER.warning(f"The Set Heating Schedule from File service is deprecated and will be removed in a future release.  Please use the Set Schedule from File service instead")
-        try:
-            _LOGGER.info(f"Setting {self._room.name} schedule from file {filename}")
-            await self.hass.async_add_executor_job(
-                self._room.schedule.set_schedule_from_yaml_file, filename
-            )
-            await self.async_force_update()
-        except:
-            _LOGGER.error(f"Error setting {self._room.name} schedule from file {filename}")
-
-    @callback
-    async def async_copy_schedule(self, to_entity_id)-> None:
-        _LOGGER.warning(f"The Copy Heating Schedule service is deprecated and will be removed in a future release.  Please use the Copy Schedule service instead")
-        to_room_name = to_entity_id.replace("climate.wiser_","").replace("_"," ")
-        try:
-            # Add Check that to_entity is of same type as from_entity
-            _LOGGER.info(f"Copying schedule from {self._room.name} to {to_room_name.title()}")
-            await self.hass.async_add_executor_job(
-                    self._room.schedule.copy_schedule, self._data.wiserhub.rooms.get_by_name(to_room_name).schedule.id
-                )
-            await self.async_force_update()
-        except:
-            _LOGGER.error(f"Error copying schedule from {self._room.name} to {to_room_name}")
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""

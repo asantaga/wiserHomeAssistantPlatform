@@ -57,21 +57,11 @@ SIGNAL_STRENGTH_ICONS = {
 WISER_SERVICES = {
     "SERVICE_BOOST_HEATING": "boost_heating",
     "SERVICE_BOOST_HOTWATER": "boost_hotwater",
-    "SERVICE_COPY_HEATING_SCHEDULE": "copy_heating_schedule",
-    "SERVICE_COPY_ONOFF_SCHEDULE": "copy_onoff_schedule",
     "SERVICE_ASSIGN_SCHEDULE": "assign_schedule",
     "SERVICE_COPY_SCHEDULE": "copy_schedule",
     "SERVICE_GET_SCHEDULE": "get_schedule",
     "SERVICE_SET_SCHEDULE": "set_schedule",
-    "SERVICE_GET_HEATING_SCHEDULE": "get_heating_schedule",
-    "SERVICE_GET_ONOFF_SCHEDULE": "get_onoff_schedule",
-    "SERVICE_SET_HEATING_SCHEDULE": "set_heating_schedule",
-    "SERVICE_SET_ONOFF_SCHEDULE": "set_onoff_schedule",
-    "SERVICE_SET_DEVICE_MODE": "set_device_mode",
-    "SERVICE_SET_HOTWATER_MODE": "set_hotwater_mode",
-    "SERVICE_SET_SMARTPLUG_MODE": "set_smartplug_mode",
-    "SERVICE_SET_LIGHT_MODE": "set_light_mode",
-    "SERVICE_SET_SHUTTER_MODE": "set_shutter_mode",
+    "SERVICE_SET_DEVICE_MODE": "set_device_mode"
 }
 
 WISER_BOOST_PRESETS = {

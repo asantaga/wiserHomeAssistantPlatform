@@ -61,30 +61,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     if data.wiserhub.hotwater:
         platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_HOTWATER_MODE"],
-            {
-                vol.Required(ATTR_MODE): vol.In(data.wiserhub.hotwater.available_modes),
-            },
-            "async_set_mode"
-        )
-
-        platform.async_register_entity_service(
             WISER_SERVICES["SERVICE_BOOST_HOTWATER"],
             {
                 vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(int),
             },
             "async_boost"
         )
-
-    if data.wiserhub.devices.smartplugs:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_SET_SMARTPLUG_MODE"],
-            {
-                vol.Required(ATTR_MODE): vol.In(data.wiserhub.devices.smartplugs.available_modes),
-            },
-            "async_set_mode"
-        )
-    
 
 class WiserSelectEntity(SelectEntity):
     def __init__(self, data):
