@@ -1,6 +1,8 @@
 import logging
 from homeassistant.core import callback
 
+from wiserHeatAPIv2.schedule import WiserScheduleTypeEnum
+
 _LOGGER = logging.getLogger(__name__)
 
 class WiserScheduleEntity(object):
@@ -30,6 +32,40 @@ class WiserScheduleEntity(object):
                 )
         except:
             _LOGGER.error(f"Error setting {self._schedule.name} schedule from file {filename}")
+
+    @callback 
+    def assign_schedule(self, to_id: int, to_entity_name: str)-> None:
+        try:
+            if self._schedule:
+                _LOGGER.info(f"Assigning {self._schedule.name} schedule to {to_entity_name}")
+                self.hass.async_add_executor_job(
+                    self._schedule.assign_schedule, to_id
+                )
+                self.hass.async_create_task(
+                    self.async_force_update()
+                )
+            else:
+                _LOGGER.error(f"Error assigning {self._schedule.name} schedule to {to_entity_name}")
+        except:
+            _LOGGER.error(f"Error assigning {self._schedule.name} schedule to {to_entity_name}")
+
+    @callback 
+    def assign_schedule_by_id(self, schedule_id: int, to_id: int, to_entity_name: str)-> None:
+        try:
+            _LOGGER.info(f"Assigning schedule with id {schedule_id} to {to_entity_name}")
+            schedule_type = WiserScheduleTypeEnum(self._schedule.schedule_type)
+            schedule = self._data.wiserhub.schedules.get_by_id(schedule_type, schedule_id)
+            if schedule:
+                self.hass.async_add_executor_job(
+                    schedule.assign_schedule, to_id
+                )
+                self.hass.async_create_task(
+                    self.async_force_update()
+                )
+            else:
+                _LOGGER.error(f"Error assigning schedule to {to_entity_name}. {schedule_type.value} schedule with id {schedule_id} does not exist")
+        except Exception as ex:
+            _LOGGER.error(f"Error assigning schedule with id {schedule_id} to {to_entity_name}")
 
     @callback
     def copy_schedule(self, to_schedule_id: int, to_entity_name: str)-> None:

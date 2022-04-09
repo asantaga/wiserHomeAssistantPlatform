@@ -68,7 +68,8 @@ _LOGGER = logging.getLogger(__name__)
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 ATTR_FILENAME = "filename"
-ATTR_COPYTO_ENTITY_ID = "to_entity_id"
+ATTR_TO_ENTITY_ID = "to_entity_id"
+ATTR_SCHEDULE_ID = "schedule_id"
 CONF_HUB_ID = "wiser_hub_id"
 CONF_ENDPOINT = "wiser_hub_endpoint"
 SERVICE_REMOVE_ORPHANED_ENTRIES = "remove_orphaned_entries"
@@ -91,7 +92,15 @@ SET_SCHEDULE_SCHEMA = vol.Schema(
 COPY_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_COPYTO_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
+    }
+)
+
+ASSIGN_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_SCHEDULE_ID): vol.Coerce(int),
+        vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
     }
 )
 
@@ -232,7 +241,7 @@ async def async_setup_entry(hass, config_entry):
     def copy_schedule(service_call):
         """Handle the service call"""
         entity_id = service_call.data[ATTR_ENTITY_ID]
-        to_entity_ids = service_call.data[ATTR_COPYTO_ENTITY_ID]
+        to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
         for to_entity_id in to_entity_ids:
             from_entity = get_entity_from_entity_id(entity_id)
             to_entity = get_entity_from_entity_id(to_entity_id)
@@ -250,6 +259,54 @@ async def async_setup_entry(hass, config_entry):
                     _LOGGER.error("You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead")
             else:
                 _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
+
+    @callback
+    def assign_schedule(service_call):
+        """Handle the service call"""
+        entity_id = service_call.data.get(ATTR_ENTITY_ID)
+        schedule_id = service_call.data.get(ATTR_SCHEDULE_ID)
+        to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
+
+        if entity_id:
+            for to_entity_id in to_entity_ids:
+                from_entity = get_entity_from_entity_id(entity_id)
+                to_entity = get_entity_from_entity_id(to_entity_id)
+
+                if from_entity and to_entity:
+                    if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
+                        # Get device/room id
+                        if from_entity._schedule.schedule_type == "Heating":
+                            to_id = to_entity._room_id
+                        else:
+                            to_id = to_entity._device_id
+
+                        if hasattr(from_entity, "assign_schedule"):
+                            getattr(from_entity, "assign_schedule")(to_id, to_entity.name)
+                        else:
+                            _LOGGER.error(f"Cannot assign schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
+                    else:
+                        _LOGGER.error("You cannot assign schedules across different Wiser Hubs.  Download form one and upload to the other instead")
+                else:
+                    _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
+        elif schedule_id:
+            for to_entity_id in to_entity_ids:
+                to_entity = get_entity_from_entity_id(to_entity_id)
+                if to_entity:
+                    if hasattr(to_entity, "_room_id"):
+                        to_id = to_entity._room_id
+                    elif hasattr(to_entity, "_device_id"):
+                        to_id = to_entity._device_id
+                    else:
+                        _LOGGER.error("Error")
+
+                    if hasattr(to_entity, "assign_schedule_by_id"):
+                            getattr(to_entity, "assign_schedule_by_id")(schedule_id, to_id, to_entity.name)
+                    else:
+                        _LOGGER.error(f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose")
+
+        else:
+            _LOGGER.error("You must choose either a schedule id or entity for the schedule to assign")
+                
 
     @callback
     def set_device_mode(service_call):
@@ -302,6 +359,13 @@ async def async_setup_entry(hass, config_entry):
         WISER_SERVICES["SERVICE_COPY_SCHEDULE"],
         copy_schedule,
         schema=COPY_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_ASSIGN_SCHEDULE"],
+        assign_schedule,
+        schema=ASSIGN_SCHEDULE_SCHEMA,
     )
 
     hass.services.async_register(

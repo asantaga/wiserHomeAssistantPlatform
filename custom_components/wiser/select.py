@@ -143,6 +143,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         """Initialize the sensor."""
         super().__init__(data)
         self._hotwater = self._data.wiserhub.hotwater
+        self._device_id = self._hotwater.id
         self._options = self._hotwater.available_modes
         self._schedule = self._hotwater.schedule
 
@@ -206,6 +207,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         """Initialize the sensor."""
         self._smartplug_id = smartplug_id
         super().__init__(data)
+        self._device_id = self._smartplug_id
         self._smartplug = self._data.wiserhub.devices.smartplugs.get_by_id(self._smartplug_id)
         self._options = self._smartplug.available_modes
         self._schedule = self._smartplug.schedule
@@ -265,6 +267,7 @@ class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         """Initialize the sensor."""
         self._light_id = light_id
         super().__init__(data)
+        self._device_id = self._light_id
         self._light = self._data.wiserhub.devices.lights.get_by_id(self._light_id)
         self._options = self._light.available_modes
         self._schedule = self._light.schedule
@@ -324,6 +327,7 @@ class WiserShutterModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         """Initialize the sensor."""
         self._shutter_id = shutter_id
         super().__init__(data)
+        self._device_id = self._shutter_id
         self._shutter = self._data.wiserhub.devices.shutters.get_by_id(self._shutter_id)
         self._options = self._shutter.available_modes
         self._schedule = self._shutter.schedule

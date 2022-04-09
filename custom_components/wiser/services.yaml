@@ -139,6 +139,39 @@ copy_schedule:
           - climate
           - select
 
+assign_schedule:
+  name: Assign Schedule
+  description: Assign the schedule to other rooms or devices in the same type
+  fields:
+    entity_id:
+      name: Entity
+      description: A wiser entity
+      required: false
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+    schedule_id:
+      name: Schedule Id
+      description: A wiser schedule id
+      required: false
+      selector:
+        number:
+          mode: box
+    to_entity_id:
+      name: To Entity
+      description: Enter the entity_id for the room or device to assign the same schedule to.
+      required: true
+      example: climate.wiser_kitchen
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+
 get_heating_schedule:
   name: Save Heating Schedule to File (Deprecated)
   description: >
