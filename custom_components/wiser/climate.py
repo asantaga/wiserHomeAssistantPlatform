@@ -334,6 +334,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
 
         # Room can have no schedule
         if self._room.schedule:
+            attrs["schedule_id"] = self._room.schedule.id
+            attrs["schedule_name"] = self._room.schedule.name
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
             attrs["next_day_change"] = str(self._room.schedule.next.day)
             attrs["next_schedule_change"] = str(self._room.schedule.next.time)

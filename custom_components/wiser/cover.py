@@ -183,6 +183,7 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
         # Schedule
         attrs["schedule_id"] = self._shutter.schedule_id        
         if self._shutter.schedule:
+            attrs["schedule_name"] = self._shutter.schedule.name
             attrs["next_day_change"] = str(self._shutter.schedule.next.day)
             attrs["next_schedule_change"] = str(self._shutter.schedule.next.time)
             attrs["next_schedule_state"] = self._shutter.schedule.next.setting    

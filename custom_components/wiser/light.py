@@ -133,6 +133,7 @@ class WiserLight(LightEntity, WiserScheduleEntity):
         #Schedule
         attrs["schedule_id"] = self._light.schedule_id
         if self._light.schedule:
+            attrs["schedule_name"] = self._light.schedule.name
             attrs["next_day_change"] = str(self._light.schedule.next.day)
             attrs["next_schedule_change"] = str(self._light.schedule.next.time)
             attrs["next_schedule_state"] = self._light.schedule.next.setting    
@@ -209,7 +210,7 @@ class WiserDimmableLight(WiserLight):
         attrs["override_level"] = self._light.override_level
         
         #Schedule
-        if self._light.schedule.id:
+        if self._light.schedule:
             del attrs["next_schedule_state"]
             attrs["next_schedule_percentage"] = self._light.schedule.next.setting    
         return attrs
