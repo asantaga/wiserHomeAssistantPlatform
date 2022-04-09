@@ -440,8 +440,9 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
             attrs["room"] = "Unassigned"   
         attrs["away_mode_action"] = self._smartplug.away_mode_action      
         attrs["scheduled_state"] = self._smartplug.scheduled_state
-        #attrs["schedule_id"] = self._smartplug.schedule_id
+        attrs["schedule_id"] = self._smartplug.schedule_id
         if self._smartplug.schedule:
+            attrs["schedule_name"] = self._smartplug.schedule.name
             attrs["next_day_change"] = str(self._smartplug.schedule.next.day)
             attrs["next_schedule_change"] = str(self._smartplug.schedule.next.time)
             attrs["next_schedule_state"] = self._smartplug.schedule.next.setting
