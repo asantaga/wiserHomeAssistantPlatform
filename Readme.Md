@@ -1,4 +1,6 @@
-# Wiser Home Assistant Integration v3.0.24
+# Wiser Home Assistant Integration v3.0.24Beta
+
+**BETA WARNING: this 3.0.24Beta release contains a significant amount of changes to support Lights and Shutters for the European version of the Wiser Hub.  It equally uses v0.0.27 of the WiserHeatAPIv2, which also contains a significant amount fo changes.  It has been tested but may contain some bugs in existing or new functionality.  Use in your live environment at your own risk.**
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
