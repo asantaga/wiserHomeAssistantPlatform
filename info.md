@@ -45,6 +45,7 @@ This integration allows visibility and control of the Drayton Wiser system in Ho
     - Allows setting Window Detection
     - Long Term Stats sensors for Target Temp, Current Temp and Demand
     - Many attributes available
+    - Fires wiser_room_heating_status_changed event when room starts or stops heating
 
 - **Hot Water**
     - Sensor to show if hot water is on or off
@@ -54,8 +55,8 @@ This integration allows visibility and control of the Drayton Wiser system in Ho
     - Button to override hot water
     - Button to cancel hot water overrides
 
-- **iTRV, Roomstat, Heating Actuator, Smart Plug, Lights & Shutter Devices***
-    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Smart Plug, Light & Shutter
+- **iTRV, Roomstat, Heating Actuator, UnderFloorHeating, Smart Plug, Lights & Shutter Devices**
+    - Devices for the HeatHub, each iTRV, Roomstat, Heating Actuator, Under Floor Heating Controller, Smart Plug, Light & Shutter
     - Switches for Device Lock and Identify
     - Sensor for battery (if device is battery powered)
     - Sensor for Zigbee signal
@@ -68,17 +69,14 @@ This integration allows visibility and control of the Drayton Wiser system in Ho
 
 - **Services**
     - Supports standard services for entity types
-      - i.e. climate.set_temperature, climate.set_preset, climate.set_hvac_mode, button.press, select.option, switch.turn_on etc
-    - Following custom services are available for use with automation
+      - i.e. climate.set_temperature, climate.set_preset, climate.set_hvac_mode, button.press, select.option, switch.turn_on, light.turn_on, cover.set_position etc
+    - The following custom services are available for use with automation
     - Service `boost_heating` : Provides ability to boost the heating in a particular room
     - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
-    - Service `get_heating_schedule/set_heating_schedule/copy_heating_schedule`: Provides ability to get/set/copy schedules for rooms
-    - Service `get_onoff_schedule/set_onoff_schedule/copy_onoff_schedule`: Provides ability to get/set/copy schedules hot water and smartplugs
-    - Service `set_smartplug_mode`: Provides ability to set the mode of a specific smartplug. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
-        - NB : Setting the smartplug "state" is done by setting the state of the switch component.
-    - Service `set_hotwater_mode`: Provides ability to set hot water mode to **manual** or **auto**. Valid values include `manual` or `auto` Setting it to auto makes it follow the current schedule
+    - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
+    - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
-    - Service `output_hub_json`: Provides ability to write the json data (anonymised) to files for debug purposes.
+    - Service `output_hub_json`: Provides ability to output hub json to 3 anonymised files to enable easier debugging
 
 
 ## Sample Images
