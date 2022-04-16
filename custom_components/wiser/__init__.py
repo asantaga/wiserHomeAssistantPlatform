@@ -268,45 +268,35 @@ async def async_setup_entry(hass, config_entry):
         to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
 
         if entity_id:
+            # Assign schedule from this entity to another
             for to_entity_id in to_entity_ids:
                 from_entity = get_entity_from_entity_id(entity_id)
                 to_entity = get_entity_from_entity_id(to_entity_id)
 
                 if from_entity and to_entity:
-                    if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
-                        # Get device/room id
-                        if from_entity._schedule.schedule_type == "Heating":
-                            to_id = to_entity._room_id
-                        else:
-                            to_id = to_entity._device_id
-
-                        if hasattr(from_entity, "assign_schedule"):
-                            getattr(from_entity, "assign_schedule")(to_id, to_entity.name)
-                        else:
-                            _LOGGER.error(f"Cannot assign schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
+                    if hasattr(from_entity, "assign_schedule_to_another_entity"):
+                        getattr(from_entity, "assign_schedule_to_another_entity")(to_entity)
                     else:
-                        _LOGGER.error("You cannot assign schedules across different Wiser Hubs.  Download form one and upload to the other instead")
+                        _LOGGER.error(f"Cannot assign schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
                 else:
                     _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
         elif schedule_id:
+            # Assign scheduel with id to this entity
             for to_entity_id in to_entity_ids:
                 to_entity = get_entity_from_entity_id(to_entity_id)
                 if to_entity:
-                    if hasattr(to_entity, "_room_id"):
-                        to_id = to_entity._room_id
-                    elif hasattr(to_entity, "_device_id"):
-                        to_id = to_entity._device_id
-                    else:
-                        _LOGGER.error("Error")
-
                     if hasattr(to_entity, "assign_schedule_by_id"):
-                            getattr(to_entity, "assign_schedule_by_id")(schedule_id, to_id, to_entity.name)
+                        getattr(to_entity, "assign_schedule_by_id")(schedule_id)
                     else:
                         _LOGGER.error(f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose")
-
         else:
-            _LOGGER.error("You must choose either a schedule id or entity for the schedule to assign")
-                
+            # Create default schedule and assign to entity
+            for to_entity_id in to_entity_ids:
+                entity = get_entity_from_entity_id(to_entity_id)
+                if hasattr(entity, "create_schedule"):
+                    getattr(entity, "create_schedule")()
+                else:
+                    _LOGGER.error(f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose")
 
     @callback
     def set_device_mode(service_call):
