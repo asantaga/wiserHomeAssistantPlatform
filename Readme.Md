@@ -503,7 +503,7 @@ From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to di
   ![](docs/networkmap.png)
 
   ***NOTES***
-  1) I have found it is generally better to add this card to a new tab in panel mode so that you can make it nice and big.  The settings above are certainly best suited to panel mode tabs.
+  1) I have found it is generally better to add this card to a new tab in panel or sidebar mode so that you can make it nice and big.  The settings above are certainly best suited to panel or sidebar mode tabs.
   2) As this card is designed to work with zigbee2mqtt, we are using css in the card yaml to hide the refresh button.  This is advisable as a) it doesn't do anything and b) if you don't have mqtt installed it will error.
 
 
