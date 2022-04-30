@@ -475,30 +475,32 @@ Each TRV sensor now has three special network related attributes
 From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to display an image of your Wiser Zigbee network.  The below instructions will help you set it up.
 1) Firstly, install the zigbee2mqtt-networkmap card using HACS
 2) Create a new card in lovelace with the following yaml
-  ```yaml
-  type: custom:zigbee2mqtt-networkmap
-  entity: sensor.wiser_zigbee_network_map
-  node_size: 30
-  font_size: 14
-  link_width: 2
-  height: 800
-  force: 15000
-  css: |
-    .card-actions mwc-button {visibility: hidden}
-    :host {
-      --zigbee2mqtt-networkmap-node-color: #1e8be5;
-      --zigbee2mqtt-networkmap-node-fill-color: #dcfaf3;
-      --zigbee2mqtt-networkmap-node-pinned-color: rgba(190, 56, 93, .6);
-      --zigbee2mqtt-networkmap-link-color: #0047a1;
-      --zigbee2mqtt-networkmap-hover-color: #be385d;
-      --zigbee2mqtt-networkmap-link-selected-color: #1565c0;
-      --zigbee2mqtt-networkmap-label-color: rgba(255, 255, 255, 1);
-      --zigbee2mqtt-networkmap-arrow-color: rgba(18, 120, 98, 0.7);
-      --zigbee2mqtt-networkmap-node-coordinator-color: rgba(255,0,0,0.8);
-      --zigbee2mqtt-networkmap-node-router-color: #00b804;
-    }
-  ```
+    ```yaml
+    type: custom:zigbee2mqtt-networkmap
+    entity: sensor.wiser_zigbee_network_map
+    node_size: 30
+    font_size: 14
+    link_width: 2
+    height: 800
+    force: 15000
+    css: |
+      .card-actions mwc-button {visibility: hidden}
+      :host {
+        --zigbee2mqtt-networkmap-node-color: #1e8be5;
+        --zigbee2mqtt-networkmap-node-fill-color: #dcfaf3;
+        --zigbee2mqtt-networkmap-node-pinned-color: rgba(190, 56, 93, .6);
+        --zigbee2mqtt-networkmap-link-color: #0047a1;
+        --zigbee2mqtt-networkmap-hover-color: #be385d;
+        --zigbee2mqtt-networkmap-link-selected-color: #1565c0;
+        --zigbee2mqtt-networkmap-label-color: rgba(255, 255, 255, 1);
+        --zigbee2mqtt-networkmap-arrow-color: rgba(18, 120, 98, 0.7);
+        --zigbee2mqtt-networkmap-node-coordinator-color: rgba(255,0,0,0.8);
+        --zigbee2mqtt-networkmap-node-router-color: #00b804;
+      }
+    ```
   3) Tweak the settings and css to suit how you want it to look.
+
+  ![](docs/networkmap.png)
 
   ***NOTES***
   1) I have found it is generally better to add this card to a new tab in panel mode so that you can make it nice and big.  The settings above are certainly best suited to panel mode tabs.
