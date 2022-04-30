@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.0.24Beta
+# Wiser Home Assistant Integration v3.0.24-Beta2
 
 **BETA WARNING: this 3.0.24Beta release contains a significant amount of changes to support Lights and Shutters for the European version of the Wiser Hub.  It equally uses v0.0.27 of the WiserHeatAPIv2, which also contains a significant amount fo changes.  It has been tested but may contain some bugs in existing or new functionality.  Use in your live environment at your own risk.**
 
@@ -19,6 +19,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
+- [Network Map](#network-map)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
 - [Contributors](#contributors)
@@ -113,6 +114,9 @@ Mark & Angelo
     - Selector to set mode (Auto, Manual) for Smart Plug
     - Many attributes available
 
+- **Network Map Sensor**
+    - Sensor for use with Zigbee2mqtt Networkmap Card by @azuwis - see XXXX for how to setup
+
 - **Moments**
     - Buttons to activate Moments configured in the Wiser App
 
@@ -143,6 +147,8 @@ Mark & Angelo
 ![](docs/smartplug.PNG)
 
 ![](docs/heatingactuator.PNG)
+
+![](docs/networkmap.png)
 
 
 # Code Installation
@@ -464,6 +470,40 @@ Each TRV sensor now has three special network related attributes
 | `Repeater` | Which actual device is acting as repeater |
 
 
+## Network Map
+
+From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to display an image of your Wiser Zigbee network.  The below instructions will help you set it up.
+1) Firstly, install the zigbee2mqtt-networkmap card using HACS
+2) Create a new card in lovelace with the following yaml
+  ```yaml
+  type: custom:zigbee2mqtt-networkmap
+  entity: sensor.wiser_zigbee_network_map
+  node_size: 30
+  font_size: 14
+  link_width: 2
+  height: 800
+  force: 15000
+  css: |
+    .card-actions mwc-button {visibility: hidden}
+    :host {
+      --zigbee2mqtt-networkmap-node-color: #1e8be5;
+      --zigbee2mqtt-networkmap-node-fill-color: #dcfaf3;
+      --zigbee2mqtt-networkmap-node-pinned-color: rgba(190, 56, 93, .6);
+      --zigbee2mqtt-networkmap-link-color: #0047a1;
+      --zigbee2mqtt-networkmap-hover-color: #be385d;
+      --zigbee2mqtt-networkmap-link-selected-color: #1565c0;
+      --zigbee2mqtt-networkmap-label-color: rgba(255, 255, 255, 1);
+      --zigbee2mqtt-networkmap-arrow-color: rgba(18, 120, 98, 0.7);
+      --zigbee2mqtt-networkmap-node-coordinator-color: rgba(255,0,0,0.8);
+      --zigbee2mqtt-networkmap-node-router-color: #00b804;
+    }
+  ```
+  3) Tweak the settings and css to suit how you want it to look.
+
+  ***NOTES***
+  1) I have found it is generally better to add this card to a new tab in panel mode so that you can make it nice and big.  The settings above are certainly best suited to panel mode tabs.
+  2) As this card is designed to work with zigbee2mqtt, we are using css in the card yaml to hide the refresh button.  This is advisable as a) it doesn't do anything and b) if you don't have mqtt installed it will error.
+
 
 ## Battery Values
 
@@ -509,7 +549,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Bump api to 0.0.27
     * Add shutter, light and dimable light support - thanks @LGO44
     * Add new service to assign schedules to rooms or devices
-    * Add schedule id and name to all schedule capable entities
+    * Add new Wiser Zigbee Network Map sensor to support using the zigbee2mqtt-networkmap card to display zigbee network
     * BREAKING CHANGE: Previously deprecated services for get/set/copy_heating_schedule and get/set/copy_onoff_schedule and set_hotwater_mode and set_smartplug mode have been removed and replaced with get/set/copy_schedule and set_device_mode respectively.
 
 - 3.0.23
