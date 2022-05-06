@@ -6,11 +6,12 @@ from wiserHeatAPIv2.schedule import WiserScheduleTypeEnum
 _LOGGER = logging.getLogger(__name__)
 
 class WiserScheduleEntity(object):
+
     def get_schedule_type(self, expand_level: bool = False):
         """Get scheudle type for entity"""
         schedule_type = WiserScheduleTypeEnum.heating
         if hasattr(self, "_device_id"):
-            if self._data.wiserhub.devices.get_by_id(self._device_id).product_type in ['SmartPlug','OnOffLight']:
+            if self._data.wiserhub.devices.get_by_id(self._device_id).product_type in ['SmartPlug']:
                 schedule_type = WiserScheduleTypeEnum.onoff
             else:
                 if expand_level:
@@ -70,13 +71,13 @@ class WiserScheduleEntity(object):
                             entity_name = self._data.wiserhub.devices.get_by_id(self._device_id).name
                             to_id = to_entity._device_id
 
-                            _LOGGER.info(f"Assigning {entity_name} schedule to {to_entity_name}")
-                            self.hass.async_add_executor_job(
-                                self._schedule.assign_schedule, to_id
-                            )
-                            self.hass.async_create_task(
-                                self.async_force_update()
-                            )
+                        _LOGGER.info(f"Assigning {entity_name} schedule to {to_entity_name}")
+                        self.hass.async_add_executor_job(
+                            self._schedule.assign_schedule, to_id
+                        )
+                        self.hass.async_create_task(
+                            self.async_force_update()
+                        )
                     except Exception as ex:
                         _LOGGER.error(f"Unknown error assigning {entity_name} schedule to {to_entity_name}. {ex}")
                 else:
@@ -139,19 +140,49 @@ class WiserScheduleEntity(object):
 
 
     @callback
-    def copy_schedule(self, to_schedule_id: int, to_entity_name: str)-> None:
-        try:
-            if self._schedule:
-                _LOGGER.info(f"Copying schedule from {self._schedule.name} to {to_entity_name}")
-                self.hass.async_add_executor_job(
-                        self._schedule.copy_schedule, to_schedule_id
-                    )
-                self.hass.async_create_task(
-                    self.async_force_update()
-                )
-        except:
-            _LOGGER.error(f"Error copying schedule from {self._schedule.name} to {to_entity_name}")
-
+    def copy_schedule(self, to_entity)-> None:
+        # Check if from_entity has an assigned schedule
+        if self._schedule:
+            # Check on same hub
+            if self._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
+                # Check to entity is a schedule entity
+                if hasattr(to_entity, "_schedule"):
+                    # Check to entity has a schedule assigned
+                    if to_entity._schedule:
+                        # Check schedules are of the same type
+                        if (
+                            (self._schedule.schedule_type == to_entity._schedule.schedule_type)
+                            and
+                            (getattr(self._schedule,"schedule_level_type", None) == getattr(to_entity._schedule,"schedule_level_type", None))
+                        ):
+                            _LOGGER.info(f"Copying schedule from {self.name} to {to_entity.name}")
+                            try:
+                                if self._schedule:
+                                    self.hass.async_add_executor_job(
+                                            self._schedule.copy_schedule, to_entity._schedule.id
+                                        )
+                                    self.hass.async_create_task(
+                                        self.async_force_update()
+                                    )
+                            except Exception as ex:
+                                _LOGGER.error(f"Unknown error copying schedule from {self.name} to {to_entity.name}: {ex}")
+                        else:
+                            _LOGGER.error(
+                                f"Error copying schedule.  You cannot copy schedules of different types. "
+                                + f"{self.name} is type {self._schedule.schedule_type}"
+                                + f"{' - ' + self._schedule.schedule_level_type if hasattr(self._schedule,'schedule_level_type') else ''}"
+                                + f" and {to_entity.name} is type {to_entity._schedule.schedule_type}"
+                                + f"{' - ' + to_entity._schedule.schedule_level_type if hasattr(to_entity._schedule,'schedule_level_type') else ''}"
+                            )
+                    else:
+                        _LOGGER.error(f"Error copying schedule. {to_entity.name} has no assigned schedule to copy to")
+                else:
+                    _LOGGER.error(f"Cannot copy schedule to entity {to_entity.name}. Please see integration instructions for entities to choose")
+            else:
+                _LOGGER.error("You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead")
+        else:
+            _LOGGER.error(f"Error copying schedule. {self.name} has no schedule assigned to copy")
+        
     @callback
     async def async_advance_schedule(self) -> None:
         """Advance to next schedule setting for room"""

@@ -247,18 +247,14 @@ async def async_setup_entry(hass, config_entry):
             to_entity = get_entity_from_entity_id(to_entity_id)
 
             if from_entity and to_entity:
-                if from_entity._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
-                    if hasattr(to_entity, "_schedule") and to_entity._schedule:
-                        if hasattr(from_entity, "copy_schedule"):
-                            getattr(from_entity, "copy_schedule")(to_entity._schedule.id, to_entity._schedule.name)
-                        else:
-                            _LOGGER.error(f"Cannot copy schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
-                    else:
-                        _LOGGER.error(f"Cannot copy schedule to entity {to_entity_id}.  Please see integration instructions for entities to choose")
+                # Check from entity is a schedule entity
+                if hasattr(from_entity, "copy_schedule"):
+                    getattr(from_entity, "copy_schedule")(to_entity)
                 else:
-                    _LOGGER.error("You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead")
+                    _LOGGER.error(f"Cannot copy schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose")
             else:
-                _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
+                    _LOGGER.error(f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration")
+            return False
 
     @callback
     def assign_schedule(service_call):
