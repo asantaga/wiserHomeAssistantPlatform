@@ -552,6 +552,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Add shutter, light and dimable light support - thanks @LGO44
     * Add new service to assign schedules to rooms or devices
     * Add new Wiser Zigbee Network Map sensor to support using the zigbee2mqtt-networkmap card to display zigbee network
+    * Add opentherm info to heating sensor
     * BREAKING CHANGE: Previously deprecated services for get/set/copy_heating_schedule and get/set/copy_onoff_schedule and set_hotwater_mode and set_smartplug mode have been removed and replaced with get/set/copy_schedule and set_device_mode respectively.
 
 - 3.0.23
