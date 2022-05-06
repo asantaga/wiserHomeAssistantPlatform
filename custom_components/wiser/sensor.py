@@ -425,6 +425,11 @@ class WiserSystemCircuitState(WiserSensor):
             attrs[f"percentage_demand_{heating_channel.name}"] = heating_channel.percentage_demand
             attrs[f"room_ids_{heating_channel.name}"] = heating_channel.room_ids
             attrs[f"is_smartvalve_preventing_demand_{heating_channel.name}"] = heating_channel.is_smart_valve_preventing_demand
+            if self._data.wiserhub.system.opentherm.connection_status == "Connected":
+                opentherm = self._data.wiserhub.system.opentherm
+                attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
+                attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
+                attrs["ch_return_temperature"] = opentherm.ch_return_temperature
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
