@@ -487,7 +487,7 @@ From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to di
       .card-actions mwc-button {visibility: hidden}
       :host {
         --zigbee2mqtt-networkmap-node-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-node-fill-color: var(--card-background-color, --primary-background-color);
+        --zigbee2mqtt-networkmap-node-fill-color: var(--ha-card-background, var(--card-background-color, white));
         --zigbee2mqtt-networkmap-node-pinned-color:var(--primary-color);
         --zigbee2mqtt-networkmap-link-color: var(--dark-primary-color);
         --zigbee2mqtt-networkmap-hover-color: var(--primary-color);
