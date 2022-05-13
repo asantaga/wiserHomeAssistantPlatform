@@ -486,17 +486,16 @@ From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to di
     css: |
       .card-actions mwc-button {visibility: hidden}
       :host {
-        --zigbee2mqtt-networkmap-node-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-node-fill-color: var(--card-background-color, --primary-background-color);
+        --zigbee2mqtt-networkmap-node-fill-color: var(--ha-card-background, var(--card-background-color, white));
         --zigbee2mqtt-networkmap-node-pinned-color:var(--primary-color);
-        --zigbee2mqtt-networkmap-link-color: var(--dark-primary-color);
+        --zigbee2mqtt-networkmap-link-color: var(--primary-color);
         --zigbee2mqtt-networkmap-hover-color: var(--primary-color);
         --zigbee2mqtt-networkmap-link-selected-color:var(--primary-color);
         --zigbee2mqtt-networkmap-label-color: var(--primary-text-color);
         --zigbee2mqtt-networkmap-arrow-color: var(--primary-color);
         --zigbee2mqtt-networkmap-node-coordinator-color: var(--label-badge-red);
         --zigbee2mqtt-networkmap-node-router-color: var(--label-badge-green);
-      }
+  }
 
     ```
   3) Tweak the settings and css to suit how you want it to look.
