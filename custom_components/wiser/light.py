@@ -44,6 +44,8 @@ class WiserLight(LightEntity, WiserScheduleEntity):
         self._data = data
         self._light_id = light_id
         self._light = self._data.wiserhub.devices.lights.get_by_id(light_id)
+        self._device_id = self._light.id
+        self._device_type_id = self._light.device_type_id
         self._schedule = self._light.schedule
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
