@@ -7,6 +7,7 @@ msparker@sky.com
 import asyncio
 from datetime import timedelta, datetime
 import logging
+import json
 import voluptuous as vol
 from wiserHeatAPIv2.wiserhub import (
     TEMP_MINIMUM,
@@ -40,6 +41,8 @@ from homeassistant.helpers.entity_registry import (
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import Throttle
+
+from .websockets import async_register_websockets
 
 from .const import (
     CONF_MOMENTS,
@@ -193,6 +196,8 @@ async def async_setup_entry(hass, config_entry):
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
+
+    await async_register_websockets(hass)
 
     # Initialise global services
     def get_entity_from_entity_id(entity: str):
@@ -556,5 +561,26 @@ class WiserHubHandle:
                     wiserhub.output_raw_hub_data, endpoint, f"{endpoint}-{datetime.now().strftime('%Y%m%d-%H%M%S')}", self._hass.config.config_dir
                 ):
                     _LOGGER.info(f"Written hub {endpoint} data to the wiser_data subdirectory in your config directory")
+    
+    def _remove_schedule_elements(self, schedule_data: dict) -> dict:
+        remove_list = ["Name", "Description", "Type"]
+        for item in remove_list:
+            if item in schedule_data:
+                del schedule_data[item]
+        return schedule_data
 
-            
+    def async_get_schedules(self):
+        """fetch a list of schedules (websocket API hook)"""
+        schedules = []
+        for schedule in self.wiserhub.schedules.all:
+            schedules.append(
+                {
+                    "id": schedule.id,
+                    "name": schedule.name,
+                    "type": schedule.schedule_type,
+                    "level_type": schedule.schedule_level_type if hasattr(schedule, 'schedule_level_type') else None,
+                    "schedule": self._remove_schedule_elements(schedule._convert_from_wiser_schedule(schedule.schedule_data))
+                }
+            )
+                
+        return schedules
