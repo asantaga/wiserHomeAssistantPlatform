@@ -547,7 +547,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.0.24
-    * Bump api to 0.0.27
+    * Bump api to 0.0.31
     * Add shutter, light and dimable light support - thanks @LGO44
     * Add new service to assign schedules to rooms or devices
     * Add new Wiser Zigbee Network Map sensor to support using the zigbee2mqtt-networkmap card to display zigbee network
