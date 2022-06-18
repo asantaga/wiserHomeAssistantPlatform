@@ -40,9 +40,11 @@ from homeassistant.helpers.entity_registry import (
 )
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.loader import Integration, async_get_integration
 from homeassistant.util import Throttle
 
 from .websockets import async_register_websockets
+from .frontend import locate_dir
 
 from .const import (
     CONF_MOMENTS,
@@ -197,7 +199,7 @@ async def async_setup_entry(hass, config_entry):
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    await async_register_websockets(hass)
+    await async_register_websockets(hass, data)
 
     # Initialise global services
     def get_entity_from_entity_id(entity: str):
@@ -383,6 +385,15 @@ async def async_setup_entry(hass, config_entry):
     # Add hub as device
     await data.async_update_device_registry()
 
+    # Register custom cards
+    URL_BASE = "/wiser"
+    url = f"{URL_BASE}/frontend/wiser-schedule-card.js"
+    resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
+    if not resource_loaded:
+    # Custom card - need to remove on uninstall!
+        hass.http.register_static_path(f"{URL_BASE}/frontend", locate_dir(), cache_headers=False)
+        await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
+
     _LOGGER.info("Wiser Component Setup Completed")
 
     return True
@@ -471,11 +482,13 @@ class WiserHubHandle:
         try:
             result = await self._hass.async_add_executor_job(self.wiserhub.read_hub_data)
             if result:
-                _LOGGER.debug(f"Wiser Hub data updated - {self.wiserhub.system.name}")
+                _LOGGER.info(f"Wiser Hub data updated - {self.wiserhub.system.name}")
                 # Send update notice to all components to update
                 self.last_update_time = datetime.now()
                 self.last_update_status = "Success"
                 dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateMessage")
+                # Fire event on successfull update
+                dispatcher_send(self._hass,"wiser_update_received")
                 return True
 
             _LOGGER.error(f"Unable to update from Wiser hub - {self.wiserhub.system.name}")

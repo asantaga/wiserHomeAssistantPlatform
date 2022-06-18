@@ -1,4 +1,6 @@
 import logging
+import enum
+import json
 from homeassistant.core import callback
 
 from wiserHeatAPIv2.schedule import WiserScheduleTypeEnum
@@ -191,3 +193,86 @@ class WiserScheduleEntity(object):
             self._room.schedule_advance
         )
         await self.async_force_update()
+
+
+    def get_ws_schedule(self):
+        days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+        class settingEnum(enum.Enum):
+            heating = "Temp"
+            onoff = "State"
+            level = "Level"
+
+
+        def get_end_time(slot, slots):
+            index = slots.index(slot)
+            if index < len(slots) -1:
+                return slots[index+1].get("Time")
+            return "24:00"
+
+        def get_setting(start_time: str, slots, settings):
+
+            index = slots.index(start_time)
+            return settings[index]
+
+        def get_previous_day(day: str):
+            index = days.index(day)
+            if index == 0:
+                return days[len(days)-1]
+            if index == len(days)-1:
+                return days[0]
+            return days[index - 1]
+
+        def get_prev_day_last_setting(schedule_type, day: str, schedule_data):
+            slots = schedule_data.get(get_previous_day(day))
+            return slots[-1].get(settingEnum[schedule_type.lower()].value)
+
+        def format_slot(schedule_type, day, slot, slots, schedule_data, first_slot):
+            if first_slot:
+                start_time = "00:00"
+                end_time = slot.get('Time')
+                setpoint = get_prev_day_last_setting(schedule_type, day, schedule_data)
+                from_previous_day = True
+            else:
+                start_time = slot.get("Time")
+                end_time = get_end_time(slot, slots)
+                setpoint = slot.get(settingEnum[schedule_type.lower()].value)
+                from_previous_day = False
+            
+            return {
+                    "start": start_time, 
+                    "end": end_time,
+                    "setpoint": setpoint,
+                    "from_previous": from_previous_day
+                }
+
+        def stringTimeToTime(strTime:str) -> int:
+            return int(strTime.replace(':',''))
+
+        #schedule = self._data.wiserhub.schedules.get_by_id(WiserScheduleTypeEnum[self._schedule.schedule_type.lower()], self._schedule.id)
+        schedule = self._schedule
+        schedule_f = schedule._convert_from_wiser_schedule(schedule.schedule_data)
+        output = []
+        for day, slots in schedule_f.items():
+            if day in days:
+                # print(f"Day - {day}, Prev - {get_previous_day(day)}")
+                new_slot = []
+                for slot in slots:
+                    if slots.index(slot) == 0 and stringTimeToTime(slot.get("Time")) > 0:
+                        # If schedule starts after midnight add slot from previous day
+                        new_slot.append(format_slot(self._schedule.schedule_type, day, slot, slots, schedule_f, True))
+                    new_slot.append(format_slot(self._schedule.schedule_type, day, slot, slots, schedule_f, False))
+
+                output.append({"day": day, "slots": new_slot})
+
+
+        end_output = {
+            "id": schedule.id,
+            "name": schedule.name,
+            "type": "Heating",
+            "next": schedule.next._data,
+            "rooms_ids": schedule.room_ids,
+            "room_names": [self._data.wiserhub.rooms.get_by_id(room_id).name for room_id in schedule.room_ids ],
+            "schedule_data": output}
+        return end_output
+
