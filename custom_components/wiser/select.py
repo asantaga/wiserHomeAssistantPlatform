@@ -249,8 +249,9 @@ class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         """Initialize the sensor."""
         self._light_id = light_id
         super().__init__(data)
-        self._device_id = self._light_id
         self._light = self._data.wiserhub.devices.lights.get_by_id(self._light_id)
+        self._device_id = self._light.id
+        self._device_type_id = self._light.device_type_id
         self._options = self._light.available_modes
         self._schedule = self._light.schedule
 
@@ -309,8 +310,9 @@ class WiserShutterModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         """Initialize the sensor."""
         self._shutter_id = shutter_id
         super().__init__(data)
-        self._device_id = self._shutter_id
         self._shutter = self._data.wiserhub.devices.shutters.get_by_id(self._shutter_id)
+        self._device_id = self._shutter.id
+        self._device_type_id = self._shutter.device_type_id
         self._options = self._shutter.available_modes
         self._schedule = self._shutter.schedule
 

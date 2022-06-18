@@ -98,8 +98,9 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "auth_failure"
             except (WiserHubConnectionError, requests.exceptions.ConnectionError):
                 errors["base"] = "timeout_error"
-            except (WiserHubRESTError, RuntimeError, Exception):
+            except (WiserHubRESTError, RuntimeError, Exception) as ex:
                 errors["base"] = "unknown"
+                _LOGGER.debug(ex)
 
             if "base" not in errors:
                 await self.async_set_unique_id(validated["unique_id"])
@@ -156,8 +157,9 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             except (WiserHubConnectionError, requests.exceptions.ConnectionError):
                 _LOGGER.warning("Connection timout error connecting to Wiser Hub")
                 errors["base"] = "timeout_error_discovery"
-            except (WiserHubRESTError, RuntimeError, Exception):
+            except (WiserHubRESTError, RuntimeError, Exception) as ex:
                 _LOGGER.exception("Unknown error connecting to Wiser Hub")
+                _LOGGER.debug(ex)
                 errors["base"] = "unknown"
 
             if "base" not in errors:

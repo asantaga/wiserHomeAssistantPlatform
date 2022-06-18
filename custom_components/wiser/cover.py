@@ -59,6 +59,8 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
         self._data = data
         self._shutter_id = shutter_id
         self._shutter = self._data.wiserhub.devices.shutters.get_by_id(self._shutter_id)
+        self._device_id = self._shutter.id
+        self._device_type_id = self._shutter.device_type_id
         self._schedule = self._shutter.schedule
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 

@@ -8,6 +8,6 @@
   "dependencies": [],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.0.24",
-  "requirements": ["wiserHeatAPIv2==0.0.27"],
+  "requirements": ["wiserHeatAPIv2==0.0.32"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }

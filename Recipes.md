@@ -22,7 +22,7 @@ Thank you to all who have contributed.  Please feel free to send us any more you
 
 * [Interacting with custom schedules using the Lovelace UI by @nofuse](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/interacting_with_custom_schedules.md)
 * [Linking 3rd party TRVs/sensors to Wiser heating by @carloneb](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/linking_3rd_party_sensors_to_wiser_heating.md)
-* [Using external temp sensor to manage room temp accuracy by @msp1974](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/manage_temps.md)
+* [Using external temp sensor to manage room temp accuracy by @msp1974](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/manage_temps_v2.md)
 * [Automatically upload schedule files when changes are made by @msp1974](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/upload_schedules_on_change.md)
 * [Automatically turn off away mode at date/time by @msp1974](https://github.com/asantaga/wiserHomeAssistantPlatform/tree/dev/recipes/turn_off_away_mode_by_datetime.md)
 
