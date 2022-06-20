@@ -27,7 +27,6 @@ async def handle_subscribe_updates(hass, connection, msg):
     @callback
     def async_handle_event_wiser_update():
         """pass data to frontend when backend changes"""
-        _LOGGER.warning(msg)
         connection.send_message(
             {
                 "id": msg["id"],
@@ -106,7 +105,7 @@ async def async_register_websockets(hass, data):
         {
             vol.Required("type"): "{}/schedules".format(const.DOMAIN),
             vol.Optional("hub"): str,
-            vol.Optional("schedule_type"): str
+            vol.Optional("schedule_type"): str,
         }
     )
     @websocket_api.async_response
@@ -115,20 +114,15 @@ async def async_register_websockets(hass, data):
     ) -> None:
         """Publish schedules list data."""
         output = []
-        schedule_type = msg.get("schedule_type")
-        if schedule_type in ['lighting','shutters']: schedule_type = 'level'
+        schedule_type = msg.get("schedule_type","")
         d = get_api_for_hub(msg.get("hub"))
         if d:
-            if schedule_type:
-                schedule_type_enum = WiserScheduleTypeEnum[str(schedule_type).lower()]
-                schedules = d.wiserhub.schedules.get_by_type(schedule_type_enum)
-            else:
-                schedules = d.wiserhub.schedules.all
-            
-            for schedule in schedules:
-                output.append({"id": schedule.id, "type": (schedule.level_type if schedule.schedule_type == 'Level' else schedule.schedule_type), "name": schedule.name})
+            schedules = d.wiserhub.schedules.all
+            for schedule in schedules: 
+                if schedule.schedule_type == schedule_type or not schedule_type:
+                    output.append({"Id": schedule.id, "Type": schedule.schedule_type, "Name": schedule.name, "Assignments": len(schedule.assignment_ids)})
 
-            connection.send_result(msg["id"], sorted(output, key=lambda n: n['name']))
+            connection.send_result(msg["id"], sorted(output, key=lambda n: n['Name']))
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")   
 
@@ -145,10 +139,12 @@ async def async_register_websockets(hass, data):
         hass, connection: ActiveConnection, msg: dict
     ) -> None:
         """Publish supported schedule type list data."""
-        output = ["Heating", "OnOff"]
+        output = ["Heating"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
             for cap, value in d.wiserhub.system.capabilities.all.items():
+                if cap == 'SmartPlug' and value == True:
+                    output.append("OnOff")
                 if cap == 'Light' and value == True:
                     output.append("Lighting")
                 if cap == 'Shutter' and value == True:
@@ -174,14 +170,13 @@ async def async_register_websockets(hass, data):
     ) -> None:
         """Publish schedule data."""
         schedule_type = str(msg.get("schedule_type")).lower()
-        if schedule_type in ['lighting','shutters']: schedule_type = 'level'
         schedule_id = msg.get("schedule_id")
         d = get_api_for_hub(msg.get("hub"))
         if d:
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                schedule = get_ws_schedule(d, schedule_type, schedule)
+                schedule = schedule.ws_schedule_data
                 connection.send_result(msg["id"], schedule)
             else:
                 connection.send_error(msg["id"], "wiser error", f"Unable to get schedule.  Schedule with id {schedule_id} of type {schedule_type} not found")
@@ -207,8 +202,8 @@ async def async_register_websockets(hass, data):
             rooms = d.wiserhub.rooms.all
             room_list = []
             for room in rooms:
-                room_list.append({"id": room.id, "name":room.name})
-            connection.send_result(msg["id"], sorted(room_list, key=lambda n: n['name']))
+                room_list.append({"Id": room.id, "Name":room.name})
+            connection.send_result(msg["id"], sorted(room_list, key=lambda n: n['Name']))
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")    
 
@@ -229,17 +224,20 @@ async def async_register_websockets(hass, data):
         d = get_api_for_hub(msg.get("hub"))
         devices = None
         if d:
-            if msg["device_type"] == 'onoff':
+            if msg["device_type"].lower() == 'onoff':
                 devices = d.wiserhub.devices.smartplugs.all
-            if msg["device_type"] == 'shutters':
+            if msg["device_type"].lower() == 'shutters':
                 devices = d.wiserhub.devices.shutters.all
-            if msg["device_type"] == 'lighting':
+            if msg["device_type"].lower() == 'lighting':
                 devices = d.wiserhub.devices.lights.all
 
             device_list = []
-            for device in devices:
-                device_list.append({"id": device.id, "name":device.name})
-            connection.send_result(msg["id"], sorted(device_list, key=lambda n: n['name']))
+            if devices:
+                for device in devices:
+                    device_list.append({"Id": device.id, "Name":device.name})
+                connection.send_result(msg["id"], sorted(device_list, key=lambda n: n['Name']))
+            else:
+                connection.send_result(msg["id"], [])
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")   
 
@@ -317,7 +315,7 @@ async def async_register_websockets(hass, data):
 
     
 
-     # Delete schedule
+    # Delete schedule
     @websocket_api.websocket_command(
         {
             vol.Required("type"): "{}/schedule/delete".format(const.DOMAIN),
@@ -369,13 +367,14 @@ async def async_register_websockets(hass, data):
         """Save schedule"""
         schedule_type = str(msg.get("schedule_type")).lower()
         schedule_id = msg["schedule_id"]
+        new_schedule = msg["schedule"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
                 await hass.async_add_executor_job(
-                    schedule.delete_schedule
+                    schedule.set_schedule_from_ws_data, new_schedule
                 )
                 await hass.async_create_task(
                     d.async_update(True)
@@ -383,6 +382,42 @@ async def async_register_websockets(hass, data):
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(msg["id"], "wiser error", f"Unable to delete schedule.  Schedule with id {schedule_id} of type {schedule_type} not found")
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+
+
+
+    # Copy schedule
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/schedule/copy".format(const.DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("schedule_type"): str,
+            vol.Required("schedule_id"):int,
+            vol.Required("to_schedule_id"): int
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_copy_schedule(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        schedule_type = str(msg.get("schedule_type")).lower()
+        schedule_id = msg["schedule_id"]
+        to_schedule_id = msg["to_schedule_id"]
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
+            schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
+            if schedule:
+                await hass.async_add_executor_job(
+                    schedule.copy_schedule, to_schedule_id
+                )
+                await hass.async_create_task(
+                    d.async_update(True)
+                )
+                connection.send_result(msg["id"], "success")
+            else:
+                connection.send_error(msg["id"], "wiser error", f"Unable to copy schedule.  Schedule with id {schedule_id} of type {schedule_type} not found")
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
     
@@ -395,123 +430,10 @@ async def async_register_websockets(hass, data):
     hass.components.websocket_api.async_register_command(websocket_assign_schedule)
     hass.components.websocket_api.async_register_command(websocket_create_schedule)
     hass.components.websocket_api.async_register_command(websocket_delete_schedule)
+    hass.components.websocket_api.async_register_command(websocket_save_schedule)
+    hass.components.websocket_api.async_register_command(websocket_copy_schedule)
 
     async_register_command(hass, handle_subscribe_updates)
 
 
-    def get_ws_schedule(data, schedule_type, schedule):
-        DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-
-        class settingEnum(enum.Enum):
-            heating = "Temp"
-            onoff = "State"
-            level = "Level"
-
-
-        def get_end_time(slot, slots):
-            index = slots.index(slot)
-            if index < len(slots) -1:
-                return slots[index+1].get("Time")
-            return "24:00"
-
-        def get_previous_setting(schedule_type, day: str, schedule_data):
-            days = DAYS
-            i = days.index(day)
-            # Reverse week starting from day before day param
-            i = days.index(day)
-            days = days[i:] + days[:i]
-            days.reverse()
-
-            for day in days:
-                slots = schedule_data.get(day)
-                if len(slots) > 0:
-                    return slots[-1].get(settingEnum[schedule_type.lower()].value)
-
-        def format_slot(data, schedule_type, day, slot, slots, schedule_data, first_slot):
-            if first_slot:
-                start_time = "00:00"
-                end_time = slot.get('Time','24:00') 
-                if end_time in ['Sunrise','Sunset']:
-                    end_time = convert_special_time(data, end_time)
-                setpoint = get_previous_setting(schedule_type, day, schedule_data)
-                from_previous_day = True
-            else:
-                start_time = slot.get('Time','00:00') 
-                if start_time in ['Sunrise','Sunset']:
-                    start_time = convert_special_time(data, day)
-                end_time = get_end_time(slot, slots)
-                if end_time in ['Sunrise','Sunset']:
-                    end_time = convert_special_time(data, day)
-                setpoint = slot.get(settingEnum[schedule_type.lower()].value)
-                from_previous_day = False
-            
-            return {
-                    "start": start_time, 
-                    "end": end_time,
-                    "setpoint": setpoint,
-                    "from_previous": from_previous_day
-                }
-
-        def convert_special_time(data, day: str, time: str):
-            if time == "Sunrise":
-                return get_sunrise(data, day)
-            return get_sunset(data, day)
-
-        def get_sunrise(data, day):
-            #TODO: Add by day
-            # Just get first entry for now
-            s = data.wiserhub.system.sunrise_times.get(day)
-            return s
-
-        def get_sunset(data, day):
-            #TODO: Add by day
-            # Just get first entry for now
-            s = data.wiserhub.system.sunset_times.get(day)
-            return s
-
-
-        def stringTimeToTime(strTime:str):
-            strTime = strTime.replace(':','')
-            if strTime in ['Sunrise','Sunset']:
-                return strTime
-            return int(strTime)
-
-        schedule_f = schedule._convert_from_wiser_schedule(schedule.schedule_data, True)
-        output = []
-        for day, slots in schedule_f.items():
-            if day in DAYS:
-                new_slot = []
-                if slots:
-                    for slot in slots:
-                        if slots.index(slot) == 0 and stringTimeToTime(slot.get("Time")):
-                            # If schedule starts after midnight add slot from previous day
-                            new_slot.append(format_slot(data, schedule.schedule_type, day, slot, slots, schedule_f, True))
-                        new_slot.append(format_slot(data, schedule.schedule_type, day, slot, slots, schedule_f, False))
-                else:
-                    #If day has no slots add whole day slot from prev
-                    new_slot.append(format_slot(data, schedule.schedule_type, day, {}, slots, schedule_f, True))
-
-                output.append({"day": day, "slots": new_slot})
-
-        if schedule_type == "heating":
-            end_output = {
-                "id": schedule.id,
-                "name": schedule.name,
-                "type": "Heating",
-                "next": schedule.next._data,
-                "attachment_ids": schedule.room_ids,
-                "attachment_names": [data.wiserhub.rooms.get_by_id(room_id).name for room_id in schedule.room_ids ],
-                "schedule_data": output}
-        else:
-            end_output = {
-                "id": schedule.id,
-                "name": schedule.name,
-                "type": (schedule.level_type if schedule.schedule_type == 'Level' else schedule.schedule_type),
-                "next": schedule.next._data,
-                "attachment_ids": schedule.device_ids,
-                "attachment_names": [data.wiserhub.devices.get_by_id(device_id).name for device_id in schedule.device_ids if schedule.id != 1000 ],
-                "schedule_data": output}
-        return end_output
-
-
-
+    
