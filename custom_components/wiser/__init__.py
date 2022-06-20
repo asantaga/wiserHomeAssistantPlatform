@@ -387,11 +387,14 @@ async def async_setup_entry(hass, config_entry):
 
     # Register custom cards
     URL_BASE = "/wiser"
-    url = f"{URL_BASE}/frontend/wiser-schedule-card.js"
+    url = f"{URL_BASE}/wiser-schedule-card.js"
     resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
     if not resource_loaded:
     # Custom card - need to remove on uninstall!
-        hass.http.register_static_path(f"{URL_BASE}/frontend", locate_dir(), cache_headers=False)
+        hass.http.register_static_path(f"{URL_BASE}", locate_dir(), cache_headers=False)
+        #if "frontend_extra_module_url" not in hass.data:
+        #    hass.data["frontend_extra_module_url"] = set()
+        #hass.data["frontend_extra_module_url"].add(url)
         await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
 
     _LOGGER.info("Wiser Component Setup Completed")
