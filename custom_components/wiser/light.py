@@ -1,5 +1,6 @@
 
 """Support for Wiser lights via Wiser Hub"""
+import asyncio
 import logging
 
 from homeassistant.components.light import (
@@ -49,6 +50,7 @@ class WiserLight(LightEntity, WiserScheduleEntity):
 
     async def async_force_update(self):
         _LOGGER.debug(f"{self._light.name} requested hub update")
+        await asyncio.sleep(2)
         await self._data.async_update(no_throttle=True)
 
     async def async_update(self):
