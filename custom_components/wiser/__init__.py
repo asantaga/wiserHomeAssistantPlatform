@@ -391,7 +391,12 @@ async def async_setup_entry(hass, config_entry):
     resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
     if not resource_loaded:
     # Custom card - need to remove on uninstall!
-        hass.http.register_static_path(f"{URL_BASE}", locate_dir(), cache_headers=False)
+        _LOGGER.warning(hass.config.path("custom_components/wiser/frontend"))
+        hass.http.register_static_path(
+            URL_BASE,
+            hass.config.path("custom_components/wiser/frontend"),
+            cache_headers=False
+        )
         #if "frontend_extra_module_url" not in hass.data:
         #    hass.data["frontend_extra_module_url"] = set()
         #hass.data["frontend_extra_module_url"].add(url)
