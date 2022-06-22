@@ -397,9 +397,6 @@ async def async_setup_entry(hass, config_entry):
             hass.config.path("custom_components/wiser/frontend"),
             cache_headers=False
         )
-        #if "frontend_extra_module_url" not in hass.data:
-        #    hass.data["frontend_extra_module_url"] = set()
-        #hass.data["frontend_extra_module_url"].add(url)
         await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
 
     _LOGGER.info("Wiser Component Setup Completed")
