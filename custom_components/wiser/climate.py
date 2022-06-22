@@ -28,7 +28,8 @@ from homeassistant.util import dt
 
 from wiserHeatAPIv2.wiserhub import (
     TEMP_MINIMUM,
-    TEMP_MAXIMUM
+    TEMP_MAXIMUM,
+    TEMP_OFF
 )
 
 from .const import (
@@ -327,7 +328,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature(self):
         """Return target temp."""
-        if self._room.mode == "Off":
+        if self._room.mode == "Off" or self._room.current_target_temperature == TEMP_OFF:
             return None
         return self._room.current_target_temperature
 

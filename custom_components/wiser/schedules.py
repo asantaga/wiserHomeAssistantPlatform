@@ -61,7 +61,7 @@ class WiserScheduleEntity(object):
                 if (
                     (hasattr(self, "_room_id") and hasattr(to_entity, "_room_id")) 
                     or 
-                    (hasattr(self, "_device_id") and hasattr(to_entity, "_device_id"))
+                    (hasattr(self, "_device_type_id") and hasattr(to_entity, "_device_type_id"))
                 ):
                     try:
                         if hasattr(self, "_room_id"):
@@ -99,7 +99,7 @@ class WiserScheduleEntity(object):
                 to_id.append(self._room_id)
                 _LOGGER.info(f"Assigning {schedule_type.value} schedule with id {schedule_id} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}")
             else:
-                to_id.append(self._device_id)
+                to_id.append(self._device_type_id)
                 _LOGGER.info(f"Assigning {schedule_type.value} schedule with id {schedule_id} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}")
 
             schedule = self._data.wiserhub.schedules.get_by_id(schedule_type, schedule_id)

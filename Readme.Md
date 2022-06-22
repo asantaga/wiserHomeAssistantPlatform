@@ -486,17 +486,16 @@ From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to di
     css: |
       .card-actions mwc-button {visibility: hidden}
       :host {
-        --zigbee2mqtt-networkmap-node-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-node-fill-color: var(--card-background-color, --primary-background-color);
+        --zigbee2mqtt-networkmap-node-fill-color: var(--ha-card-background, var(--card-background-color, white));
         --zigbee2mqtt-networkmap-node-pinned-color:var(--primary-color);
-        --zigbee2mqtt-networkmap-link-color: var(--dark-primary-color);
+        --zigbee2mqtt-networkmap-link-color: var(--primary-color);
         --zigbee2mqtt-networkmap-hover-color: var(--primary-color);
         --zigbee2mqtt-networkmap-link-selected-color:var(--primary-color);
         --zigbee2mqtt-networkmap-label-color: var(--primary-text-color);
         --zigbee2mqtt-networkmap-arrow-color: var(--primary-color);
         --zigbee2mqtt-networkmap-node-coordinator-color: var(--label-badge-red);
         --zigbee2mqtt-networkmap-node-router-color: var(--label-badge-green);
-      }
+  }
 
     ```
   3) Tweak the settings and css to suit how you want it to look.
@@ -554,13 +553,13 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Added websockets functions to support schedule card
     * Addded schedule card to managed schedules - NEED TO ADD DOCUMENTATION!
 - 3.0.24
-    * Bump api to 0.0.27
+    * Bump api to 0.0.32
     * Add shutter, light and dimable light support - thanks @LGO44
     * Add new service to assign schedules to rooms or devices
-    * Add new Wiser Zigbee Network Map sensor to support using the zigbee2mqtt-networkmap card to display zigbee network
     * Add opentherm info to heating sensor
+    * Fixed issue where scheudle setting of off displayed -20C in climate card
+    * Improve debug logging for unknown errors during setup
     * BREAKING CHANGE: Previously deprecated services for get/set/copy_heating_schedule and get/set/copy_onoff_schedule and set_hotwater_mode and set_smartplug mode have been removed and replaced with get/set/copy_schedule and set_device_mode respectively.
-
 - 3.0.23
     * Bump api to 0.0.25
     * Added support for Under Floor Heating controller - issue [#234](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/234)

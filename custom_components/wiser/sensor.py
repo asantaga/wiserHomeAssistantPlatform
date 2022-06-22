@@ -124,11 +124,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 WiserLTSDemandSensor(data, 0, "hotwater")
             )
 
-        #Add sensor for zigbee network card
-        wiser_sensors.append(
-            WiserZigbeeNetworkSensor(data, 0, "Zigbee Network Map")
-        )
-
     async_add_entities(wiser_sensors, True)
 
 
@@ -426,7 +421,7 @@ class WiserSystemCircuitState(WiserSensor):
             attrs[f"room_ids_{heating_channel.name}"] = heating_channel.room_ids
             attrs[f"is_smartvalve_preventing_demand_{heating_channel.name}"] = heating_channel.is_smart_valve_preventing_demand
             if self._data.wiserhub.system.opentherm.connection_status == "Connected":
-                opentherm = self._data.wiserhub.system.opentherm
+                opentherm = self._data.wiserhub.system.opentherm.operational_data
                 attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
                 attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
                 attrs["ch_return_temperature"] = opentherm.ch_return_temperature
@@ -837,45 +832,3 @@ class WiserLTSPowerSensor(WiserSensor):
     def entity_category(self):
         return EntityCategory.DIAGNOSTIC
 
-
-class WiserZigbeeNetworkSensor(WiserSensor):
-    """Sensor for the Wiser Zigbee Network Data"""
-
-    def __init__(self, data, device_id=0, sensor_type=""):
-        """Initialise the operation mode sensor."""
-        super().__init__(data, device_id, sensor_type)
-        self._state = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    async def async_update(self):
-        """Fetch new state data for the sensor."""
-        await super().async_update()
-        self._state = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    @property
-    def icon(self):
-        """Return icon."""
-        return "mdi:lan"
-
-    @property
-    def extra_state_attributes(self):
-        """Return the device state attributes."""
-        attrs = {}
-        links = []
-        nodes = []
-        nodes.append({"friendlyName": self._data.wiserhub.system.name, "ieeeAddr": str(self._data.wiserhub.system.node_id), "type": "Coordinator"})
-        for device in self._data.wiserhub.devices.all:
-            if device.product_type == "SmartPlug":
-                lqi = device.signal.displayed_signal_strength
-            else:
-                lqi = f"{device.signal.displayed_signal_strength} ({device.signal.controller_signal_strength}%)"
-            links.append({"lqi": lqi, "sourceIeeeAddr": str(device.node_id), "targetIeeeAddr": str(device.parent_node_id)})
-
-            # Get room name or Unallocated
-            if self._data.wiserhub.rooms.get_by_device_id(device.id):
-                name = f"{device.name} ({self._data.wiserhub.rooms.get_by_device_id(device.id).name})"
-            else:
-                name = f"{device.name} (Unallocated)"
-            nodes.append({"friendlyName": name, "ieeeAddr": str(device.node_id), "type": "EndDevice" if hasattr(device, "battery") else "Router"})
-        attrs["links"] = links
-        attrs["nodes"] = nodes
-        return attrs
