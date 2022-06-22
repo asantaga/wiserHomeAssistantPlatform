@@ -57,20 +57,19 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     def __init__(self, data, shutter_id):
         """Initialize the sensor."""
         self._data = data
-        self._shutter_id = shutter_id
         self._device_id = shutter_id
-        self._shutter = self._data.wiserhub.devices.shutters.get_by_id(self._shutter_id)
-        self._schedule = self._shutter.schedule
+        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
+        self._schedule = self._device.schedule
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
     async def async_force_update(self):
-        _LOGGER.debug(f"{self._shutter.name} requested hub update")
+        _LOGGER.debug(f"{self._device.name} requested hub update")
         await self._data.async_update(no_throttle=True)
 
     async def async_update(self):
         """Async update method."""
-        self._shutter = self._data.wiserhub.devices.shutters.get_by_id(self._shutter_id)
-        self._schedule = self._shutter.schedule
+        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
+        self._schedule = self._device.schedule
       
     @property
     def supported_features(self):
@@ -81,19 +80,19 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     @property
     def scheduled_position(self):
         """Return scheduled position from data."""
-        return self._shutter.scheduled_lift
+        return self._device.scheduled_lift
 
     @property
     def device_info(self):
         """Return device specific attributes."""
         return {
-                "name": get_device_name(self._data, self._shutter_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.devices.get_by_id(self._shutter_id).model,
-                "serial_number" : self._data.wiserhub.devices.get_by_id(self._shutter_id).serial_number,
-                "product_type": self._shutter.product_type,
-                "product_identifier": self._shutter.product_identifier,
+                "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
+                "serial_number" : self._data.wiserhub.devices.get_by_id(self._device_id).serial_number,
+                "product_type": self._device.product_type,
+                "product_identifier": self._device.product_identifier,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
 
@@ -105,7 +104,7 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device"""
-        return f"{get_device_name(self._data, self._shutter_id)} Control"   
+        return f"{get_device_name(self._data, self._device_id)} Control"   
 
     @property
     def should_poll(self):
@@ -115,24 +114,24 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     @property
     def current_cover_position(self):
         """Return current position from data."""
-        return self._shutter.current_lift
+        return self._device.current_lift
         
     @property
     def is_closed(self):
-        return self._shutter.is_closed
+        return self._device.is_closed
 
     @property
     def is_opening(self):
-        return self._shutter.is_opening
+        return self._device.is_opening
 
     @property
     def is_closing(self):
-        return self._shutter.is_closing
+        return self._device.is_closing
 
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-Wisershutter-{self._shutter_id}-{self.name}"
+        return f"{self._data.wiserhub.system.name}-Wisershutter-{self._device_id}-{self.name}"
 
     @property
     def extra_state_attributes(self):
@@ -140,54 +139,54 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
         # Generic attributes
         attrs = super().state_attributes
         # Shutter Identification
-        attrs["name"] = self._shutter.name
-        attrs["model"] = self._shutter.model
-        attrs["product_type"] = self._shutter.product_type
-        attrs["product_identifier"] = self._shutter.product_identifier
-        attrs["product_model"] = self._shutter.product_model
-        attrs["serial_number"] = self._shutter.serial_number
-        attrs["firmware"] = self._shutter.firmware_version
+        attrs["name"] = self._device.name
+        attrs["model"] = self._device.model
+        attrs["product_type"] = self._device.product_type
+        attrs["product_identifier"] = self._device.product_identifier
+        attrs["product_model"] = self._device.product_model
+        attrs["serial_number"] = self._device.serial_number
+        attrs["firmware"] = self._device.firmware_version
 
         # Room
-        if  self._data.wiserhub.rooms.get_by_id(self._shutter.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._shutter.room_id).name
+        if  self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
         else:
             attrs["room"] = "Unassigned"     
         
         # Settings
-        attrs["shutter_id"] = self._shutter_id
-        attrs["away_mode_action"] = self._shutter.away_mode_action   
-        attrs["mode"] = self._shutter.mode
-        attrs["lift_open_time"] = self._shutter.drive_config.open_time
-        attrs["lift_close_time"] = self._shutter.drive_config.close_time
+        attrs["shutter_id"] = self._device_id
+        attrs["away_mode_action"] = self._device.away_mode_action   
+        attrs["mode"] = self._device.mode
+        attrs["lift_open_time"] = self._device.drive_config.open_time
+        attrs["lift_close_time"] = self._device.drive_config.close_time
         
         # Command state
-        attrs["control_source"] = self._shutter.control_source
+        attrs["control_source"] = self._device.control_source
         
         # Status
-        attrs["is_open"] = self._shutter.is_open
-        attrs["is_closed"] = self._shutter.is_closed
-        if self._shutter.is_open :
+        attrs["is_open"] = self._device.is_open
+        attrs["is_closed"] = self._device.is_closed
+        if self._device.is_open :
             attrs["current_state"] = "Open"
-        elif  self._shutter.is_closed :
+        elif  self._device.is_closed :
             attrs["current_state"] ="Closed"
-        elif (self._shutter.is_open == False and self._shutter.is_closed == False):
+        elif (self._device.is_open == False and self._device.is_closed == False):
             attrs["current_state"] = "Middle" 
-        attrs["lift_movement"] = self._shutter.lift_movement
+        attrs["lift_movement"] = self._device.lift_movement
         
         # Positions
-        attrs["current_lift"] = self._shutter.current_lift
-        attrs["manual_lift"] = self._shutter.manual_lift
-        attrs["target_lift"] = self._shutter.target_lift
-        attrs["scheduled_lift"] = self._shutter.scheduled_lift
+        attrs["current_lift"] = self._device.current_lift
+        attrs["manual_lift"] = self._device.manual_lift
+        attrs["target_lift"] = self._device.target_lift
+        attrs["scheduled_lift"] = self._device.scheduled_lift
         
         # Schedule
-        attrs["schedule_id"] = self._shutter.schedule_id        
-        if self._shutter.schedule:
-            attrs["schedule_name"] = self._shutter.schedule.name
-            attrs["next_day_change"] = str(self._shutter.schedule.next.day)
-            attrs["next_schedule_change"] = str(self._shutter.schedule.next.time)
-            attrs["next_schedule_state"] = self._shutter.schedule.next.setting    
+        attrs["schedule_id"] = self._device.schedule_id        
+        if self._device.schedule:
+            attrs["schedule_name"] = self._device.schedule.name
+            attrs["next_day_change"] = str(self._device.schedule.next.day)
+            attrs["next_schedule_change"] = str(self._device.schedule.next.time)
+            attrs["next_schedule_state"] = self._device.schedule.next.setting    
             
         return attrs
 
@@ -195,21 +194,21 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
         """Move the cover to a specific position."""
         position = kwargs[ATTR_POSITION]
         await self.hass.async_add_executor_job(
-            setattr, self._shutter, "current_lift", position
+            setattr, self._device, "current_lift", position
         )
         await self.async_force_update()
 
     async def async_close_cover(self, **kwargs):
         """Close shutter"""
         await self.hass.async_add_executor_job(
-            self._shutter.close
+            self._device.close
         )              
         await self.async_force_update()
 
     async def async_open_cover(self, **kwargs):
         """Close shutter"""
         await self.hass.async_add_executor_job(
-            self._shutter.open
+            self._device.open
         )
                 
         await self.async_force_update()
@@ -217,7 +216,7 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     async def async_stop_cover(self, **kwargs):
         """Stop shutter"""       
         await self.hass.async_add_executor_job(
-            self._shutter.stop
+            self._device.stop
         )
         await self.async_force_update()
 
