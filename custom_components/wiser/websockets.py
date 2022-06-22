@@ -234,7 +234,7 @@ async def async_register_websockets(hass, data):
             device_list = []
             if devices:
                 for device in devices:
-                    device_list.append({"Id": device.id, "Name":device.name})
+                    device_list.append({"Id": device.device_type_id, "Name":device.name})
                 connection.send_result(msg["id"], sorted(device_list, key=lambda n: n['Name']))
             else:
                 connection.send_result(msg["id"], [])
