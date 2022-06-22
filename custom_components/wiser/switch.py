@@ -380,11 +380,11 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     def __init__(self, data, plugId, name):
         """Initialize the sensor."""
         self._name = name
-        self._smart_plug_id = plugId
+        self._device_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
-        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
-        self._schedule = self._smartplug.schedule
-        self._is_on = self._smartplug.is_on
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._schedule = self._device.schedule
+        self._is_on = self._device.is_on
 
     async def async_force_update(self):
         await asyncio.sleep(2)
@@ -393,34 +393,34 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     async def async_update(self):
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
-        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
-        self._schedule = self._smartplug.schedule
-        self._is_on = self._smartplug.is_on
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._schedule = self._device.schedule
+        self._is_on = self._device.is_on
 
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._smart_plug_id)} Switch"
+        return f"{get_device_name(self._data, self._device_id)} Switch"
     
     @property
     def unique_id(self):
         """Return unique Id."""
         return get_unique_id(
             self._data, 
-            self._smartplug.product_type, 
+            self._device.product_type, 
             self.name,
-            self._smart_plug_id
+            self._device_id
         )
 
     @property
     def device_info(self):
         """Return device specific attributes."""
         return {
-                "name": get_device_name(self._data, self._smart_plug_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._smart_plug_id))},
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "manufacturer": MANUFACTURER,
-                "model": self._smartplug.product_type,
-                "sw_version": self._smartplug.firmware_version,
+                "model": self._device.product_type,
+                "sw_version": self._device.firmware_version,
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
 
@@ -428,30 +428,30 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     def extra_state_attributes(self):
         """Return set of device state attributes."""
         attrs = {}
-        attrs["control_source"] = self._smartplug.control_source
-        attrs["manual_state"] = self._smartplug.manual_state
-        attrs["mode"] = self._smartplug.mode
-        attrs["name"] = self._smartplug.name
-        attrs["output_state"] = "On" if self._smartplug.is_on else "Off"
+        attrs["control_source"] = self._device.control_source
+        attrs["manual_state"] = self._device.manual_state
+        attrs["mode"] = self._device.mode
+        attrs["name"] = self._device.name
+        attrs["output_state"] = "On" if self._device.is_on else "Off"
         # Switches could be not allocated to room (issue:209)
-        if  self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._smartplug.room_id).name
+        if  self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
         else:
             attrs["room"] = "Unassigned"   
-        attrs["away_mode_action"] = self._smartplug.away_mode_action      
-        attrs["scheduled_state"] = self._smartplug.scheduled_state
-        attrs["schedule_id"] = self._smartplug.schedule_id
-        if self._smartplug.schedule:
-            attrs["schedule_name"] = self._smartplug.schedule.name
-            attrs["next_day_change"] = str(self._smartplug.schedule.next.day)
-            attrs["next_schedule_change"] = str(self._smartplug.schedule.next.time)
-            attrs["next_schedule_state"] = self._smartplug.schedule.next.setting
+        attrs["away_mode_action"] = self._device.away_mode_action      
+        attrs["scheduled_state"] = self._device.scheduled_state
+        attrs["schedule_id"] = self._device.schedule_id
+        if self._device.schedule:
+            attrs["schedule_name"] = self._device.schedule.name
+            attrs["next_day_change"] = str(self._device.schedule.next.day)
+            attrs["next_schedule_change"] = str(self._device.schedule.next.time)
+            attrs["next_schedule_state"] = self._device.schedule.next.setting
         return attrs
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self.hass.async_add_executor_job(
-            self._smartplug.turn_on
+            self._device.turn_on
         )
         await self.async_force_update()
         return True
@@ -459,7 +459,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self.hass.async_add_executor_job(
-            self._smartplug.turn_off
+            self._device.turn_off
         )
         await self.async_force_update()
         return True
