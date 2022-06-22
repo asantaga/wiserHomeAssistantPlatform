@@ -5,7 +5,13 @@
   "config_flow": true,
   "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Readme.Md",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
-  "dependencies": [],
+  "dependencies": [
+    "http",
+    "websocket_api",
+    "frontend",
+    "persistent_notification",
+    "lovelace"
+  ],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.0.25",
   "requirements": ["wiserHeatAPIv2==0.0.33"],
