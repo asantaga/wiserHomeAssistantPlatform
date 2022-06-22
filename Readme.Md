@@ -1,4 +1,6 @@
-# Wiser Home Assistant Integration v3.0.24
+# Wiser Home Assistant Integration v3.0.25-Beta
+
+**BETA WARNING: this 3.0.25Beta release contains a significant amount of changes to support our new schedule card.  It equally uses v0.0.33 of the WiserHeatAPIv2, which also contains a significant amount fo changes.  It has been tested but may contain some bugs in existing or new functionality.  Use in your live environment at your own risk.**
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
@@ -544,6 +546,12 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.0.25beta
+    * Bump api to 0.0.33
+    * Fix for battery voltages over 3v show 0%
+    * Added update delay after sending light command to allow time for hub to update new values before reading
+    * Added websockets functions to support schedule card
+    * Addded schedule card to managed schedules - NEED TO ADD DOCUMENTATION!
 - 3.0.24
     * Bump api to 0.0.32
     * Add shutter, light and dimable light support - thanks @LGO44

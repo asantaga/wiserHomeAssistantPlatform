@@ -10,7 +10,7 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 SCHEDULE_CARD_FILENAME = "wiser-schedule-card.js"
 
-VERSION = "3.0.24"
+VERSION = "3.0.25beta"
 WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number", "light", "cover"]
 DATA = "data"
 UPDATE_TRACK = "update_track"
