@@ -55,8 +55,10 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MANUFACTURER,
+    SCHEDULE_CARD_FILENAME,
     UPDATE_LISTENER,
     UPDATE_TRACK,
+    URL_BASE,
     WISER_PLATFORMS,
     WISER_SERVICES
 )
@@ -378,6 +380,18 @@ async def async_setup_entry(hass, config_entry):
     # Add hub as device
     await data.async_update_device_registry()
 
+    # Register custom cards
+    url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
+    hass.http.register_static_path(
+        URL_BASE,
+        hass.config.path("custom_components/wiser/frontend"),
+        cache_headers=False
+    )
+    resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
+    if not resource_loaded:
+        # Custom card - need to remove on uninstall!
+        resource_id = await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
+
     _LOGGER.info("Wiser Component Setup Completed")
 
     return True
@@ -396,6 +410,12 @@ async def async_unload_entry(hass, config_entry):
     :param config_entry:
     :return:
     """
+    # Unload lovelace module resource
+    url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
+    resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
+    for resource in resources:
+        await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
+
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_ORPHANED_ENTRIES)
