@@ -419,8 +419,8 @@ async def async_unload_entry(hass, config_entry):
     """
     # Unload lovelace module resource
     url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
-    resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
-    for resource in resources:
+    wiser_resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
+    for resource in wiser_resources:
         await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
 
     # Deregister services
