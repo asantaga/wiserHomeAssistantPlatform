@@ -436,9 +436,9 @@ const xt={},_t=1,yt=3,wt=4,Et=e=>(...t)=>({_$litDirective$:e,values:t});
                 ${null===(e=this.schedule)||void 0===e?void 0:e.ScheduleData.map((e=>this.renderDay(e)))}
                 <div class="wrapper" style="display:flex; height:28px;">
                     <div class="day  ${this._show_short_days?"short":""}">&nbsp;</div>
-                        <time-bar style="width:100%"
+                        <wiser-time-bar style="width:100%"
                             .hass=${this.hass}
-                            ></time-bar>
+                            ></wiser-time-bar>
                     </div>
                 </div>
             </div>
@@ -524,7 +524,7 @@ const xt={},_t=1,yt=3,wt=4,Et=e=>(...t)=>({_$litDirective$:e,values:t});
                         <div class="day  ${this._show_short_days?"short":""}">&nbsp;</div>
                         <div class="section-header">Temperature</div>
                         <ha-icon-button class="set-off-button" .path=${"M3.28,2L2,3.27L4.77,6.04L5.64,7.39L4.22,9.6L5.95,10.5L7.23,8.5L10.73,12H4A2,2 0 0,0 2,14V22H4V20H18.73L20,21.27V22H22V20.73L22,20.72V20.72L3.28,2M7,17A1,1 0 0,1 6,18A1,1 0 0,1 5,17V15A1,1 0 0,1 6,14A1,1 0 0,1 7,15V17M11,17A1,1 0 0,1 10,18A1,1 0 0,1 9,17V15A1,1 0 0,1 10,14A1,1 0 0,1 11,15V17M15,17A1,1 0 0,1 14,18A1,1 0 0,1 13,17V15C13,14.79 13.08,14.61 13.18,14.45L15,16.27V17M16.25,9.5L17.67,7.3L16.25,5.1L18.25,2L20,2.89L18.56,5.1L20,7.3V7.31L18,10.4L16.25,9.5M22,14V18.18L19,15.18V15A1,1 0 0,0 18,14C17.95,14 17.9,14 17.85,14.03L15.82,12H20C21.11,12 22,12.9 22,14M11.64,7.3L10.22,5.1L12.22,2L13.95,2.89L12.53,5.1L13.95,7.3L13.94,7.31L12.84,9L11.44,7.62L11.64,7.3M7.5,3.69L6.1,2.28L6.22,2.09L7.95,3L7.5,3.69Z"} @click=${()=>this._updateSetPoint("-20")}> </ha-icon-button>
-                        <variable-slider
+                        <wiser-variable-slider
                             min="5"
                             max="30"
                             step="0.5"
@@ -534,7 +534,7 @@ const xt={},_t=1,yt=3,wt=4,Et=e=>(...t)=>({_$litDirective$:e,values:t});
                             .disabled=${-1===this._activeSlot}
                             @value-changed=${e=>{this._updateSetPoint(Number(e.detail.value))}}
                         >
-                        </variable-slider>
+                        </wiser-variable-slider>
                     </div>
                 `:"OnOff"==this.schedule_type?z`
                     <div class="wrapper" style="white-space: normal; height: 36px;">
@@ -559,7 +559,7 @@ const xt={},_t=1,yt=3,wt=4,Et=e=>(...t)=>({_$litDirective$:e,values:t});
                     <div class="wrapper" style="white-space: normal;">
                         <div class="day  ${this._show_short_days?"short":""}">&nbsp;</div>
                         <div class="section-header">Level</div>
-                        <variable-slider
+                        <wiser-variable-slider
                             min="0"
                             max="100"
                             step="1"
@@ -569,7 +569,7 @@ const xt={},_t=1,yt=3,wt=4,Et=e=>(...t)=>({_$litDirective$:e,values:t});
                             .disabled=${-1===this._activeSlot}
                             @value-changed=${e=>{this._updateSetPoint(Number(e.detail.value))}}
                         >
-                        </variable-slider>
+                        </wiser-variable-slider>
                     </div>
                 `:z``}return z``}renderTooltip(e){const t=this.schedule.ScheduleData.filter((e=>e.day==this._activeDay))[0].slots,i=$t(t[e].Time);return z`
           <div class="tooltip-container center">
