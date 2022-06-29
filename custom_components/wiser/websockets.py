@@ -98,6 +98,28 @@ async def async_register_websockets(hass, data):
         connection.send_result(msg["id"], output)
 
 
+    # Get sunrise and sunset times
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/suntimes".format(const.DOMAIN),
+            vol.Optional("hub"): str,
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_get_suntimes(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Publish schedules list data."""
+        output = []
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            sunrises = d.wiserhub.system.sunrise_times
+            sunsets = d.wiserhub.system.sunset_times
+            output.append({"Sunrises": sunrises, "Sunsets": sunsets})
+
+            connection.send_result(msg["id"], output)
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")   
 
 
     # Get schedules list
@@ -422,6 +444,7 @@ async def async_register_websockets(hass, data):
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
     
     hass.components.websocket_api.async_register_command(websocket_get_hubs)
+    hass.components.websocket_api.async_register_command(websocket_get_suntimes)
     hass.components.websocket_api.async_register_command(websocket_get_schedules)
     hass.components.websocket_api.async_register_command(websocket_get_schedule_types)
     hass.components.websocket_api.async_register_command(websocket_get_schedule_by_id)
