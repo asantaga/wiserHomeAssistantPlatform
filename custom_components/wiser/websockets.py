@@ -110,13 +110,16 @@ async def async_register_websockets(hass, data):
         hass, connection: ActiveConnection, msg: dict
     ) -> None:
         """Publish schedules list data."""
-        output = []
         d = get_api_for_hub(msg.get("hub"))
         if d:
-            sunrises = d.wiserhub.system.sunrise_times
-            sunsets = d.wiserhub.system.sunset_times
-            output.append({"Sunrises": sunrises, "Sunsets": sunsets})
+            sunrises = []
+            for key, value in d.wiserhub.system.sunrise_times.items():
+                sunrises.append({"day": key, "time": value})
+            sunsets = []
+            for key, value in d.wiserhub.system.sunset_times.items():
+                sunsets.append({"day": key, "time": value})
 
+            output = {"Sunrises": sunrises, "Sunsets": sunsets}
             connection.send_result(msg["id"], output)
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")   
