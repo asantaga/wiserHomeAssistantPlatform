@@ -306,9 +306,8 @@ async def async_register_websockets(hass, data):
                 )
             connection.send_result(msg["id"], "success")
         else:
-            connection.send_error(msg["id"], "wiser error", "hub not recognised")    
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")  
 
-    
     # Create schedule
     @websocket_api.websocket_command(
         {
@@ -337,8 +336,44 @@ async def async_register_websockets(hass, data):
             connection.send_result(msg["id"], "success")
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")    
+  
 
     
+    # Rename schedule
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/schedule/rename".format(const.DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("schedule_type"): str,
+            vol.Required("schedule_id"): int,
+            vol.Required("schedule_name"):str
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_rename_schedule(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        schedule_type = str(msg.get("schedule_type")).lower()
+        schedule_id = msg.get("schedule_id")
+        name = msg["schedule_name"]
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
+            schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
+            if schedule:
+                await hass.async_add_executor_job(
+                    setattr, schedule, "name", name
+                )
+                await hass.async_create_task(
+                    d.async_update(True)
+                )
+                connection.send_result(msg["id"], "success")
+            else:
+                connection.send_error(msg["id"], "wiser error", f"Unable to rename schedule.  Schedule with id {schedule_id} of type {schedule_type} not found")
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")    
+
+
 
     # Delete schedule
     @websocket_api.websocket_command(
@@ -455,6 +490,7 @@ async def async_register_websockets(hass, data):
     hass.components.websocket_api.async_register_command(websocket_get_devices)
     hass.components.websocket_api.async_register_command(websocket_assign_schedule)
     hass.components.websocket_api.async_register_command(websocket_create_schedule)
+    hass.components.websocket_api.async_register_command(websocket_rename_schedule)
     hass.components.websocket_api.async_register_command(websocket_delete_schedule)
     hass.components.websocket_api.async_register_command(websocket_save_schedule)
     hass.components.websocket_api.async_register_command(websocket_copy_schedule)
