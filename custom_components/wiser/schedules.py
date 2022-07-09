@@ -1,4 +1,6 @@
 import logging
+import enum
+import json
 from homeassistant.core import callback
 
 from wiserHeatAPIv2.schedule import WiserScheduleTypeEnum
@@ -69,7 +71,7 @@ class WiserScheduleEntity(object):
                         else:
                             to_entity_name = to_entity._data.wiserhub.devices.get_by_id(to_entity._device_id).name
                             entity_name = self._data.wiserhub.devices.get_by_id(self._device_id).name
-                            to_id = to_entity._device_type_id
+                            to_id = to_entity._device.device_type_id
 
                         _LOGGER.info(f"Assigning {entity_name} schedule to {to_entity_name}")
                         self.hass.async_add_executor_job(
@@ -191,3 +193,5 @@ class WiserScheduleEntity(object):
             self._room.schedule_advance
         )
         await self.async_force_update()
+
+

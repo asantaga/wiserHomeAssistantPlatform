@@ -30,23 +30,15 @@ class WiserAwayModeTempNumber(NumberEntity):
         """Initialize the sensor."""
         self._data = data
         self._name = name
+        self._attr_native_min_value = TEMP_MINIMUM
+        self._attr_native_max_value = TEMP_MAXIMUM
         _LOGGER.info(f"Away Mode target temperature initalise")
 
     async def async_force_update(self):
         await self._data.async_update(no_throttle=True)
 
     @property
-    def min_value(self) -> float:
-        """Return the minimum value."""
-        return TEMP_MINIMUM
-
-    @property
-    def max_value(self) -> float:
-        """Return the maximum value."""
-        return TEMP_MAXIMUM
-
-    @property
-    def step(self) -> float:
+    def native_step(self) -> float:
         return 0.5
 
     @property
@@ -82,7 +74,7 @@ class WiserAwayModeTempNumber(NumberEntity):
             }
 
     @property
-    def value(self) -> float:
+    def native_value(self) -> float:
         """Return the entity value to represent the entity state."""
         return self._data.wiserhub.system.away_mode_target_temperature
 
@@ -92,7 +84,7 @@ class WiserAwayModeTempNumber(NumberEntity):
         self._data.wiserhub.system.away_mode_target_temperature = value
         self.hass.async_create_task(self.async_force_update())
 
-    async def async_set_value(self, value: float) -> None:
+    async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
         await self.hass.async_add_executor_job(self.set_value, value)
 

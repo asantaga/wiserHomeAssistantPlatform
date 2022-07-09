@@ -1,5 +1,5 @@
 {
     "name": "Drayton Wiser Integration for Home Assistant",
-    "homeassistant": "2021.12",
-    "render_readme": false
+    "homeassistant": "2022.06",
+    "render_readme": true
 }
