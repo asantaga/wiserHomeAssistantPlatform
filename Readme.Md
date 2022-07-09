@@ -464,6 +464,9 @@ It is very simple to use/add the card.  If you go to add a card to your dashboar
 
 Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!
 
+
+![](docs/schedule-card.PNG)
+
 [Video](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
 
 We hope you enjoy it and find it useful in managing your Wiser environment via HA.
