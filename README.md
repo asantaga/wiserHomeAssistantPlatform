@@ -454,18 +454,24 @@ In order to create these files do the following:
 
 ## Schedule Card
 
-This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could enhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
+This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could exhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
 
 So, it has been on our request list since early 2021 to be able to manage schedules via HA.  Well, as HA lacks any inbuilt way to do this, we have had to build our own.  I would like to give a shout out to @neilsfaber who writes the amazing scheduler-card integration and card for HA where we have used his code to learn how to do this, and copied some of his ideas/code.
 
 It is very simple to use/add the card.  If you go to add a card to your dashboard, you will now see the Wiser Schedule Card in the list.  Just add like any other card.
 
-Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!
+***NOTE:*** If you use YAML mode for your Lovelace Dashboards, you will need to add the resource entry manually as below:
+```
+    - url: /wiser/wiser-schedule-card.js
+      type: module
+```
+
+Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!  Link below the images.
 
 
 ![](docs/schedule-card.PNG)
 
-[Video](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
+[**Link to Overview Video**](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
 
 We hope you enjoy it and find it useful in managing your Wiser environment via HA.
 ## Network Topology
