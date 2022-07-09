@@ -13,7 +13,7 @@ For more information checkout the AMAZING community thread available on https://
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
-- [Updating to v3.1 from v2.x](#updating-to-v30-from-v2.x---important-please-read)
+- [Updating to v3.x from v2.x](#updating-to-v30-from-v2.x---important-please-read)
 - [Issues & Questions](#issues-and-questions)
 - [Functionality of this Integration](#functionality)
 - [Installing](#code-installation)
@@ -32,7 +32,7 @@ For more information checkout the AMAZING community thread available on https://
 
 Requires a minimum of HA 2022.06.
 
-## Updating to v3.1 from v2.x - IMPORTANT PLEASE READ!
+## Updating to v3.x from v2.x - IMPORTANT PLEASE READ!
 
 Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
 
@@ -113,9 +113,6 @@ Mark & Angelo
     - Selector to set mode (Auto, Manual) for Smart Plug
     - Many attributes available
 
-- **Network Map Sensor**
-    - Sensor for use with Zigbee2mqtt Networkmap Card by @azuwis - see XXXX for how to setup
-
 - **Moments**
     - Buttons to activate Moments configured in the Wiser App
 
@@ -130,7 +127,8 @@ Mark & Angelo
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
     - Service `output_hub_json`: Provides ability to output hub json to 3 anonymised files to enable easier debugging
 
-
+- **UI Cards**
+  - Schedule Card to add, edit, delete and rename schedules
 ## Sample Images
 
 ![](docs/screenshot.PNG)
@@ -146,8 +144,6 @@ Mark & Angelo
 ![](docs/smartplug.PNG)
 
 ![](docs/heatingactuator.PNG)
-
-![](docs/networkmap.png)
 
 
 # Code Installation
