@@ -8,7 +8,7 @@ For more information checkout the AMAZING community thread available on https://
 
 ---
 ## What's New?
-- The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See xxxx for how to setup and use.
+- The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
 
 ## Contents
 
@@ -20,7 +20,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
-- [Schedule Card] (#schedule-card)
+- [Schedule Card](#schedule-card)
 - [Network Map](#network-map)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
@@ -459,8 +459,8 @@ In order to create these files do the following:
 This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could enhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
 
 So, it has been on our request list since early 2021 to be able to manage schedules via HA.  Well, as HA lacks any inbuilt way to do this, we have had to build our own.  I would like to give a shout out to @neilsfaber who writes the amazing scheduler-card integration and card for HA where we have used his code to learn how to do this, and copied some of his ideas/code.
-# How To Add
-This is very simple.  If you go to add a card to your dashboard, you will now see the Wiser Schedule Card in the list.  Just add like any other card.
+
+It is very simple to use/add the card.  If you go to add a card to your dashboard, you will now see the Wiser Schedule Card in the list.  Just add like any other card.
 
 Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!
 
