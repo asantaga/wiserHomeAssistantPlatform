@@ -1,6 +1,4 @@
-# Wiser Home Assistant Integration v3.0.25-Beta
-
-**BETA WARNING: this 3.0.25Beta release contains a significant amount of changes to support our new schedule card.  It equally uses v0.0.33 of the WiserHeatAPIv2, which also contains a significant amount fo changes.  It has been tested but may contain some bugs in existing or new functionality.  Use in your live environment at your own risk.**
+# Wiser Home Assistant Integration v3.1.0
 
 This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
@@ -9,16 +7,20 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 For more information checkout the AMAZING community thread available on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
 
 ---
+## What's New?
+- The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See xxxx for how to setup and use.
+
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
-- [Updating to v3.0 from v2.x](#updating-to-v30-from-v2.x---important-please-read)
+- [Updating to v3.1 from v2.x](#updating-to-v30-from-v2.x---important-please-read)
 - [Issues & Questions](#issues-and-questions)
 - [Functionality of this Integration](#functionality)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
+- [Schedule Card] (#schedule-card)
 - [Network Map](#network-map)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
@@ -28,11 +30,9 @@ For more information checkout the AMAZING community thread available on https://
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2021.12.  This is needed to support the new button functionality and changes to config flow.
-Requires the new WiserHeatAPIv2 api.
+Requires a minimum of HA 2022.06.
 
-
-## Updating to v3.0 from v2.x - IMPORTANT PLEASE READ!
+## Updating to v3.1 from v2.x - IMPORTANT PLEASE READ!
 
 Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
 
@@ -70,8 +70,7 @@ Mark & Angelo
 - Support for hub discovery and UI config.  No YAML editing.
 
 - Support for multiple hubs
-- Support for Wiser Hub, iTRVs, Roomstats, Heating Actuators and SmartPlugs
-- Basic sensor support for Dimmable Lights and Shutters
+- Support for Wiser Hub, iTRVs, Roomstats, Heating Actuators, SmartPlugs, Lights and Blinds
 
 - **Hub (System) Device**
     - Various switches to control hub settings (Away Mode, Comfort Mode, Daylight Saving, Eco Mode, Valve Protection)
@@ -455,7 +454,19 @@ In order to create these files do the following:
 4) Select Call Service
 5) This will output 3 files - domain.json, schedule.json, network.json in a directory wiser_data in your config directory.  These can be uploaded to an issue on github.
 
+## Schedule Card
 
+This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could enhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
+
+So, it has been on our request list since early 2021 to be able to manage schedules via HA.  Well, as HA lacks any inbuilt way to do this, we have had to build our own.  I would like to give a shout out to @neilsfaber who writes the amazing scheduler-card integration and card for HA where we have used his code to learn how to do this, and copied some of his ideas/code.
+# How To Add
+This is very simple.  If you go to add a card to your dashboard, you will now see the Wiser Schedule Card in the list.  Just add like any other card.
+
+Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!
+
+[Video](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
+
+We hope you enjoy it and find it useful in managing your Wiser environment via HA.
 ## Network Topology
 
 With V1.9 for TRVs you can now determine if the TRV is connected to the heathub directly or via a smartplug repeater. 
@@ -472,38 +483,7 @@ Each TRV sensor now has three special network related attributes
 
 ## Network Map
 
-From v3.0.24, you can now use the zigbee2mqtt-networkmap card from @azuwis to display an image of your Wiser Zigbee network.  The below instructions will help you set it up.
-1) Firstly, install the zigbee2mqtt-networkmap card using HACS
-2) Create a new card in lovelace with the following yaml
-    ```yaml
-    type: custom:zigbee2mqtt-networkmap
-    entity: sensor.wiser_zigbee_network_map
-    node_size: 24
-    font_size: 10
-    link_width: 2
-    height: 500
-    force: 5000
-    css: |
-      .card-actions mwc-button {visibility: hidden}
-      :host {
-        --zigbee2mqtt-networkmap-node-fill-color: var(--ha-card-background, var(--card-background-color, white));
-        --zigbee2mqtt-networkmap-node-pinned-color:var(--primary-color);
-        --zigbee2mqtt-networkmap-link-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-hover-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-link-selected-color:var(--primary-color);
-        --zigbee2mqtt-networkmap-label-color: var(--primary-text-color);
-        --zigbee2mqtt-networkmap-arrow-color: var(--primary-color);
-        --zigbee2mqtt-networkmap-node-coordinator-color: var(--label-badge-red);
-        --zigbee2mqtt-networkmap-node-router-color: var(--label-badge-green);
-  }
-
-    ```
-  3) Tweak the settings and css to suit how you want it to look.
-
-  ![](docs/networkmap.png)
-
-  ***NOTES***
-  1) As this card is designed to work with zigbee2mqtt, we are using css in the card yaml to hide the refresh button.  This is advisable as a) it doesn't do anything and b) if you don't have mqtt installed it will error.
+This was removed from 3.0.24 just before release as it caused some spamming of the HA logs.  It will return in 3.1.x as a dedicated Wiser Zigbee network map card.
 
 
 ## Battery Values
@@ -546,12 +526,13 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
-- 3.0.25beta
-    * Bump api to 0.0.33
+- 3.1.0
+    * Bump api to 0.0.37
     * Fix for battery voltages over 3v show 0%
     * Added update delay after sending light command to allow time for hub to update new values before reading
     * Added websockets functions to support schedule card
-    * Addded schedule card to managed schedules - NEED TO ADD DOCUMENTATION!
+    * Addded schedule card to managed schedules
+    * Fixed deprecation functions warning for number entity
 - 3.0.24
     * Bump api to 0.0.32
     * Add shutter, light and dimable light support - thanks @LGO44
