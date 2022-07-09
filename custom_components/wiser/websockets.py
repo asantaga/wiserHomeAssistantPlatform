@@ -480,6 +480,55 @@ async def async_register_websockets(hass, data):
                 connection.send_error(msg["id"], "wiser error", f"Unable to copy schedule.  Schedule with id {schedule_id} of type {schedule_type} not found")
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
+
+
+    # Get zigbee data
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/zigbee".format(const.DOMAIN),
+            vol.Optional("hub"): str,
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_get_zigbee_data(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Publish devices zigbee data."""
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            nodes = []
+            edges = []
+
+            # Add controller
+            nodes.append({
+                "id": 0, 
+                "label": d.wiserhub.system.name, 
+                "group": "Controller", 
+                "shape": "box"
+            })
+
+            for device in d.wiserhub.devices.all:
+                nodes.append({
+                    "id": device.node_id, 
+                    "label": f"{device.name}\n({d.wiserhub.rooms.get_by_device_id(device.id).name})",
+                    "group": device.product_type, 
+                    "shape": "box"
+                })
+
+                if device.product_type in ["SmartPlug","HeatingActuator"]:
+                        lqi = device.signal.displayed_signal_strength
+                else:
+                    lqi = f"{device.signal.displayed_signal_strength} ({device.signal.controller_signal_strength}%)"
+
+                edges.append({
+                    "from": device.node_id,
+                    "to": device.parent_node_id,
+                    "label": lqi
+                })
+                    
+            connection.send_result(msg["id"], {"nodes": nodes, "edges": edges})
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")   
     
     hass.components.websocket_api.async_register_command(websocket_get_hubs)
     hass.components.websocket_api.async_register_command(websocket_get_suntimes)
@@ -494,6 +543,7 @@ async def async_register_websockets(hass, data):
     hass.components.websocket_api.async_register_command(websocket_delete_schedule)
     hass.components.websocket_api.async_register_command(websocket_save_schedule)
     hass.components.websocket_api.async_register_command(websocket_copy_schedule)
+    hass.components.websocket_api.async_register_command(websocket_get_zigbee_data)
 
     async_register_command(hass, handle_subscribe_updates)
 
