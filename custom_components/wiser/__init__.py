@@ -394,7 +394,6 @@ async def async_setup_entry(hass, config_entry):
         hass.config.path("custom_components/wiser/frontend"),
         cache_headers=False
     )
-    _LOGGER.warning(hass.data['lovelace'])
     resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
     if not resource_loaded and hass.data['lovelace']['mode'] == "storage":
         resource_id = await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
