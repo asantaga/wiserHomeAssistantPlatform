@@ -20,8 +20,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_numbers = []
 
     _LOGGER.debug("Setting up Away Mode setpoint setter")
+    #Dodgy fix for HA core issue #74883
     wiser_numbers.extend([WiserAwayModeTempNumber(data, "Away Mode Target Temperature")])
-
     async_add_entities(wiser_numbers)
 
 
@@ -30,15 +30,25 @@ class WiserAwayModeTempNumber(NumberEntity):
         """Initialize the sensor."""
         self._data = data
         self._name = name
-        self._attr_native_min_value = TEMP_MINIMUM
-        self._attr_native_max_value = TEMP_MAXIMUM
+        self._value = self._data.wiserhub.system.away_mode_target_temperature
         _LOGGER.info(f"Away Mode target temperature initalise")
 
     async def async_force_update(self):
         await self._data.async_update(no_throttle=True)
+        self._value = self._data.wiserhub.system.away_mode_target_temperature
 
     @property
-    def native_step(self) -> float:
+    def min_value(self) -> float:
+        """Return the minimum value."""
+        return TEMP_MINIMUM
+
+    @property
+    def max_value(self) -> float:
+        """Return the maximum value."""
+        return TEMP_MAXIMUM
+
+    @property
+    def step(self) -> float:
         return 0.5
 
     @property
@@ -74,9 +84,9 @@ class WiserAwayModeTempNumber(NumberEntity):
             }
 
     @property
-    def native_value(self) -> float:
+    def value(self) -> float:
         """Return the entity value to represent the entity state."""
-        return self._data.wiserhub.system.away_mode_target_temperature
+        return self._value
 
     def set_value(self, value: float) -> None:
         """Set new value."""
@@ -84,7 +94,7 @@ class WiserAwayModeTempNumber(NumberEntity):
         self._data.wiserhub.system.away_mode_target_temperature = value
         self.hass.async_create_task(self.async_force_update())
 
-    async def async_set_native_value(self, value: float) -> None:
+    async def async_set_value(self, value: float) -> None:
         """Set new value."""
         await self.hass.async_add_executor_job(self.set_value, value)
 
