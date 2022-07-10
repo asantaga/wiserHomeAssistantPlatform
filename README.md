@@ -548,6 +548,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Reverted changes to number entity as no compatible way to support 2022.6 and 2022.7.  Will log deprecation warnings until HA provide a fix - think better than not working!
     * Added fix to error installing schedule-card when Lovelace in YAML storage mode.  Need to add manually - see documentation.
     * Added websocket service for zigbee network card
+    * Added new Zigbee Network Card
 - 3.1.0
     * Bump api to 0.0.37
     * Fix for battery voltages over 3v show 0%
