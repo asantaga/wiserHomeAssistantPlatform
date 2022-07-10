@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.0
+# Wiser Home Assistant Integration v3.1.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -9,8 +9,13 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 For more information checkout the AMAZING community thread available on https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965
 
 ---
-## What's New?
+## What's New in 3.1?
 - The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
+- The Wiser Zigbee Network Card to view the status and connections of your wiser zigbee devices.
+
+  ***NOTES***: 
+  - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
+  - If you run Lovelace in YAML mode, you will need to add the js file resources manually.  See each cards documentation.
 
 ## Contents
 
@@ -23,7 +28,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
 - [Schedule Card](#schedule-card)
-- [Network Map](#network-map)
+- [Zigbee Network Card](#zigbee-network-map)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
 - [Contributors](#contributors)
@@ -454,18 +459,24 @@ In order to create these files do the following:
 
 ## Schedule Card
 
-This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could enhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
+This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could exhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
 
 So, it has been on our request list since early 2021 to be able to manage schedules via HA.  Well, as HA lacks any inbuilt way to do this, we have had to build our own.  I would like to give a shout out to @neilsfaber who writes the amazing scheduler-card integration and card for HA where we have used his code to learn how to do this, and copied some of his ideas/code.
 
 It is very simple to use/add the card.  If you go to add a card to your dashboard, you will now see the Wiser Schedule Card in the list.  Just add like any other card.
 
-Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!
+***NOTE:*** If you use YAML mode for your Lovelace Dashboards, you will need to add the resource entry manually as below:
+```
+    - url: /wiser/wiser-schedule-card.js
+      type: module
+```
+
+Instead of lots of words about how to use this card, we thought best to do a short video which may lack Tarantino quality directorship but should get the point across!  Link below the images.
 
 
 ![](docs/schedule-card.PNG)
 
-[Video](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
+[**Link to Overview Video**](https://www.loom.com/share/6c85291deee94d709f36515be8fc1763)
 
 We hope you enjoy it and find it useful in managing your Wiser environment via HA.
 ## Network Topology
@@ -482,9 +493,15 @@ Each TRV sensor now has three special network related attributes
 | `Repeater` | Which actual device is acting as repeater |
 
 
-## Network Map
+## Zigbee Network Map Card
 
-This was removed from 3.0.24 just before release as it caused some spamming of the HA logs.  It will return in 3.1.x as a dedicated Wiser Zigbee network map card.
+New in v3.1.1 is the zigbee network map card.  Add via the Add Card action in Lovelace.
+
+***NOTE:*** If you use YAML mode for your Lovelace Dashboards, you will need to add the resource entry manually as below:
+```
+    - url: /wiser/wiser-zigbee-card.js
+      type: module
+```
 
 
 ## Battery Values
@@ -527,6 +544,11 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.1
+    * Reverted changes to number entity as no compatible way to support 2022.6 and 2022.7.  Will log deprecation warnings until HA provide a fix - think better than not working!
+    * Added fix to error installing schedule-card when Lovelace in YAML storage mode.  Need to add manually - see documentation.
+    * Added websocket service for zigbee network card
+    * Added new Zigbee Network Card
 - 3.1.0
     * Bump api to 0.0.37
     * Fix for battery voltages over 3v show 0%

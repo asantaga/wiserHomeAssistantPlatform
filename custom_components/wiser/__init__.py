@@ -60,7 +60,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MANUFACTURER,
-    SCHEDULE_CARD_FILENAME,
+    WISER_CARD_FILENAMES,
     UPDATE_LISTENER,
     UPDATE_TRACK,
     URL_BASE,
@@ -388,16 +388,19 @@ async def async_setup_entry(hass, config_entry):
     await data.async_update_device_registry()
 
     # Register custom cards
-    url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
     hass.http.register_static_path(
         URL_BASE,
         hass.config.path("custom_components/wiser/frontend"),
         cache_headers=False
     )
-    resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
-    if not resource_loaded:
-        # Custom card - need to remove on uninstall!
-        resource_id = await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
+
+    # Auto add resources if Lovelace in storage mode.  Need to add manually if in YAML mode
+    if hass.data['lovelace']['mode'] == "storage":
+        for card_filename in WISER_CARD_FILENAMES:
+            url = f"{URL_BASE}/{card_filename}"
+            resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
+            if not resource_loaded:
+                resource_id = await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
 
     _LOGGER.info("Wiser Component Setup Completed")
 
@@ -419,9 +422,10 @@ async def async_unload_entry(hass, config_entry):
     """
     # Unload lovelace module resource
     url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
-    wiser_resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
-    for resource in wiser_resources:
-        await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
+    if hass.data['lovelace']['mode'] == "storage":
+        wiser_resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
+        for resource in wiser_resources:
+            await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
 
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
