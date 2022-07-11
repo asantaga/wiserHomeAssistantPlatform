@@ -405,11 +405,12 @@ async def async_unload_entry(hass, config_entry):
     :return:
     """
     # Unload lovelace module resource
-    url = f"{URL_BASE}/{SCHEDULE_CARD_FILENAME}"
     if hass.data['lovelace']['mode'] == "storage":
-        wiser_resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
-        for resource in wiser_resources:
-            await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
+        for card_filename in WISER_CARD_FILENAMES:
+            url = f"{URL_BASE}/{card_filename}"
+            wiser_resources = [resource for resource in hass.data['lovelace']["resources"].async_items() if resource["url"] == url]
+            for resource in wiser_resources:
+                await hass.data['lovelace']["resources"].async_delete_item(resource.get("id"))
 
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
