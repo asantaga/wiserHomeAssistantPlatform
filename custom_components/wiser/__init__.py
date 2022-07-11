@@ -40,11 +40,9 @@ from homeassistant.helpers.entity_registry import (
 )
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.loader import Integration, async_get_integration
 from homeassistant.util import Throttle
 
 from .websockets import async_register_websockets
-from .frontend import locate_dir
 
 from .const import (
     CONF_MOMENTS,
@@ -328,13 +326,6 @@ async def async_setup_entry(hass, config_entry):
                 data.async_remove_orphaned_entries(entry_id, service.data[CONF_HUB_ID])
             )
 
-    @callback
-    def output_hub_json(service):
-        for entry_id in hass.data[DOMAIN]:
-            hass.async_create_task(
-                data.async_output_hub_json(entry_id, service.data[CONF_HUB_ID])
-            )
-
     hass.services.async_register(
         DOMAIN,
         WISER_SERVICES["SERVICE_GET_SCHEDULE"],
@@ -375,13 +366,6 @@ async def async_setup_entry(hass, config_entry):
         SERVICE_REMOVE_ORPHANED_ENTRIES,
         remove_orphaned_entries_service,
         schema=SELECT_HUB_SCHEMA,
-    )
-
-    hass.services.async_register (
-        DOMAIN,
-        SERVICE_OUTPUT_HUB_JSON,
-        output_hub_json,
-        schema=SELECT_HUB_SCHEMA
     )
 
     # Add hub as device
@@ -430,7 +414,7 @@ async def async_unload_entry(hass, config_entry):
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_ORPHANED_ENTRIES)
-    hass.services.async_remove(DOMAIN, SERVICE_OUTPUT_HUB_JSON)
+
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_GET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_SET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_COPY_SCHEDULE"])
@@ -575,40 +559,3 @@ class WiserHubHandle:
                 ):
                     _LOGGER.info(f"Removed {device_id}")
                     device_registry.async_remove_device(device_id)
-
-    @callback
-    async def async_output_hub_json(self, entry_id, wiser_hub_id: str):
-        """Output hub jsondata from endpoint"""
-        api = self._hass.data[DOMAIN][entry_id]["data"]
-        wiserhub = api.wiserhub
-
-        if wiserhub.system.name == wiser_hub_id:
-            _LOGGER.info(f"Outputing json data from {wiser_hub_id}")
-            for endpoint in ['domain','network','schedules']:
-                if await self._hass.async_add_executor_job(
-                    wiserhub.output_raw_hub_data, endpoint, f"{endpoint}-{datetime.now().strftime('%Y%m%d-%H%M%S')}", self._hass.config.config_dir
-                ):
-                    _LOGGER.info(f"Written hub {endpoint} data to the wiser_data subdirectory in your config directory")
-    
-    def _remove_schedule_elements(self, schedule_data: dict) -> dict:
-        remove_list = ["Name", "Description", "Type"]
-        for item in remove_list:
-            if item in schedule_data:
-                del schedule_data[item]
-        return schedule_data
-
-    def async_get_schedules(self):
-        """fetch a list of schedules (websocket API hook)"""
-        schedules = []
-        for schedule in self.wiserhub.schedules.all:
-            schedules.append(
-                {
-                    "id": schedule.id,
-                    "name": schedule.name,
-                    "type": schedule.schedule_type,
-                    "level_type": schedule.schedule_level_type if hasattr(schedule, 'schedule_level_type') else None,
-                    "schedule": self._remove_schedule_elements(schedule._convert_from_wiser_schedule(schedule.schedule_data))
-                }
-            )
-                
-        return schedules
