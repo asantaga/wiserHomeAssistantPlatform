@@ -1,3 +1,6 @@
+from awesomeversion import AwesomeVersion
+from homeassistant.const import __version__ as HA_VERSION
+from types import FunctionType
 import logging
 from .const import (
     DATA,
@@ -12,6 +15,7 @@ from wiserHeatAPIv2.wiserhub import (
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
+HA_VERSION_OBJ = AwesomeVersion(HA_VERSION)
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -20,7 +24,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_numbers = []
 
     _LOGGER.debug("Setting up Away Mode setpoint setter")
-    #Dodgy fix for HA core issue #74883
     wiser_numbers.extend([WiserAwayModeTempNumber(data, "Away Mode Target Temperature")])
     async_add_entities(wiser_numbers)
 
@@ -31,24 +34,36 @@ class WiserAwayModeTempNumber(NumberEntity):
         self._data = data
         self._name = name
         self._value = self._data.wiserhub.system.away_mode_target_temperature
+
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if HA_VERSION_OBJ < "2022.7.0":
+            self._attr_min_value = self.native_min_value
+            self._attr_max_value = self.native_max_value
+            self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
+            self.set_value = self.set_native_value
+
         _LOGGER.info(f"Away Mode target temperature initalise")
 
     async def async_force_update(self):
         await self._data.async_update(no_throttle=True)
         self._value = self._data.wiserhub.system.away_mode_target_temperature
 
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if hasattr(self, "_attr_value"):
+            self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
+
     @property
-    def min_value(self) -> float:
+    def native_min_value(self) -> float:
         """Return the minimum value."""
         return TEMP_MINIMUM
 
     @property
-    def max_value(self) -> float:
+    def native_max_value(self) -> float:
         """Return the maximum value."""
         return TEMP_MAXIMUM
 
     @property
-    def step(self) -> float:
+    def native_step(self) -> float:
         return 0.5
 
     @property
@@ -84,19 +99,15 @@ class WiserAwayModeTempNumber(NumberEntity):
             }
 
     @property
-    def value(self) -> float:
-        """Return the entity value to represent the entity state."""
+    def native_value(self):
+        """Return device value"""
         return self._value
 
-    def set_value(self, value: float) -> None:
+    def set_native_value(self, value: float) -> None:
         """Set new value."""
         _LOGGER.debug(f"Setting {self._name} to {value}C")
         self._data.wiserhub.system.away_mode_target_temperature = value
         self.hass.async_create_task(self.async_force_update())
-
-    async def async_set_value(self, value: float) -> None:
-        """Set new value."""
-        await self.hass.async_add_executor_job(self.set_value, value)
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""
