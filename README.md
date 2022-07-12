@@ -545,8 +545,10 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.1.2
+    * Added diagnostics capability to download diagnostic data in UI via Config or Device
+    * Removed old output_json_to_file service (now replaced by diagnostics)
     * Fixed issue with zigbee card if device not assigned to a room
-    * Updated schedule card to v1.1.1
+    * Updated schedule card to v1.1.1 to include copy day functions
 - 3.1.1
     * Reverted changes to number entity as no compatible way to support 2022.6 and 2022.7.  Will log deprecation warnings until HA provide a fix - think better than not working!
     * Added fix to error installing schedule-card when Lovelace in YAML storage mode.  Need to add manually - see documentation.
