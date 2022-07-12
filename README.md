@@ -10,8 +10,9 @@ For more information checkout the AMAZING community thread available on https://
 
 ---
 ## What's New in 3.1?
-- The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
-- The Wiser Zigbee Network Card to view the status and connections of your wiser zigbee devices.
+- The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
+- The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
+- Diagnotics - you can now download a diagnotics report that include you full hub json output via the Integrations page or Devices page
 
   ***NOTES***: 
   - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
