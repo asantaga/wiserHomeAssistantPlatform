@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.1
+# Wiser Home Assistant Integration v3.1.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -544,6 +544,9 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.2
+    * Fixed issue with zigbee card if device not assigned to a room
+    * Updated schedule card to v1.1.1
 - 3.1.1
     * Reverted changes to number entity as no compatible way to support 2022.6 and 2022.7.  Will log deprecation warnings until HA provide a fix - think better than not working!
     * Added fix to error installing schedule-card when Lovelace in YAML storage mode.  Need to add manually - see documentation.
