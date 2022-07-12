@@ -29,7 +29,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
 - [Schedule Card](#schedule-card)
-- [Zigbee Network Card](#zigbee-network-map)
+- [Zigbee Network Card](#zigbee-network-card)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
 - [Contributors](#contributors)
@@ -494,7 +494,7 @@ Each TRV sensor now has three special network related attributes
 | `Repeater` | Which actual device is acting as repeater |
 
 
-## Zigbee Network Map Card
+## Zigbee Network Card
 
 New in v3.1.1 is the zigbee network map card.  Add via the Add Card action in Lovelace.
 
