@@ -508,9 +508,10 @@ async def async_register_websockets(hass, data):
             })
 
             for device in d.wiserhub.devices.all:
+                room = d.wiserhub.rooms.get_by_device_id(device.id)
                 nodes.append({
                     "id": device.node_id, 
-                    "label": f"{device.name}\n({d.wiserhub.rooms.get_by_device_id(device.id).name})",
+                    "label": f"{device.name}\n({room.name if room else 'No Room'})",
                     "group": device.product_type, 
                     "shape": "box"
                 })
