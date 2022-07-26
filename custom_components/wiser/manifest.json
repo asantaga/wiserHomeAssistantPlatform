@@ -14,7 +14,7 @@
     "hacs"
   ],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.1.1",
-  "requirements": ["wiserHeatAPIv2==0.0.37"],
+  "version": "3.1.2",
+  "requirements": ["wiserHeatAPIv2==0.0.38"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }

@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.1
+# Wiser Home Assistant Integration v3.1.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -10,8 +10,9 @@ For more information checkout the AMAZING community thread available on https://
 
 ---
 ## What's New in 3.1?
-- The Wiser Schedule Card to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
-- The Wiser Zigbee Network Card to view the status and connections of your wiser zigbee devices.
+- The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
+- The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
+- Diagnotics - you can now download a diagnotics report that include you full hub json output via the Integrations page or Devices page
 
   ***NOTES***: 
   - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
@@ -28,7 +29,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
 - [Network Topology](#network-topology)
 - [Schedule Card](#schedule-card)
-- [Zigbee Network Card](#zigbee-network-map)
+- [Zigbee Network Card](#zigbee-network-card)
 - [Battery Values](#battery-values)
 - [Community and Recipes](#community)
 - [Contributors](#contributors)
@@ -132,7 +133,6 @@ Mark & Angelo
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
-    - Service `output_hub_json`: Provides ability to output hub json to 3 anonymised files to enable easier debugging
 
 - **UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -151,6 +151,10 @@ Mark & Angelo
 ![](docs/smartplug.PNG)
 
 ![](docs/heatingactuator.PNG)
+
+![](docs/schedule-card.PNG)
+
+![](docs/zigbee-card.PNG)
 
 
 # Code Installation
@@ -493,9 +497,11 @@ Each TRV sensor now has three special network related attributes
 | `Repeater` | Which actual device is acting as repeater |
 
 
-## Zigbee Network Map Card
+## Zigbee Network Card
 
 New in v3.1.1 is the zigbee network map card.  Add via the Add Card action in Lovelace.
+
+![](docs/zigbee-card.PNG)
 
 ***NOTE:*** If you use YAML mode for your Lovelace Dashboards, you will need to add the resource entry manually as below:
 ```
@@ -544,6 +550,11 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.2
+    * Added diagnostics capability to download diagnostic data in UI via Config or Device
+    * Removed old output_json_to_file service (now replaced by diagnostics)
+    * Fixed issue with zigbee card if device not assigned to a room
+    * Updated schedule card to v1.1.1 to include copy day functions
 - 3.1.1
     * Reverted changes to number entity as no compatible way to support 2022.6 and 2022.7.  Will log deprecation warnings until HA provide a fix - think better than not working!
     * Added fix to error installing schedule-card when Lovelace in YAML storage mode.  Need to add manually - see documentation.

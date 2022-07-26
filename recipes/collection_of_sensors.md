@@ -12,7 +12,7 @@ binary_sensor.yaml: sensor to check if heating is turned on or off, also sets a 
 - platform: template
     heating_flur:
       friendly_name: Heating Flur
-      value_template: '{{state_attr("climate.wiser_flur","control_output_state") == "On"}}'
+      value_template: '{{is_state_attr("climate.wiser_flur","control_output_state","On")}}'
       icon_template: >-
         {% if is_state("binary_sensor.heating_flur", "on") %}
           mdi:radiator
