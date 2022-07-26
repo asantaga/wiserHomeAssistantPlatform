@@ -133,7 +133,6 @@ Mark & Angelo
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
     - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
-    - Service `output_hub_json`: Provides ability to output hub json to 3 anonymised files to enable easier debugging
 
 - **UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -152,6 +151,10 @@ Mark & Angelo
 ![](docs/smartplug.PNG)
 
 ![](docs/heatingactuator.PNG)
+
+![](docs/schedule-card.PNG)
+
+![](docs/zigbee-card.PNG)
 
 
 # Code Installation
@@ -497,6 +500,8 @@ Each TRV sensor now has three special network related attributes
 ## Zigbee Network Card
 
 New in v3.1.1 is the zigbee network map card.  Add via the Add Card action in Lovelace.
+
+![](docs/zigbee-card.PNG)
 
 ***NOTE:*** If you use YAML mode for your Lovelace Dashboards, you will need to add the resource entry manually as below:
 ```
