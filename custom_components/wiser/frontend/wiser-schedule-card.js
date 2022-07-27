@@ -486,7 +486,7 @@ const St={},Ct=1,It=3,At=4,Tt=e=>(...t)=>({_$litDirective$:e,values:t});
       <div class="wrapper" style="white-space: normal;">
         <div class="day  ${this._show_short_days?"short":""}">&nbsp;</div>
         <div class="sub-section">
-          <mwc-button @click=${this._addSlot} ?disabled=${this._activeSlot<0||e>=24}>
+          <mwc-button @click=${this._addSlot} ?disabled=${this._activeSlot<-1||e>=24}>
             <ha-icon icon="hass:plus-circle-outline" class="padded-right"></ha-icon>
             ${rt("wiser.actions.add")}
           </mwc-button>
@@ -554,12 +554,12 @@ const St={},Ct=1,It=3,At=4,Tt=e=>(...t)=>({_$litDirective$:e,values:t});
             <div class="day  ${this._show_short_days?"short":""}">&nbsp;</div>
             <div class="sub-section">
               <div class="section-header">Level</div>
-              <div>
+              <div style="display: flex; line-height: 32px; width: 100%; max-width: 400px;">
                 <wiser-variable-slider
                   min="0"
                   max="100"
                   step="1"
-                  value=${this._activeSlot>=0?parseInt(e[this._activeSlot].Setpoint):0}
+                  value=${this._activeSlot>=0?parseFloat(e[this._activeSlot].Setpoint):0}
                   unit="%"
                   .optional=${!1}
                   .disabled=${this._activeSlot<0}
@@ -2426,7 +2426,7 @@ function(e){return class extends e{createRenderRoot(){const e=this.constructor,{
         ></mwc-switch>
       </mwc-formfield>
       <br />
-      <div class="version">Version: ${"1.1.2"}</div>
+      <div class="version">Version: ${"1.1.3"}</div>
     `:N``}hubSelector(){var e;const t=this._hubs?this._hubs:[];return t.length>1?N`
         <mwc-select
           naturalMenuWidth
@@ -2452,7 +2452,7 @@ function(e){return class extends e{createRenderRoot(){const e=this.constructor,{
     mwc-switch {
       --mdc-theme-secondary: var(--switch-checked-color);
     }
-  `,o([ae({attribute:!1})],Un.prototype,"hass",void 0),o([de()],Un.prototype,"_config",void 0),o([de()],Un.prototype,"_helpers",void 0),o([de()],Un.prototype,"_hubs",void 0),o([de()],Un.prototype,"_schedules",void 0),Un=o([ne("wiser-schedule-card-editor")],Un),console.info(`%c  WISER-SCHEDULE-CARD \n%c  ${rt("common.version")} 1.1.2    `,"color: orange; font-weight: bold; background: black","color: white; font-weight: bold; background: dimgray"),window.customCards=window.customCards||[],window.customCards.push({type:"wiser-schedule-card",name:"Wiser Schedule Card",description:"A card to manage Wiser schedules",preview:!1});let jn=class extends ie{constructor(){super(),this._view=Be.Overview,this.translationsLoaded=!0,this.component_loaded=!1,this._schedule_id=0,this._schedule_type="heating",this.initialise()}static async getConfigElement(){return document.createElement("wiser-schedule-card-editor")}static getStubConfig(){return{}}setConfig(e){if(!e)throw new Error(rt("common.invalid_configuration"));e.test_gui&&function(){var e=document.querySelector("home-assistant");if(e=(e=(e=(e=(e=(e=(e=(e=e&&e.shadowRoot)&&e.querySelector("home-assistant-main"))&&e.shadowRoot)&&e.querySelector("app-drawer-layout partial-panel-resolver"))&&e.shadowRoot||e)&&e.querySelector("ha-panel-lovelace"))&&e.shadowRoot)&&e.querySelector("hui-root")){var t=e.lovelace;return t.current_view=e.___curView,t}return null}().setEditMode(!0),this.config=Object.assign({name:"Wiser Schedule"},e)}set hass(e){this._hass=e}async initialise(){return await this.isComponentLoaded()&&(this.component_loaded=!0),this.processConfigSchedule(),!0}async isComponentLoaded(){for(;!this._hass||!this._hass.config.components.includes("wiser");)await new Promise((e=>setTimeout(e,100)));return!0}processConfigSchedule(){this.config.selected_schedule?(this._schedule_type=this.config.selected_schedule.split("|")[0],this._schedule_id=parseInt(this.config.selected_schedule.split("|")[1]),this._view=Be.ScheduleEdit):(this._schedule_type="",this._schedule_id=0,this._view=Be.Overview)}getCardSize(){return 9}shouldUpdate(e){return!(!this.config||!this.component_loaded)&&(e.has("config")&&this.processConfigSchedule(),!!e.has("component_loaded")||(!!e.has("_view")||(!!e.has("_schedule_list")||ze(this,e,!1))))}async _handleEvent(e){if("wiser_update_received"===e.event_type){const e=new CustomEvent("wiser-update",{});this.dispatchEvent(e)}}render(){return this._hass&&this.config&&this.translationsLoaded?this._view==Be.Overview?N`
+  `,o([ae({attribute:!1})],Un.prototype,"hass",void 0),o([de()],Un.prototype,"_config",void 0),o([de()],Un.prototype,"_helpers",void 0),o([de()],Un.prototype,"_hubs",void 0),o([de()],Un.prototype,"_schedules",void 0),Un=o([ne("wiser-schedule-card-editor")],Un),console.info(`%c  WISER-SCHEDULE-CARD \n%c  ${rt("common.version")} 1.1.3    `,"color: orange; font-weight: bold; background: black","color: white; font-weight: bold; background: dimgray"),window.customCards=window.customCards||[],window.customCards.push({type:"wiser-schedule-card",name:"Wiser Schedule Card",description:"A card to manage Wiser schedules",preview:!1});let jn=class extends ie{constructor(){super(),this._view=Be.Overview,this.translationsLoaded=!0,this.component_loaded=!1,this._schedule_id=0,this._schedule_type="heating",this.initialise()}static async getConfigElement(){return document.createElement("wiser-schedule-card-editor")}static getStubConfig(){return{}}setConfig(e){if(!e)throw new Error(rt("common.invalid_configuration"));e.test_gui&&function(){var e=document.querySelector("home-assistant");if(e=(e=(e=(e=(e=(e=(e=(e=e&&e.shadowRoot)&&e.querySelector("home-assistant-main"))&&e.shadowRoot)&&e.querySelector("app-drawer-layout partial-panel-resolver"))&&e.shadowRoot||e)&&e.querySelector("ha-panel-lovelace"))&&e.shadowRoot)&&e.querySelector("hui-root")){var t=e.lovelace;return t.current_view=e.___curView,t}return null}().setEditMode(!0),this.config=Object.assign({name:"Wiser Schedule"},e)}set hass(e){this._hass=e}async initialise(){return await this.isComponentLoaded()&&(this.component_loaded=!0),this.processConfigSchedule(),!0}async isComponentLoaded(){for(;!this._hass||!this._hass.config.components.includes("wiser");)await new Promise((e=>setTimeout(e,100)));return!0}processConfigSchedule(){this.config.selected_schedule?(this._schedule_type=this.config.selected_schedule.split("|")[0],this._schedule_id=parseInt(this.config.selected_schedule.split("|")[1]),this._view=Be.ScheduleEdit):(this._schedule_type="",this._schedule_id=0,this._view=Be.Overview)}getCardSize(){return 9}shouldUpdate(e){return!(!this.config||!this.component_loaded)&&(e.has("config")&&this.processConfigSchedule(),!!e.has("component_loaded")||(!!e.has("_view")||(!!e.has("_schedule_list")||ze(this,e,!1))))}async _handleEvent(e){if("wiser_update_received"===e.event_type){const e=new CustomEvent("wiser-update",{});this.dispatchEvent(e)}}render(){return this._hass&&this.config&&this.translationsLoaded?this._view==Be.Overview?N`
         <wiser-schedule-list-card
           id="schedule_list"
           .hass=${this._hass}
