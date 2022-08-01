@@ -29,7 +29,6 @@ from .const import (
     CONF_MOMENTS,
     CONF_SETPOINT_MODE,
     CONF_HW_BOOST_TIME,
-    CONF_USE_HOST,
     CONF_HOSTNAME,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -44,7 +43,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
-    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str, vol.Optional(CONF_USE_HOST, default = True): bool}
+    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str}
 )
 
 
@@ -112,16 +111,10 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 # Add hub name to config
                 user_input[CONF_NAME] = validated["title"]
                 
-                
-                a = self.async_create_entry(
+                return self.async_create_entry(
                     title=validated["title"], data=user_input
                 )
-                _LOGGER.warning(a)
-                op = {}
-                op[CONF_HOST] = user_input[CONF_HOST]
 
-                self.async_update_config_entry(a, options=op)
-                return a
 
         return self.async_show_form(
             step_id="user",
