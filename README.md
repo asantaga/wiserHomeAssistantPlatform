@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.2
+# Wiser Home Assistant Integration v3.1.3
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -13,6 +13,7 @@ For more information checkout the AMAZING community thread available on https://
 - The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
 - The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
 - Diagnotics - you can now download a diagnotics report that include you full hub json output via the Integrations page or Devices page
+- Change IP/Hostname for hub via UI instead of editing config_entries file
 
   ***NOTES***: 
   - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
@@ -550,6 +551,8 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.3
+    * Added ability to change hub IP/Hostname via configuration in UI
 - 3.1.2
     * Added diagnostics capability to download diagnostic data in UI via Config or Device
     * Removed old output_json_to_file service (now replaced by diagnostics)
