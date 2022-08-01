@@ -177,7 +177,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={"name": self.discovery_info[CONF_NAME], "hostname": self.discovery_info[CONF_HOSTNAME], "ip_address": self.discovery_info[CONF_HOST]},
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST, default = self.discovery_info[CONF_HOSTNAME]): str,
+                    vol.Required(CONF_HOST, default = self.discovery_info[CONF_HOST]): str,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
