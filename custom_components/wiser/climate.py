@@ -132,6 +132,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
+        self._previous_target_temp = self.target_temperature
         self._schedule = self._room.schedule
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
@@ -189,22 +190,36 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         return CURRENT_HVAC_HEAT if self._room.is_heating else CURRENT_HVAC_IDLE
 
     @property
+    def hvac_mode(self):
+        return HVAC_MODE_WISER_TO_HASS[self._room.mode]
+
+    @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
         return self._hvac_modes_list
 
-    def set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
         _LOGGER.debug(
             f"Setting HVAC mode to {hvac_mode} for {self._room.name}"
         )
         try:
-            self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+            if (self.hvac_mode == HVAC_MODE_HEAT 
+                and self.target_temperature != -20):
+                
+                self._previous_target_temp = self._room.current_target_temperature
+
+            await self.hass.async_add_executor_job(
+                setattr, self._room, "mode" , HVAC_MODE_HASS_TO_WISER[hvac_mode]
+            )
+            # Restore previous manual target temp when coming from Off mode back to Manual
+            if hvac_mode == HVAC_MODE_HEAT and self._previous_target_temp:
+                await self.hass.async_add_executor_job(
+                    self._room.set_target_temperature, self._previous_target_temp
+                )
         except KeyError:
             _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
-        self.hass.async_create_task(
-            self.async_force_update()
-        )
+        await self.async_force_update()
         return True
 
     @property
