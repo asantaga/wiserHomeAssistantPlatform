@@ -553,6 +553,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 # Change log
 - 3.1.3
     * Added ability to change hub IP/Hostname via configuration in UI
+    * Changing HVAC settign will now remember previous manual setting
 - 3.1.2
     * Added diagnostics capability to download diagnostic data in UI via Config or Device
     * Removed old output_json_to_file service (now replaced by diagnostics)
