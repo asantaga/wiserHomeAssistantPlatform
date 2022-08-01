@@ -11,9 +11,10 @@
 				}
 			},
 			"zeroconf_confirm": {
-                "title": "Wiser Heat Hub Setup",
+                "title": "Wiser Heat Hub Setup ({name})",
                 "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
                 "data": {
+					"host": "IP Adresse",
                     "password": "API Schl\u00fcssel"
                 }
             }
@@ -35,6 +36,7 @@
 				"title": "Wiser Heat Hub-Optionen",
 				"description": "Wiser-Parameter ändern.",
 		  		"data": {
+					"host": "IP Adresse",
 					"heating_boost_temp": "Boost Temperatur",
 					"heating_boost_time": "Boost Dauer",
 					"hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",

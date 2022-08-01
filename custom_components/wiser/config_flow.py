@@ -5,8 +5,9 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
+from types import MappingProxyType
 import requests.exceptions
-from typing import Any
+from typing import Any, Mapping
 import voluptuous as vol
 from wiserHeatAPIv2.wiserhub import WiserAPI
 from wiserHeatAPIv2.exceptions import (
@@ -28,6 +29,8 @@ from .const import (
     CONF_MOMENTS,
     CONF_SETPOINT_MODE,
     CONF_HW_BOOST_TIME,
+    CONF_USE_HOST,
+    CONF_HOSTNAME,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
@@ -41,7 +44,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
-    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str}
+    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str, vol.Optional(CONF_USE_HOST, default = True): bool}
 )
 
 
@@ -108,9 +111,17 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # Add hub name to config
                 user_input[CONF_NAME] = validated["title"]
-                return self.async_create_entry(
+                
+                
+                a = self.async_create_entry(
                     title=validated["title"], data=user_input
                 )
+                _LOGGER.warning(a)
+                op = {}
+                op[CONF_HOST] = user_input[CONF_HOST]
+
+                self.async_update_config_entry(a, options=op)
+                return a
 
         return self.async_show_form(
             step_id="user",
@@ -123,7 +134,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle zeroconf discovery."""
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
-
         host = discovery_info.host
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
@@ -136,6 +146,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self.discovery_info.update(
             {
                 CONF_HOST: host,
+                CONF_HOSTNAME: discovery_info.hostname.replace(".local.",".local"),
                 CONF_NAME: name,
             }
         )
@@ -148,7 +159,6 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle a confirmation flow initiated by zeroconf."""
         errors = {}
         if user_input is not None:
-            user_input[CONF_HOST] = self.discovery_info[CONF_HOST]
             try:
                 validated = await validate_input(self.hass, user_input)
             except WiserHubAuthenticationError:
@@ -171,9 +181,10 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="zeroconf_confirm",
-            description_placeholders={"name": self.discovery_info[CONF_NAME]},
+            description_placeholders={"name": self.discovery_info[CONF_NAME], "hostname": self.discovery_info[CONF_HOSTNAME], "ip_address": self.discovery_info[CONF_HOST]},
             data_schema=vol.Schema(
                 {
+                    vol.Required(CONF_HOST, default = self.discovery_info[CONF_HOSTNAME]): str,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
@@ -191,10 +202,19 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
         if user_input is not None:
+            if user_input[CONF_HOST]:
+                data = {
+                    CONF_HOST: user_input[CONF_HOST],
+                    CONF_PASSWORD: self.config_entry.data[CONF_PASSWORD],
+                    CONF_NAME: self.config_entry.data[CONF_NAME]
+                }
+                user_input.pop(CONF_HOST)
+                self.hass.config_entries.async_update_entry(self.config_entry, data = data)
             return self.async_create_entry(title="", data=user_input)
 
         data_schema = vol.Schema(
             {
+                vol.Required(CONF_HOST, default = self.config_entry.data[CONF_HOST]): str,
                 vol.Optional(
                     CONF_HEATING_BOOST_TEMP,
                     default=self.config_entry.options.get(

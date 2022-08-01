@@ -12,8 +12,9 @@
             },
             "zeroconf_confirm": {
                 "title": "Wiser Heat Hub Setup",
-                "description": "Please enter the secret key obtained from the hub.",
+                "description": "Please enter the secret key obtained from the hub - {name}. \n Hostname: {hostname} \n IP Address: {ip_address}",
                 "data": {
+                    "host": "IP Address or Hostname",
                     "password": "Secret Key"
                 }
             }
@@ -35,6 +36,7 @@
                 "title": "Wiser Heat Hub Options",
                 "description": "Amend Wiser parameters.",
                 "data": {
+                    "host": "IP Address or Hostname",
                     "heating_boost_temp": "Default Heating Boost Temperature",
                     "heating_boost_time": "Default Heating Boost Duration",
                     "hotwater_boost_time": "Default Hot Water Boost Duration",

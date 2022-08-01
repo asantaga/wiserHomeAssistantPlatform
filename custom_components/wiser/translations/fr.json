@@ -11,9 +11,10 @@
                 }
             },
             "zeroconf_confirm": {
-                "title": "Configuration de la Box Wiser",
+                "title": "Configuration de la Box Wiser ({name})",
                 "description": "Entrez la clé secrète obtenue de la Box Wiser.",
                 "data": {
+                    "host": "Adresse IP ou nom d'hote",
                     "password": "Clé Secrète"
 
                 }
@@ -36,6 +37,7 @@
                 "title": "Options Box Wiser",
                 "description": "Réglages des paramètres Wiser.",
                 "data": {
+                    "host": "Adresse IP ou nom d'hote",
                     "heating_boost_temp": "Défault Temperature de Boost chauffage",
                     "heating_boost_time": "Défault Durée de Boost chauffage",
                     "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",

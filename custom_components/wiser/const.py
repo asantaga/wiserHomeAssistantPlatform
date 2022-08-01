@@ -42,6 +42,7 @@ CONF_HW_BOOST_TIME = "hotwater_boost_time"
 CONF_SETPOINT_MODE = "setpoint_mode"
 CONF_MOMENTS = "moments"
 CONF_LTS_SENSORS = "lts_sensors"
+CONF_HOSTNAME = "hostname"
 
 # Custom Attributes
 ATTR_TIME_PERIOD = "time_period"
