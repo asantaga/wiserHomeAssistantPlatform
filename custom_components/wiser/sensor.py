@@ -425,6 +425,8 @@ class WiserSystemCircuitState(WiserSensor):
                 attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
                 attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
                 attrs["ch_return_temperature"] = opentherm.ch_return_temperature
+                attrs["relative_modulation_level"] = opentherm.relative_modulation_level
+                attrs["hw_temperature"] = opentherm.hw_temperature
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
