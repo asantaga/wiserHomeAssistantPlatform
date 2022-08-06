@@ -260,7 +260,10 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return list(WISER_PRESETS.keys())
+        preset_modes = list(WISER_PRESETS.keys())
+        if not self._schedule:
+            preset_modes = [mode for mode in preset_modes if mode != "Advance Schedule"]
+        return preset_modes
 
     async def async_set_preset_mode(self, preset_mode):
         """Async call to set preset mode ."""
