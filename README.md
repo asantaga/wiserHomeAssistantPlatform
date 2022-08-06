@@ -208,13 +208,22 @@ Select the configure link from the integrations page.  This will then show the c
 
 ![](docs/config.PNG)
 
+`IP Address` here you can change the IP addrss or use a hostname of the hub connection.
+
+`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
+
 `Default Heating Boost Temperature` is the delta temperature above the current room temperature the radiator should be set to when boosted, default is 2
 
 `Default Heating Boost Duration` is the time (in minutes) for which a heating boost should be active for, default is 60 mins
 
 `Default Hot Water Boost Duration` is the time (in minutes) for which a hot water boost should be active for, default is 60 mins
 
-`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
+`Setpoint Mode` modifies the way setpoint works. There are 3 options:
+  - Normal - the functionality is the same as the Wiser app
+  - Boost - when you set a new setpoint it will only take affect for the default "boost" time.
+  - Boost Only in Auto - same as the boost mode but will only do this if in auto mode.  In manual mode, it will set the temp as per default mode.
+
+`Use This Temperature If No Stored Manual Temperature` when setting a manual temp on one of your rooms, we store this to use each time you go back to manual/heat mode.  However, on a HA restart, we do not have a stored temp, so here you can set what temp to use in that first time use situation.
 
 `Enable Moments Buttons` is to create buttons for Moments you have setup on the wiser app.  Default is unticked.
 
