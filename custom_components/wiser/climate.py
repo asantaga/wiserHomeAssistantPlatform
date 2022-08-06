@@ -37,10 +37,9 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     ROOM,
-    SETPOINT_MODE_BOOST,
-    SETPOINT_MODE_BOOST_AUTO,
     WISER_BOOST_PRESETS,
-    WISER_SERVICES
+    WISER_SERVICES,
+    WISER_SETPOINT_MODES
 )
 from .helpers import get_device_name, get_identifier
 from .schedules import WiserScheduleEntity
@@ -132,8 +131,15 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
-        self._previous_target_temp = self.target_temperature
         self._schedule = self._room.schedule
+        self._previous_target_temp = self.current_temperature
+        
+        # Set initial previous target temp based on config setting
+        if self._schedule and self._data.previous_target_temp_option == "Schedule":
+            self._previous_target_temp = self._room.schedule.current_setting
+        elif self._data.previous_target_temp_option == "Minimum":
+            self._previous_target_temp = TEMP_MINIMUM
+
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -354,8 +360,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         if target_temperature is None:
             return False
 
-        if (self._data.setpoint_mode == SETPOINT_MODE_BOOST 
-            or (self._data.setpoint_mode == SETPOINT_MODE_BOOST_AUTO and self.state == HVAC_MODE_AUTO)
+        if (self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"]
+            or (self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"] and self.state == HVAC_MODE_AUTO)
         ):
             _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature} using boost")
             await self.hass.async_add_executor_job(

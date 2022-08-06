@@ -37,11 +37,12 @@
                 "description": "Amend Wiser parameters.",
                 "data": {
                     "host": "IP Address or Hostname",
+                    "scan_interval": "Scan Interval",
                     "heating_boost_temp": "Default Heating Boost Temperature",
                     "heating_boost_time": "Default Heating Boost Duration",
                     "hotwater_boost_time": "Default Hot Water Boost Duration",
-                    "scan_interval": "Scan Interval",
                     "setpoint_mode": "Setpoint Mode",
+                    "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature",
                     "moments": "Enable Moments Buttons",
                     "lts_sensors": "Enable LTS Sensors"
                 }               

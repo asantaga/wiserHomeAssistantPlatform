@@ -43,6 +43,7 @@ CONF_SETPOINT_MODE = "setpoint_mode"
 CONF_MOMENTS = "moments"
 CONF_LTS_SENSORS = "lts_sensors"
 CONF_HOSTNAME = "hostname"
+CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
 # Custom Attributes
 ATTR_TIME_PERIOD = "time_period"
@@ -73,3 +74,15 @@ WISER_BOOST_PRESETS = {
     "Boost 2h": 120,
     "Boost 3h": 180
 }
+
+WISER_SETPOINT_MODES = {
+    "Normal": "normal",
+    "Boost": "boost",
+    "BoostAuto": "boost in auto mode only"
+}
+
+WISER_RESTORE_TEMP_DEFAULT_OPTIONS = [
+    "Current",
+    "Scheduled",
+    "Minimum"
+]

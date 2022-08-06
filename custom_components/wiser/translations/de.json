@@ -37,11 +37,12 @@
 				"description": "Wiser-Parameter ändern.",
 		  		"data": {
 					"host": "IP Adresse",
+					"scan_interval": "Scan Intervall",
 					"heating_boost_temp": "Boost Temperatur",
 					"heating_boost_time": "Boost Dauer",
 					"hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
-					"scan_interval": "Scan Intervall",
 					"setpoint_mode": "Sollwert-Modus",
+					"restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist",
 					"moments": "Moments-Schaltflächen aktivieren",
 					"lts_sensors": "LTS-Sensoren aktivieren"
 				}

@@ -46,6 +46,7 @@ from .websockets import async_register_websockets
 
 from .const import (
     CONF_MOMENTS,
+    CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     DEFAULT_SETPOINT_MODE,
     CONF_HEATING_BOOST_TEMP,
@@ -199,6 +200,7 @@ async def async_setup_entry(hass, config_entry):
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
+    # Setup websocket services for frontend cards
     await async_register_websockets(hass, data)
 
     # Initialise global services
@@ -371,7 +373,7 @@ async def async_setup_entry(hass, config_entry):
     # Add hub as device
     await data.async_update_device_registry()
 
-    # Register custom cards
+    # Register custom cards path
     hass.http.register_static_path(
         URL_BASE,
         hass.config.path("custom_components/wiser/frontend"),
@@ -415,7 +417,6 @@ async def async_unload_entry(hass, config_entry):
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_ORPHANED_ENTRIES)
-
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_GET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_SET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_COPY_SCHEDULE"])
@@ -466,6 +467,7 @@ class WiserHubHandle:
         self.setpoint_mode = config_entry.options.get(CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE)
         self.enable_moments = config_entry.options.get(CONF_MOMENTS, False)
         self.enable_lts_sensors = config_entry.options.get(CONF_LTS_SENSORS, False)
+        self.previous_target_temp_option = config_entry.options.get(CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule")
 
     def connect(self):
         """Connect to Wiser Hub."""
