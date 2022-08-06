@@ -3,7 +3,7 @@
   "name": "Drayton Wiser Integration for Home Assistant",
   "iot_class": "local_polling",
   "config_flow": true,
-  "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/Readme.Md",
+  "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/README.md",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
   "dependencies": [
     "http",
