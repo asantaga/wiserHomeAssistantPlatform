@@ -210,7 +210,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
 
     def select_option(self, option: str) -> None:
         if option and option in self._options:
-            _LOGGER.debug("Setting smartplug mode to {option}")
+            _LOGGER.debug(f"Setting smartplug mode to {option}")
             self._device.mode = option
             self.hass.async_create_task(self.async_force_update())
         else:
