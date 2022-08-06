@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.2
+# Wiser Home Assistant Integration v3.1.3
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -13,6 +13,7 @@ For more information checkout the AMAZING community thread available on https://
 - The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
 - The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
 - Diagnotics - you can now download a diagnotics report that include you full hub json output via the Integrations page or Devices page
+- Change IP/Hostname for hub via UI instead of editing config_entries file
 
   ***NOTES***: 
   - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
@@ -207,13 +208,22 @@ Select the configure link from the integrations page.  This will then show the c
 
 ![](docs/config.PNG)
 
+`IP Address` here you can change the IP addrss or use a hostname of the hub connection.
+
+`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
+
 `Default Heating Boost Temperature` is the delta temperature above the current room temperature the radiator should be set to when boosted, default is 2
 
 `Default Heating Boost Duration` is the time (in minutes) for which a heating boost should be active for, default is 60 mins
 
 `Default Hot Water Boost Duration` is the time (in minutes) for which a hot water boost should be active for, default is 60 mins
 
-`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
+`Setpoint Mode` modifies the way setpoint works. There are 3 options:
+  - Normal - the functionality is the same as the Wiser app
+  - Boost - when you set a new setpoint it will only take affect for the default "boost" time.
+  - Boost Only in Auto - same as the boost mode but will only do this if in auto mode.  In manual mode, it will set the temp as per default mode.
+
+`Use This Temperature If No Stored Manual Temperature` when setting a manual temp on one of your rooms, we store this to use each time you go back to manual/heat mode.  However, on a HA restart, we do not have a stored temp, so here you can set what temp to use in that first time use situation.
 
 `Enable Moments Buttons` is to create buttons for Moments you have setup on the wiser app.  Default is unticked.
 
@@ -550,6 +560,11 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.3
+    * Added ability to change hub IP/Hostname via configuration in UI
+    * Changing HVAC setting will now remember previous manual setting
+    * New config option to determine what target temp to use if no stored manual temp
+    * Bump api to v0.0.39 to fix issue [#284](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/284)
 - 3.1.2
     * Added diagnostics capability to download diagnostic data in UI via Config or Device
     * Removed old output_json_to_file service (now replaced by diagnostics)

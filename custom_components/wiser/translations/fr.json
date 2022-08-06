@@ -11,9 +11,10 @@
                 }
             },
             "zeroconf_confirm": {
-                "title": "Configuration de la Box Wiser",
+                "title": "Configuration de la Box Wiser ({name})",
                 "description": "Entrez la clé secrète obtenue de la Box Wiser.",
                 "data": {
+                    "host": "Adresse IP ou nom d'hote",
                     "password": "Clé Secrète"
 
                 }
@@ -36,11 +37,13 @@
                 "title": "Options Box Wiser",
                 "description": "Réglages des paramètres Wiser.",
                 "data": {
+                    "host": "Adresse IP ou nom d'hote",
+                    "scan_interval": " Période d'acquisition",
                     "heating_boost_temp": "Défault Temperature de Boost chauffage",
                     "heating_boost_time": "Défault Durée de Boost chauffage",
                     "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",
-                    "scan_interval": " Période d'acquisition",
                     "setpoint_mode": "Mode de fonctionnement consigne",
+                    "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée",
                     "moments": "Autorisation de boutons Moments",
                     "lts_sensors": "Autorisation capteurs LTS (Longue Durée de Sauvegarde)"
                 }               

@@ -37,10 +37,9 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     ROOM,
-    SETPOINT_MODE_BOOST,
-    SETPOINT_MODE_BOOST_AUTO,
     WISER_BOOST_PRESETS,
-    WISER_SERVICES
+    WISER_SERVICES,
+    WISER_SETPOINT_MODES
 )
 from .helpers import get_device_name, get_identifier
 from .schedules import WiserScheduleEntity
@@ -133,6 +132,14 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
+        self._previous_target_temp = self.current_temperature
+        
+        # Set initial previous target temp based on config setting
+        if self._schedule and self._data.previous_target_temp_option == "Schedule":
+            self._previous_target_temp = self._room.schedule.current_setting
+        elif self._data.previous_target_temp_option == "Minimum":
+            self._previous_target_temp = TEMP_MINIMUM
+
 
         _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -189,22 +196,36 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         return CURRENT_HVAC_HEAT if self._room.is_heating else CURRENT_HVAC_IDLE
 
     @property
+    def hvac_mode(self):
+        return HVAC_MODE_WISER_TO_HASS[self._room.mode]
+
+    @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
         return self._hvac_modes_list
 
-    def set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
         _LOGGER.debug(
             f"Setting HVAC mode to {hvac_mode} for {self._room.name}"
         )
         try:
-            self._room.mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+            if (self.hvac_mode == HVAC_MODE_HEAT 
+                and self.target_temperature != -20):
+                
+                self._previous_target_temp = self._room.current_target_temperature
+
+            await self.hass.async_add_executor_job(
+                setattr, self._room, "mode" , HVAC_MODE_HASS_TO_WISER[hvac_mode]
+            )
+            # Restore previous manual target temp when coming from Off mode back to Manual
+            if hvac_mode == HVAC_MODE_HEAT and self._previous_target_temp:
+                await self.hass.async_add_executor_job(
+                    self._room.set_target_temperature, self._previous_target_temp
+                )
         except KeyError:
             _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
-        self.hass.async_create_task(
-            self.async_force_update()
-        )
+        await self.async_force_update()
         return True
 
     @property
@@ -239,7 +260,10 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return list(WISER_PRESETS.keys())
+        preset_modes = list(WISER_PRESETS.keys())
+        if not self._schedule:
+            preset_modes = [mode for mode in preset_modes if mode != "Advance Schedule"]
+        return preset_modes
 
     async def async_set_preset_mode(self, preset_mode):
         """Async call to set preset mode ."""
@@ -339,8 +363,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         if target_temperature is None:
             return False
 
-        if (self._data.setpoint_mode == SETPOINT_MODE_BOOST 
-            or (self._data.setpoint_mode == SETPOINT_MODE_BOOST_AUTO and self.state == HVAC_MODE_AUTO)
+        if (self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"]
+            or (self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"] and self.state == HVAC_MODE_AUTO)
         ):
             _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature} using boost")
             await self.hass.async_add_executor_job(
