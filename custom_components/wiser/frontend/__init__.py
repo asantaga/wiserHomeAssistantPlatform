@@ -2,6 +2,7 @@
 from atexit import register
 import logging
 from datetime import timedelta
+import os
 from typing import Any
 from xmlrpc.client import boolean
 from homeassistant.helpers.event import async_call_later
@@ -36,7 +37,7 @@ class WiserCardRegistration:
             if self.hass.data['lovelace']['resources'].loaded:
                 self.hass.async_create_task(self.async_register_wiser_cards())
             else:
-                _LOGGER.warning("Unable to install Wiser card resources because Lovelace resources not yet loaded.  Trying again in 5 seconds.")
+                _LOGGER.debug("Unable to install Wiser card resources because Lovelace resources not yet loaded.  Trying again in 5 seconds.")
                 async_call_later(
                     self.hass,
                     5,
@@ -46,9 +47,21 @@ class WiserCardRegistration:
 
 
     async def async_register_wiser_cards(self):
-        _LOGGER.warning("Installing Lovelace resources for Wiser cards")
+        _LOGGER.debug("Installing Lovelace resources for Wiser cards")
         for card_filename in WISER_CARD_FILENAMES:
             url = f"{URL_BASE}/{card_filename}"
             resource_loaded = [res["url"] for res in self.hass.data['lovelace']["resources"].async_items() if res["url"] == url]
             if not resource_loaded:
                 resource_id = await self.hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
+
+    async def async_remove_gzip_files(self):
+        path = self.hass.config.path("custom_components/wiser/frontend")
+        gzip_files = [filename for filename in os.listdir(path) if filename.endswith(".gz")]
+
+        for file in gzip_files:
+            try:
+                if os.path.getmtime(f"{path}/{file}") < os.path.getmtime(f"{path}/{file.replace('.gz','')}"):
+                    _LOGGER.debug(f"Removing older gzip file - {file}")
+                    os.remove(f"{path}/{file}")
+            except:
+                pass

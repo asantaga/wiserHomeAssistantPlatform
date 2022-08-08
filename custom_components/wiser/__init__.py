@@ -379,6 +379,9 @@ async def async_setup_entry(hass, config_entry):
     cards = WiserCardRegistration(hass)
     cards.register()
 
+    # Remove old gzip files
+    await cards.async_remove_gzip_files()
+
     _LOGGER.info("Wiser Component Setup Completed")
 
     return True
