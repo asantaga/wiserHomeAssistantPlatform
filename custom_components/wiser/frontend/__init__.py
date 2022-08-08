@@ -33,7 +33,7 @@ class WiserCardRegistration:
         )
 
     def wait_for_lovelace_resources(self) -> None:
-        def check_lovelace_resources_loaded():
+        def check_lovelace_resources_loaded(now):
             if self.hass.data['lovelace']['resources'].loaded:
                 self.hass.async_create_task(self.async_register_wiser_cards())
             else:
@@ -43,7 +43,7 @@ class WiserCardRegistration:
                     5,
                     check_lovelace_resources_loaded
                 )
-        check_lovelace_resources_loaded()
+        check_lovelace_resources_loaded(0)
 
 
     async def async_register_wiser_cards(self):
