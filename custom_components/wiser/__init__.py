@@ -44,6 +44,8 @@ from homeassistant.util import Throttle
 
 from .websockets import async_register_websockets
 
+from .frontend import WiserCardRegistration
+
 from .const import (
     CONF_MOMENTS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
@@ -373,20 +375,9 @@ async def async_setup_entry(hass, config_entry):
     # Add hub as device
     await data.async_update_device_registry()
 
-    # Register custom cards path
-    hass.http.register_static_path(
-        URL_BASE,
-        hass.config.path("custom_components/wiser/frontend"),
-        cache_headers=False
-    )
-
-    # Auto add resources if Lovelace in storage mode.  Need to add manually if in YAML mode
-    if hass.data['lovelace']['mode'] == "storage":
-        for card_filename in WISER_CARD_FILENAMES:
-            url = f"{URL_BASE}/{card_filename}"
-            resource_loaded = [res["url"] for res in hass.data['lovelace']["resources"].async_items() if res["url"] == url]
-            if not resource_loaded:
-                resource_id = await hass.data['lovelace']["resources"].async_create_item({"res_type":"module", "url":url})
+    # Register custom cards
+    cards = WiserCardRegistration(hass)
+    cards.register()
 
     _LOGGER.info("Wiser Component Setup Completed")
 
