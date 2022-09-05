@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.3
+# Wiser Home Assistant Integration v3.1.5
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -560,11 +560,16 @@ And many many more, please see github pull requests for more info
 Moving forward (post 1.9) there will be two primary branches, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 # Change log
+- 3.1.5
+    * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
+    * Remove gzip versions of files from source
+    * Delete versions of gzip file older than js file on restart to prevent new version not loading
 - 3.1.3
     * Added ability to change hub IP/Hostname via configuration in UI
     * Changing HVAC setting will now remember previous manual setting
     * New config option to determine what target temp to use if no stored manual temp
     * Bump api to v0.0.39 to fix issue [#284](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/284)
+    * Removed Advance Schedule preset option if room has no schedule
 - 3.1.2
     * Added diagnostics capability to download diagnostic data in UI via Config or Device
     * Removed old output_json_to_file service (now replaced by diagnostics)
