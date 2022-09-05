@@ -1,11 +1,9 @@
 """Wiser Frontend"""
-from atexit import register
 import logging
-from datetime import timedelta
 import os
-from typing import Any
-from xmlrpc.client import boolean
+
 from homeassistant.helpers.event import async_call_later
+
 from ..const import (
     URL_BASE,
     WISER_CARD_FILENAMES
