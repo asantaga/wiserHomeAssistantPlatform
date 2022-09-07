@@ -4,11 +4,9 @@ from .const import (
     DOMAIN,
     MANUFACTURER
 )
-from .climate import HVAC_MODE_HASS_TO_WISER
 from .helpers import get_device_name, get_unique_id, get_identifier
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.components.climate.const import HVAC_MODE_AUTO
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 
