@@ -10,13 +10,9 @@ from functools import partial
 import voluptuous as vol
 
 from homeassistant.components.climate.const import (
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE,
-    HVAC_MODE_AUTO,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_OFF,
-    SUPPORT_PRESET_MODE,
-    SUPPORT_TARGET_TEMPERATURE
+    HVACAction,
+    HVACMode,
+    ClimateEntityFeature
 )
 
 from homeassistant.components.climate import ClimateEntity
@@ -59,17 +55,19 @@ STATUS_BOOST = "Boost"
 STATUS_COMFORT = "Comfort"
 STATUS_ECO = "EcoIQ"
 STATUS_OVERRIDE = "Override"
+STATUS_BLANK = ""
 
 WISER_PRESET_TO_HASS = {
     "FromAwayMode": STATUS_AWAY,
-    "FromManualMode": None,
+    "FromManualMode": STATUS_BLANK,
     "FromBoost": STATUS_BOOST,
     "FromManualOverrideDuringAway": STATUS_AWAY_OVERRIDE,
     "FromBoostDuringAway": STATUS_AWAY_BOOST,
     "FromManualOverride": STATUS_OVERRIDE,
     "FromEcoIQ": STATUS_ECO,
-    "FromSchedule": None,
+    "FromSchedule": STATUS_BLANK,
     "FromComfortMode": STATUS_COMFORT,
+    "FromNoControl": STATUS_BLANK
 }
 
 WISER_PRESETS = {
@@ -79,18 +77,18 @@ WISER_PRESETS = {
 WISER_PRESETS.update(WISER_BOOST_PRESETS)
 
 HVAC_MODE_WISER_TO_HASS = {
-        "Auto": HVAC_MODE_AUTO,
-        "Manual": HVAC_MODE_HEAT,
-        "Off": HVAC_MODE_OFF,
+        "Auto": HVACMode.AUTO,
+        "Manual": HVACMode.HEAT,
+        "Off": HVACMode.OFF,
 }
 
 HVAC_MODE_HASS_TO_WISER = {
-    HVAC_MODE_AUTO: "Auto",
-    HVAC_MODE_HEAT: "Manual",
-    HVAC_MODE_OFF: "Off",
+    HVACMode.AUTO: "Auto",
+    HVACMode.HEAT: "Manual",
+    HVACMode.OFF: "Off",
 }
 
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
+SUPPORT_FLAGS = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
@@ -193,7 +191,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
     @property
     def hvac_action(self):
         """Return hvac action from data."""
-        return CURRENT_HVAC_HEAT if self._room.is_heating else CURRENT_HVAC_IDLE
+        return HVACAction.HEATING if self._room.is_heating else HVACAction.IDLE
 
     @property
     def hvac_mode(self):
@@ -210,7 +208,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             f"Setting HVAC mode to {hvac_mode} for {self._room.name}"
         )
         try:
-            if (self.hvac_mode == HVAC_MODE_HEAT 
+            if (self.hvac_mode == HVACMode.HEAT
                 and self.target_temperature != -20):
                 
                 self._previous_target_temp = self._room.current_target_temperature
@@ -219,7 +217,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
                 setattr, self._room, "mode" , HVAC_MODE_HASS_TO_WISER[hvac_mode]
             )
             # Restore previous manual target temp when coming from Off mode back to Manual
-            if hvac_mode == HVAC_MODE_HEAT and self._previous_target_temp:
+            if hvac_mode == HVACMode.HEAT and self._previous_target_temp:
                 await self.hass.async_add_executor_job(
                     self._room.set_target_temperature, self._previous_target_temp
                 )
@@ -255,41 +253,38 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             else:
                 return WISER_PRESET_TO_HASS[self._room.target_temperature_origin]
         except KeyError:
-            return None
+            return STATUS_BLANK
     
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        preset_modes = list(WISER_PRESETS.keys())
         if not self._schedule:
-            preset_modes = [mode for mode in preset_modes if mode != "Advance Schedule"]
-        return preset_modes
+            return [mode for mode in list(WISER_PRESETS.keys()) if mode != "Advance Schedule"]
+        return list(WISER_PRESETS.keys())
 
-    async def async_set_preset_mode(self, preset_mode):
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
         _LOGGER.debug(
                 f"Setting Preset Mode {preset_mode} for {self._room.name}"
             )
-        try:
-            if preset_mode == "Advance Schedule":
-                await self.hass.async_add_executor_job(
-                    self._room.schedule_advance
-                )
-            elif WISER_PRESETS[preset_mode] == 0:
-                await self.hass.async_add_executor_job(
-                    self._room.cancel_overrides
-                )
-            else:
-                boost_time = WISER_PRESETS[preset_mode]
-                boost_temp = self._data.boost_temp
-                await self.hass.async_add_executor_job(
-                    self._room.boost, boost_temp, boost_time
-                )
-        except KeyError:
+        if preset_mode == "Advance Schedule":
+            await self.hass.async_add_executor_job(
+                self._room.schedule_advance
+            )
+        elif WISER_PRESETS[preset_mode] == 0:
+            await self.hass.async_add_executor_job(
+                self._room.cancel_overrides
+            )
+        elif preset_mode.startswith("Boost"):
+            boost_time = WISER_PRESETS[preset_mode]
+            boost_temp = self._data.boost_temp
+            await self.hass.async_add_executor_job(
+                self._room.boost, boost_temp, boost_time
+            )
+        else:
             _LOGGER.error(f"Invalid preset mode.  Options are {self.preset_modes}")
-        
+
         await self.async_force_update()
-        return True
 
     @property
     def should_poll(self):
@@ -364,7 +359,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             return False
 
         if (self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"]
-            or (self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"] and self.state == HVAC_MODE_AUTO)
+            or (self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"] and self.state == HVACMode.AUTO)
         ):
             _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature} using boost")
             await self.hass.async_add_executor_job(

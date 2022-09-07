@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    SUPPORT_BRIGHTNESS,
+    ColorMode,
     LightEntity,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -188,7 +188,7 @@ class WiserDimmableLight(WiserLight):
     @property
     def supported_features(self):
         """Flag supported features."""
-        return SUPPORT_BRIGHTNESS
+        return ColorMode.BRIGHTNESS
 
     @property
     def brightness(self):
