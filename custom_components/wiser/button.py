@@ -46,19 +46,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     async_add_entities(wiser_buttons, True)
 
-    # Setup services
-    platform = entity_platform.async_get_current_platform()
-
-    if data.wiserhub.hotwater:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_BOOST_HOTWATER"],
-            {
-                vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(int),
-            },
-            "async_boost"
-        )
-
-
 class WiserButton(ButtonEntity):
     def __init__(self, data, name = "Button"):
         """Initialize the sensor."""
@@ -156,21 +143,6 @@ class WiserBoostHotWaterButton(WiserButton):
     @property
     def icon(self):
         return "mdi:water-plus"
-
-    @callback
-    async def async_boost(self, time_period: int):
-        if time_period > 0:
-            _LOGGER.info(f"Boosting Hot Water for {time_period}m")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.boost, time_period
-            )
-        else:
-            _LOGGER.info(f"Cancelling Hot Water boost")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.cancel_overrides
-            )
-        await self.async_force_update()
-
 
 class WiserCancelHotWaterOverridesButton(WiserButton):
     def __init__(self, data):
