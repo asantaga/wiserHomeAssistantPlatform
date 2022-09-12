@@ -176,10 +176,16 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
     @callback
     async def async_boost(self, time_period: int):
-        _LOGGER.info(f"Boosting Hot Water for {time_period}m")
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.hotwater.boost, time_period
-        )
+        if time_period > 0:
+            _LOGGER.info(f"Boosting Hot Water for {time_period}m")
+            await self.hass.async_add_executor_job(
+                self._data.wiserhub.hotwater.boost, time_period
+            )
+        else:
+            _LOGGER.info(f"Cancelling Hot Water boost")
+            await self.hass.async_add_executor_job(
+                self._data.wiserhub.hotwater.cancel_overrides
+            )
         await self.async_force_update()
 
 
