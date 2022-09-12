@@ -561,8 +561,8 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 
 # Change log
 - 3.1.6
-    * Removed need to have HACs installed
-    * Added ability to use button.boost_hot_water as entity on wiser.boost_hotwater service. Issue [#297](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/297)
+    * Updated deprecated constants.  Issue [#289](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/289)
+    * Removed need to have HACs installed. Issue [#292](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/292)
 - 3.1.5
     * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
     * Remove gzip versions of files from source
