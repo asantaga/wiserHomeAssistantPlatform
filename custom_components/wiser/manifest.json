@@ -9,9 +9,7 @@
     "http",
     "websocket_api",
     "frontend",
-    "persistent_notification",
-    "lovelace",
-    "hacs"
+    "lovelace"
   ],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.1.5",
