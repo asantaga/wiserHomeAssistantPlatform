@@ -563,6 +563,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
 - 3.1.6
     * Updated deprecated constants.  Issue [#289](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/289)
     * Removed need to have HACs installed. Issue [#292](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/292)
+    * LTS target temp sensor now shows None value if room set to off.  Issue [#301](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/301)
 - 3.1.5
     * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
     * Remove gzip versions of files from source
