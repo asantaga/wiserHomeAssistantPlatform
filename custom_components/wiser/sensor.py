@@ -13,6 +13,10 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 import voluptuous as vol
 
+from wiserHeatAPIv2.wiserhub import (
+     TEMP_OFF
+)
+
 from .const import (
     DATA,
     DOMAIN,
@@ -600,6 +604,11 @@ class WiserLTSTempSensor(WiserSensor):
         if self._lts_sensor_type == "current_temp":
             self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_temperature
         else:
+            if (
+                self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off" 
+                or self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature == TEMP_OFF
+            ):
+                self._state = None
             self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature
 
     @property
