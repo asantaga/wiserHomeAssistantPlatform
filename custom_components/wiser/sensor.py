@@ -608,8 +608,9 @@ class WiserLTSTempSensor(WiserSensor):
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off" 
                 or self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature == TEMP_OFF
             ):
-                self._state = None
-            self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature
+                self._state = "Off"
+            else:
+                self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature
 
     @property
     def device_info(self):
@@ -646,6 +647,8 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def native_unit_of_measurement(self):
+        if self._state == "Off":
+            return None
         return TEMP_CELSIUS
 
     @property
