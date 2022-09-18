@@ -60,6 +60,10 @@ class WiserLight(LightEntity, WiserScheduleEntity):
         self._schedule = self._device.schedule
 
     @property
+    def supported_color_modes(self):
+        return {ColorMode.ONOFF}
+
+    @property
     def is_on(self):
         """Return the boolean response if the node is on."""
         return self._device.is_on
@@ -186,9 +190,8 @@ class WiserDimmableLight(WiserLight):
         super().__init__(data, light_id)
 
     @property
-    def supported_features(self):
-        """Flag supported features."""
-        return ColorMode.BRIGHTNESS
+    def supported_color_modes(self):
+        return {ColorMode.BRIGHTNESS}
 
     @property
     def brightness(self):
