@@ -12,7 +12,8 @@ from homeassistant.components.cover import (
     SUPPORT_SET_POSITION,
     SUPPORT_STOP,
     ATTR_POSITION,
-    CoverEntity
+    CoverEntity,
+    CoverEntityFeature
 )
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -33,7 +34,7 @@ MANUFACTURER='Schneider Electric'
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS =  SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION | SUPPORT_STOP
+SUPPORT_FLAGS =  CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.SET_POSITION | CoverEntityFeature.STOP
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
