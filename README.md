@@ -566,6 +566,7 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * LTS target temp sensor now shows None value if room set to off.  Issue [#301](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/301)
     * Added ability to delete devices via UI (including associated entities)
     * Removed delete_orphaned_devices service
+    * Moved services into own file to tidy up code for readability
 - 3.1.5
     * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
     * Remove gzip versions of files from source
