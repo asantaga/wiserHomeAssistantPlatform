@@ -12,11 +12,12 @@ For more information checkout the AMAZING community thread available on https://
 ## What's New in 3.1?
 - The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
 - The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
-- Diagnotics - you can now download a diagnotics report that include you full hub json output via the Integrations page or Devices page
-- Change IP/Hostname for hub via UI instead of editing config_entries file
+- Diagnotics - you can now download a diagnotics report that includes your full hub json output via the Integrations page or Devices page
+- Integration Config - you can now change IP/Hostname for your hub via UI instead of editing config_entries file
+- Devices - you can now delete devices via the UI instead of our removed_orphaned_devices service hack!  This will delete entities associated with that device too.  Won't allow you to delete the controller to prevent issues.
 
   ***NOTES***: 
-  - If you do not see these cards in the list of cards to add, try a SHIFT F5 browser refresh.
+  - If you do not see these new cards in the list of cards to add, try a SHIFT F5 browser refresh.
   - If you run Lovelace in YAML mode, you will need to add the js file resources manually.  See each cards documentation.
 
 ## Contents
@@ -133,7 +134,6 @@ Mark & Angelo
     - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
-    - Service `remove_orphaned_entries`: Provides ability to remove HA devices for rooms/devices that have been removed from your hub.  Must have no entities.
 
 - **UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -208,7 +208,7 @@ Select the configure link from the integrations page.  This will then show the c
 
 ![](docs/config.PNG)
 
-`IP Address` here you can change the IP addrss or use a hostname of the hub connection.
+`IP Address` here you can change the IP address or use a hostname of the hub connection.
 
 `Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
 
@@ -564,6 +564,8 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Updated deprecated constants.  Issue [#289](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/289)
     * Removed need to have HACs installed. Issue [#292](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/292)
     * LTS target temp sensor now shows None value if room set to off.  Issue [#301](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/301)
+    * Added ability to delete devices via UI (including associated entities)
+    * Removed delete_orphaned_devices service
 - 3.1.5
     * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
     * Remove gzip versions of files from source
