@@ -80,8 +80,6 @@ ATTR_TO_ENTITY_ID = "to_entity_id"
 ATTR_SCHEDULE_ID = "schedule_id"
 CONF_HUB_ID = "wiser_hub_id"
 CONF_ENDPOINT = "wiser_hub_endpoint"
-SERVICE_REMOVE_ORPHANED_ENTRIES = "remove_orphaned_entries"
-SERVICE_OUTPUT_HUB_JSON = "output_hub_json"
 
 GET_SCHEDULE_SCHEMA = vol.Schema(
     {
@@ -118,8 +116,6 @@ SET_DEVICE_MODE_SCHEMA = vol.Schema(
         vol.Required(ATTR_MODE): vol.Coerce(str),
     }
 )
-
-SELECT_HUB_SCHEMA = vol.All(vol.Schema({vol.Required(CONF_HUB_ID): str}))
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -323,13 +319,6 @@ async def async_setup_entry(hass, config_entry):
             else:
                 _LOGGER.error(f"Invalid entity. {entity_id} does not exist in this integration")
 
-    @callback
-    def remove_orphaned_entries_service(service):
-        for entry_id in hass.data[DOMAIN]:
-            hass.async_create_task(
-                data.async_remove_orphaned_entries(entry_id, service.data[CONF_HUB_ID])
-            )
-
     hass.services.async_register(
         DOMAIN,
         WISER_SERVICES["SERVICE_GET_SCHEDULE"],
@@ -365,13 +354,6 @@ async def async_setup_entry(hass, config_entry):
         schema=SET_DEVICE_MODE_SCHEMA,
     )
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_REMOVE_ORPHANED_ENTRIES,
-        remove_orphaned_entries_service,
-        schema=SELECT_HUB_SCHEMA,
-    )
-
     # Add hub as device
     await data.async_update_device_registry()
 
@@ -391,6 +373,12 @@ async def _async_update_listener(hass, config_entry):
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
+async def async_remove_config_entry_device(hass, config_entry, device_entry) -> bool:
+    """Delete device if not entities"""
+    if device_entry.model == "Controller":
+        _LOGGER.error("You cannot delete the Wiser Controller device via the device delete method.  Please remove the integration instead.")
+        return False
+    return True
 
 async def async_unload_entry(hass, config_entry):
     """
@@ -410,7 +398,6 @@ async def async_unload_entry(hass, config_entry):
 
     # Deregister services
     _LOGGER.debug("Unregister Wiser Services")
-    hass.services.async_remove(DOMAIN, SERVICE_REMOVE_ORPHANED_ENTRIES)
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_GET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_SET_SCHEDULE"])
     hass.services.async_remove(DOMAIN, WISER_SERVICES["SERVICE_COPY_SCHEDULE"])
@@ -516,43 +503,3 @@ class WiserHubHandle:
             model=self.wiserhub.system.model,
             sw_version=self.wiserhub.system.firmware_version,
         )
-
-    @callback
-    async def async_remove_orphaned_entries(self, entry_id, wiser_hub_id: str):
-        """Remove orphaned Wiser entries from device registry"""
-        api = self._hass.data[DOMAIN][entry_id]["data"]
-
-        if api.wiserhub.system.name == wiser_hub_id:
-            _LOGGER.info(f"Removing orphaned devices for {wiser_hub_id}")
-
-            device_registry = dr.async_get(self._hass)
-            entity_registry = er.async_get(self._hass)
-
-            devices_to_be_removed = []
-
-            #Get list of all devices for integration
-            all_devices = [
-                entry
-                for entry in device_registry.devices.values()
-                if entry_id in entry.config_entries
-            ]
-
-            # Don't remove the Gateway host entry
-            wiser_hub = device_registry.async_get_device(
-                connections={(CONNECTION_NETWORK_MAC, api.wiserhub.system.network.mac_address)},
-                identifiers={(DOMAIN, api.unique_id)},
-            )
-            devices_to_be_removed = [ device.id for device in all_devices if device.id != wiser_hub.id ]
-
-            # Remove devices that don't belong to any entity
-            for device_id in devices_to_be_removed:
-                if (
-                    len(
-                        async_entries_for_device(
-                            entity_registry, device_id, include_disabled_entities=True
-                        )
-                    )
-                    == 0
-                ):
-                    _LOGGER.info(f"Removed {device_id}")
-                    device_registry.async_remove_device(device_id)
