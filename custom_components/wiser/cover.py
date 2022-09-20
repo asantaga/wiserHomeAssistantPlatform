@@ -7,10 +7,6 @@ Angelosantagata@gmail.com
 """
 
 from homeassistant.components.cover import (
-    SUPPORT_OPEN,
-    SUPPORT_CLOSE,
-    SUPPORT_SET_POSITION,
-    SUPPORT_STOP,
     ATTR_POSITION,
     CoverEntity,
     CoverEntityFeature
