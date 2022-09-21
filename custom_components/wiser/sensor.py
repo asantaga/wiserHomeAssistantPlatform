@@ -92,12 +92,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Add LTS sensors - for room temp and target temp
     if data.enable_lts_sensors:
         _LOGGER.debug("Setting up LTS sensors")
-        for temp_device in data.wiserhub.rooms.all:
-            wiser_sensors.extend([
-                WiserLTSTempSensor(data, temp_device.id, sensor_type = "current_temp"),
-                WiserLTSTempSensor(data, temp_device.id, sensor_type = "current_target_temp"),
-                WiserLTSDemandSensor(data, temp_device.id, "room")
-            ])
+        for room in data.wiserhub.rooms.all:
+            if room.devices:
+                wiser_sensors.extend([
+                    WiserLTSTempSensor(data, room.id, sensor_type = "current_temp"),
+                    WiserLTSTempSensor(data, room.id, sensor_type = "current_target_temp"),
+                    WiserLTSDemandSensor(data, room.id, "room")
+                ])
 
     # Add humidity sensor for Roomstat
 
