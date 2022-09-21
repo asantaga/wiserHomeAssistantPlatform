@@ -1,23 +1,17 @@
-from faulthandler import cancel_dump_traceback_later
 import logging
 
 from .const import (
-    ATTR_TIME_PERIOD,
     DATA,
-    DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
-    MANUFACTURER,
-    WISER_SERVICES
+    MANUFACTURER
 )
 
 from .helpers import get_device_name, get_unique_id, get_identifier
 from .schedules import WiserScheduleEntity
 
 import voluptuous as vol
-from homeassistant.const import ATTR_MODE
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
-from homeassistant.helpers import entity_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,19 +49,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     async_add_entities(wiser_selects)
 
-
-    # Setup services
-    platform = entity_platform.async_get_current_platform()
-
-    if data.wiserhub.hotwater:
-        platform.async_register_entity_service(
-            WISER_SERVICES["SERVICE_BOOST_HOTWATER"],
-            {
-                vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(int),
-            },
-            "async_boost"
-        )
-
 class WiserSelectEntity(SelectEntity):
     def __init__(self, data):
         """Initialize the sensor."""
@@ -100,10 +81,6 @@ class WiserSelectEntity(SelectEntity):
     @callback
     async def async_set_mode(self, mode):
         _LOGGER.error(f"Set mode service is not available on this entity")
-
-    @callback
-    async def async_boost(self, time_period: int):
-        _LOGGER.error(f"Boost service is not available on this entity")
 
     async def async_added_to_hass(self):
         """Subscribe for update from the hub."""
@@ -173,21 +150,6 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
             self.select_option, mode
         )
         await self.async_force_update()
-
-    @callback
-    async def async_boost(self, time_period: int):
-        if time_period > 0:
-            _LOGGER.info(f"Boosting Hot Water for {time_period}m")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.boost, time_period
-            )
-        else:
-            _LOGGER.info(f"Cancelling Hot Water boost")
-            await self.hass.async_add_executor_job(
-                self._data.wiserhub.hotwater.cancel_overrides
-            )
-        await self.async_force_update()
-
 
 class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
 

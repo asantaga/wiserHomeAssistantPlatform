@@ -154,7 +154,7 @@ async def async_setup_entry(hass, config_entry):
     await async_register_websockets(hass, data)
 
     # Setup services
-    await async_setup_services(hass)
+    await async_setup_services(hass, data)
 
     # Add hub as device
     await data.async_update_device_registry()

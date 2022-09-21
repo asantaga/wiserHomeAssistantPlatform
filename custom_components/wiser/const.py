@@ -46,6 +46,7 @@ CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
 # Custom Attributes
+ATTR_HUB = "hub"
 ATTR_TIME_PERIOD = "time_period"
 ATTR_FILENAME = "filename"
 ATTR_TO_ENTITY_ID = "to_entity_id"

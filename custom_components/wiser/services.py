@@ -2,22 +2,28 @@
 import voluptuous as vol
 import logging
 from .const import (
-    ATTR_FILENAME, 
-    ATTR_SCHEDULE_ID, 
+    ATTR_FILENAME,
+    ATTR_HUB, 
+    ATTR_SCHEDULE_ID,
+    ATTR_TIME_PERIOD, 
     ATTR_TO_ENTITY_ID,
+    DATA,
+    DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
     WISER_SERVICES
 )
+from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
 )
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_services(hass):
+async def async_setup_services(hass, data):
 
     GET_SCHEDULE_SCHEMA = vol.Schema(
         {
@@ -54,6 +60,13 @@ async def async_setup_services(hass):
             vol.Required(ATTR_MODE): vol.Coerce(str),
         }
     )
+
+    BOOST_HOTWATER_SCHEMA = vol.Schema(
+        {
+            vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(int),
+            vol.Optional(ATTR_HUB, default=""): vol.Coerce(str)
+        }
+        )
 
     def get_entity_from_entity_id(entity: str):
         """Get wiser entity from entity_id"""
@@ -172,6 +185,42 @@ async def async_setup_services(hass):
             else:
                 _LOGGER.error(f"Invalid entity. {entity_id} does not exist in this integration")
 
+    @callback
+    async def async_boost_hotwater(service_call):
+        time_period = service_call.data[ATTR_TIME_PERIOD]
+        hub = service_call.data[ATTR_HUB]
+        instance = data
+
+        if get_instance_count(hass) > 1:
+            if not hub:
+                raise HomeAssistantError("Please specify a hub config entry id or name")
+                return None
+            else:
+                #Find hub from config_entry_id or hub name
+                if is_wiser_config_id(hass, hub):
+                    instance = hass.data[DOMAIN][hub][DATA]
+                else:
+                    # Find hub by name
+                    config_entry_id = get_config_entry_id_by_name(hass, hub)
+                    if config_entry_id:
+                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+
+        # If hub has hotwater functionality, call boost
+        if instance.wiserhub.hotwater:
+            if time_period > 0:
+                _LOGGER.info(f"Boosting Hot Water for {time_period}m")
+                await hass.async_add_executor_job(
+                    instance.wiserhub.hotwater.boost, time_period
+                )
+            else:
+                _LOGGER.info(f"Cancelling Hot Water boost")
+                await hass.async_add_executor_job(
+                    instance.wiserhub.hotwater.cancel_overrides
+                )
+        else:
+            raise HomeAssistantError("This hub does not have hotwater functionality")
+        await data.async_force_update()
+
     hass.services.async_register(
         DOMAIN,
         WISER_SERVICES["SERVICE_GET_SCHEDULE"],
@@ -206,3 +255,11 @@ async def async_setup_services(hass):
         set_device_mode,
         schema=SET_DEVICE_MODE_SCHEMA,
     )
+
+    if data.wiserhub.hotwater:
+        hass.services.async_register(
+            DOMAIN,
+            WISER_SERVICES["SERVICE_BOOST_HOTWATER"],
+            async_boost_hotwater,
+            schema=BOOST_HOTWATER_SCHEMA,
+        )
