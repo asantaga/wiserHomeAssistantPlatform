@@ -11,7 +11,6 @@ from .const import (
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
-
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
