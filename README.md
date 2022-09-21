@@ -564,9 +564,10 @@ Moving forward (post 1.9) there will be two primary branches, `master` and `dev`
     * Updated deprecated constants.  Issue [#289](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/289)
     * Removed need to have HACs installed. Issue [#292](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/292)
     * LTS target temp sensor now shows None value if room set to off.  Issue [#301](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/301)
+    * Prevented creation of LTS sensors if room has no devices
     * Added ability to delete devices via UI (including associated entities)
-    * Removed delete_orphaned_devices service
-    * Moved services into own file to tidy up code for readability
+    * BREAKING CHANGE: Removed removed_orphaned_devices services as now replaced with UI delete option
+    * Moved services into own file to tidy up code for readability ahead of future rework of this code
 - 3.1.5
     * Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
     * Remove gzip versions of files from source
