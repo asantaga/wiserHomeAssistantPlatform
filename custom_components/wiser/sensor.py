@@ -439,11 +439,16 @@ class WiserSystemCircuitState(WiserSensor):
                 attrs["boost_end"] = hw.boost_end_time
             attrs["boost_time_remaining"] = int(hw.boost_time_remaining/60)
             attrs["away_mode_supressed"] = hw.away_mode_suppressed
-            attrs["next_schedule_change"] = str(hw.schedule.next.time)
-            attrs["next_schedule_state"] = hw.schedule.next.setting
             attrs["is_away_mode"] = hw.is_away_mode
             attrs["is_boosted"] = hw.is_boosted
             attrs["is_override"] = hw.is_override
+
+            if hw.schedule:
+                attrs["schedule_id"] = self._room.schedule.id
+                attrs["schedule_name"] = self._room.schedule.name
+                attrs["next_day_change"] = str(self._room.schedule.next.day)
+                attrs["next_schedule_change"] = str(hw.schedule.next.time)
+                attrs["next_schedule_state"] = hw.schedule.next.setting
         return attrs
 
 
