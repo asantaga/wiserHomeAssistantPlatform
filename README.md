@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
-This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
+This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.  This component only works locally with your wiser hub and does not rely on the cloud.
 
 For the latest version of the Wiser Home Assistant Platform please use the master branch or better still install via HACS. if you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation described below.
 
@@ -26,6 +26,7 @@ For more information checkout the AMAZING community thread available on https://
 - [Updating to v3.x from v2.x](#updating-to-v30-from-v2.x---important-please-read)
 - [Issues & Questions](#issues-and-questions)
 - [Functionality of this Integration](#functionality)
+- [Services Included in this Integration](./docs/services.md)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
@@ -135,8 +136,11 @@ Mark & Angelo
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
 
+    More information on using all the services available to this integration can be found [here](./docs/services.md)
+
 - **UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
+  - Zigbee Network Card to display your Wiser zigbee network connectivity
 ## Sample Images
 
 ![](docs/screenshot.PNG)
@@ -238,6 +242,8 @@ Select the configure link from the integrations page.  This will then show the c
 ## Managing Schedules with Home Assistant
 
 v3.0.23 deprecates previous different services for Heating and OnOff schedule types in favor of a single service for each of get, set and copy that works with all schedule types, including lights and shutters for the Continental European version of the hub and devices.
+
+More information on using all the services available to this integration can be found [here](./docs/services.md)
 
 
 ### Getting a Schedule
@@ -459,17 +465,16 @@ You can either provide an entity ID to reference the schedule attached to that e
 - Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
 
 
-## Providing Your Hub Output as Json Files
+## Providing Your Hub Output as a Json File
 
-The integration contains a service to make it easy to provide your hub data for us to test in our mock server for issues you are experiencing.  This can save a lot of back and forth if we can use your data to recreate a problem.  The outputs created have all sensitive data anonymised so you can be comfortable posting to our git issues tracker.
+This integration supports the downloading of diagnostics information.  This can often help when diagnosing an issue as we can use this file in our emulator to test against your setup.  All sensitive data in this download is anonymised, i.e. serial numbers, IP addresses, GPS coordinates etc.
 
-In order to create these files do the following:
+In order to download this file do the following:
 
-1) In developer tools, go to services
-2) Select the Output Hub Json Data to File service
-3) Enter your Wiser hub name in the field Wiser Hub Name.  This can be found from Configuration->Integrations and is the WiserHeatxxxxxx name shown on the integration box for Wiser in this screen.
-4) Select Call Service
-5) This will output 3 files - domain.json, schedule.json, network.json in a directory wiser_data in your config directory.  These can be uploaded to an issue on github.
+1) In Settings, go to Devices & Services
+2) Select the x Devices link on the WiserHeat integration
+3) Select any device on the list.
+4) You will then see the option to Download Diagnostics
 
 ## Schedule Card
 
