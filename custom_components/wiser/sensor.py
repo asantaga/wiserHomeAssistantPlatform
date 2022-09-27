@@ -444,10 +444,11 @@ class WiserSystemCircuitState(WiserSensor):
             attrs["is_override"] = hw.is_override
 
             if hw.schedule:
-                attrs["schedule_id"] = self._room.schedule.id
-                attrs["schedule_name"] = self._room.schedule.name
-                attrs["next_day_change"] = str(self._room.schedule.next.day)
+                attrs["schedule_id"] = hw.schedule.id
+                attrs["schedule_name"] = hw.schedule.name
+                attrs["next_day_change"] = str(hw.schedule.next.day)
                 attrs["next_schedule_change"] = str(hw.schedule.next.time)
+                attrs["next_schedule_datetime"] = str(hw.schedule.next.datetime)
                 attrs["next_schedule_state"] = hw.schedule.next.setting
         return attrs
 

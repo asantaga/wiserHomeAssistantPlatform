@@ -335,6 +335,7 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             attrs["current_schedule_temp"] = self._room.schedule.current_setting
             attrs["next_day_change"] = str(self._room.schedule.next.day)
             attrs["next_schedule_change"] = str(self._room.schedule.next.time)
+            attrs["next_schedule_datetime"] = str(self._room.schedule.next.datetime)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
 
         return attrs
