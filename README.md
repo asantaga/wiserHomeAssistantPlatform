@@ -564,8 +564,8 @@ There are two primary branches for this integration, `master` and `dev` . Master
 ## Change log
 
 - 3.1.6
-  - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require and entity id. See [Boost Hot Water Service](./docs/services.md#boost-hot-water)
-  - BREAKING CHANGE: Removed removed_orphaned_devices services as now replaced with UI delete option
+  - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require an entity id. See [Boost Hot Water Service](./docs/services.md#boost-hot-water)
+  - BREAKING CHANGE: Removed remove_orphaned_devices services as now replaced with UI delete option
   - Bumped api to v0.0.40
   - Added next schedule day attributes to hot water sensor. Issue [#302](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/302)
   - Added next schedule datetime attribute to climate, hot water, light and shutter sensors
