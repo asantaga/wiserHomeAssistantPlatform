@@ -2,14 +2,14 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
-This repository contains a Home Assistant component + platforms, for the awesome Drayton Wiser Heating solution.  It also supports the European version of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.  This component only works locally with your wiser hub and does not rely on the cloud.
+This repository contains a Home Assistant integration for the awesome Drayton Wiser Heating solution.  This integration only works locally with your wiser hub and does not rely on the cloud.
 
-For the latest version of the Wiser Home Assistant Platform please use the master branch or better still install via HACS. if you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation described below.
+It also supports some European versions of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
+
+For the latest version of the Wiser Home Assistant Platform please use the master branch or better still install via HACS. If you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation described below.
 
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
-
----
 
 ## What's New in 3.1?
 
@@ -17,9 +17,9 @@ For more information checkout the AMAZING community thread available on
 - The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
 - Diagnotics - you can now download a diagnotics report that includes your full hub json output via the Integrations page or Devices page
 - Integration Config - you can now change IP/Hostname for your hub via UI instead of editing config_entries file
-- Devices - you can now delete devices via the UI instead of our removed_orphaned_devices service hack!  This will delete entities associated with that device too.  Won't allow you to delete the controller to prevent issues.
+- Devices - you can now delete devices via the UI instead of our removed_orphaned_devices service hack!  This will delete entities associated with that device too.  You cannot delete the controller device in order to prevent issues and if you want to do that, we recommend uninstalling the integration.
 
-  ***NOTES***:
+  ***NOTES***
   - If you do not see these new cards in the list of cards to add, try a SHIFT F5 browser refresh.
   - If you run Lovelace in YAML mode, you will need to add the js file resources manually.  See each cards documentation.
 
@@ -50,7 +50,9 @@ Requires a minimum of HA 2022.06.
 
 ## Updating to v3.x from v2.x - IMPORTANT PLEASE READ
 
-Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
+If you are installing this integration for the first time, you can skip this section as you will be installing the latest version.  For those still hanging onto v2.x, we do recommend moving to v3 but please read the below first.
+
+Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading, a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
 
 If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
 
@@ -58,24 +60,21 @@ We have tried hard to find a way to not have this as such a disruptive change bu
 
 In most cases, it will be easier to remove the old integration and add this from new.
 
-However, we hope that many of the things our community has had to create with scripts or automations will now have a much simpler way to do it anyway and we can better maintain this setup going forward so future upgrades will be straight forward.
+However, we hope that many of the things that have previously needed scripts or automations will now have a much simpler way to do it and we can better maintain this setup going forward so future upgrades will be more straight forward.
 
 ## Issues and Questions
 
-As you can see, we have been oh so very busy adding new functions and trying to make it simple and intuitive.  We have done a lot of testing on this v3.0 release but as always, it is very hard to test all the possible setups out there.
+As you can see, we are always busy adding new functions, fixing bugs and trying to make this a robust, simple and intuitive integration.  We do a lot of testing on new releases but it is very hard to test all the possible setups out there.
 
-As such, if you find an issue or have a how do I question, please feel free to raise a github issue on our repo or post you query to our HA Community page.
+If you find an issue or have a how do I question, please feel free to raise a github issue on our repo or post you query to our very active HA Community page.
 
-NOTE: It can really help diagnose an issue to be provided with an output from your hub to run in our mock hub server.  You can download an anonomised diagnostic file by following the instructions [here](#providing-your-hub-output-as-a-json-file) how to run this.
+NOTE: It can really help diagnose an issue to be provided with an output from your hub to run in our mock hub server.  You can download an anonomised diagnostic file by following the instructions [here](#providing-your-hub-output-as-a-json-file).
 
-Issues
+Issues -
 [https://github.com/asantaga/wiserHomeAssistantPlatform/issues](https://github.com/asantaga/wiserHomeAssistantPlatform/issues)
 
-Questions
+Questions & Help -
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
-
-Hope you enjoy it!  
-Mark & Angelo
 
 ## Providing Your Hub Output as a Json File
 
@@ -145,14 +144,14 @@ In order to download this file do the following:
   - Supports standard services for entity types
     - i.e. climate.set_temperature, climate.set_preset, climate.set_hvac_mode, button.press, select.option, switch.turn_on, light.turn_on, cover.set_position etc
   - The following custom services are available for use with automation
-  - Service `boost_heating` : Provides ability to boost the heating in a particular room
-  - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
-  - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
-  - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
+    - Service `boost_heating` : Provides ability to boost the heating in a particular room
+    - Service `boost_hotwater` : Provides ability to boost the heating in a particular room
+    - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
+    - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
 
-    More information on using all the services available to this integration can be found [here](./docs/services.md)
+  More information on using all the services available to this integration can be found [here](./docs/services.md)
 
-- **UI Cards**
+- **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
   - Zigbee Network Card to display your Wiser zigbee network connectivity
 
@@ -182,7 +181,7 @@ We highly recommend using [HACS Home Assistant Community Store](https://github.c
 
 ## Manual Code Installation
 
-This method is best used when you want to play with the "latest and greatest" from the repository. Moving forward (post 1.9) , the github repository will contain two primary branches, **master** and dev. Master is the latest released, and hopefully most stable branch, whereas **dev** is the branch that we're currently working on.
+This method is best used when you want to play with the "latest and greatest" from the repository. The github repository contains two primary branches, **master** and **dev**. Master is the latest released version (and the most stable branch), whereas **dev** is the branch that we're currently working on.
 
 1. On your server clone the github repository into a suitable directory using the following command
    git clone `https://github.com/asantaga/wiserHomeAssistantPlatform.git`
@@ -205,12 +204,11 @@ Reference `https://it.knightnet.org.uk/kb/nr-qa/drayton-wiser-heating-control/#c
 
 Before you can use the component you need to find the HeatHub secret key, this involves a couple of steps.
 
-1. On your hub, press the setup button and the led should flash.
-2. Use your phone or tablet and connect to the wifi SSID (you should now see available) that is Wiserxx_xxxxxx
+1. On your hub, press the setup button and the led should flash green.
+2. Use your phone or tablet and connect to the wifi SSID (that you should now see available) that is Wiserxx_xxxxxx
 3. Once connected to this wifi network, open your browser and go to `http://192.168.8.1/secret`
 4. You can then copy your key to an email to send to another device or copy and paste into the HA config if setting up integration via your phone/tablet.
-5. When finished, either wait for hub to revert to led on constant or repower it (quicker to repower). Must be in non flashing mode to setup integration.
-
+5. When finished, press the setup button again and wait for hub to revert to a constant green led or repower it. The hub must have a constant green light to setup the integration.
 6. Configure using Home Assistant Configuration -> Integrations where your hub should have been auto discovered
 
 ![Hub Discovery](docs/discovery.PNG)
@@ -223,7 +221,7 @@ Select the configure link from the integrations page.  This will then show the c
 
 `IP Address` here you can change the IP address or use a hostname of the hub connection.
 
-`Scan Interval` is the interval in second that the integration will update form the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
+`Scan Interval` is the interval in seconds that the integration will update from the hub.  Do not set this too low as the hub will not be able to cope and you will see errors.  Default is 30.
 
 `Default Heating Boost Temperature` is the delta temperature above the current room temperature the radiator should be set to when boosted, default is 2
 
@@ -237,17 +235,15 @@ Select the configure link from the integrations page.  This will then show the c
 - Boost - when you set a new setpoint it will only take affect for the default "boost" time.
 - Boost Only in Auto - same as the boost mode but will only do this if in auto mode.  In manual mode, it will set the temp as per default mode.
 
-`Use This Temperature If No Stored Manual Temperature` when setting a manual temp on one of your rooms, we store this to use each time you go back to manual/heat mode.  However, on a HA restart, we do not have a stored temp, so here you can set what temp to use in that first time use situation.
+`Use This Temperature If No Stored Manual Temperature` when setting a manual temp on one of your rooms, we store this to use each time you go back to manual/heat mode.  However, on a HA restart, we do not have a stored temp, so here you can set what temp to use in that first time use situation.  There are 3 options:
+
+- Current - the current temperature of the room
+- Scheduled - the current scheduled temperature
+- Minimum - the hub minimum temp which is 5C
 
 `Enable Moments Buttons` is to create buttons for Moments you have setup on the wiser app.  Default is unticked.
 
-`Enable LTS Sensors` is to create sensors for LTS for rooms and hub heating and hot water demand.  Default is unticked.
-
-`Setpoint Mode` modifies the way setpoint works. There are 3 options:
-
-- Normal - the functionality is the same as the Wiser app
-- Boost - when you set a new setpoint it will only take affect for the default "boost" time.
-- Boost Only in Auto - same as the boost mode but will only do this if in auto mode.  In manual mode, it will set the temp as per default mode.
+`Enable LTS Sensors` is to create sensors for Long Term Statistics for rooms and hub heating and hot water demand.  Default is unticked.
 
 ## Managing Schedules with Home Assistant
 
