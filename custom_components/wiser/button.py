@@ -1,14 +1,18 @@
 
 from .const import (
+    ATTR_TIME_PERIOD,
     DATA,
+    DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
-    MANUFACTURER
+    MANUFACTURER,
+    WISER_SERVICES
 )
-from .climate import HVAC_MODE_HASS_TO_WISER
 from .helpers import get_device_name, get_unique_id, get_identifier
 
+import voluptuous as vol
 from homeassistant.components.button import ButtonEntity
-from homeassistant.components.climate.const import HVAC_MODE_AUTO
+from homeassistant.core import callback
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 
@@ -41,7 +45,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             wiser_buttons.append(WiserMomentsButton(data, moment.id))
 
     async_add_entities(wiser_buttons, True)
-
 
 class WiserButton(ButtonEntity):
     def __init__(self, data, name = "Button"):
@@ -140,7 +143,6 @@ class WiserBoostHotWaterButton(WiserButton):
     @property
     def icon(self):
         return "mdi:water-plus"
-
 
 class WiserCancelHotWaterOverridesButton(WiserButton):
     def __init__(self, data):

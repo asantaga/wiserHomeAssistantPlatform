@@ -1,4 +1,4 @@
-from .const import ENTITY_PREFIX
+from .const import DOMAIN, ENTITY_PREFIX
 
 def get_device_name(data, id, type = "device"):
     if type == "device":
@@ -72,4 +72,19 @@ def get_unique_id(data, device_type, entity_type, id):
 
 def get_room_name(data, room_id):
     return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
+
+def get_instance_count(hass) -> int:
+    return len(hass.config_entries.async_entries(DOMAIN))
+
+def is_wiser_config_id(hass, config_id):
+    entry = [entry for entry in hass.config_entries.async_entries(DOMAIN) if entry.entry_id == config_id]
+    if entry:
+        return True
+    return False
+
+def get_config_entry_id_by_name(hass, name) -> str or None:
+    entry = [entry for entry in hass.config_entries.async_entries(DOMAIN) if entry.title == name]
+    if entry:
+        return entry[0].entry_id
+    return None
 

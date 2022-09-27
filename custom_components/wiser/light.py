@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    SUPPORT_BRIGHTNESS,
+    ColorMode,
     LightEntity,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -58,6 +58,10 @@ class WiserLight(LightEntity, WiserScheduleEntity):
         _LOGGER.debug(f"Wiser {self.name} Light Update requested")
         self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._schedule = self._device.schedule
+
+    @property
+    def supported_color_modes(self):
+        return {ColorMode.ONOFF}
 
     @property
     def is_on(self):
@@ -138,6 +142,7 @@ class WiserLight(LightEntity, WiserScheduleEntity):
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
             attrs["next_schedule_change"] = str(self._device.schedule.next.time)
+            attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
             attrs["next_schedule_state"] = self._device.schedule.next.setting    
 
         return attrs
@@ -186,9 +191,8 @@ class WiserDimmableLight(WiserLight):
         super().__init__(data, light_id)
 
     @property
-    def supported_features(self):
-        """Flag supported features."""
-        return SUPPORT_BRIGHTNESS
+    def supported_color_modes(self):
+        return {ColorMode.BRIGHTNESS}
 
     @property
     def brightness(self):

@@ -10,7 +10,7 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.1.5"
+VERSION = "3.1.6"
 WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number", "light", "cover"]
 DATA = "data"
 UPDATE_TRACK = "update_track"
@@ -46,7 +46,12 @@ CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
 # Custom Attributes
+ATTR_HUB = "hub"
 ATTR_TIME_PERIOD = "time_period"
+ATTR_FILENAME = "filename"
+ATTR_TO_ENTITY_ID = "to_entity_id"
+ATTR_SCHEDULE_ID = "schedule_id"
+
 
 # Signal icons
 SIGNAL_STRENGTH_ICONS = {

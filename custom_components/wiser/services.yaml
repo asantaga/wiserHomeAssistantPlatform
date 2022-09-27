@@ -1,7 +1,7 @@
 boost_heating:
   name: Boost Heating
   description: >
-    Boost the temperature in the selected rooms/areas.
+    Boost the temperature in the selected rooms/areas
   target:
     entity:
       integration: wiser
@@ -9,7 +9,7 @@ boost_heating:
   fields:
     time_period:
       name: Time period
-      description: Set the time period for the boost in minutes.
+      description: Set the time period for the boost in minutes
       example: 60
       default: 60
       required: true
@@ -21,7 +21,7 @@ boost_heating:
           mode: box
     temperature_delta:
       name: Temperature Increase
-      description: Set the increase in temperature for the boost period.
+      description: Set the increase in temperature for the boost period
       example: 3.0
       default: 3.0
       required: false
@@ -30,10 +30,10 @@ boost_heating:
           min: 0.5
           max: 5
           step: 0.5
-          unit_of_measurement: C
+          unit_of_measurement: °C
     temperature:
       name: Temperature
-      description: Set the room target temperature for the boost period.
+      description: Set the room target temperature for the boost period
       example: 21.0
       default: 21.0
       required: false
@@ -42,20 +42,16 @@ boost_heating:
           min: 5
           max: 30
           step: 0.5
-          unit_of_measurement: C
+          unit_of_measurement: °C
 
 boost_hotwater:
   name: Boost Hot Water
   description: >
-    Boost the hot water for time specified.
-  target:
-    entity:
-      integration: wiser
-      domain: select
+    Boost the hot water for time specified
   fields:
     time_period:
       name: Time period
-      description: Set the time period for the boost in minutes.
+      description: Set the time period for the boost
       example: 60
       default: 60
       required: true
@@ -65,6 +61,15 @@ boost_hotwater:
           max: 1440
           step: 1
           mode: box
+          unit_of_measurement: minutes
+    hub:
+      name: Hub
+      description: Only needs to be set if you have multiple Wiser hubs
+      required: false
+      selector:
+        config_entry:
+          integration: wiser
+
 
 get_schedule:
   name: Save Schedule to File
@@ -85,7 +90,7 @@ get_schedule:
       name: Filename
       description: >
         The filename to write out the yaml. See README.MD if running within a
-        docker container.
+        docker container
       required: false
       example: "config/schedules/{{ entity_id.name }}.yaml"
       selector:
@@ -194,31 +199,3 @@ set_device_mode:
           options:
             - "Auto"
             - "Manual"
-
-remove_orphaned_entries:
-  name: Remove Orphaned Devices
-  description: Delete devices that no longer exist on Wiser
-  fields:
-    wiser_hub_id:
-      name: Wiser Hub Name
-      description: >-
-        The name of the wiser hub to remove orhpaned devices from.  
-        This can be found from the integration name.
-      example: WiserHeatxxxxxx
-      required: true
-      selector:
-        text:
-
-output_hub_json:
-  name: Output Hub Json Data To File
-  description: Write anonymised hub json data to file for debug purposes
-  fields:
-    wiser_hub_id:
-      name: Wiser Hub Name
-      description: >-
-        The name of the wiser hub to get json data from.  
-        This can be found from the integration name.
-      example: WiserHeatxxxxxx
-      required: true
-      selector:
-        text:

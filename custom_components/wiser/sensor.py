@@ -13,6 +13,10 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 import voluptuous as vol
 
+from wiserHeatAPIv2.wiserhub import (
+     TEMP_OFF
+)
+
 from .const import (
     DATA,
     DOMAIN,
@@ -88,12 +92,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Add LTS sensors - for room temp and target temp
     if data.enable_lts_sensors:
         _LOGGER.debug("Setting up LTS sensors")
-        for temp_device in data.wiserhub.rooms.all:
-            wiser_sensors.extend([
-                WiserLTSTempSensor(data, temp_device.id, sensor_type = "current_temp"),
-                WiserLTSTempSensor(data, temp_device.id, sensor_type = "current_target_temp"),
-                WiserLTSDemandSensor(data, temp_device.id, "room")
-            ])
+        for room in data.wiserhub.rooms.all:
+            if room.devices:
+                wiser_sensors.extend([
+                    WiserLTSTempSensor(data, room.id, sensor_type = "current_temp"),
+                    WiserLTSTempSensor(data, room.id, sensor_type = "current_target_temp"),
+                    WiserLTSDemandSensor(data, room.id, "room")
+                ])
 
     # Add humidity sensor for Roomstat
 
@@ -434,11 +439,17 @@ class WiserSystemCircuitState(WiserSensor):
                 attrs["boost_end"] = hw.boost_end_time
             attrs["boost_time_remaining"] = int(hw.boost_time_remaining/60)
             attrs["away_mode_supressed"] = hw.away_mode_suppressed
-            attrs["next_schedule_change"] = str(hw.schedule.next.time)
-            attrs["next_schedule_state"] = hw.schedule.next.setting
             attrs["is_away_mode"] = hw.is_away_mode
             attrs["is_boosted"] = hw.is_boosted
             attrs["is_override"] = hw.is_override
+
+            if hw.schedule:
+                attrs["schedule_id"] = hw.schedule.id
+                attrs["schedule_name"] = hw.schedule.name
+                attrs["next_day_change"] = str(hw.schedule.next.day)
+                attrs["next_schedule_change"] = str(hw.schedule.next.time)
+                attrs["next_schedule_datetime"] = str(hw.schedule.next.datetime)
+                attrs["next_schedule_state"] = hw.schedule.next.setting
         return attrs
 
 
@@ -600,7 +611,13 @@ class WiserLTSTempSensor(WiserSensor):
         if self._lts_sensor_type == "current_temp":
             self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_temperature
         else:
-            self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature
+            if (
+                self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off" 
+                or self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature == TEMP_OFF
+            ):
+                self._state = "Off"
+            else:
+                self._state = self._data.wiserhub.rooms.get_by_id(self._device_id).current_target_temperature
 
     @property
     def device_info(self):
@@ -637,6 +654,8 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def native_unit_of_measurement(self):
+        if self._state == "Off":
+            return None
         return TEMP_CELSIUS
 
     @property

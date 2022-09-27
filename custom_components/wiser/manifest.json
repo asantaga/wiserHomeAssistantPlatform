@@ -9,12 +9,10 @@
     "http",
     "websocket_api",
     "frontend",
-    "persistent_notification",
-    "lovelace",
-    "hacs"
+    "lovelace"
   ],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.1.5",
-  "requirements": ["wiserHeatAPIv2==0.0.39"],
+  "version": "3.1.6",
+  "requirements": ["wiserHeatAPIv2==0.0.40"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }
