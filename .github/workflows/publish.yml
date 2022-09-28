@@ -1,0 +1,30 @@
+name: Publish
+
+on:
+  release:
+    types:
+      - published
+  push:
+    branches:
+      - main
+
+jobs:
+  release_zip_file:
+    name: Publish Wiser zip file asset
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout the repository
+        uses: actions/checkout@v3.0.2
+      # Pack the Wiser dir as a zip and upload to the release
+      - name: 📦 ZIP Wiser Dir
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          cd ${{ github.workspace }}/custom_components/wiser
+          zip wiser.zip -r ./
+      - name: 📤 Upload zip to release
+        uses: softprops/action-gh-release@v0.1.14
+        if: ${{ github.event_name == 'release' }}
+        with:
+          files: ${{ github.workspace }}/custom_components/wiser/wiser.zip
