@@ -30,7 +30,7 @@ For more information checkout the AMAZING community thread available on
 - [Issues & Questions](#issues-and-questions)
 - [Providing You Hub Output as a JSON File](#providing-your-hub-output-as-a-json-file)
 - [Functionality of this Integration](#functionality)
-- [Services Included in this Integration](./docs/services.md)
+- [Services Included in this Integration](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
@@ -149,7 +149,7 @@ In order to download this file do the following:
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
 
-  More information on using all the services available to this integration can be found [here](./docs/services.md)
+  More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
 
 - **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -249,7 +249,7 @@ Select the configure link from the integrations page.  This will then show the c
 
 v3.0.23 deprecates previous different services for Heating and OnOff schedule types in favor of a single service for each of get, set and copy that works with all schedule types, including lights and shutters for the Continental European version of the hub and devices.
 
-More information on using all the services available to this integration can be found [here](./docs/services.md)
+More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
 
 ### Getting a Schedule
 
@@ -564,7 +564,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 ## Change log
 
 - 3.1.6
-  - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require an entity id. See [Boost Hot Water Service](./docs/services.md#boost-hot-water)
+  - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require an entity id. See [Boost Hot Water Service](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#boost-hot-water)
   - BREAKING CHANGE: Removed remove_orphaned_devices services as now replaced with UI delete option
   - Bumped api to v0.0.40
   - Added next schedule day attributes to hot water sensor. Issue [#302](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/302)
@@ -577,7 +577,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Moved services into own file to tidy up code for readability ahead of future rework of this code
 
 - 3.1.5
-  - Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue #[#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
+  - Fix for trying to add Wiser card resources before lovelace has loaded existing ones on fast hardware - issue [#287](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/287)
   - Remove gzip versions of files from source
   - Delete versions of gzip file older than js file on restart to prevent new version not loading
 
