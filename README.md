@@ -1,7 +1,6 @@
 # Wiser Home Assistant Integration v3.1.6
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-[![pypi-version]][11] [![pypi-downloads]][11] [![license-badge]][4]
 
 This repository contains a Home Assistant integration for the awesome Drayton Wiser Heating solution.  This integration only works locally with your wiser hub and does not rely on the cloud.
 
