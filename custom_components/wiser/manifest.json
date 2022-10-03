@@ -13,6 +13,6 @@
   ],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.1.7",
-  "requirements": ["wiserHeatAPIv2==0.0.41"],
+  "requirements": ["wiserHeatAPIv2==0.0.42"],
   "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
 }
