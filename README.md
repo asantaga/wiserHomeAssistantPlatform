@@ -566,6 +566,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
   - Added debug logging to show number of pool connections
+  - Fix for error in boost_hotwater service.  Issue [#305](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/305)
 
 - 3.1.6
   - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require an entity id. See [Boost Hot Water Service](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#boost-hot-water)
