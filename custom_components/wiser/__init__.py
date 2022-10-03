@@ -283,6 +283,9 @@ class WiserHubHandle:
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.error(f"An unknown error occurred trying to update from Wiser hub {self.wiserhub.system.name}")
             _LOGGER.debug(f"Error is {str(ex)}")
+
+        finally:
+            _LOGGER.debug(f"Connection Pool Connections: {len(self.wiserhub._wiser_rest_controller.get_connection_pools())}")
         
         self.last_update_status = "Failed"
         dispatcher_send(self._hass, f"{self.wiserhub.system.name}-HubUpdateFailedMessage")
