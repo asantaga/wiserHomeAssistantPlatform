@@ -1,10 +1,6 @@
-# Wiser Home Assistant Integration v3.1.7beta1
+# Wiser Home Assistant Integration v3.1.7
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-
-
-> **THIS IS A BETA TEST RELEASE FOR INVESTIGATING IMPROVEMENTS IN WISER HUB DISCONNECTS.  PLEASE ONLY INSTALL IF YOU ARE EXPERIENCING THE ISSUE AND PART OF THE FORUM ONVERSATION**
-
 
 This repository contains a Home Assistant integration for the awesome Drayton Wiser Heating solution.  This integration only works locally with your wiser hub and does not rely on the cloud.
 
@@ -566,6 +562,10 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.1.7
+  - Bump api to 0.0.42 to fix hub wifi drop outs
+  - Added debug logging to show number of pool connections
 
 - 3.1.6
   - BREAKING CHANGE: The boost hot water service parameters have changed and no longer require an entity id. See [Boost Hot Water Service](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#boost-hot-water)
