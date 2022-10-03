@@ -217,9 +217,9 @@ async def async_setup_services(hass, data):
                 await hass.async_add_executor_job(
                     instance.wiserhub.hotwater.cancel_overrides
                 )
+            await data.async_update(True)
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
-        await data.async_force_update()
 
     hass.services.async_register(
         DOMAIN,
