@@ -564,7 +564,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Utilise async api aioWiserHeatAPI
   - Modify for fully async functionality
   - Utilise the data update coordinator of HA
-  - Adjustment of battery levels to be more reflective of remainign usable capacity
+  - Adjustment of battery levels to be more reflective of remaining usable capacity
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
