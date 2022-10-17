@@ -13,7 +13,13 @@ For more information checkout the AMAZING community thread available on
 
 ## What's New in 3.2?
 
-- Async - write more here!!!!
+- A lot of backend rework of the integration to utilise built in HA functions and make it more performant.
+  - Moved to a new fully async api from the old sync api
+  - Now utilises the data update coordinator functionality in HA instead of our own custom one
+  - Quite a bit of code tidying and black formatting
+
+- MORE TO COME BEFORE RELEASE - ADD HERE!
+
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
@@ -557,6 +563,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.2.0
   - Utilise async api aioWiserHeatAPI
   - Modify for fully async functionality
+  - Utilise the data update coordinator of HA
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
