@@ -10,8 +10,17 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.1.7"
-WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number", "light", "cover"]
+VERSION = "3.2.0"
+WISER_PLATFORMS = [
+    "climate",
+    "sensor",
+    "switch",
+    "select",
+    "button",
+    "number",
+    "light",
+    "cover",
+]
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
@@ -71,24 +80,20 @@ WISER_SERVICES = {
     "SERVICE_COPY_SCHEDULE": "copy_schedule",
     "SERVICE_GET_SCHEDULE": "get_schedule",
     "SERVICE_SET_SCHEDULE": "set_schedule",
-    "SERVICE_SET_DEVICE_MODE": "set_device_mode"
+    "SERVICE_SET_DEVICE_MODE": "set_device_mode",
 }
 
 WISER_BOOST_PRESETS = {
     "Boost 30m": 30,
     "Boost 1h": 60,
     "Boost 2h": 120,
-    "Boost 3h": 180
+    "Boost 3h": 180,
 }
 
 WISER_SETPOINT_MODES = {
     "Normal": "normal",
     "Boost": "boost",
-    "BoostAuto": "boost in auto mode only"
+    "BoostAuto": "boost in auto mode only",
 }
 
-WISER_RESTORE_TEMP_DEFAULT_OPTIONS = [
-    "Current",
-    "Scheduled",
-    "Minimum"
-]
+WISER_RESTORE_TEMP_DEFAULT_OPTIONS = ["Current", "Scheduled", "Minimum"]

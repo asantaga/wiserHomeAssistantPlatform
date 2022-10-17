@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.7
+# Wiser Home Assistant Integration v3.2.0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -11,18 +11,9 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 3.1?
+## What's New in 3.2?
 
-- The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
-- The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
-- Diagnotics - you can now download a diagnotics report that includes your full hub json output via the Integrations page or Devices page
-- Integration Config - you can now change IP/Hostname for your hub via UI instead of editing config_entries file
-- Devices - you can now delete devices via the UI instead of our removed_orphaned_devices service hack!  This will delete entities associated with that device too.  You cannot delete the controller device in order to prevent issues and if you want to do that, we recommend uninstalling the integration.
-
-  ***NOTES***
-  - If you do not see these new cards in the list of cards to add, try a SHIFT F5 browser refresh.
-  - If you run Lovelace in YAML mode, you will need to add the js file resources manually.  See each cards documentation.
-
+- Async - write more here!!!!
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
@@ -46,7 +37,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.06.
+Requires a minimum of HA 2022.9.
 
 ## Updating to v3.x from v2.x - IMPORTANT PLEASE READ
 
@@ -562,6 +553,10 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.2.0
+  - Utilise async api aioWiserHeatAPI
+  - Modify for fully async functionality
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
