@@ -207,6 +207,7 @@ class WiserBatterySensor(WiserSensor):
         super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._state = self._device.battery.percent
+        self.async_write_ha_state()
 
     @property
     def device_class(self):
@@ -259,6 +260,10 @@ class WiserDeviceSignalSensor(WiserSensor):
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
+        if self._device_id == 0:
+            self._device = self._data.wiserhub.system
+        else:
+            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._state = self._device.signal.displayed_signal_strength
         self.async_write_ha_state()
 
