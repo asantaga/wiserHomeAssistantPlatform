@@ -329,7 +329,7 @@ async def async_register_websockets(hass, data):
         d = get_api_for_hub(msg.get("hub"))
         if d:
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
-            await d.wiserhub.schedules.create_schedule, schedule_type_enum, name
+            await d.wiserhub.schedules.create_schedule(schedule_type_enum, name)
             await d.async_refresh()
             connection.send_result(msg["id"], "success")
         else:
