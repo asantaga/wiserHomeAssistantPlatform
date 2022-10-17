@@ -144,7 +144,7 @@ class WiserOverrideHotWaterButton(WiserButton):
 
     async def async_press(self):
         await self._data.wiserhub.hotwater.override_state(
-            "Off" if self._data.wiserhub.hotwater.current_state == "On" else "Off"
+            "Off" if self._data.wiserhub.hotwater.current_state == "On" else "On"
         )
         await self.async_force_update()
 
