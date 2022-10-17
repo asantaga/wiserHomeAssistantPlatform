@@ -11,7 +11,8 @@ import voluptuous as vol
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
@@ -134,22 +135,31 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     return True
 
 
-class WiserSwitch(SwitchEntity):
+class WiserSwitch(CoordinatorEntity, SwitchEntity):
     """Switch to set the status of the Wiser Operation Mode (Away/Normal)."""
 
-    def __init__(self, data, name, key, type, icon):
+    def __init__(self, coordinator, name, key, type, icon):
         """Initialize the sensor."""
-        self._data = data
+        super().__init__(coordinator)
+        self._data = coordinator
         self._key = key
         self._icon = icon
         self._name = name
         self._is_on = False
         self._type = type
         self._away_temperature = None
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} init")
 
-    async def async_force_update(self):
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            await asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} switch update requested")
 
     @property
     def name(self):
@@ -166,11 +176,6 @@ class WiserSwitch(SwitchEntity):
         return get_unique_id(self._data, self._type, "switch", self.name)
 
     @property
-    def should_poll(self):
-        """Return the polling state."""
-        return False
-
-    @property
     def is_on(self):
         """Return true if device is on."""
         return self._is_on
@@ -183,21 +188,6 @@ class WiserSwitch(SwitchEntity):
         """Turn the device off."""
         raise NotImplemented
 
-
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )
-
-
 class WiserSystemSwitch(WiserSwitch):
     """Switch to set the status of a system switch"""
 
@@ -207,26 +197,31 @@ class WiserSystemSwitch(WiserSwitch):
         self._away_temperature = None
         self._is_on = getattr(self._data.wiserhub.system, self._key)
 
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._is_on = getattr(self._data.wiserhub.system, self._key)
         if self._name == "Away Mode":
             self._away_temperature = self._data.wiserhub.system.away_mode_target_temperature
+        self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
+        """
         await self.hass.async_add_executor_job(
             setattr, self._data.wiserhub.system, self._key, True
         )
+        """
+        fn = getattr(self._data.wiserhub.system, "set_" + self._key)
+        result = await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._data.wiserhub.system, self._key, False
-        )
+        fn = getattr(self._data.wiserhub.system, "set_" + self._key)
+        result = await fn(False)
         await self.async_force_update()
         return True
 
@@ -263,11 +258,13 @@ class WiserRoomSwitch(WiserSwitch):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._is_on = getattr(self._room, self._key)
 
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._is_on = getattr(self._room, self._key)
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -276,17 +273,15 @@ class WiserRoomSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            setattr, self._room, self._key, True
-        )
+        fn = getattr(self._room, "set_" + self._key)
+        result = await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._room, self._key, False
-        )
+        fn = getattr(self._room, "set_" + self._key)
+        result = await fn(False)
         await self.async_force_update()
         return True
 
@@ -318,11 +313,13 @@ class WiserDeviceSwitch(WiserSwitch):
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._is_on = getattr(self._device, self._key)
 
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._is_on = getattr(self._device, self._key)
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -331,17 +328,15 @@ class WiserDeviceSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            setattr, self._device, self._key, True
-        )
+        fn = getattr(self._device, "set_" + self._key)
+        result = await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._device, self._key, False
-        )
+        fn = getattr(self._device, "set_" + self._key)
+        result = await fn(False)
         await self.async_force_update()
         return True
 
@@ -386,16 +381,14 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
 
-    async def async_force_update(self):
-        await asyncio.sleep(2)
-        await self._data.async_update(no_throttle=True)
-
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -451,18 +444,14 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            self._device.turn_on
-        )
-        await self.async_force_update()
+        await self._device.turn_on()
+        await self.async_force_update(2)
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            self._device.turn_off
-        )
-        await self.async_force_update()
+        await self._device.turn_off()
+        await self.async_force_update(2)
         return True
 
 
@@ -477,15 +466,13 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = True if self._smartplug.away_mode_action == "Off" else False
 
-    async def async_force_update(self):
-        await asyncio.sleep(2)
-        await self._data.async_update(no_throttle=True)
-
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = True if self._smartplug.away_mode_action == "Off" else False
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -516,17 +503,13 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            setattr, self._smartplug, "away_mode_action", "Off"
-        )
+        await self._smartplug.set_away_mode_action("Off")
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._smartplug, "away_mode_action", "NoChange"
-        )
+        await self._smartplug.set_away_mode_action("NoChange")
         await self.async_force_update()
         return True
 
@@ -542,15 +525,13 @@ class WiserLightAwayActionSwitch(WiserSwitch):
         self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
         
-
-    async def async_force_update(self):
-        await self._data.async_update(no_throttle=True)
-
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -581,17 +562,13 @@ class WiserLightAwayActionSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            setattr, self._light, "away_mode_action", "Off"
-        )
+        await self._light.set_away_mode_action("Off")
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._light, "away_mode_action", "NoChange"
-        )
+        await self._light.set_away_mode_action("NoChange")
         await self.async_force_update()
         return True        
 
@@ -607,15 +584,13 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.away_mode_action == "Close" else False
         
-
-    async def async_force_update(self):
-        await self._data.async_update(no_throttle=True)
-
-    async def async_update(self):
+    @callback
+    def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         _LOGGER.debug(f"Wiser {self.name} Switch Update requested")
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.away_mode_action == "Close" else False
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -646,16 +621,14 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            setattr, self._shutter, "away_mode_action", "Close"
-        )
+        fn = getattr(self._shutter, "set_" + self._key)
+        result = await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            setattr, self._shutter, "away_mode_action", "NoChange"
-        )
+        fn = getattr(self._shutter, "set_" + self._key)
+        result = await fn(False)
         await self.async_force_update()
         return True        

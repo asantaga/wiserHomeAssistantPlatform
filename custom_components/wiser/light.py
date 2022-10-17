@@ -8,7 +8,8 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_unique_id
@@ -37,27 +38,30 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         async_add_entities(wiser_lights, True)
 
 
-class WiserLight(LightEntity, WiserScheduleEntity):
+class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     """WiserLight ClientEntity Object."""
 
-    def __init__(self, data, light_id):
+    def __init__(self, coordinator, light_id):
         """Initialize the sensor."""
-        self._data = data
+        super().__init__(coordinator)
+        self._data = coordinator
         self._device_id = light_id
         self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
-    async def async_force_update(self):
-        _LOGGER.debug(f"{self._device.name} requested hub update")
-        await asyncio.sleep(2)
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            await asyncio.sleep(delay)
+        await self._data.async_refresh()
 
-    async def async_update(self):
-        """Async Update method ."""
-        _LOGGER.debug(f"Wiser {self.name} Light Update requested")
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        _LOGGER.debug(f"{self.name} updating")
         self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._schedule = self._device.schedule
+        self.async_write_ha_state()
 
     @property
     def supported_color_modes(self):
@@ -84,11 +88,6 @@ class WiserLight(LightEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         return get_unique_id(self._data, "device", "light", self.name)
-
-    @property
-    def should_poll(self):
-        """Return the polling state."""
-        return False
 
     @property
     def device_info(self):
@@ -147,42 +146,24 @@ class WiserLight(LightEntity, WiserScheduleEntity):
 
         return attrs
 
-
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
+            _LOGGER.debug(f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%")
             brightness = int(kwargs[ATTR_BRIGHTNESS])
-            await self.hass.async_add_executor_job(
-                setattr, self._device, "current_percentage", round((brightness / 255) * 100)
-            )
+            await self._device.set_current_percentage(round((brightness / 255) * 100))
         else:
-            await self.hass.async_add_executor_job(
-                self._device.turn_on
-            )
-        await self.async_force_update()
+            _LOGGER.debug(f"Turning on {self.name}")
+            await self._device.turn_on()
+        await self.async_force_update(2)
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        await self.hass.async_add_executor_job(
-            self._device.turn_off
-        )
-        await self.async_force_update()
+        _LOGGER.debug(f"Turning off {self.name}")
+        await self._device.turn_off()
+        await self.async_force_update(2)
         return True
-
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-
-        async def async_update_state():
-            """Update light state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )
-
 
 class WiserDimmableLight(WiserLight):
     """A Class for an Wiser light entity."""

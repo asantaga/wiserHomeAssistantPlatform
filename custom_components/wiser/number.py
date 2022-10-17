@@ -1,22 +1,18 @@
 from awesomeversion import AwesomeVersion
 from homeassistant.const import __version__ as HA_VERSION
 from types import FunctionType
+import asyncio
 import logging
-from .const import (
-    DATA,
-    DOMAIN,
-    MANUFACTURER
-)
+from .const import DATA, DOMAIN, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_unique_id
-from wiserHeatAPIv2.wiserhub import (
-    TEMP_MINIMUM,
-    TEMP_MAXIMUM
-)
+from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM
 from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 HA_VERSION_OBJ = AwesomeVersion(HA_VERSION)
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
@@ -24,14 +20,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_numbers = []
 
     _LOGGER.debug("Setting up Away Mode setpoint setter")
-    wiser_numbers.extend([WiserAwayModeTempNumber(data, "Away Mode Target Temperature")])
+    wiser_numbers.extend(
+        [WiserAwayModeTempNumber(data, "Away Mode Target Temperature")]
+    )
     async_add_entities(wiser_numbers)
 
 
-class WiserAwayModeTempNumber(NumberEntity):
-    def __init__(self, data, name):
+class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
+    def __init__(self, coordinator, name):
         """Initialize the sensor."""
-        self._data = data
+        super().__init__(coordinator)
+        self._data = coordinator
         self._name = name
         self._value = self._data.wiserhub.system.away_mode_target_temperature
 
@@ -42,15 +41,24 @@ class WiserAwayModeTempNumber(NumberEntity):
             self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
             self.set_value = self.set_native_value
 
-        _LOGGER.info(f"Away Mode target temperature initalise")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
-    async def async_force_update(self):
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
         self._value = self._data.wiserhub.system.away_mode_target_temperature
-
         # Support prior to 2022.7.0 Versions without deprecation warning
         if hasattr(self, "_attr_value"):
             self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
+
+        self.async_write_ha_state()
 
     @property
     def native_min_value(self) -> float:
@@ -81,7 +89,6 @@ class WiserAwayModeTempNumber(NumberEntity):
         """Icon for device"""
         return "mdi:thermometer-low"
 
-
     @property
     def unique_id(self):
         return get_unique_id(self._data, "system", "number", self.name)
@@ -90,34 +97,21 @@ class WiserAwayModeTempNumber(NumberEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-                "name": get_device_name(self._data, 0),
-                "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-                "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.system.product_type,
-                "sw_version": self._data.wiserhub.system.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
     @property
     def native_value(self):
         """Return device value"""
         return self._value
 
-    def set_native_value(self, value: float) -> None:
+    async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
         _LOGGER.debug(f"Setting {self._name} to {value}C")
-        self._data.wiserhub.system.away_mode_target_temperature = value
-        self.hass.async_create_task(self.async_force_update())
-
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )
+        await self._data.wiserhub.system.set_away_mode_target_temperature(value)
+        await self.async_force_update()

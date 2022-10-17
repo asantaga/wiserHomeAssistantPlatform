@@ -15,6 +15,7 @@ WISER_PLATFORMS = ["climate", "sensor", "switch", "select", "button", "number", 
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
+MIN_TIME_BETWEEN_UPDATES = 30
 
 # Hub
 MANUFACTURER = "Drayton Wiser"

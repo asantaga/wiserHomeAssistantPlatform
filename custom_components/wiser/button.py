@@ -8,13 +8,12 @@ from .const import (
     WISER_SERVICES
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
-
+import asyncio
 import voluptuous as vol
 from homeassistant.components.button import ButtonEntity
-from homeassistant.core import callback
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 import logging
 
@@ -46,16 +45,22 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     async_add_entities(wiser_buttons, True)
 
-class WiserButton(ButtonEntity):
-    def __init__(self, data, name = "Button"):
+class WiserButton(CoordinatorEntity, ButtonEntity):
+    def __init__(self, coordinator, name = "Button"):
         """Initialize the sensor."""
-        self._data = data
+        super().__init__(coordinator)
+        self._data = coordinator
         self._name = name
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} init")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
 
-    async def async_force_update(self):
-        _LOGGER.debug(f"{self._name} requested hub update")
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        state = await self.async_get_last_state()
+        if state is not None and state.state is not None:
+            self.__last_pressed = dt_util.parse_datetime(state.state)
+        await self._data.async_refresh()
 
     @property
     def unique_id(self):
@@ -78,25 +83,6 @@ class WiserButton(ButtonEntity):
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
 
-
-    async def async_added_to_hass(self):
-        """Call when the button is added to hass."""
-        state = await self.async_get_last_state()
-        if state is not None and state.state is not None:
-            self.__last_pressed = dt_util.parse_datetime(state.state)
-
-        """Subscribe for update from the hub."""
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )
-
-
 class WiserBoostAllHeatingButton(WiserButton):
     def __init__(self, data):
         super().__init__(data, "Boost All Heating")
@@ -104,9 +90,7 @@ class WiserBoostAllHeatingButton(WiserButton):
     async def async_press(self):
         boost_time = self._data.boost_time
         boost_temp = self._data.boost_temp
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.system.boost_all_rooms, boost_temp, boost_time
-        )
+        await self._data.wiserhub.system.boost_all_rooms(boost_temp, boost_time)
         await self.async_force_update()
 
     @property
@@ -119,9 +103,7 @@ class WiserCancelHeatingOverridesButton(WiserButton):
         super().__init__(data, "Cancel All Heating Overrides")
 
     async def async_press(self):
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.system.cancel_all_overrides
-        )
+        await self._data.wiserhub.system.cancel_all_overrides()
         await self.async_force_update()
 
     @property
@@ -135,9 +117,7 @@ class WiserBoostHotWaterButton(WiserButton):
 
     async def async_press(self):
         boost_time = self._data.hw_boost_time
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.hotwater.boost, boost_time
-        )
+        await self._data.wiserhub.hotwater.boost(boost_time)
         await self.async_force_update()
 
     @property
@@ -149,9 +129,7 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
         super().__init__(data, "Cancel Hot Water Overrides")
 
     async def async_press(self):
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.hotwater.cancel_overrides
-        )
+        await self._data.wiserhub.hotwater.cancel_overrides()
         await self.async_force_update()
 
     @property
@@ -164,9 +142,8 @@ class WiserOverrideHotWaterButton(WiserButton):
         super().__init__(data, "Toggle Hot Water")
 
     async def async_press(self):
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.hotwater.override_state, 
-            "Off" if self._data.wiserhub.hotwater.current_state == "On" else "On"
+        await self._data.wiserhub.hotwater.override_state( 
+            "Off" if self._data.wiserhub.hotwater.current_state == "On" else "Off"
         )
         await self.async_force_update()
 
@@ -181,9 +158,7 @@ class WiserMomentsButton(WiserButton):
         super().__init__(data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}")
 
     async def async_press(self):
-        await self.hass.async_add_executor_job(
-            self._data.wiserhub.moments.get_by_id(self._moment_id).activate
-        )
+        await self._data.wiserhub.moments.get_by_id(self._moment_id).activate()
         await self.async_force_update()
 
     @property

@@ -5,6 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+import asyncio
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -12,7 +13,8 @@ from homeassistant.components.cover import (
     CoverEntityFeature
 )
 
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .schedules import WiserScheduleEntity
 
@@ -48,25 +50,30 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         async_add_entities(wiser_shutters, True)       
 
 
-class WiserShutter(CoverEntity, WiserScheduleEntity):
+class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     """Wisershutter ClientEntity Object."""
 
-    def __init__(self, data, shutter_id):
+    def __init__(self, coordinator, shutter_id):
         """Initialize the sensor."""
-        self._data = data
+        super().__init__(coordinator)
+        self._data = coordinator
         self._device_id = shutter_id
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
-    async def async_force_update(self):
-        _LOGGER.debug(f"{self._device.name} requested hub update")
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
 
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        _LOGGER.debug(f"{self.name} updating")
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
+        self.async_write_ha_state()
       
     @property
     def supported_features(self):
@@ -102,11 +109,6 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
     def name(self):
         """Return Name of device"""
         return f"{get_device_name(self._data, self._device_id)} Control"   
-
-    @property
-    def should_poll(self):
-        """We don't want polling so return false."""
-        return True
 
     @property
     def current_cover_position(self):
@@ -190,42 +192,26 @@ class WiserShutter(CoverEntity, WiserScheduleEntity):
 
     async def async_set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
+        _LOGGER.debug(f"Setting cover position for {self.name} to {position}")
         position = kwargs[ATTR_POSITION]
-        await self.hass.async_add_executor_job(
-            setattr, self._device, "current_lift", position
-        )
+        await self._device.set_current_lift(position)
         await self.async_force_update()
 
     async def async_close_cover(self, **kwargs):
         """Close shutter"""
-        await self.hass.async_add_executor_job(
-            self._device.close
-        )              
+        _LOGGER.debug(f"Closing {self.name}")
+        await self._device.close()              
         await self.async_force_update()
 
     async def async_open_cover(self, **kwargs):
         """Close shutter"""
-        await self.hass.async_add_executor_job(
-            self._device.open
-        )
-                
+        _LOGGER.debug(f"Opening {self.name}")
+        await self._device.open()
         await self.async_force_update()
 
     async def async_stop_cover(self, **kwargs):
-        """Stop shutter"""       
-        await self.hass.async_add_executor_job(
-            self._device.stop
-        )
+        """Stop shutter"""     
+        _LOGGER.debug(f"Stopping {self.name}")  
+        await self._device.stop()
         await self.async_force_update()
 
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )

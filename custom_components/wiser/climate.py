@@ -5,8 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-from functools import partial
-
+import logging
 import voluptuous as vol
 
 from homeassistant.components.climate.const import (
@@ -14,20 +13,16 @@ from homeassistant.components.climate.const import (
     HVACMode,
     ClimateEntityFeature
 )
-
 from homeassistant.components.climate import ClimateEntity
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, TEMP_CELSIUS
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
 from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import dt
-
+from homeassistant.helpers import entity_platform
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from wiserHeatAPIv2.wiserhub import (
     TEMP_MINIMUM,
     TEMP_MAXIMUM,
     TEMP_OFF
 )
-
 from .const import (
     DATA,
     DOMAIN,
@@ -40,7 +35,6 @@ from .const import (
 from .helpers import get_device_name, get_identifier
 from .schedules import WiserScheduleEntity
 
-import logging
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_COPYTO_ENTITY_ID = "to_entity_id"
@@ -92,12 +86,12 @@ SUPPORT_FLAGS = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.P
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
-    data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get coordinator
 
-    if data.wiserhub.rooms:
+    if coordinator.wiserhub.rooms:
         _LOGGER.debug("Setting up Room climate entities")
         wiser_rooms = [
-            WiserRoom(hass, data, room.id) for room in data.wiserhub.rooms.all if len(room.devices) > 0
+            WiserRoom(hass, coordinator, room.id) for room in coordinator.wiserhub.rooms.all if len(room.devices) > 0
         ]
         async_add_entities(wiser_rooms, True)
 
@@ -108,7 +102,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         platform.async_register_entity_service(
             WISER_SERVICES["SERVICE_BOOST_HEATING"],
             {
-                vol.Required(ATTR_TIME_PERIOD, default=data.boost_time): vol.Coerce(int),
+                vol.Required(ATTR_TIME_PERIOD, default=coordinator.boost_time): vol.Coerce(int),
                 vol.Any(
                     vol.Optional(ATTR_TEMPERATURE_DELTA, default=0),
                     vol.Optional(ATTR_TEMPERATURE, default=0),
@@ -118,13 +112,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         )
 
 
-class WiserRoom(ClimateEntity, WiserScheduleEntity):
+class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
-    def __init__(self, hass, data, room_id):
+    def __init__(self, hass, coordinator, room_id):
         """Initialize the sensor."""
+        super().__init__(coordinator)
         self._hass = hass
-        self._data = data
+        self._data = coordinator
         self._room_id = room_id
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
@@ -138,24 +133,25 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         elif self._data.previous_target_temp_option == "Minimum":
             self._previous_target_temp = TEMP_MINIMUM
 
-
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
 
     async def async_force_update(self):
-        _LOGGER.debug(f"{self._room.name} requested hub update")
-        await self._data.async_update(no_throttle=True)
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        await self._data.async_refresh()
 
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        _LOGGER.debug(f"{self.name} updating")
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
-
+        
+        self.async_fire_events()
         # Vars to support change fired events
         self._is_heating = self._room.is_heating
-        await self.async_fire_events()
 
         if not self._room.is_boosted:
             self._boosted_time = 0
+        self.async_write_ha_state()
 
     @property
     def current_temperature(self):
@@ -213,18 +209,14 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
                 
                 self._previous_target_temp = self._room.current_target_temperature
 
-            await self.hass.async_add_executor_job(
-                setattr, self._room, "mode" , HVAC_MODE_HASS_TO_WISER[hvac_mode]
-            )
+            await self._room.set_mode(HVAC_MODE_HASS_TO_WISER[hvac_mode])
             # Restore previous manual target temp when coming from Off mode back to Manual
             if hvac_mode == HVACMode.HEAT and self._previous_target_temp:
-                await self.hass.async_add_executor_job(
-                    self._room.set_target_temperature, self._previous_target_temp
-                )
+                await self._room.set_target_temperature(self._previous_target_temp)
+            await self.async_force_update()
+            return True
         except KeyError:
             _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
-        await self.async_force_update()
-        return True
 
     @property
     def max_temp(self):
@@ -268,28 +260,17 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
                 f"Setting Preset Mode {preset_mode} for {self._room.name}"
             )
         if preset_mode == "Advance Schedule":
-            await self.hass.async_add_executor_job(
-                self._room.schedule_advance
-            )
+            await self._room.schedule_advance()
         elif WISER_PRESETS[preset_mode] == 0:
-            await self.hass.async_add_executor_job(
-                self._room.cancel_overrides
-            )
+            await self._room.cancel_overrides()
         elif preset_mode.startswith("Boost"):
             boost_time = WISER_PRESETS[preset_mode]
             boost_temp = self._data.boost_temp
-            await self.hass.async_add_executor_job(
-                self._room.boost, boost_temp, boost_time
-            )
+            await self._room.boost(boost_temp, boost_time)
         else:
             _LOGGER.error(f"Invalid preset mode.  Options are {self.preset_modes}")
 
         await self.async_force_update()
-
-    @property
-    def should_poll(self):
-        """We don't want polling so return false."""
-        return False
 
     @property
     def state(self):
@@ -363,14 +344,10 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
             or (self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"] and self.state == HVACMode.AUTO)
         ):
             _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature} using boost")
-            await self.hass.async_add_executor_job(
-                self._room.set_target_temperature_for_duration, target_temperature, self._data.boost_time
-            )
+            await self._room.set_target_temperature_for_duration(target_temperature, self._data.boost_time)
         else:
             _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature}")
-            await self.hass.async_add_executor_job(
-                self._room.set_target_temperature, target_temperature
-            )
+            await self._room.set_target_temperature(target_temperature)
         await self.async_force_update()
         return True
 
@@ -385,9 +362,10 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
         return f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
 
 
-    async def async_fire_events(self):
+    def async_fire_events(self):
         # Fire event if is_heating status changed
         if self._is_heating != self._room.is_heating:
+            _LOGGER.debug(f"Firing wiser_room_heating_status_changed event for {self.name}")
             self._hass.bus.fire("wiser_room_heating_status_changed", {
                 "entity_id": self.entity_id,
                 "is_heating": self._room.is_heating,
@@ -407,24 +385,8 @@ class WiserRoom(ClimateEntity, WiserScheduleEntity):
 
         if temperature_delta > 0:
             _LOGGER.info(f"Boosting heating for {self._room.name} by {temperature_delta}C for {time_period}m ")
-            await self.hass.async_add_executor_job(
-                self._room.boost, temperature_delta, time_period
-            )
+            await self._room.boost(temperature_delta, time_period)
         if temperature > 0 and temperature_delta == 0:
             _LOGGER.info(f"Boosting heating for {self._room.name} to {temperature}C for {time_period}m ")
-            await self.hass.async_add_executor_job(
-                self._room.set_target_temperature_for_duration, temperature, time_period
-            )
+            await self._room.set_target_temperature_for_duration(temperature, time_period)
         await self.async_force_update()
-
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
-            )
-        )
