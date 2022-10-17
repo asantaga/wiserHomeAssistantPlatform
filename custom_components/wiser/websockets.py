@@ -6,7 +6,7 @@ from homeassistant.components.websocket_api import (
     async_register_command,
     ActiveConnection,
 )
-from wiserHeatAPIv2.schedule import WiserScheduleTypeEnum
+from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from . import const
 

@@ -8,12 +8,8 @@ from .const import (
 
 from .helpers import get_device_name, get_unique_id, get_identifier
 from .schedules import WiserScheduleEntity
-from aioWiserHeatAPI.const import WiserDeviceModeEnum
 
-import voluptuous as vol
 from homeassistant.components.select import SelectEntity
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 

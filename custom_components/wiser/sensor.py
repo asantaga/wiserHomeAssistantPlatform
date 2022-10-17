@@ -7,6 +7,7 @@ Angelosantagata@gmail.com
 """
 from datetime import datetime
 import logging
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
@@ -22,7 +23,6 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-import voluptuous as vol
 
 from aioWiserHeatAPI.wiserhub import TEMP_OFF
 

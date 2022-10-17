@@ -1,17 +1,15 @@
 from datetime import datetime, timedelta
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from homeassistant.const import (
     CONF_HOST,
-    CONF_MINIMUM,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
@@ -35,18 +33,10 @@ from .const import (
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
     CONF_LTS_SENSORS,
-    DATA,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    MANUFACTURER,
-    WISER_CARD_FILENAMES,
-    UPDATE_LISTENER,
-    UPDATE_TRACK,
-    URL_BASE,
-    WISER_PLATFORMS,
-    WISER_SERVICES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,7 +72,11 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"{DOMAIN} ({config_entry.unique_id})",
-            update_interval=timedelta(seconds=30),
+            update_interval=timedelta(
+                seconds=config_entry.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                )
+            ),
         )
 
         self.wiserhub = WiserAPI(

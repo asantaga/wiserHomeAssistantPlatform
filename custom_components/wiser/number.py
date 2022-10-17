@@ -1,13 +1,15 @@
-from awesomeversion import AwesomeVersion
-from homeassistant.const import __version__ as HA_VERSION
-from types import FunctionType
 import asyncio
 import logging
+
 from .const import DATA, DOMAIN, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_unique_id
+
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM
+
+from awesomeversion import AwesomeVersion
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.core import callback
+from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 HA_VERSION_OBJ = AwesomeVersion(HA_VERSION)
