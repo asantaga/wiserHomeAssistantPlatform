@@ -10,7 +10,7 @@ import asyncio
 from homeassistant.components.cover import (
     ATTR_POSITION,
     CoverEntity,
-    CoverEntityFeature
+    CoverEntityFeature,
 )
 
 from homeassistant.core import callback
@@ -27,12 +27,17 @@ from .helpers import get_device_name, get_identifier
 
 import logging
 
-#TODO: Set this based on model of hub
-MANUFACTURER='Schneider Electric'
+# TODO: Set this based on model of hub
+MANUFACTURER = "Schneider Electric"
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS =  CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.SET_POSITION | CoverEntityFeature.STOP
+SUPPORT_FLAGS = (
+    CoverEntityFeature.OPEN
+    | CoverEntityFeature.CLOSE
+    | CoverEntityFeature.SET_POSITION
+    | CoverEntityFeature.STOP
+)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -42,12 +47,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_shutters = []
     if data.wiserhub.devices.shutters:
         _LOGGER.debug("Setting up shutter entities")
-        for shutter in data.wiserhub.devices.shutters.all :
-            if shutter.product_type=="Shutter":
-                wiser_shutters.append ( 
-                    WiserShutter(data, shutter.id ) 
-                )
-        async_add_entities(wiser_shutters, True)       
+        for shutter in data.wiserhub.devices.shutters.all:
+            if shutter.product_type == "Shutter":
+                wiser_shutters.append(WiserShutter(data, shutter.id))
+        async_add_entities(wiser_shutters, True)
 
 
 class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
@@ -74,13 +77,13 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self.async_write_ha_state()
-      
+
     @property
     def supported_features(self):
         """Flag supported features."""
         return SUPPORT_FLAGS
 
-    #TODO: What is this for?
+    # TODO: What is this for?
     @property
     def scheduled_position(self):
         """Return scheduled position from data."""
@@ -90,15 +93,17 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-                "name": get_device_name(self._data, self._device_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-                "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
-                "serial_number" : self._data.wiserhub.devices.get_by_id(self._device_id).serial_number,
-                "product_type": self._device.product_type,
-                "product_identifier": self._device.product_identifier,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
+            "serial_number": self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).serial_number,
+            "product_type": self._device.product_type,
+            "product_identifier": self._device.product_identifier,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
     @property
     def icon(self):
@@ -108,13 +113,13 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device"""
-        return f"{get_device_name(self._data, self._device_id)} Control"   
+        return f"{get_device_name(self._data, self._device_id)} Control"
 
     @property
     def current_cover_position(self):
         """Return current position from data."""
         return self._device.current_lift
-        
+
     @property
     def is_closed(self):
         return self._device.is_closed
@@ -147,60 +152,62 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         attrs["firmware"] = self._device.firmware_version
 
         # Room
-        if  self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
+        if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
+                self._device.room_id
+            ).name
         else:
-            attrs["room"] = "Unassigned"     
-        
+            attrs["room"] = "Unassigned"
+
         # Settings
         attrs["shutter_id"] = self._device_id
-        attrs["away_mode_action"] = self._device.away_mode_action   
+        attrs["away_mode_action"] = self._device.away_mode_action
         attrs["mode"] = self._device.mode
         attrs["lift_open_time"] = self._device.drive_config.open_time
         attrs["lift_close_time"] = self._device.drive_config.close_time
-        
+
         # Command state
         attrs["control_source"] = self._device.control_source
-        
+
         # Status
         attrs["is_open"] = self._device.is_open
         attrs["is_closed"] = self._device.is_closed
-        if self._device.is_open :
+        if self._device.is_open:
             attrs["current_state"] = "Open"
-        elif  self._device.is_closed :
-            attrs["current_state"] ="Closed"
-        elif (self._device.is_open == False and self._device.is_closed == False):
-            attrs["current_state"] = "Middle" 
+        elif self._device.is_closed:
+            attrs["current_state"] = "Closed"
+        elif self._device.is_open == False and self._device.is_closed == False:
+            attrs["current_state"] = "Middle"
         attrs["lift_movement"] = self._device.lift_movement
-        
+
         # Positions
         attrs["current_lift"] = self._device.current_lift
         attrs["manual_lift"] = self._device.manual_lift
         attrs["target_lift"] = self._device.target_lift
         attrs["scheduled_lift"] = self._device.scheduled_lift
-        
+
         # Schedule
-        attrs["schedule_id"] = self._device.schedule_id        
+        attrs["schedule_id"] = self._device.schedule_id
         if self._device.schedule:
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
             attrs["next_schedule_change"] = str(self._device.schedule.next.time)
             attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
-            attrs["next_schedule_state"] = self._device.schedule.next.setting    
-            
+            attrs["next_schedule_state"] = self._device.schedule.next.setting
+
         return attrs
 
     async def async_set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
-        _LOGGER.debug(f"Setting cover position for {self.name} to {position}")
         position = kwargs[ATTR_POSITION]
-        await self._device.set_current_lift(position)
+        _LOGGER.debug(f"Setting cover position for {self.name} to {position}")
+        await self._device.open(position)
         await self.async_force_update()
 
     async def async_close_cover(self, **kwargs):
         """Close shutter"""
         _LOGGER.debug(f"Closing {self.name}")
-        await self._device.close()              
+        await self._device.close()
         await self.async_force_update()
 
     async def async_open_cover(self, **kwargs):
@@ -210,8 +217,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         await self.async_force_update()
 
     async def async_stop_cover(self, **kwargs):
-        """Stop shutter"""     
-        _LOGGER.debug(f"Stopping {self.name}")  
+        """Stop shutter"""
+        _LOGGER.debug(f"Stopping {self.name}")
         await self._device.stop()
         await self.async_force_update()
-
