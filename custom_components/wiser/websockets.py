@@ -8,7 +8,7 @@ from homeassistant.components.websocket_api import (
 )
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from . import const
+from .const import DATA, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,29 +23,27 @@ _LOGGER = logging.getLogger(__name__)
 async def handle_subscribe_updates(hass, connection, msg):
     """subscribe listeners when frontend connection is opened"""
 
-    listeners = []
-
     @callback
-    def async_handle_event_wiser_update():
+    async def handle_event_wiser_update(hub: str):
         """pass data to frontend when backend changes"""
         connection.send_message(
             {
                 "id": msg["id"],
                 "type": "event",
-                "event": {"event": "wiser_updated"},  # data to pass with event
+                "event": {
+                    "event": "wiser_updated",
+                    "hub": hub,
+                },  # data to pass with event
             }
         )
 
-    listeners.append(
-        async_dispatcher_connect(
-            hass, "wiser_update_received", async_handle_event_wiser_update
-        )
+    remove_listener = async_dispatcher_connect(
+        hass, "wiser_update_received", handle_event_wiser_update
     )
 
     def unsubscribe_listeners():
         """unsubscribe listeners when frontend connection closes"""
-        while len(listeners):
-            listeners.pop()()
+        remove_listener()
 
     connection.subscriptions[msg["id"]] = unsubscribe_listeners
     connection.send_result(msg["id"])
@@ -54,23 +52,20 @@ async def handle_subscribe_updates(hass, connection, msg):
 async def async_register_websockets(hass, data):
     def get_hub_name(config_entry_id):
         try:
-            api = hass.data[const.DOMAIN][config_entry_id]["data"]
+            api = hass.data[DOMAIN][config_entry_id][DATA]
             return api.wiserhub.system.name
         except:
             return None
 
     def get_api_for_hub(hub: str):
         if hub:
-            for entry_id in hass.data[const.DOMAIN]:
-                if (
-                    hass.data[const.DOMAIN][entry_id]["data"].wiserhub.system.name
-                    == hub
-                ):
-                    return hass.data[const.DOMAIN][entry_id]["data"]
+            for entry_id in hass.data[DOMAIN]:
+                if hass.data[DOMAIN][entry_id][DATA].wiserhub.system.name == hub:
+                    return hass.data[DOMAIN][entry_id][DATA]
             return None
         else:
-            for entry_id in hass.data[const.DOMAIN]:
-                return hass.data[const.DOMAIN][entry_id]["data"]
+            for entry_id in hass.data[DOMAIN]:
+                return hass.data[DOMAIN][entry_id][DATA]
 
     def get_entity_from_entity_id(entity: str):
         """Get wiser entity from entity_id"""
@@ -83,14 +78,14 @@ async def async_register_websockets(hass, data):
     # Get Hubs
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/hubs".format(const.DOMAIN),
+            vol.Required("type"): "{}/hubs".format(DOMAIN),
         }
     )
     @websocket_api.async_response
     async def websocket_get_hubs(hass, connection: ActiveConnection, msg: dict) -> None:
         """Publish schedules list data."""
         output = []
-        for entry in hass.data[const.DOMAIN]:
+        for entry in hass.data[DOMAIN]:
             output.append(get_hub_name(entry))
 
         # output = output.sort()
@@ -99,7 +94,7 @@ async def async_register_websockets(hass, data):
     # Get sunrise and sunset times
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/suntimes".format(const.DOMAIN),
+            vol.Required("type"): "{}/suntimes".format(DOMAIN),
             vol.Optional("hub"): str,
         }
     )
@@ -125,7 +120,7 @@ async def async_register_websockets(hass, data):
     # Get schedules list
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedules".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedules".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Optional("schedule_type"): str,
         }
@@ -158,7 +153,7 @@ async def async_register_websockets(hass, data):
     # Get schedules types for hub
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedules/types".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedules/types".format(DOMAIN),
             vol.Optional("hub"): str,
         }
     )
@@ -185,7 +180,7 @@ async def async_register_websockets(hass, data):
     # Get schedule by id
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/id".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/id".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): vol.Coerce(int),
@@ -217,7 +212,7 @@ async def async_register_websockets(hass, data):
     # Get list of rooms
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/rooms".format(const.DOMAIN),
+            vol.Required("type"): "{}/rooms".format(DOMAIN),
             vol.Optional("hub"): str,
         }
     )
@@ -241,7 +236,7 @@ async def async_register_websockets(hass, data):
     # Get list of devices
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/devices".format(const.DOMAIN),
+            vol.Required("type"): "{}/devices".format(DOMAIN),
             vol.Required("device_type"): str,
             vol.Optional("hub"): str,
         }
@@ -278,7 +273,7 @@ async def async_register_websockets(hass, data):
     # Assign schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/assign".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/assign".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): int,
@@ -313,7 +308,7 @@ async def async_register_websockets(hass, data):
     # Create schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/create".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/create".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("name"): str,
@@ -338,7 +333,7 @@ async def async_register_websockets(hass, data):
     # Rename schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/rename".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/rename".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): int,
@@ -372,7 +367,7 @@ async def async_register_websockets(hass, data):
     # Delete schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/delete".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/delete".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): int,
@@ -390,7 +385,7 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                await schedule.delete_schedule
+                await schedule.delete_schedule()
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:
@@ -405,7 +400,7 @@ async def async_register_websockets(hass, data):
     # Save schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/save".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/save".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): int,
@@ -440,7 +435,7 @@ async def async_register_websockets(hass, data):
     # Copy schedule
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/schedule/copy".format(const.DOMAIN),
+            vol.Required("type"): "{}/schedule/copy".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("schedule_type"): str,
             vol.Required("schedule_id"): int,
@@ -474,7 +469,7 @@ async def async_register_websockets(hass, data):
     # Get zigbee data
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/zigbee".format(const.DOMAIN),
+            vol.Required("type"): "{}/zigbee".format(DOMAIN),
             vol.Optional("hub"): str,
         }
     )

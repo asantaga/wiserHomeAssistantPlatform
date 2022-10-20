@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -67,24 +68,22 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize data update coordinator."""
-
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN} ({config_entry.unique_id})",
+            update_method=self.async_update_data,
             update_interval=timedelta(
                 seconds=config_entry.options.get(
                     CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                 )
             ),
         )
-
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
             secret=config_entry.data[CONF_PASSWORD],
             session=async_get_clientsession(hass),
         )
-        self._name = config_entry.data[CONF_NAME]
         self.last_update_time = datetime.now()
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
@@ -107,10 +106,15 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
         )
 
-    async def _async_update_data(self) -> WiserData:
+    async def async_update_data(self) -> WiserData:
         if await self.wiserhub.read_hub_data():
             self.last_update_time = datetime.now()
             self.last_update_status = "Success"
+
+            # Send event to websockets to notify hub update
+            async_dispatcher_send(
+                self.hass, "wiser_update_received", self.wiserhub.system.name
+            )
             return True
         else:
             self.last_update_status = "Failed"
