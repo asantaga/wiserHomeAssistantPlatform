@@ -107,7 +107,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def async_update_data(self) -> WiserData:
-        if await self.wiserhub.read_hub_data():
+        try:
+            await self.wiserhub.read_hub_data()
             self.last_update_time = datetime.now()
             self.last_update_status = "Success"
 
@@ -116,6 +117,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        else:
+        except:
             self.last_update_status = "Failed"
             return False
