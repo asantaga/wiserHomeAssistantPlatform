@@ -87,6 +87,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
 
     async def async_set_mode(self, option: str) -> None:
         await self._device.set_mode(option)
+        await self.async_force_update()
 
     @property
     def unique_id(self):
