@@ -107,10 +107,12 @@ class WiserScheduleEntity(object):
             )
 
     @callback
-    async def assign_schedule_by_id_or_name(self, schedule_id: int | None, schedule_name: str | None) -> None:
+    async def assign_schedule_by_id_or_name(
+        self, schedule_id: int | None, schedule_name: str | None
+    ) -> None:
         try:
             to_id = None
-            #schedule = None
+            # schedule = None
             schedule_type = self.get_schedule_type()
             if hasattr(self, "_room_id"):
                 to_id = self._room_id
@@ -131,7 +133,7 @@ class WiserScheduleEntity(object):
                 schedule = self._data.wiserhub.schedules.get_by_id(
                     schedule_type, schedule_id
                 )
-            
+
             if schedule:
                 await schedule.assign_schedule(to_id)
                 await self._data.async_refresh()

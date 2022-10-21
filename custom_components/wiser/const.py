@@ -24,7 +24,7 @@ WISER_PLATFORMS = [
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
-MIN_TIME_BETWEEN_UPDATES = 30
+MIN_SCAN_INTERVAL = 30
 
 # Hub
 MANUFACTURER = "Drayton Wiser"

@@ -22,10 +22,11 @@ from .const import (
     MANUFACTURER,
     UPDATE_LISTENER,
     WISER_PLATFORMS,
-    WISER_SERVICES
+    WISER_SERVICES,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry):
     """Set up Wiser from a config entry."""
@@ -63,8 +64,11 @@ async def async_setup_entry(hass, config_entry):
     await cards.async_register()
     await cards.async_remove_gzip_files()
 
-    _LOGGER.info(f"Wiser Component Setup Completed ({coordinator.wiserhub.system.name})")
+    _LOGGER.info(
+        f"Wiser Component Setup Completed ({coordinator.wiserhub.system.name})"
+    )
     return True
+
 
 async def async_update_device_registry(hass, config_entry):
     """Update device registry."""
@@ -72,7 +76,9 @@ async def async_update_device_registry(hass, config_entry):
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
-        connections={(CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address)},
+        connections={
+            (CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address)
+        },
         identifiers={(DOMAIN, get_identifier(data, 0))},
         manufacturer=MANUFACTURER,
         name=get_device_name(data, 0),
@@ -80,16 +86,21 @@ async def async_update_device_registry(hass, config_entry):
         sw_version=data.wiserhub.system.firmware_version,
     )
 
+
 async def _async_update_listener(hass, config_entry):
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
+
 async def async_remove_config_entry_device(hass, config_entry, device_entry) -> bool:
     """Delete device if not entities"""
     if device_entry.model == "Controller":
-        _LOGGER.error("You cannot delete the Wiser Controller device via the device delete method.  Please remove the integration instead.")
+        _LOGGER.error(
+            "You cannot delete the Wiser Controller device via the device delete method.  Please remove the integration instead."
+        )
         return False
     return True
+
 
 async def async_unload_entry(hass, config_entry):
     """Unload a config entry"""

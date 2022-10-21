@@ -70,15 +70,17 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize data update coordinator."""
         self.scan_interval = config_entry.options.get(
-                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                )
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN} ({config_entry.unique_id})",
             update_method=self.async_update_data,
             update_interval=timedelta(
-                seconds=self.scan_interval if self.scan_interval > MIN_SCAN_INTERVAL else MIN_SCAN_INTERVAL
+                seconds=self.scan_interval
+                if self.scan_interval > MIN_SCAN_INTERVAL
+                else MIN_SCAN_INTERVAL
             ),
         )
         self.wiserhub = WiserAPI(
