@@ -5,6 +5,7 @@ from .const import (
     ATTR_FILENAME,
     ATTR_HUB,
     ATTR_SCHEDULE_ID,
+    ATTR_SCHEDULE_NAME,
     ATTR_TIME_PERIOD,
     ATTR_TO_ENTITY_ID,
     DATA,
@@ -51,6 +52,7 @@ async def async_setup_services(hass, data):
         {
             vol.Optional(ATTR_ENTITY_ID): cv.entity_id,
             vol.Optional(ATTR_SCHEDULE_ID): vol.Coerce(int),
+            vol.Optional(ATTR_SCHEDULE_NAME): vol.Coerce(str),
             vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
         }
     )
@@ -157,6 +159,7 @@ async def async_setup_services(hass, data):
         """Handle the service call"""
         entity_id = service_call.data.get(ATTR_ENTITY_ID)
         schedule_id = service_call.data.get(ATTR_SCHEDULE_ID)
+        schedule_name = service_call.data.get(ATTR_SCHEDULE_NAME)
         to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
 
         if entity_id:
@@ -182,9 +185,21 @@ async def async_setup_services(hass, data):
             for to_entity_id in to_entity_ids:
                 to_entity = get_entity_from_entity_id(to_entity_id)
                 if to_entity:
-                    if hasattr(to_entity, "assign_schedule_by_id"):
-                        fn = getattr(to_entity, "assign_schedule_by_id")
-                        await fn(schedule_id)
+                    if hasattr(to_entity, "assign_schedule_by_id_or_name"):
+                        fn = getattr(to_entity, "assign_schedule_by_id_or_name")
+                        await fn(schedule_id, None)
+                    else:
+                        _LOGGER.error(
+                            f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose"
+                        )
+        elif schedule_name:
+            # Assign schedule with name to this entity
+            for to_entity_id in to_entity_ids:
+                to_entity = get_entity_from_entity_id(to_entity_id)
+                if to_entity:
+                    if hasattr(to_entity, "assign_schedule_by_id_or_name"):
+                        fn = getattr(to_entity, "assign_schedule_by_id_or_name")
+                        await fn(None, schedule_name)
                     else:
                         _LOGGER.error(
                             f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose"

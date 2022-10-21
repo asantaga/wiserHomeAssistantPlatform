@@ -61,6 +61,7 @@ ATTR_TIME_PERIOD = "time_period"
 ATTR_FILENAME = "filename"
 ATTR_TO_ENTITY_ID = "to_entity_id"
 ATTR_SCHEDULE_ID = "schedule_id"
+ATTR_SCHEDULE_NAME = "schedule_name"
 
 
 # Signal icons

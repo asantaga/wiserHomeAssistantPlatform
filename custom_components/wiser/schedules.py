@@ -3,7 +3,7 @@ import enum
 import json
 from homeassistant.core import callback
 
-from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
+from aioWiserHeatAPI.const import WiserScheduleTypeEnum
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,30 +107,37 @@ class WiserScheduleEntity(object):
             )
 
     @callback
-    async def assign_schedule_by_id(self, schedule_id: int) -> None:
+    async def assign_schedule_by_id_or_name(self, schedule_id: int | None, schedule_name: str | None) -> None:
         try:
-            to_id = []
+            to_id = None
+            #schedule = None
             schedule_type = self.get_schedule_type()
             if hasattr(self, "_room_id"):
-                to_id.append(self._room_id)
+                to_id = self._room_id
                 _LOGGER.info(
-                    f"Assigning {schedule_type.value} schedule with id {schedule_id} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}"
+                    f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}"
                 )
             else:
-                to_id.append(self._device_id)
+                to_id = self._device_id
                 _LOGGER.info(
-                    f"Assigning {schedule_type.value} schedule with id {schedule_id} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
+                    f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
                 )
 
-            schedule = self._data.wiserhub.schedules.get_by_id(
-                schedule_type, schedule_id
-            )
+            if schedule_name:
+                schedule = self._data.wiserhub.schedules.get_by_name(
+                    schedule_type, schedule_name
+                )
+            elif schedule_id:
+                schedule = self._data.wiserhub.schedules.get_by_id(
+                    schedule_type, schedule_id
+                )
+            
             if schedule:
                 await schedule.assign_schedule(to_id)
                 await self._data.async_refresh()
             else:
                 _LOGGER.error(
-                    f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with id {schedule_id} does not exist"
+                    f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} does not exist"
                 )
         except Exception as ex:
             _LOGGER.error(

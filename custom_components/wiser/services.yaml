@@ -165,6 +165,12 @@ assign_schedule:
       selector:
         number:
           mode: box
+    schedule_name:
+      name: Schedule Name
+      description: A wiser schedule name
+      required: false
+      selector:
+        text:
     to_entity_id:
       name: To Entity
       description: Enter the entity_id for the room or device to assign the same schedule to.
