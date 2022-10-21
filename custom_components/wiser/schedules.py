@@ -33,15 +33,13 @@ class WiserScheduleEntity(object):
         return schedule_type
 
     @callback
-    def get_schedule(self, filename: str) -> None:
+    async def get_schedule(self, filename: str) -> None:
         try:
             if self._schedule:
                 _LOGGER.info(
                     f"Saving {self._schedule.name} schedule to file {filename}"
                 )
-                self.hass.async_add_executor_job(
-                    self._schedule.save_schedule_to_yaml_file, filename
-                )
+                await self._schedule.save_schedule_to_yaml_file(filename)
             else:
                 _LOGGER.error(f"No schedule exists for {self.name}")
         except Exception as ex:
@@ -50,30 +48,27 @@ class WiserScheduleEntity(object):
             )
 
     @callback
-    def set_schedule(self, filename: str) -> None:
+    async def set_schedule(self, filename: str) -> None:
         try:
             if self._schedule:
                 _LOGGER.info(
                     f"Setting {self._schedule.name} schedule from file {filename}"
                 )
-                self.hass.async_add_executor_job(
-                    self._schedule.set_schedule_from_yaml_file, filename
-                )
-                self.hass.async_create_task(self.async_force_update())
+                await self._schedule.set_schedule_from_yaml_file(filename)
+                await self._data.async_refresh()
         except:
             _LOGGER.error(
                 f"Error setting {self._schedule.name} schedule from file {filename}"
             )
 
     @callback
-    def assign_schedule_to_another_entity(self, to_entity) -> None:
+    async def assign_schedule_to_another_entity(self, to_entity) -> None:
         if self._schedule:
             # Check they are on the same wiser hub
             if self._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
                 # Check they are of the same schedule type
                 if (hasattr(self, "_room_id") and hasattr(to_entity, "_room_id")) or (
-                    hasattr(self, "_device_type_id")
-                    and hasattr(to_entity, "_device_type_id")
+                    hasattr(self, "_device_id") and hasattr(to_entity, "_device_id")
                 ):
                     try:
                         if hasattr(self, "_room_id"):
@@ -87,15 +82,13 @@ class WiserScheduleEntity(object):
                             entity_name = self._data.wiserhub.devices.get_by_id(
                                 self._device_id
                             ).name
-                            to_id = to_entity._device.device_type_id
+                            to_id = to_entity._device_id
 
                         _LOGGER.info(
                             f"Assigning {entity_name} schedule to {to_entity_name}"
                         )
-                        self.hass.async_add_executor_job(
-                            self._schedule.assign_schedule, to_id
-                        )
-                        self.hass.async_create_task(self.async_force_update())
+                        await self._schedule.assign_schedule(to_id)
+                        await self._data.async_refresh()
                     except Exception as ex:
                         _LOGGER.error(
                             f"Unknown error assigning {entity_name} schedule to {to_entity_name}. {ex}"
@@ -114,7 +107,7 @@ class WiserScheduleEntity(object):
             )
 
     @callback
-    def assign_schedule_by_id(self, schedule_id: int) -> None:
+    async def assign_schedule_by_id(self, schedule_id: int) -> None:
         try:
             to_id = []
             schedule_type = self.get_schedule_type()
@@ -124,7 +117,7 @@ class WiserScheduleEntity(object):
                     f"Assigning {schedule_type.value} schedule with id {schedule_id} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}"
                 )
             else:
-                to_id.append(self._device_type_id)
+                to_id.append(self._device_id)
                 _LOGGER.info(
                     f"Assigning {schedule_type.value} schedule with id {schedule_id} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
                 )
@@ -133,8 +126,8 @@ class WiserScheduleEntity(object):
                 schedule_type, schedule_id
             )
             if schedule:
-                self.hass.async_add_executor_job(schedule.assign_schedule, to_id)
-                self.hass.async_create_task(self.async_force_update())
+                await schedule.assign_schedule(to_id)
+                await self._data.async_refresh()
             else:
                 _LOGGER.error(
                     f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with id {schedule_id} does not exist"
@@ -145,7 +138,7 @@ class WiserScheduleEntity(object):
             )
 
     @callback
-    def create_schedule(self) -> None:
+    async def create_schedule(self) -> None:
         to_id = []
         try:
             schedule_type = self.get_schedule_type(True)
@@ -163,19 +156,18 @@ class WiserScheduleEntity(object):
                     f"Creating {schedule_type.value} schedule with name {name} and assigning to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
                 )
 
-            self.hass.async_add_executor_job(
-                self._data.wiserhub.schedules.create_schedule,
+            await self._data.wiserhub.schedules.create_schedule(
                 schedule_type,
                 name,
                 to_id,
             )
-            self.hass.async_create_task(self.async_force_update())
+            await self._data.async_refresh()
 
         except Exception as ex:
             _LOGGER.error(f"Error assigning schedule to {name}. {ex}")
 
     @callback
-    def copy_schedule(self, to_entity) -> None:
+    async def copy_schedule(self, to_entity) -> None:
         # Check if from_entity has an assigned schedule
         if self._schedule:
             # Check on same hub
@@ -197,13 +189,10 @@ class WiserScheduleEntity(object):
                             )
                             try:
                                 if self._schedule:
-                                    self.hass.async_add_executor_job(
-                                        self._schedule.copy_schedule,
+                                    await self._schedule.copy_schedule(
                                         to_entity._schedule.id,
                                     )
-                                    self.hass.async_create_task(
-                                        self.async_force_update()
-                                    )
+                                    await self._data.async_refresh()
                             except Exception as ex:
                                 _LOGGER.error(
                                     f"Unknown error copying schedule from {self.name} to {to_entity.name}: {ex}"
@@ -237,5 +226,5 @@ class WiserScheduleEntity(object):
     async def async_advance_schedule(self) -> None:
         """Advance to next schedule setting for room"""
         _LOGGER.info(f"Advancing room schedule for  {self._room.name}")
-        await self.hass.async_add_executor_job(self._room.schedule_advance)
-        await self.async_force_update()
+        await self._room.schedule_advance()
+        await self._data.async_refresh()
