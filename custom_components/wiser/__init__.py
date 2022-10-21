@@ -63,7 +63,7 @@ async def async_setup_entry(hass, config_entry):
     await cards.async_register()
     await cards.async_remove_gzip_files()
 
-    _LOGGER.info("Wiser Component Setup Completed")
+    _LOGGER.info(f"Wiser Component Setup Completed ({coordinator.wiserhub.system.name})")
     return True
 
 async def async_update_device_registry(hass, config_entry):
