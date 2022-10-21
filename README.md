@@ -565,6 +565,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Modify for fully async functionality
   - Utilise the data update coordinator of HA
   - Adjustment of battery levels to be more reflective of remaining usable capacity
+  - Added schedule_name parameter option to assign schedule service
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
