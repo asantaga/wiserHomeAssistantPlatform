@@ -82,7 +82,7 @@ class WiserScheduleEntity(object):
                             entity_name = self._data.wiserhub.devices.get_by_id(
                                 self._device_id
                             ).name
-                            to_id = to_entity._device_id
+                            to_id = to_entity._device.device_type_id
 
                         _LOGGER.info(
                             f"Assigning {entity_name} schedule to {to_entity_name}"
@@ -120,7 +120,7 @@ class WiserScheduleEntity(object):
                     f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}"
                 )
             else:
-                to_id = self._device_id
+                to_id = self._device.device_type_id
                 _LOGGER.info(
                     f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
                 )
