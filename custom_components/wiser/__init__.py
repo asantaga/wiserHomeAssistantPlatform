@@ -12,7 +12,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .coordinator import WiserUpdateCoordinator
 from .frontend import WiserCardRegistration
-from .helpers import get_device_name, get_identifier
+from .helpers import get_device_name, get_identifier, get_instance_count
 from .services import async_setup_services
 from .websockets import async_register_websockets
 
@@ -105,15 +105,16 @@ async def async_remove_config_entry_device(hass, config_entry, device_entry) -> 
 async def async_unload_entry(hass, config_entry):
     """Unload a config entry"""
 
-    # Unload lovelace module resource
-    _LOGGER.debug("Remove Wiser Lovelace cards")
-    cards = WiserCardRegistration(hass)
-    await cards.async_unregister()
+    if get_instance_count() == 1:
+        # Unload lovelace module resource if only instance
+        _LOGGER.debug("Remove Wiser Lovelace cards")
+        cards = WiserCardRegistration(hass)
+        await cards.async_unregister()
 
-    # Deregister services
-    _LOGGER.debug("Unregister Wiser services")
-    for k, service in WISER_SERVICES.items():
-        hass.services.async_remove(DOMAIN, service)
+        # Deregister services if only instance
+        _LOGGER.debug("Unregister Wiser services")
+        for k, service in WISER_SERVICES.items():
+            hass.services.async_remove(DOMAIN, service)
 
     _LOGGER.debug("Unload Wiser integration platforms")
     # Unload a config entry
