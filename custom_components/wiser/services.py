@@ -265,15 +265,11 @@ async def async_setup_services(hass, data):
         if instance.wiserhub.hotwater:
             if time_period > 0:
                 _LOGGER.info(f"Boosting Hot Water for {time_period}m")
-                await hass.async_add_executor_job(
-                    instance.wiserhub.hotwater.boost, time_period
-                )
+                await instance.wiserhub.hotwater.boost(time_period)
             else:
                 _LOGGER.info(f"Cancelling Hot Water boost")
-                await hass.async_add_executor_job(
-                    instance.wiserhub.hotwater.cancel_overrides
-                )
-            await data.async_update(True)
+                await instance.wiserhub.hotwater.cancel_overrides()
+            await data.async_refresh()
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
 
