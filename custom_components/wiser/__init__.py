@@ -105,7 +105,7 @@ async def async_remove_config_entry_device(hass, config_entry, device_entry) -> 
 async def async_unload_entry(hass, config_entry):
     """Unload a config entry"""
 
-    if get_instance_count() == 1:
+    if get_instance_count(hass) == 0:
         # Unload lovelace module resource if only instance
         _LOGGER.debug("Remove Wiser Lovelace cards")
         cards = WiserCardRegistration(hass)
