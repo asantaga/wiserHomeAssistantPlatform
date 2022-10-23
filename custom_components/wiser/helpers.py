@@ -78,7 +78,12 @@ def get_room_name(data, room_id):
 
 
 def get_instance_count(hass) -> int:
-    return len(hass.config_entries.async_entries(DOMAIN))
+    entries = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if not entry.disabled_by
+    ]
+    return len(entries)
 
 
 def is_wiser_config_id(hass, config_id):
