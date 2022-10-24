@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.1.7
+# Wiser Home Assistant Integration v3.2.0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
@@ -11,17 +11,15 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 3.1?
+## What's New in 3.2?
 
-- The Wiser Schedule Card - to allow you add, edit, rename, delete and assign schedules to rooms or devices via the HA UI.  See [Schedule Card](#schedule-card) for how to setup and use.
-- The Wiser Zigbee Network Card - to view the status and connections of your wiser zigbee devices.
-- Diagnotics - you can now download a diagnotics report that includes your full hub json output via the Integrations page or Devices page
-- Integration Config - you can now change IP/Hostname for your hub via UI instead of editing config_entries file
-- Devices - you can now delete devices via the UI instead of our removed_orphaned_devices service hack!  This will delete entities associated with that device too.  You cannot delete the controller device in order to prevent issues and if you want to do that, we recommend uninstalling the integration.
+- A lot of backend rework of the integration to utilise built in HA functions and make it more performant.
+  - Moved to a new fully async api from the old sync api
+  - Now utilises the data update coordinator functionality in HA instead of our own custom one
+  - Quite a bit of code tidying and black formatting
 
-  ***NOTES***
-  - If you do not see these new cards in the list of cards to add, try a SHIFT F5 browser refresh.
-  - If you run Lovelace in YAML mode, you will need to add the js file resources manually.  See each cards documentation.
+- Schedule files now support the All special day as well as Weekdays and Weekends.
+- New service to set a schedule from a string that supports templating.  See [set_schedule_from_string](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
 
 ## Contents
 
@@ -46,7 +44,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.06.
+Requires a minimum of HA 2022.9.
 
 ## Updating to v3.x from v2.x - IMPORTANT PLEASE READ
 
@@ -360,8 +358,8 @@ Sunday:
     Temp: 21
 ```
 
-If you are creating your own file (or editing one you have copied from a wiser device), you can use the 2 special day
-names of 'Weekdays' and 'Weekends' instead of listing individual days.
+If you are creating your own file (or editing one you have copied from a wiser device), you can use the 3 special day
+names of 'All', 'Weekdays' and 'Weekends' instead of listing individual days.
 
 For lights and shutters, you can also use the special times of Sunrise and Sunset.
 
@@ -562,6 +560,13 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.2.0
+  - Utilise async api aioWiserHeatAPI
+  - Modify for fully async functionality
+  - Utilise the data update coordinator of HA
+  - Adjustment of battery levels to be more reflective of remaining usable capacity
+  - Added schedule_name parameter option to assign schedule service
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs

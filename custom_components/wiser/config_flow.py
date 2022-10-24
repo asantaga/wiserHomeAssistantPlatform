@@ -5,12 +5,11 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
-from types import MappingProxyType
-import requests.exceptions
-from typing import Any, Mapping
+from typing import Any
 import voluptuous as vol
-from wiserHeatAPIv2.wiserhub import WiserAPI
-from wiserHeatAPIv2.exceptions import (
+from aioWiserHeatAPI.wiserhub import WiserAPI
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from aioWiserHeatAPI.exceptions import (
     WiserHubConnectionError,
     WiserHubAuthenticationError,
     WiserHubRESTError,
@@ -37,10 +36,11 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
-    WISER_SETPOINT_MODES
+    WISER_SETPOINT_MODES,
 )
 
 import logging
+
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
@@ -53,10 +53,11 @@ async def validate_input(hass, data):
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    wiser = await hass.async_add_executor_job(
-        WiserAPI, data[CONF_HOST], data[CONF_PASSWORD],
+    wiserhub = WiserAPI(
+        data[CONF_HOST], data[CONF_PASSWORD], session=async_get_clientsession(hass)
     )
-    wiser_id = wiser.system.name
+    await wiserhub.read_hub_data()
+    wiser_id = wiserhub.system.name
     return {"title": wiser_id, "unique_id": get_unique_id(wiser_id)}
 
 
@@ -99,7 +100,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 validated = await validate_input(self.hass, user_input)
             except WiserHubAuthenticationError:
                 errors["base"] = "auth_failure"
-            except (WiserHubConnectionError, requests.exceptions.ConnectionError):
+            except (WiserHubConnectionError):
                 errors["base"] = "timeout_error"
             except (WiserHubRESTError, RuntimeError, Exception) as ex:
                 errors["base"] = "unknown"
@@ -111,20 +112,20 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # Add hub name to config
                 user_input[CONF_NAME] = validated["title"]
-                
+
                 return self.async_create_entry(
                     title=validated["title"], data=user_input
                 )
-
 
         return self.async_show_form(
             step_id="user",
             data_schema=self.discovery_info or DATA_SCHEMA,
             errors=errors,
         )
-    
 
-    async def async_step_zeroconf(self, discovery_info: zeroconf.ZeroconfServiceInfo) -> FlowResult:
+    async def async_step_zeroconf(
+        self, discovery_info: zeroconf.ZeroconfServiceInfo
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
@@ -140,12 +141,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self.discovery_info.update(
             {
                 CONF_HOST: host,
-                CONF_HOSTNAME: discovery_info.hostname.replace(".local.",".local"),
+                CONF_HOSTNAME: discovery_info.hostname.replace(".local.", ".local"),
                 CONF_NAME: name,
             }
         )
         return await self.async_step_zeroconf_confirm()
-    
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] = None
@@ -158,7 +158,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             except WiserHubAuthenticationError:
                 _LOGGER.warning("Authentication failure connecting to Wiser Hub")
                 errors["base"] = "auth_failure"
-            except (WiserHubConnectionError, requests.exceptions.ConnectionError):
+            except (WiserHubConnectionError):
                 _LOGGER.warning("Connection timout error connecting to Wiser Hub")
                 errors["base"] = "timeout_error_discovery"
             except (WiserHubRESTError, RuntimeError, Exception) as ex:
@@ -175,10 +175,16 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="zeroconf_confirm",
-            description_placeholders={"name": self.discovery_info[CONF_NAME], "hostname": self.discovery_info[CONF_HOSTNAME], "ip_address": self.discovery_info[CONF_HOST]},
+            description_placeholders={
+                "name": self.discovery_info[CONF_NAME],
+                "hostname": self.discovery_info[CONF_HOSTNAME],
+                "ip_address": self.discovery_info[CONF_HOST],
+            },
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST, default = self.discovery_info[CONF_HOST]): str,
+                    vol.Required(
+                        CONF_HOST, default=self.discovery_info[CONF_HOST]
+                    ): str,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
@@ -200,72 +206,75 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 data = {
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_PASSWORD: self.config_entry.data[CONF_PASSWORD],
-                    CONF_NAME: self.config_entry.data[CONF_NAME]
+                    CONF_NAME: self.config_entry.data[CONF_NAME],
                 }
                 user_input.pop(CONF_HOST)
-                self.hass.config_entries.async_update_entry(self.config_entry, data = data)
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=data
+                )
             return self.async_create_entry(title="", data=user_input)
 
         data_schema = {
-                vol.Required(CONF_HOST, default = self.config_entry.data[CONF_HOST]): str,
-                vol.Optional(
-                    CONF_SCAN_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                    ),
-                ): int,
-                vol.Optional(
-                    CONF_HEATING_BOOST_TEMP,
-                    default=self.config_entry.options.get(
-                        CONF_HEATING_BOOST_TEMP, DEFAULT_BOOST_TEMP
-                    ),
-                ): int,
-                vol.Optional(
-                    CONF_HEATING_BOOST_TIME,
-                    default=self.config_entry.options.get(
-                        CONF_HEATING_BOOST_TIME, DEFAULT_BOOST_TEMP_TIME
-                    ),
-                ): int,
-                vol.Optional(
-                    CONF_HW_BOOST_TIME,
-                    default=self.config_entry.options.get(
-                        CONF_HW_BOOST_TIME, DEFAULT_BOOST_TEMP_TIME
-                    ),
-                ): int,
-                vol.Optional(
-                    CONF_SETPOINT_MODE,
-                    default=self.config_entry.options.get(
-                        CONF_SETPOINT_MODE, list(WISER_SETPOINT_MODES.values())[0]
-                    ),
-                ): selector({
+            vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=self.config_entry.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                ),
+            ): int,
+            vol.Optional(
+                CONF_HEATING_BOOST_TEMP,
+                default=self.config_entry.options.get(
+                    CONF_HEATING_BOOST_TEMP, DEFAULT_BOOST_TEMP
+                ),
+            ): int,
+            vol.Optional(
+                CONF_HEATING_BOOST_TIME,
+                default=self.config_entry.options.get(
+                    CONF_HEATING_BOOST_TIME, DEFAULT_BOOST_TEMP_TIME
+                ),
+            ): int,
+            vol.Optional(
+                CONF_HW_BOOST_TIME,
+                default=self.config_entry.options.get(
+                    CONF_HW_BOOST_TIME, DEFAULT_BOOST_TEMP_TIME
+                ),
+            ): int,
+            vol.Optional(
+                CONF_SETPOINT_MODE,
+                default=self.config_entry.options.get(
+                    CONF_SETPOINT_MODE, list(WISER_SETPOINT_MODES.values())[0]
+                ),
+            ): selector(
+                {
                     "select": {
                         "options": list(WISER_SETPOINT_MODES.values()),
-                        "mode": SelectSelectorMode.DROPDOWN
+                        "mode": SelectSelectorMode.DROPDOWN,
                     }
-                }),
-                vol.Optional(
+                }
+            ),
+            vol.Optional(
+                CONF_RESTORE_MANUAL_TEMP_OPTION,
+                default=self.config_entry.options.get(
                     CONF_RESTORE_MANUAL_TEMP_OPTION,
-                    default=self.config_entry.options.get(
-                        CONF_RESTORE_MANUAL_TEMP_OPTION, WISER_RESTORE_TEMP_DEFAULT_OPTIONS[0]
-                    ),
-                ): selector({
+                    WISER_RESTORE_TEMP_DEFAULT_OPTIONS[0],
+                ),
+            ): selector(
+                {
                     "select": {
                         "options": WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
-                        "mode": SelectSelectorMode.DROPDOWN
+                        "mode": SelectSelectorMode.DROPDOWN,
                     }
-                }),
-                vol.Optional(
-                    CONF_MOMENTS,
-                    default=self.config_entry.options.get(
-                        CONF_MOMENTS, False
-                    ),
-                ): bool,
-                vol.Optional(
-                    CONF_LTS_SENSORS,
-                    default=self.config_entry.options.get(
-                        CONF_LTS_SENSORS, False
-                    ),
-                ): bool,
+                }
+            ),
+            vol.Optional(
+                CONF_MOMENTS,
+                default=self.config_entry.options.get(CONF_MOMENTS, False),
+            ): bool,
+            vol.Optional(
+                CONF_LTS_SENSORS,
+                default=self.config_entry.options.get(CONF_LTS_SENSORS, False),
+            ): bool,
         }
         return self.async_show_form(step_id="init", data_schema=vol.Schema(data_schema))
 
