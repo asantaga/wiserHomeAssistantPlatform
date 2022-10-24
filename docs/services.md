@@ -216,6 +216,8 @@ Set a schedule from a string.  The string must be a yaml schedule in the same fo
 - State must render to On or Off
 - Level must render to an integer number
 
+**NOTE**: If you are usinf On or Off and times in the template, encase then in quotes or the template engine converts them to a funny value and the call will fail.
+
 ```yaml
 service: wiser.set_schedule_from_string
 data:
@@ -239,8 +241,21 @@ data:
     All:
     - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'),"%H:%M:%S")) | timestamp_custom("%H:%M") }}
       Temp: 16.0
-    - Time: 22:30
+    - Time: '22:30'
       Temp: {{ 2 * 8 + 3 }}
+```
+
+```yaml
+service: wiser.set_schedule_from_string
+data:
+  entity_id: select.wiser_hot_water
+  schedule: |
+    Type: OnOff
+    All:
+    - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'),"%H:%M:%S")) | timestamp_custom("%H:%M") }}
+      State: 'On'
+    - Time: '22:30'
+      State: 'Off'
 ```
 
 ## Copy Schedule
