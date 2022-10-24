@@ -142,6 +142,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         if self._hotwater.is_override:
             await self._hotwater.cancel_overrides()
         await self._hotwater.set_mode(option)
+        await self.async_force_update()
 
     @property
     def unique_id(self):
