@@ -18,7 +18,8 @@ For more information checkout the AMAZING community thread available on
   - Now utilises the data update coordinator functionality in HA instead of our own custom one
   - Quite a bit of code tidying and black formatting
 
-- MORE TO COME BEFORE RELEASE - ADD HERE!
+- Schedule files now support the All special day as well as Weekdays and Weekends.
+- New service to set a schedule from a string that supports templating.  See [set_schedule_from_string](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
 
 ## Contents
 
@@ -357,8 +358,8 @@ Sunday:
     Temp: 21
 ```
 
-If you are creating your own file (or editing one you have copied from a wiser device), you can use the 2 special day
-names of 'Weekdays' and 'Weekends' instead of listing individual days.
+If you are creating your own file (or editing one you have copied from a wiser device), you can use the 3 special day
+names of 'All', 'Weekdays' and 'Weekends' instead of listing individual days.
 
 For lights and shutters, you can also use the special times of Sunrise and Sunset.
 

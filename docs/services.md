@@ -17,6 +17,7 @@ Please feel free to correct any errors or omissions by posting a PR to our Githu
 - [Set Device Mode](#set-device-mode)
 - [Save Schedule to File](#save-schedule-to-file)
 - [Set Schedule from File](#set-schedule-from-file)
+- [Set Schedule from String](#set-schedule-from-string)
 - [Copy Schedule](#copy-schedule)
 - [Assign Schedule](#assign-schedule)
 
@@ -204,6 +205,31 @@ Load a schedule into the wiser hub from a yaml formatted file.  This can be used
 
 ---
 
+## Set Schedule From String
+
+**Service Name**: wiser.set_schedule_from_string
+
+Set a schedule from a string.  The string must be a yaml schedule in the same format as a yaml file used to load a schedule.  This supports templating.
+
+- Times must render to a HH:MM format
+- Temps must render to a float number
+- State must render to On or Off
+- Level must render to an integer number
+
+```yaml
+service: wiser.set_schedule_from_string
+data:
+  entity_id: climate.wiser_beths_room
+  schedule: |
+      Type: Heating
+      Weekdays:
+      - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'), "%H:%M:%S")) | timestamp_custom("%H:%M") }}
+        Temp: 16.0
+      Weekends:
+      - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'), "%H:%M:%S")) | timestamp_custom("%H:%M") }}
+        Temp: {{ 2 * 8 + 1 }}
+```
+
 ## Copy Schedule
 
 **Service Name**: wiser.copy_schedule
@@ -220,10 +246,10 @@ Copy schedules between rooms/devices.
 
 - The 2 entities must be of the same time i.e:
 
-    - climate to climate
-    - smart plug to smart plug
-    - light to light
-    - shutter to shutter
+  - climate to climate
+  - smart plug to smart plug
+  - light to light
+  - shutter to shutter
 
 - If you have more than one hub, the entities must be from the same hub.  To copy between hubs use the get_schedule and set_schedule services.
 
