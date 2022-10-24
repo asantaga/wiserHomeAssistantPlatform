@@ -88,7 +88,6 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
     async def async_set_mode(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} mode to {option}")
         await self._device.set_mode(option)
-        await self.async_force_update()
 
     @property
     def unique_id(self):
@@ -142,7 +141,6 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         if self._hotwater.is_override:
             await self._hotwater.cancel_overrides()
         await self._hotwater.set_mode(option)
-        await self.async_force_update()
 
     @property
     def unique_id(self):
