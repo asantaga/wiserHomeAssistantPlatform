@@ -219,7 +219,7 @@ Set a schedule from a string.  The string must be a yaml schedule in the same fo
 ```yaml
 service: wiser.set_schedule_from_string
 data:
-  entity_id: climate.wiser_beths_room
+  entity_id: climate.wiser_living_room
   schedule: |
       Type: Heating
       Weekdays:
@@ -228,6 +228,19 @@ data:
       Weekends:
       - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'), "%H:%M:%S")) | timestamp_custom("%H:%M") }}
         Temp: {{ 2 * 8 + 1 }}
+```
+
+```yaml
+service: wiser.set_schedule_from_string
+data:
+  entity_id: climate.wiser_bedroom
+  schedule: |
+    Type: Heating
+    All:
+    - Time: {{ as_timestamp(strptime(states('input_datetime.wakeup'),"%H:%M:%S")) | timestamp_custom("%H:%M") }}
+      Temp: 16.0
+    - Time: 22:30
+      Temp: {{ 2 * 8 + 3 }}
 ```
 
 ## Copy Schedule
