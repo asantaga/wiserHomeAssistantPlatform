@@ -4,6 +4,7 @@ import logging
 from .const import (
     ATTR_FILENAME,
     ATTR_HUB,
+    ATTR_SCHEDULE,
     ATTR_SCHEDULE_ID,
     ATTR_SCHEDULE_NAME,
     ATTR_TIME_PERIOD,
@@ -18,7 +19,7 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
 )
-from homeassistant.core import callback
+from homeassistant.core import callback, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
@@ -38,6 +39,13 @@ async def async_setup_services(hass, data):
         {
             vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
             vol.Required(ATTR_FILENAME): vol.Coerce(str),
+        }
+    )
+
+    SET_SCHEDULE_FROM_DATA_SCHEMA = vol.Schema(
+        {
+            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+            vol.Required(ATTR_SCHEDULE): cv.template,
         }
     )
 
@@ -121,6 +129,28 @@ async def async_setup_services(hass, data):
                 if hasattr(entity, "set_schedule"):
                     fn = getattr(entity, "set_schedule")
                     await fn(filename)
+                else:
+                    _LOGGER.error(
+                        f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose"
+                    )
+            else:
+                _LOGGER.error(
+                    f"Invalid entity. {entity_id} does not exist in this integration"
+                )
+
+    @callback
+    async def set_schedule_from_data(service_call: ServiceCall):
+        """Handle the service call."""
+        schedule = service_call.data[ATTR_SCHEDULE]
+        schedule.hass = hass
+
+        entity_ids = service_call.data[ATTR_ENTITY_ID]
+        for entity_id in entity_ids:
+            entity = get_entity_from_entity_id(entity_id)
+            if entity:
+                if hasattr(entity, "set_schedule_from_data"):
+                    fn = getattr(entity, "set_schedule_from_data")
+                    await fn(schedule.async_render(parse_result=False))
                 else:
                     _LOGGER.error(
                         f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose"
@@ -285,6 +315,13 @@ async def async_setup_services(hass, data):
         WISER_SERVICES["SERVICE_SET_SCHEDULE"],
         set_schedule,
         schema=SET_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SET_SCHEDULE_FROM_DATA"],
+        set_schedule_from_data,
+        schema=SET_SCHEDULE_FROM_DATA_SCHEMA,
     )
 
     hass.services.async_register(

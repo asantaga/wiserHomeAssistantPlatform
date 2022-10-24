@@ -62,6 +62,7 @@ ATTR_FILENAME = "filename"
 ATTR_TO_ENTITY_ID = "to_entity_id"
 ATTR_SCHEDULE_ID = "schedule_id"
 ATTR_SCHEDULE_NAME = "schedule_name"
+ATTR_SCHEDULE = "schedule"
 
 
 # Signal icons
@@ -81,6 +82,7 @@ WISER_SERVICES = {
     "SERVICE_COPY_SCHEDULE": "copy_schedule",
     "SERVICE_GET_SCHEDULE": "get_schedule",
     "SERVICE_SET_SCHEDULE": "set_schedule",
+    "SERVICE_SET_SCHEDULE_FROM_DATA": "set_schedule_from_string",
     "SERVICE_SET_DEVICE_MODE": "set_device_mode",
 }
 

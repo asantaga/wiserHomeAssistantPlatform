@@ -62,6 +62,20 @@ class WiserScheduleEntity(object):
             )
 
     @callback
+    async def set_schedule_from_data(self, schedule: str) -> None:
+        try:
+            if self._schedule:
+                _LOGGER.info(
+                    f"Setting {self._schedule.name} schedule from schedule data.\n{schedule}"
+                )
+                await self._schedule.set_schedule_from_yaml_data(schedule)
+                await self._data.async_refresh()
+        except:
+            _LOGGER.error(
+                f"Error setting {self._schedule.name} schedule from data.\n{schedule}"
+            )
+
+    @callback
     async def assign_schedule_to_another_entity(self, to_entity) -> None:
         if self._schedule:
             # Check they are on the same wiser hub
