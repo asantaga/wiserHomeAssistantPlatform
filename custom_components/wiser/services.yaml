@@ -118,6 +118,27 @@ set_schedule:
       selector:
         text:
 
+set_schedule_from_string:
+  name: Set Schedule From String
+  description: Set a schedule from a template supported string
+  fields:
+    entity_id:
+      name: Entity
+      description: A wiser entity
+      required: true
+      selector:
+        entity:
+          integration: wiser
+          domain: 
+          - climate
+          - select
+    schedule:
+      name: Schedule
+      description: The schedule data (supports templates)
+      required: true
+      selector:
+        text:
+
 copy_schedule:
   name: Copy Schedule
   description: Copy the schedule from one to another in the same type
@@ -165,6 +186,12 @@ assign_schedule:
       selector:
         number:
           mode: box
+    schedule_name:
+      name: Schedule Name
+      description: A wiser schedule name
+      required: false
+      selector:
+        text:
     to_entity_id:
       name: To Entity
       description: Enter the entity_id for the room or device to assign the same schedule to.

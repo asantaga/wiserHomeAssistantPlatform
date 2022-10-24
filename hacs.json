@@ -1,5 +1,7 @@
 {
-    "name": "Drayton Wiser Integration for Home Assistant",
-    "homeassistant": "2022.06",
-    "render_readme": true
+  "name": "Drayton Wiser Integration for Home Assistant",
+  "homeassistant": "2022.09",
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "wiser.zip"
 }

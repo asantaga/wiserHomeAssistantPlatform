@@ -1,6 +1,7 @@
 from .const import DOMAIN, ENTITY_PREFIX
 
-def get_device_name(data, id, type = "device"):
+
+def get_device_name(data, id, type="device"):
     if type == "device":
         device = data.wiserhub.devices.get_by_id(id)
 
@@ -16,7 +17,7 @@ def get_device_name(data, id, type = "device"):
                     # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
                     # 1 is lowest device id, 2 next lowest etc
                     sv_index = device_room.smartvalve_ids.index(device.id) + 1
-                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{sv_index}"    
+                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{sv_index}"
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
@@ -26,7 +27,7 @@ def get_device_name(data, id, type = "device"):
             if device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
-            
+
         if device.product_type == "UnderFloorHeating":
             return f"{ENTITY_PREFIX} {device.name}"
 
@@ -39,7 +40,7 @@ def get_device_name(data, id, type = "device"):
                     # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
                     # 1 is lowest device id, 2 next lowest etc
                     ha_index = device_room.heating_actuator_ids.index(device.id) + 1
-                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"   
+                    return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"
                 device_room = data.wiserhub.rooms.get_by_device_id(id)
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
@@ -49,11 +50,11 @@ def get_device_name(data, id, type = "device"):
 
         if device.product_type in ["Shutter", "OnOffLight", "DimmableLight"]:
             device_room = data.wiserhub.rooms.get_by_device_id(id)
-             # If device not allocated to a room return type and id only
+            # If device not allocated to a room return type and id only
             if device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name} {device.name}"
-            return f"{ENTITY_PREFIX} {device.product_type} {device.name}"      
-        
+            return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif type == "room":
@@ -62,29 +63,46 @@ def get_device_name(data, id, type = "device"):
 
     else:
         return f"{ENTITY_PREFIX} {type}"
-    
 
-def get_identifier(data, id, type = "device"):
+
+def get_identifier(data, id, type="device"):
     return f"{data.wiserhub.system.name} {get_device_name(data, id, type)}"
+
 
 def get_unique_id(data, device_type, entity_type, id):
     return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{id}"
 
+
 def get_room_name(data, room_id):
     return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
 
+
 def get_instance_count(hass) -> int:
-    return len(hass.config_entries.async_entries(DOMAIN))
+    entries = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if not entry.disabled_by
+    ]
+    return len(entries)
+
 
 def is_wiser_config_id(hass, config_id):
-    entry = [entry for entry in hass.config_entries.async_entries(DOMAIN) if entry.entry_id == config_id]
+    entry = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.entry_id == config_id
+    ]
     if entry:
         return True
     return False
 
+
 def get_config_entry_id_by_name(hass, name) -> str or None:
-    entry = [entry for entry in hass.config_entries.async_entries(DOMAIN) if entry.title == name]
+    entry = [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.title == name
+    ]
     if entry:
         return entry[0].entry_id
     return None
-
