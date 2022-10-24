@@ -1,20 +1,20 @@
 import logging
-
+import asyncio
 from .const import (
     DATA,
     DOMAIN,
-    MANUFACTURER
+    MANUFACTURER,
 )
 
 from .helpers import get_device_name, get_unique_id, get_identifier
 from .schedules import WiserScheduleEntity
 
-import voluptuous as vol
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Wiser climate device."""
@@ -29,88 +29,104 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     if data.wiserhub.devices.smartplugs.count > 0:
         _LOGGER.debug("Setting up Smartplug mode select")
         for plug in data.wiserhub.devices.smartplugs.all:
-            wiser_selects.extend([
-                WiserSmartPlugModeSelect(data, plug.id)
-            ])
-    
+            wiser_selects.extend([WiserSmartPlugModeSelect(data, plug.id)])
+
     if data.wiserhub.devices.lights.count > 0:
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
-            wiser_selects.extend([
-                WiserLightModeSelect(data, light.id)
-            ])
+            wiser_selects.extend([WiserLightModeSelect(data, light.id)])
 
     if data.wiserhub.devices.shutters.count > 0:
         _LOGGER.debug("Setting up Shutter mode select")
         for shutter in data.wiserhub.devices.shutters.all:
-            wiser_selects.extend([
-                WiserShutterModeSelect(data, shutter.id)
-            ])
+            wiser_selects.extend([WiserShutterModeSelect(data, shutter.id)])
 
     async_add_entities(wiser_selects)
 
-class WiserSelectEntity(SelectEntity):
-    def __init__(self, data):
+
+class WiserSelectEntity(CoordinatorEntity, SelectEntity):
+    def __init__(self, coordinator):
         """Initialize the sensor."""
-        self._data = data
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} initalise")
+        super().__init__(coordinator)
+        self._data = coordinator
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
 
-    async def async_force_update(self):
-        await self._data.async_update(no_throttle=True)
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
 
-    @property
-    def should_poll(self):
-        """We don't want polling so return false."""
-        return False
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
 
     @property
     def name(self):
         """Return Name of device."""
-        return self._name
+        return f"{get_device_name(self._data, self._device_id)} Mode"
 
     @property
     def options(self) -> list[str]:
         return self._options
 
-    @callback
-    def set_mode(self, mode):
-        self.hass.async_create_task(
-            self.async_set_mode(mode.title())
-        )
+    @property
+    def current_option(self) -> str:
+        return self._device.mode
 
-    @callback
-    async def async_set_mode(self, mode):
-        _LOGGER.error(f"Set mode service is not available on this entity")
-
-    async def async_added_to_hass(self):
-        """Subscribe for update from the hub."""
-
-        async def async_update_state():
-            """Update sensor state."""
-            await self.async_update_ha_state(True)
-
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, f"{self._data.wiserhub.system.name}-HubUpdateMessage", async_update_state
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self.async_set_mode(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
+
+    async def async_set_mode(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} mode to {option}")
+        await self._device.set_mode(option)
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "mode-select", self._device_id
         )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
 
 class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
-
-    def __init__(self, data): 
+    def __init__(self, data):
         """Initialize the sensor."""
         super().__init__(data)
         self._hotwater = self._data.wiserhub.hotwater
         self._device_id = self._hotwater.id
         self._options = self._hotwater.available_modes
         self._schedule = self._hotwater.schedule
+        self._state = self._hotwater.mode
 
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
         self._hotwater = self._data.wiserhub.hotwater
         self._schedule = self._hotwater.schedule
-    
+        self.async_write_ha_state()
+
     @property
     def name(self):
         """Return Name of device."""
@@ -120,11 +136,11 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def current_option(self) -> str:
         return self._hotwater.mode
 
-    def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting hot water mode to {option}")
-        self._hotwater.mode = option
-        self._hotwater.cancel_overrides()
-        self.hass.async_create_task(self.async_force_update())
+    async def async_set_mode(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} mode to {option}")
+        if self._hotwater.is_override:
+            await self._hotwater.cancel_overrides()
+        await self._hotwater.set_mode(option)
 
     @property
     def unique_id(self):
@@ -135,24 +151,16 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-                "name": get_device_name(self._data, 0),
-                "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-                "manufacturer": MANUFACTURER,
-                "model": self._data.wiserhub.system.product_type,
-                "sw_version": self._data.wiserhub.system.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
-    @callback
-    async def async_set_mode(self, mode):
-        _LOGGER.info(f"Setting Hot Water to {mode} mode")
-        await self.hass.async_add_executor_job(
-            self.select_option, mode
-        )
-        await self.async_force_update()
 
-class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
-
+class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def __init__(self, data, smartplug_id):
         """Initialize the sensor."""
         self._device_id = smartplug_id
@@ -161,57 +169,16 @@ class WiserSmartPlugModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         self._options = self._device.available_modes
         self._schedule = self._device.schedule
 
-
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-    
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Mode"
-
-    @property
-    def current_option(self) -> str:
-        return self._device.mode
-
-    def select_option(self, option: str) -> None:
-        if option and option in self._options:
-            _LOGGER.debug(f"Setting smartplug mode to {option}")
-            self._device.mode = option
-            self.hass.async_create_task(self.async_force_update())
-        else:
-            _LOGGER.error(f"{option} is not a valid Smart Plug mode.  Please choose from {self._options}")
-    
-    @property
-    def unique_id(self):
-        """Return unique ID for the plug."""
-        return get_unique_id(self._data, self._device.product_type, "mode-select", self._device_id)
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-                "name": get_device_name(self._data, self._device_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-                "manufacturer": MANUFACTURER,
-                "model": self._device.product_type,
-                "sw_version": self._device.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
-
-    @callback
-    async def async_set_mode(self, mode):
-        _LOGGER.info(f"Setting {self._device.name} to {mode} mode")
-        await self.hass.async_add_executor_job(
-            self.select_option, mode
-        )
-        await self.async_force_update()
+        self.async_write_ha_state()
 
 
-class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
-
+class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def __init__(self, data, light_id):
         """Initialize the sensor."""
         self._device_id = light_id
@@ -220,57 +187,16 @@ class WiserLightModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         self._options = self._device.available_modes
         self._schedule = self._device.schedule
 
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
-
-
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-    
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Mode"
-
-    @property
-    def current_option(self) -> str:
-        return self._device.mode
-
-    def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting light mode to {option}")
-        self._device.mode = option
-        self.hass.async_create_task(self.async_force_update())
-    
-    @property
-    def unique_id(self):
-        """Return unique ID for the plug."""
-        return get_unique_id(self._data, self._device.product_type, "mode-select", self._device_id)
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-                "name": get_device_name(self._data, self._device_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-                "manufacturer": MANUFACTURER,
-                "model": self._device.product_type,
-                "sw_version": self._device.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
-
-    @callback
-    async def async_set_mode(self, mode):
-        _LOGGER.info(f"Setting {self._device.name} to {mode} mode")
-        await self.hass.async_add_executor_job(
-            self.select_option, mode
-        )
-        await self.async_force_update()
+        self.async_write_ha_state()
 
 
-
-class WiserShutterModeSelect(WiserSelectEntity,WiserScheduleEntity ):
-
+class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def __init__(self, data, shutter_id):
         """Initialize the sensor."""
         self._device_id = shutter_id
@@ -279,50 +205,10 @@ class WiserShutterModeSelect(WiserSelectEntity,WiserScheduleEntity ):
         self._options = self._device.available_modes
         self._schedule = self._device.schedule
 
-        _LOGGER.info(f"{self._data.wiserhub.system.name} {self.name} init")
-
-
-    async def async_update(self):
-        """Async update method."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-  
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Mode"
-
-    @property
-    def current_option(self) -> str:
-        return self._device.mode
-
-    def select_option(self, option: str) -> None:
-        _LOGGER.debug("Setting shutter mode to {option}")
-        self._device.mode = option
-        self.hass.async_create_task(self.async_force_update())
-  
-    @property
-    def unique_id(self):
-        """Return unique ID for the plug."""
-        return get_unique_id(self._data, self._device.product_type, "mode-select", self._device_id)
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-                "name": get_device_name(self._data, self._device_id),
-                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-                "manufacturer": MANUFACTURER,
-                "model": self._device.product_type,
-                "sw_version": self._device.firmware_version,
-                "via_device": (DOMAIN, self._data.wiserhub.system.name),
-            }
-
-    @callback
-    async def async_set_mode(self, mode):
-        _LOGGER.info(f"Setting {self._device.name} to {mode} mode")
-        await self.hass.async_add_executor_job(
-            self.select_option, mode
-        )
-        await self.async_force_update()
-
+        self.async_write_ha_state()

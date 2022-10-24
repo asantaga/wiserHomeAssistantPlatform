@@ -5,14 +5,9 @@
   "config_flow": true,
   "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/README.md",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
-  "dependencies": [
-    "http",
-    "websocket_api",
-    "frontend",
-    "lovelace"
-  ],
+  "dependencies": ["http", "websocket_api", "frontend", "lovelace"],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.1.7",
-  "requirements": ["wiserHeatAPIv2==0.0.42"],
-  "zeroconf": [{"type":"_http._tcp.local.","name":"wiser*"}]
+  "version": "3.2.0",
+  "requirements": ["aioWiserHeatAPI==0.1.6"],
+  "zeroconf": [{ "type": "_http._tcp.local.", "name": "wiser*" }]
 }
