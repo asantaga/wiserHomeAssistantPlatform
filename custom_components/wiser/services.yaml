@@ -119,7 +119,7 @@ set_schedule:
         text:
 
 set_schedule_from_string:
-  name: Set Schedule From Data
+  name: Set Schedule From String
   description: Set a schedule from a template supported string
   fields:
     entity_id:
