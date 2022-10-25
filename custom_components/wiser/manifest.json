@@ -2,13 +2,12 @@
   "domain": "wiser",
   "name": "Drayton Wiser Integration for Home Assistant",
   "iot_class": "local_polling",
-  "integration_type": "hub",
   "config_flow": true,
   "documentation": "https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/README.md",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
   "dependencies": ["http", "websocket_api", "frontend", "lovelace"],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.2.0",
-  "requirements": ["aioWiserHeatAPI==0.1.6"],
+  "requirements": ["aioWiserHeatAPI==0.1.7"],
   "zeroconf": [{ "type": "_http._tcp.local.", "name": "wiser*" }]
 }
