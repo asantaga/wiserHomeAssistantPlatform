@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.2.0
+# Wiser Home Assistant Integration v3.2.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -562,6 +562,11 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.2.1
+  - Bump api to v0.1.7 to fix error with UFH controller - issue [#318](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/318)
+  - Improve setup handling and logging if hub does not respond on initial request - issue [#317](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/317)
+  - Python 3.9 compatibility
 
 - 3.2.0
   - Utilise async api aioWiserHeatAPI
