@@ -569,6 +569,8 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Utilise the data update coordinator of HA
   - Adjustment of battery levels to be more reflective of remaining usable capacity
   - Added schedule_name parameter option to assign schedule service
+  - Added All special days support in schedule files
+  - Added new Set Schedule From String service that supports templating
 
 - 3.1.7
   - Bump api to 0.0.42 to fix hub wifi drop outs
