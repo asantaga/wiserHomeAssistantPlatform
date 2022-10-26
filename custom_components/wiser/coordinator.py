@@ -123,6 +123,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        except:
+        except Exception as ex:
             self.last_update_status = "Failed"
-            return False
+            raise ex
