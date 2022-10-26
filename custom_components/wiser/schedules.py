@@ -1,6 +1,7 @@
 import logging
 import enum
 import json
+from typing import Union
 from homeassistant.core import callback
 
 from aioWiserHeatAPI.const import WiserScheduleTypeEnum
@@ -122,7 +123,7 @@ class WiserScheduleEntity(object):
 
     @callback
     async def assign_schedule_by_id_or_name(
-        self, schedule_id: int | None, schedule_name: str | None
+        self, schedule_id: Union[int, None], schedule_name: Union[str, None]
     ) -> None:
         try:
             to_id = None

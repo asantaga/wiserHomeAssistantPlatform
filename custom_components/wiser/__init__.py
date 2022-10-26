@@ -7,6 +7,7 @@ msparker@sky.com
 import asyncio
 import logging
 
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
@@ -35,6 +36,9 @@ async def async_setup_entry(hass, config_entry):
     coordinator = WiserUpdateCoordinator(hass, config_entry)
 
     await coordinator.async_config_entry_first_refresh()
+
+    if not coordinator.wiserhub.system:
+        raise ConfigEntryNotReady
 
     # Update listener for config option changes
     update_listener = config_entry.add_update_listener(_async_update_listener)
