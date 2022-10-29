@@ -38,7 +38,6 @@ async def async_get_triggers(
 ) -> list[dict[str, str]]:
     """List device triggers for Climate devices."""
     registry = entity_registry.async_get(hass)
-    triggers = []
 
     for entry in entity_registry.async_entries_for_device(registry, device_id):
         if entry.domain not in SUPPORTED_DOMAINS:
@@ -51,10 +50,8 @@ async def async_get_triggers(
                 if event_type[CONF_DOMAIN] == entry.domain
             ]
         )
-        print(trigger_types)
-        print(TRIGGER_TYPES)
 
-        triggers = [
+        return [
             {
                 CONF_PLATFORM: DEVICE,
                 CONF_DEVICE_ID: device_id,
@@ -64,9 +61,6 @@ async def async_get_triggers(
             }
             for trigger_type in trigger_types
         ]
-
-        print(triggers)
-        return triggers
 
 
 async def async_attach_trigger(
@@ -86,26 +80,6 @@ async def async_attach_trigger(
             },
         }
     )
-    print(event_config)
     return await event_trigger.async_attach_trigger(
         hass, event_config, action, trigger_info, platform_type="device"
     )
-
-
-"""
-async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
-) -> dict[str, vol.Schema]:
-    #List trigger capabilities.
-    trigger_type = config[CONF_TYPE]
-
-    # if trigger_type == "boost_changed":
-    #    return {}
-
-    if trigger_type == "boost_changed":
-        return {
-            "extra_fields": vol.Schema(
-                {vol.Optional(CONF_FOR): cv.positive_time_period_dict}
-            )
-        }
-"""
