@@ -123,12 +123,14 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        except WiserHubConnectionError as ex:
-            _LOGGER.error(ex)
-        except WiserHubAuthenticationError as ex:
-            _LOGGER.error(ex)
-        except WiserHubRESTError as ex:
+        except (
+            WiserHubConnectionError,
+            WiserHubAuthenticationError,
+            WiserHubRESTError,
+        ) as ex:
+            self.last_update_status = "Failed"
             _LOGGER.error(ex)
         except Exception as ex:
             self.last_update_status = "Failed"
+            _LOGGER.error(ex)
             raise ex
