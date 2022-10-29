@@ -48,5 +48,12 @@
         }
       }
     }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} starts heating",
+      "stopped_heating": "{entity_name} stops heating",
+      "boosted": "{entity_name} is boosted"
+    }
   }
 }

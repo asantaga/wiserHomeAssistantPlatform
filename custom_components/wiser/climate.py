@@ -6,6 +6,7 @@ Angelosantagata@gmail.com
 
 """
 import logging
+from .events import fire_events
 import voluptuous as vol
 
 from homeassistant.components.climate.const import (
@@ -141,16 +142,20 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
+        previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
-
-        self.async_fire_events()
-        # Vars to support change fired events
-        self._is_heating = self._room.is_heating
 
         if not self._room.is_boosted:
             self._boosted_time = 0
         self.async_write_ha_state()
+
+        fire_events(
+            self._hass,
+            self.entity_id,
+            previous_room_values,
+            self._room,
+        )
 
     @property
     def current_temperature(self):
@@ -373,24 +378,6 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         return (
             f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
         )
-
-    def async_fire_events(self):
-        # Fire event if is_heating status changed
-        if self._is_heating != self._room.is_heating:
-            _LOGGER.debug(
-                f"Firing wiser_room_heating_status_changed event for {self.name}"
-            )
-            self._hass.bus.fire(
-                "wiser_room_heating_status_changed",
-                {
-                    "entity_id": self.entity_id,
-                    "is_heating": self._room.is_heating,
-                    "is_boosted": self._room.is_boosted,
-                    "scheduled_temperature": self._room.scheduled_target_temperature,
-                    "target_temperature": self._room.current_target_temperature,
-                    "current_temperature": self._room.current_temperature,
-                },
-            )
 
     @callback
     async def async_boost_heating(
