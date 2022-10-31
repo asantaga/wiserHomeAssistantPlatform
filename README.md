@@ -33,6 +33,7 @@ For more information checkout the AMAZING community thread available on
 - [Providing You Hub Output as a JSON File](#providing-your-hub-output-as-a-json-file)
 - [Functionality of this Integration](#functionality)
 - [Services Included in this Integration](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+- [Events & Triggers](#events--triggers)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
@@ -151,7 +152,11 @@ In order to download this file do the following:
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
 
-  More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+    More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+
+- **Events & Triggers**
+  - A wiser_event event name with a type of boosted, started_heating and stopped_heating.  See [Events & Triggers](#events--triggers)
+
 
 - **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -477,6 +482,41 @@ You can either provide an entity ID to reference the schedule attached to that e
 - Smartplug on/off schedules - use the Smartplug Mode select entity of the smart plug eg select.smartplug1_mode
 - Lights - use the Light Mode select entity for the light eg. select.lounge_light_mode
 - Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
+
+
+## Events & Triggers
+
+The integration provides a wiser_event event name with types of boosted, started_heating and stopped_heating, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
+
+1. As an automation trigger on a specific 'room' device in the automations UI
+
+    ```yaml
+    trigger:
+      - platform: device
+        device_id: a45b40d19af72fe76bb5f3c195c24737
+        domain: wiser
+        entity_id: climate.wiser_kitchen
+        type: boosted
+    ```
+
+2. As an event listener in an automation to listen to any events of that type, extract the room that caused it in a template and use that to perform and action.
+
+    ```yaml
+    description: "Demo Event Automation"
+    mode: single
+    trigger:
+      - platform: event
+        event_type: wiser_event
+        event_data:
+          type: boosted
+    condition: []
+    action:
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: Cancel Overrides
+        target:
+          entity_id: "{{ trigger.event.data.entity_id }}"
+    ```
 
 ## Schedule Card
 
