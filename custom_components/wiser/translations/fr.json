@@ -51,8 +51,8 @@
   },
   "device_automation": {
     "trigger_type": {
-      "started_heating": "{entity_name} commence à chauffer",
-      "stopped_heating": "{entity_name} arrête de chauffer",
+      "started_heating": "{entity_name} chauffe démarrée",
+      "stopped_heating": "{entity_name} chauffe arrêté",
       "boosted": "{entity_name} est boosté"
     }
   }
