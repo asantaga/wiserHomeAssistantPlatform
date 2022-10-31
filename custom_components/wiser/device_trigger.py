@@ -1,6 +1,4 @@
-"""Provides device automations for Climate."""
-from __future__ import annotations
-
+"""Provides device automations for Wiser."""
 import voluptuous as vol
 
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
