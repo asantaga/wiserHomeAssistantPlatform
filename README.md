@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.2.1
+# Wiser Home Assistant Integration v3.2.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -22,6 +22,8 @@ For more information checkout the AMAZING community thread available on
 
 - Schedule files now support the All special day as well as Weekdays and Weekends.
 - New service to set a schedule from a string that supports templating.  See [set_schedule_from_string](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
+- Schedule card options to show IDs and list view
+- Events and automation triggers
 
 ## Contents
 
@@ -562,6 +564,13 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.2.2
+  - Add list view option to Schedule Card
+  - Add Show ID option to schedule card standard view
+  - Fixed - Update status attribute does not show when failed
+  - Added events for room started/stopped heating and boosted
+  - Added device_triggers for events
 
 - 3.2.1
   - Bump api to v0.1.7 to fix error with UFH controller - issue [#318](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/318)
