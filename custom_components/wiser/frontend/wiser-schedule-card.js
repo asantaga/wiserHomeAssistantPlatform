@@ -349,16 +349,19 @@ function ue(e,t,i){let o,n=e;return"object"==typeof e?(n=e.slot,o=e):o={flatten:
       position: relative;
     }
     .badge {
-      font-size: small;
+      font-size: 13px;
+      font-weight: 400;
       position: absolute;
+      min-width: 20px;
+      box-sizing: border-box;
       top: -5px;
       right: -8px;
-      background-color: var(--label-badge-red);
-      width: 20px;
-      height: 20px;
+      background-color: var(--accent-color);
       border-radius: 50%;
       line-height: 20px;
       text-align: center;
+      padding: 0px 6px;
+      color: var(--text-accent-color, var(--text-primary-color));
     }
   `,o([ae({attribute:!1})],wt.prototype,"config",void 0),o([ae({attribute:!1})],wt.prototype,"schedule_list",void 0),o([ae({attribute:!1})],wt.prototype,"component_loaded",void 0),wt=o([ne("wiser-schedule-list-card")],wt);
 /**
