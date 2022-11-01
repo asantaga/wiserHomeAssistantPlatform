@@ -53,7 +53,9 @@
     "trigger_type": {
       "started_heating": "{entity_name} beginnt zu heizen",
       "stopped_heating": "{entity_name} stoppt die Heizung",
-      "boosted": "{entity_name} wird verstärkt"
+      "boosted": "{entity_name} wird verstärkt",
+      "target_temperature_increased": "{entity_name} zieltemperatur erhöht",
+      "target_temperature_decreased": "{entity_name} zieltemperatur gesenkt"
     }
   }
 }
