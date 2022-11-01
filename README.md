@@ -609,6 +609,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Add list view option to Schedule Card
   - Add Show ID option to schedule card standard view
   - Fixed - Update status attribute does not show when failed
+  - Fixed - Error if heating actuator has no assigned room - Issue [#321](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/321)
   - Added events for room started/stopped heating and boosted
   - Added device_triggers for events
 
