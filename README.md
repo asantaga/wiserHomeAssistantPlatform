@@ -486,7 +486,7 @@ You can either provide an entity ID to reference the schedule attached to that e
 
 ## Events & Triggers
 
-The integration provides a wiser_event event name with types of boosted, started_heating and stopped_heating, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
+The integration provides a wiser_event event name with types of boosted, started_heating, stopped_heating, target_temperature_increased and target_temperature_decreased, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
 
 1. As an automation trigger on a specific 'room' device in the automations UI
 
@@ -626,11 +626,12 @@ There are two primary branches for this integration, `master` and `dev` . Master
 ## Change log
 
 - 3.2.2
+  - Bump api to v0.1.8
   - Add list view option to Schedule Card
   - Add Show ID option to schedule card standard view
   - Fixed - Update status attribute does not show when failed
   - Fixed - Error if heating actuator has no assigned room - Issue [#321](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/321)
-  - Added events for room started/stopped heating and boosted
+  - Added events for room started/stopped heating, target temperature increased/decreased and boosted
   - Added device_triggers for events
 
 - 3.2.1
