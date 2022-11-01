@@ -499,23 +499,43 @@ The integration provides a wiser_event event name with types of boosted, started
         type: boosted
     ```
 
-2. As an event listener in an automation to listen to any events of that type, extract the room that caused it in a template and use that to perform and action.
+     ```yaml
+    trigger:
+      - platform: device
+        device_id: a45b40d19af72fe76bb5f3c195c24737
+        domain: wiser
+        entity_id: climate.wiser_kitchen
+        type: started_heating
+    ```
+
+2. As an event listener in an automation to listen to any events of that type, extract the room that caused it in a template and use that to perform an action.
 
     ```yaml
-    description: "Demo Event Automation"
-    mode: single
+    alias: Cap Boost Temperature
+    description: Listens for boost event and caps to max target temp if above that
     trigger:
       - platform: event
         event_type: wiser_event
         event_data:
           type: boosted
-    condition: []
+        variables:
+          cap_temp: 23.5
+          room: "{{trigger.event.data.entity_id}}"
+          target_temp: "{{state_attr(trigger.event.data.entity_id, 'temperature')}}"
+    condition:
+      - condition: template
+        value_template: |-
+          {% if target_temp|float > cap_temp %}
+            True
+          {% endif %}
     action:
-      - service: climate.set_preset_mode
+      - service: climate.set_temperature
         data:
-          preset_mode: Cancel Overrides
+          temperature: "{{cap_temp}}"
         target:
-          entity_id: "{{ trigger.event.data.entity_id }}"
+          entity_id: "{{room}}"
+    mode: queued
+    max: 10
     ```
 
 ## Schedule Card
