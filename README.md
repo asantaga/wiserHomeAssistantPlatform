@@ -21,9 +21,9 @@ For more information checkout the AMAZING community thread available on
   - Quite a bit of code tidying and black formatting
 
 - Schedule files now support the All special day as well as Weekdays and Weekends.
-- New service to set a schedule from a string that supports templating.  See [set_schedule_from_string](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
+- New service to set a schedule from a string that supports templating.  See [Set Schedule From String](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
 - Schedule card options to show IDs and list view
-- Events and automation triggers
+- Events and automation triggers. See [Events & Triggers](#events--triggers)
 
 ## Contents
 
