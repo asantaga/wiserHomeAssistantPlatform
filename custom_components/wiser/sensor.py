@@ -883,18 +883,23 @@ class WiserLTSPowerSensor(WiserSensor):
     def __init__(self, data, id, sensor_type=""):
         """Initialise the operation mode sensor."""
         self._lts_sensor_type = sensor_type
+        device = data.wiserhub.devices.get_by_id(id)
+        if device.room_id == 0:
+            device_name = device.product_type + " " + str(device.id)
+        else:
+            device_name = data.wiserhub.rooms.get_by_id(device.room_id).name
 
         if sensor_type == "Power":
             super().__init__(
                 data,
                 id,
-                f"LTS Power {data.wiserhub.rooms.get_by_id(data.wiserhub.devices.get_by_id(id).room_id).name}",
+                f"LTS Power {device_name}",
             )
         else:
             super().__init__(
                 data,
                 id,
-                f"LTS Energy {data.wiserhub.rooms.get_by_id(data.wiserhub.devices.get_by_id(id).room_id).name}",
+                f"LTS Energy {device_name}",
             )
 
         self._device = data.wiserhub.devices.heating_actuators.get_by_id(id)
@@ -923,16 +928,16 @@ class WiserLTSPowerSensor(WiserSensor):
         return {
             "name": get_device_name(
                 self._data,
-                self._data.wiserhub.devices.get_by_id(self._device_id).room_id,
-                "room",
+                self._device_id,
+                "device",
             ),
             "identifiers": {
                 (
                     DOMAIN,
                     get_identifier(
                         self._data,
-                        self._data.wiserhub.devices.get_by_id(self._device_id).room_id,
-                        "room",
+                        self._device_id,
+                        "device",
                     ),
                 )
             },

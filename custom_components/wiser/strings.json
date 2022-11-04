@@ -48,5 +48,14 @@
         }
       }
     }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} starts heating",
+      "stopped_heating": "{entity_name} stops heating",
+      "boosted": "{entity_name} is boosted",
+      "target_temperature_increased": "{entity_name} target temperature increased",
+      "target_temperature_decreased": "{entity_name} target temperature decreased"
+    }
   }
 }

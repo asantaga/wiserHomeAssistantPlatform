@@ -1,52 +1,61 @@
 {
-	"config": {
-		"flow_title": "{name}",
-		"step": {
-			"user": {
-				"title": "Wiser Heat Hub Setup",
-				"description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
-				"data":{
-					"host": "IP Adresse",
-					"password": "API Schl\u00fcssel"
-				}
-			},
-			"zeroconf_confirm": {
-                "title": "Wiser Heat Hub Setup ({name})",
-                "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
-                "data": {
-					"host": "IP Adresse",
-                    "password": "API Schl\u00fcssel"
-                }
-            }
-		},
-		"abort": {
-            "already_in_progress": "Der Konfigurationsablauf f\u00fcr Wiser Heat Hub wird bereits ausgef\u00fchrt.",
-            "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert."
-        },
-        "error": {
-            "auth_failure": "Authentifizierung mit Wiser Heat Hub fehlgeschlagen. Pr\u00fcfe den API Key und versuche es erneut.",
-            "timeout_error": "Timeout bei der Verbindung zum Wiser Heat Hub. Pr\u00fcfe die IP Adresse und versuche es erneut.",
-            "timeout_error_discovery": "Timeout bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie, ob Ihr Hub noch online ist, und versuchen Sie es erneut.",
-            "unknown": "Unbekannter Fehler beim Verbinden mit dem Wiser Heat Hub. Bitte überprüfen Sie die Protokolle."
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wiser Heat Hub Setup",
+        "description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
+        "data": {
+          "host": "IP Adresse",
+          "password": "API Schl\u00fcssel"
         }
-	},
-	"options": {
-		"step": {
-			"init": {
-				"title": "Wiser Heat Hub-Optionen",
-				"description": "Wiser-Parameter ändern.",
-		  		"data": {
-					"host": "IP Adresse",
-					"scan_interval": "Scan Intervall",
-					"heating_boost_temp": "Boost Temperatur",
-					"heating_boost_time": "Boost Dauer",
-					"hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
-					"setpoint_mode": "Sollwert-Modus",
-					"restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist",
-					"moments": "Moments-Schaltflächen aktivieren",
-					"lts_sensors": "LTS-Sensoren aktivieren"
-				}
-			}
-	  	}
-	}
+      },
+      "zeroconf_confirm": {
+        "title": "Wiser Heat Hub Setup ({name})",
+        "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
+        "data": {
+          "host": "IP Adresse",
+          "password": "API Schl\u00fcssel"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "Der Konfigurationsablauf f\u00fcr Wiser Heat Hub wird bereits ausgef\u00fchrt.",
+      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert."
+    },
+    "error": {
+      "auth_failure": "Authentifizierung mit Wiser Heat Hub fehlgeschlagen. Pr\u00fcfe den API Key und versuche es erneut.",
+      "timeout_error": "Timeout bei der Verbindung zum Wiser Heat Hub. Pr\u00fcfe die IP Adresse und versuche es erneut.",
+      "timeout_error_discovery": "Timeout bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie, ob Ihr Hub noch online ist, und versuchen Sie es erneut.",
+      "unknown": "Unbekannter Fehler beim Verbinden mit dem Wiser Heat Hub. Bitte überprüfen Sie die Protokolle."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wiser Heat Hub-Optionen",
+        "description": "Wiser-Parameter ändern.",
+        "data": {
+          "host": "IP Adresse",
+          "scan_interval": "Scan Intervall",
+          "heating_boost_temp": "Boost Temperatur",
+          "heating_boost_time": "Boost Dauer",
+          "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
+          "setpoint_mode": "Sollwert-Modus",
+          "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist",
+          "moments": "Moments-Schaltflächen aktivieren",
+          "lts_sensors": "LTS-Sensoren aktivieren"
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} beginnt zu heizen",
+      "stopped_heating": "{entity_name} stoppt die Heizung",
+      "boosted": "{entity_name} wird verstärkt",
+      "target_temperature_increased": "{entity_name} zieltemperatur erhöht",
+      "target_temperature_decreased": "{entity_name} zieltemperatur gesenkt"
+    }
+  }
 }

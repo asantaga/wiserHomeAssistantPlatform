@@ -1,52 +1,61 @@
 {
-    "config": {
-        "flow_title": "{name}",
-        "step": {
-            "user": {
-                "title": "Wiser Heat Hub Setup",
-                "description": "Please enter the ip address and secret key obtained from the hub.",
-                "data": {
-                    "host": "IP Address or Hostname",
-                    "password": "Secret Key"
-                }
-            },
-            "zeroconf_confirm": {
-                "title": "Wiser Heat Hub Setup",
-                "description": "Please enter the secret key obtained from the hub - {name}. \n Hostname: {hostname} \n IP Address: {ip_address}",
-                "data": {
-                    "host": "IP Address or Hostname",
-                    "password": "Secret Key"
-                }
-            }
-        },
-        "abort": {
-            "already_in_progress": "Wiser Heat Hub configuration is already in progress.",
-            "already_configured": "This device is already configured."
-        },
-        "error": {
-            "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
-            "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
-            "timeout_error_discovery": "Timed out trying to connect to the Wiser Hub.  Check your hub is still online and try again.",
-            "unknown": "Unknown error connecting to the Wiser hub.  Please check the logs."
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wiser Heat Hub Setup",
+        "description": "Please enter the ip address and secret key obtained from the hub.",
+        "data": {
+          "host": "IP Address or Hostname",
+          "password": "Secret Key"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Wiser Heat Hub Setup",
+        "description": "Please enter the secret key obtained from the hub - {name}. \n Hostname: {hostname} \n IP Address: {ip_address}",
+        "data": {
+          "host": "IP Address or Hostname",
+          "password": "Secret Key"
+        }
+      }
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Wiser Heat Hub Options",
-                "description": "Amend Wiser parameters.",
-                "data": {
-                    "host": "IP Address or Hostname",
-                    "scan_interval": "Scan Interval",
-                    "heating_boost_temp": "Default Heating Boost Temperature",
-                    "heating_boost_time": "Default Heating Boost Duration",
-                    "hotwater_boost_time": "Default Hot Water Boost Duration",
-                    "setpoint_mode": "Setpoint Mode",
-                    "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature",
-                    "moments": "Enable Moments Buttons",
-                    "lts_sensors": "Enable LTS Sensors"
-                }               
-            }
-        }
+    "abort": {
+      "already_in_progress": "Wiser Heat Hub configuration is already in progress.",
+      "already_configured": "This device is already configured."
+    },
+    "error": {
+      "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
+      "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
+      "timeout_error_discovery": "Timed out trying to connect to the Wiser Hub.  Check your hub is still online and try again.",
+      "unknown": "Unknown error connecting to the Wiser hub.  Please check the logs."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wiser Heat Hub Options",
+        "description": "Amend Wiser parameters.",
+        "data": {
+          "host": "IP Address or Hostname",
+          "scan_interval": "Scan Interval",
+          "heating_boost_temp": "Default Heating Boost Temperature",
+          "heating_boost_time": "Default Heating Boost Duration",
+          "hotwater_boost_time": "Default Hot Water Boost Duration",
+          "setpoint_mode": "Setpoint Mode",
+          "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature",
+          "moments": "Enable Moments Buttons",
+          "lts_sensors": "Enable LTS Sensors"
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} starts heating",
+      "stopped_heating": "{entity_name} stops heating",
+      "boosted": "{entity_name} is boosted",
+      "target_temperature_increased": "{entity_name} target temperature increased",
+      "target_temperature_decreased": "{entity_name} target temperature decreased"
+    }
+  }
 }

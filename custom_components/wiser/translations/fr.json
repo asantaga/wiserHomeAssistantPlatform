@@ -1,53 +1,61 @@
 {
-    "config": {
-        "flow_title": "{name}",
-        "step": {
-            "user": {
-                "title": "Configuration de la Box Wiser",
-                "description": "Entrez l'adresse IP et la clé secrète SVP.",
-                "data": {
-                    "host": "Adresse IP ou nom d'hote",
-                    "password": "Clé Secrète"
-                }
-            },
-            "zeroconf_confirm": {
-                "title": "Configuration de la Box Wiser ({name})",
-                "description": "Entrez la clé secrète obtenue de la Box Wiser.",
-                "data": {
-                    "host": "Adresse IP ou nom d'hote",
-                    "password": "Clé Secrète"
-
-                }
-            }
-        },
-        "abort": {
-            "already_in_progress": "La configuration de la box Wiser est déjà en cours.",
-            "already_configured": "Cet équipement est déjà configuré."
-        },
-        "error": {
-            "auth_failure": "Authentification après de la Wiser Box impossible. Controlez la clé secrète et rééssayez.",
-            "timeout_error": "Timed out de la connection à la Box Wiser.  Controlez l'adresse IP et rééssayez.",
-            "timeout_error_discovery": "Timed out de la connection à la Box Wiser.  Vérifiez que votre Box Wiser est toujours en ligne et rééssayer.",
-            "unknown": "Erreur inconnue lors de la connexion à la Box Wiser.  Controlez les logs, SVP."
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Configuration de la Box Wiser",
+        "description": "Entrez l'adresse IP et la clé secrète SVP.",
+        "data": {
+          "host": "Adresse IP ou nom d'hote",
+          "password": "Clé Secrète"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Configuration de la Box Wiser ({name})",
+        "description": "Entrez la clé secrète obtenue de la Box Wiser.",
+        "data": {
+          "host": "Adresse IP ou nom d'hote",
+          "password": "Clé Secrète"
+        }
+      }
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Options Box Wiser",
-                "description": "Réglages des paramètres Wiser.",
-                "data": {
-                    "host": "Adresse IP ou nom d'hote",
-                    "scan_interval": " Période d'acquisition",
-                    "heating_boost_temp": "Défault Temperature de Boost chauffage",
-                    "heating_boost_time": "Défault Durée de Boost chauffage",
-                    "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",
-                    "setpoint_mode": "Mode de fonctionnement consigne",
-                    "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée",
-                    "moments": "Autorisation de boutons Moments",
-                    "lts_sensors": "Autorisation capteurs LTS (Longue Durée de Sauvegarde)"
-                }               
-            }
-        }
+    "abort": {
+      "already_in_progress": "La configuration de la box Wiser est déjà en cours.",
+      "already_configured": "Cet équipement est déjà configuré."
+    },
+    "error": {
+      "auth_failure": "Authentification après de la Wiser Box impossible. Controlez la clé secrète et rééssayez.",
+      "timeout_error": "Timed out de la connection à la Box Wiser.  Controlez l'adresse IP et rééssayez.",
+      "timeout_error_discovery": "Timed out de la connection à la Box Wiser.  Vérifiez que votre Box Wiser est toujours en ligne et rééssayer.",
+      "unknown": "Erreur inconnue lors de la connexion à la Box Wiser.  Controlez les logs, SVP."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Box Wiser",
+        "description": "Réglages des paramètres Wiser.",
+        "data": {
+          "host": "Adresse IP ou nom d'hote",
+          "scan_interval": " Période d'acquisition",
+          "heating_boost_temp": "Défault Temperature de Boost chauffage",
+          "heating_boost_time": "Défault Durée de Boost chauffage",
+          "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",
+          "setpoint_mode": "Mode de fonctionnement consigne",
+          "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée",
+          "moments": "Autorisation de boutons Moments",
+          "lts_sensors": "Autorisation capteurs LTS (Longue Durée de Sauvegarde)"
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} chauffe démarrée",
+      "stopped_heating": "{entity_name} chauffe arrêté",
+      "boosted": "{entity_name} est boosté",
+      "target_temperature_increased": "{entity_name} température cible a diminué",
+      "target_temperature_decreased": "{entity_name} température cible augmentée"
+    }
+  }
 }

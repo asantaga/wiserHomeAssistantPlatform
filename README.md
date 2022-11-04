@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.2.1
+# Wiser Home Assistant Integration v3.2.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -21,7 +21,9 @@ For more information checkout the AMAZING community thread available on
   - Quite a bit of code tidying and black formatting
 
 - Schedule files now support the All special day as well as Weekdays and Weekends.
-- New service to set a schedule from a string that supports templating.  See [set_schedule_from_string](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
+- New service to set a schedule from a string that supports templating.  See [Set Schedule From String](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
+- Schedule card options to show IDs and list view
+- Events and automation triggers. See [Events & Triggers](#events--triggers)
 
 ## Contents
 
@@ -31,6 +33,7 @@ For more information checkout the AMAZING community thread available on
 - [Providing You Hub Output as a JSON File](#providing-your-hub-output-as-a-json-file)
 - [Functionality of this Integration](#functionality)
 - [Services Included in this Integration](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+- [Events & Triggers](#events--triggers)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
@@ -149,7 +152,11 @@ In order to download this file do the following:
     - Service `get_schedule/set_schedule/copy_schedule/assign_schedule`: Provides ability to get/set/copy/assign schedules for rooms, hotwater, lights and shutters
     - Service `set_device_mode`: Provides ability to set the mode of a specific smartplug, hot water, light or shutter. It can be set to either `manual` or `auto` , the latter means it follows any schedule set.
 
-  More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+    More information on using all the services available to this integration can be found [here](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
+
+- **Events & Triggers**
+  - A wiser_event event name with a type of boosted, started_heating and stopped_heating.  See [Events & Triggers](#events--triggers)
+
 
 - **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -476,6 +483,61 @@ You can either provide an entity ID to reference the schedule attached to that e
 - Lights - use the Light Mode select entity for the light eg. select.lounge_light_mode
 - Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
 
+
+## Events & Triggers
+
+The integration provides a wiser_event event name with types of boosted, started_heating, stopped_heating, target_temperature_increased and target_temperature_decreased, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
+
+1. As an automation trigger on a specific 'room' device in the automations UI
+
+    ```yaml
+    trigger:
+      - platform: device
+        device_id: a45b40d19af72fe76bb5f3c195c24737
+        domain: wiser
+        entity_id: climate.wiser_kitchen
+        type: boosted
+    ```
+
+     ```yaml
+    trigger:
+      - platform: device
+        device_id: a45b40d19af72fe76bb5f3c195c24737
+        domain: wiser
+        entity_id: climate.wiser_kitchen
+        type: started_heating
+    ```
+
+2. As an event listener in an automation to listen to any events of that type, extract the room that caused it in a template and use that to perform an action.
+
+    ```yaml
+    alias: Cap Boost Temperature
+    description: Listens for boost event and caps to max target temp if above that
+    trigger:
+      - platform: event
+        event_type: wiser_event
+        event_data:
+          type: boosted
+        variables:
+          cap_temp: 23.5
+          room: "{{trigger.event.data.entity_id}}"
+          target_temp: "{{state_attr(trigger.event.data.entity_id, 'temperature')}}"
+    condition:
+      - condition: template
+        value_template: |-
+          {% if target_temp|float > cap_temp %}
+            True
+          {% endif %}
+    action:
+      - service: climate.set_temperature
+        data:
+          temperature: "{{cap_temp}}"
+        target:
+          entity_id: "{{room}}"
+    mode: queued
+    max: 10
+    ```
+
 ## Schedule Card
 
 This is our first venture into creating UI components for Home Assistant.  We have done a lot of testing but there maybe some scenarios we haven't thought of that could exhibit unexpected behaviour.  Rest assured however, the worst that can happen is a deleted schedule that you will have to recreate.
@@ -562,6 +624,15 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.2.2
+  - Bump api to v0.1.8
+  - Add list view option to Schedule Card
+  - Add Show ID option to schedule card standard view
+  - Fixed - Update status attribute does not show when failed
+  - Fixed - Error if heating actuator has no assigned room - Issue [#321](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/321)
+  - Added events for room started/stopped heating, target temperature increased/decreased and boosted
+  - Added device_triggers for events
 
 - 3.2.1
   - Bump api to v0.1.7 to fix error with UFH controller - issue [#318](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/318)
