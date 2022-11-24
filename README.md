@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.2.2
+# Wiser Home Assistant Integration v3.2.3
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -156,7 +156,6 @@ In order to download this file do the following:
 
 - **Events & Triggers**
   - A wiser_event event name with a type of boosted, started_heating and stopped_heating.  See [Events & Triggers](#events--triggers)
-
 
 - **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
@@ -483,7 +482,6 @@ You can either provide an entity ID to reference the schedule attached to that e
 - Lights - use the Light Mode select entity for the light eg. select.lounge_light_mode
 - Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
 
-
 ## Events & Triggers
 
 The integration provides a wiser_event event name with types of boosted, started_heating, stopped_heating, target_temperature_increased and target_temperature_decreased, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
@@ -625,10 +623,16 @@ There are two primary branches for this integration, `master` and `dev` . Master
 
 ## Change log
 
+- 3.2.3
+  - Add event data to wiser events - issue [#324](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/324)
+  - Fix error setting away mode action for shutters - issue [#329](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/329)
+
 - 3.2.2
   - Bump api to v0.1.8
+  - v1.1.7 of schedule card
   - Add list view option to Schedule Card
   - Add Show ID option to schedule card standard view
+  - v1.1.0 of zigbee card
   - Fixed - Update status attribute does not show when failed
   - Fixed - Error if heating actuator has no assigned room - Issue [#321](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/321)
   - Added events for room started/stopped heating, target temperature increased/decreased and boosted
