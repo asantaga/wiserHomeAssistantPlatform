@@ -625,14 +625,12 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        fn = getattr(self._shutter, "set_" + self._key)
-        result = await fn(True)
+        await self._shutter.set_away_mode_action("Close")
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        fn = getattr(self._shutter, "set_" + self._key)
-        result = await fn(False)
+        await self._shutter.set_away_mode_action("NoChange")
         await self.async_force_update()
         return True
