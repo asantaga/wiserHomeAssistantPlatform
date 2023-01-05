@@ -942,7 +942,6 @@ class WiserLTSPowerSensor(WiserSensor):
                 )
             },
             "manufacturer": MANUFACTURER,
-            "model": "Room",
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
