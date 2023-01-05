@@ -94,6 +94,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         ]
         async_add_entities(wiser_rooms, True)
 
+        # Add climate entity for heating actuator with temp sensor
+        wiser_temp_probes = []
+        _LOGGER.debug("Setting up Heating Actuator floor temp entities")
+        for heating_actuator in coordinator.wiserhub.devices.heating_actuators.all:
+            if heating_actuator.floor_temperature_sensor:
+                wiser_temp_probes.extend(
+                    [WiserTempProbe(hass, coordinator, heating_actuator.id)]
+                )
+        if wiser_temp_probes:
+            async_add_entities(wiser_temp_probes, True)
+
         # Setup services
         platform = entity_platform.async_get_current_platform()
 
@@ -110,6 +121,131 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             },
             "async_boost_heating",
         )
+
+
+class WiserTempProbe(CoordinatorEntity, ClimateEntity):
+    """Wiser temp probe climate entity object"""
+
+    def __init__(self, hass, coordinator, actuator_id):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._hass = hass
+        self._data = coordinator
+        self._actuator_id = actuator_id
+        self._actuator = self._data.wiserhub.devices.heating_actuators.get_by_id(
+            self._actuator_id
+        )
+
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
+
+    async def async_force_update(self):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        _LOGGER.debug(f"{self.name} updating")
+        self._actuator = self._data.wiserhub.devices.heating_actuators.get_by_id(
+            self._actuator_id
+        )
+
+    @property
+    def current_temperature(self):
+        """Return current temp from data."""
+        return self._actuator.floor_temperature_sensor.measured_temperature
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._actuator_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._actuator_id))},
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def icon(self):
+        """Return icon to show if radiator is heating, not heating or set to off."""
+        return "mdi:radiator-off"
+
+    @property
+    def hvac_modes(self):
+        """Return the list of available operation modes."""
+        return None
+
+    @property
+    def hvac_mode(self):
+        return "heat"
+
+    @property
+    def max_temp(self):
+        """Return max temp from data."""
+        return 39
+
+    @property
+    def min_temp(self):
+        """Return min temp from data."""
+        return TEMP_MINIMUM
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, self._actuator_id)} Floor Temp"
+
+    async def async_set_temperature(self, **kwargs) -> None:
+        """Set new target temperature."""
+        _LOGGER.warning(kwargs)
+        if (
+            kwargs.get("target_temp_low", None)
+            != self._actuator.floor_temperature_sensor.minimum_temperature
+        ):
+            await self._actuator.floor_temperature_sensor.set_minimum_temperature(
+                kwargs.get("target_temp_low")
+            )
+            await self.async_force_update()
+
+        if (
+            kwargs.get("target_temp_high", None)
+            != self._actuator.floor_temperature_sensor.maximum_temperature
+        ):
+            await self._actuator.floor_temperature_sensor.set_maximum_temperature(
+                kwargs.get("target_temp_high")
+            )
+            await self.async_force_update()
+
+    @property
+    def supported_features(self):
+        """Return the list of supported features."""
+        return ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+
+    @property
+    def target_temperature_step(self) -> float | None:
+        """Return the supported step of target temperature."""
+        return 1
+
+    @property
+    def target_temperature_high(self) -> float | None:
+        """Return the highbound target temperature we try to reach.
+        Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
+        """
+        return self._actuator.floor_temperature_sensor.maximum_temperature
+
+    @property
+    def target_temperature_low(self) -> float | None:
+        """Return the lowbound target temperature we try to reach.
+        Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
+        """
+        return self._actuator.floor_temperature_sensor.minimum_temperature
+
+    @property
+    def temperature_unit(self):
+        """Return temp units."""
+        return TEMP_CELSIUS
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return f"{self._data.wiserhub.system.name}-WiserHeatingActuatorTempSensor-{self._actuator_id}"
 
 
 class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
