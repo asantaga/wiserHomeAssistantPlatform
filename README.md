@@ -24,6 +24,7 @@ For more information checkout the AMAZING community thread available on
 - New service to set a schedule from a string that supports templating.  See [Set Schedule From String](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
 - Schedule card options to show IDs and list view
 - Events and automation triggers. See [Events & Triggers](#events--triggers)
+- Support of Heating Actuator floor temp sensors
 
 ## Contents
 
@@ -626,6 +627,8 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.2.3
   - Add event data to wiser events - issue [#324](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/324)
   - Fix error setting away mode action for shutters - issue [#329](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/329)
+  - Add support for Heating Actuator floor temp sensor - issue [#334](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/334)
+  - Improve error handling/notification for setting schedule via YAML file
 
 - 3.2.2
   - Bump api to v0.1.8
