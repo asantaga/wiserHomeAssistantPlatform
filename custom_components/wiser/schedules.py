@@ -3,8 +3,10 @@ import enum
 import json
 from typing import Union
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 
 from aioWiserHeatAPI.const import WiserScheduleTypeEnum
+from aioWiserHeatAPI.wiserhub import WiserScheduleError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ class WiserScheduleEntity(object):
             else:
                 _LOGGER.error(f"No schedule exists for {self.name}")
         except Exception as ex:
-            _LOGGER.error(
+            raise HomeAssistantError(
                 f"Error saving {self._schedule.name} schedule to file {filename}. {ex}"
             )
 
@@ -57,9 +59,11 @@ class WiserScheduleEntity(object):
                 )
                 await self._schedule.set_schedule_from_yaml_file(filename)
                 await self._data.async_refresh()
-        except:
-            _LOGGER.error(
-                f"Error setting {self._schedule.name} schedule from file {filename}"
+        except WiserScheduleError as ex:
+            raise HomeAssistantError(ex)
+        except Exception as ex:
+            raise HomeAssistantError(
+                f"Error setting {self._schedule.name} schedule from file {filename}. {ex}"
             )
 
     @callback
@@ -71,9 +75,11 @@ class WiserScheduleEntity(object):
                 )
                 await self._schedule.set_schedule_from_yaml_data(schedule)
                 await self._data.async_refresh()
-        except:
-            _LOGGER.error(
-                f"Error setting {self._schedule.name} schedule from data.\n{schedule}"
+        except WiserScheduleError as ex:
+            raise HomeAssistantError(ex)
+        except Exception as ex:
+            raise HomeAssistantError(
+                f"Error setting {self._schedule.name} schedule from data.\n{schedule}. {ex}"
             )
 
     @callback
