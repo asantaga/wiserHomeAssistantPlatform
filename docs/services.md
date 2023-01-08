@@ -20,6 +20,7 @@ Please feel free to correct any errors or omissions by posting a PR to our Githu
 - [Set Schedule from String](#set-schedule-from-string)
 - [Copy Schedule](#copy-schedule)
 - [Assign Schedule](#assign-schedule)
+- [Set Opentherm Parameter](#set-opentherm-parameter)
 
 ### Supported HA Built In Services
 
