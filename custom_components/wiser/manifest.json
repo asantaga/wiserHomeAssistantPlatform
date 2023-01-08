@@ -8,6 +8,6 @@
   "dependencies": ["http", "websocket_api", "frontend", "lovelace"],
   "codeowners": ["@asantaga", "@msp1974"],
   "version": "3.2.3",
-  "requirements": ["aioWiserHeatAPI==1.0.0"],
+  "requirements": ["aioWiserHeatAPI==1.0.1"],
   "zeroconf": [{ "type": "_http._tcp.local.", "name": "wiser*" }]
 }
