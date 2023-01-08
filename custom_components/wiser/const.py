@@ -56,6 +56,9 @@ CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
 # Custom Attributes
+ATTR_OPENTHERM_ENDPOINT = "endpoint"
+ATTR_OPENTHERM_PARAM = "parameter"
+ATTR_OPENTHERM_PARAM_VALUE = "parameter_value"
 ATTR_HUB = "hub"
 ATTR_TIME_PERIOD = "time_period"
 ATTR_FILENAME = "filename"
@@ -84,6 +87,7 @@ WISER_SERVICES = {
     "SERVICE_SET_SCHEDULE": "set_schedule",
     "SERVICE_SET_SCHEDULE_FROM_DATA": "set_schedule_from_string",
     "SERVICE_SET_DEVICE_MODE": "set_device_mode",
+    "SERVICE_SEND_OPENTHERM_COMMAND": "set_opentherm_parameter",
 }
 
 WISER_BOOST_PRESETS = {

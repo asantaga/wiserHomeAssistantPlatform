@@ -332,6 +332,25 @@ data:
     to_entity_id: climate.wiser_lounge
 ```
 
+---
+
+## Set Opentherm Parameter
+
+**Service Name**: wiser.set_opentherm_parameter
+
+**Endpoint**: Optional if the parameter is nested the parent should be set as the endpoint.  Ie. preDefinedRemoteBoilerParameters
+
+**Parameter**: The parameter name you wish to change
+
+**Value**: The new value to set the parameter to
+
+**Hub**: Optional if you have multiple hubs in your setup.  Select the hub to send the command to
+
+### NOTES
+
+1. Not all parameters can be changed and you will get an error if this is the case.
+2. It is not known how these parameters effect the working of the hub.  Use at your own risk.
+
 # HA Built In Services
 
 Many of the built in services for entity types are supported by this integration.  Below is a list of them.

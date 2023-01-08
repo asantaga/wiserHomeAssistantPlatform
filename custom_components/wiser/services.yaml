@@ -226,3 +226,33 @@ set_device_mode:
           options:
             - "Auto"
             - "Manual"
+
+set_opentherm_parameter:
+  name: "Set Opentherm Parameter"
+  description: Allows changing of opentherm parameters on the Wiser Hub
+  fields:
+    endpoint:
+      name: Endpoint
+      description: Endpoint if not at opentherm root.  Ie. preDefinedRemoteBoilerParameters
+      required: false
+      selector:
+        text:
+    parameter:
+      name: Parameter
+      description: Parameter to change
+      required: true
+      selector:
+        text:
+    parameter_value:
+      name: Value
+      description: Parameter value to set
+      required: true
+      selector:
+        text:
+    hub:
+      name: Hub
+      description: Only needs to be set if you have multiple Wiser hubs
+      required: false
+      selector:
+        config_entry:
+          integration: wiser
