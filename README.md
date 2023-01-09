@@ -193,15 +193,17 @@ This method is best used when you want to play with the "latest and greatest" fr
 1. On your server clone the github repository into a suitable directory using the following command
    git clone `https://github.com/asantaga/wiserHomeAssistantPlatform.git`
 
-2. Switch to either the master or dev branch as per your requirements.
+2. Change to the wiserHomeAssistantPlatform directory
+
+3. Switch to either the master or dev branch as per your requirements (it will default to master branch after cloning).
    e.g.
    `git checkout master`
    or
    `git checkout dev`
 
-3. Create a `custom_components` directory within your Home Assistant directory config directory
+4. Create a `custom_components` directory (if it does not already exist) within your Home Assistant config directory
 
-4. Within the custom components directory copy the wiser folder, from the directory where you github cloned the wiser component, to your installations ```custom components``` directory.
+5. Within the wiserHomeAssistantPlatform/custom_components directory copy the `wiser` folder to your HA installations `custom components` directory, so that you have custom_components/wiser directory with the files in.
 
 ## Configuration
 
