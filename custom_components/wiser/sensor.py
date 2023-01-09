@@ -657,7 +657,9 @@ class WiserLTSTempSensor(WiserSensor):
             )
         elif sensor_type == "floor_current_temp":
             super().__init__(
-                data, id, f"LTS Temperature {data.wiserhub.devices.get_by_id(id).name}"
+                data,
+                id,
+                f"LTS Floor Temperature {data.wiserhub.rooms.get_by_id(data.wiserhub.devices.get_by_id(id).room_id).name if data.wiserhub.devices.get_by_id(id).room_id else data.wiserhub.devices.get_by_id(id).name}",
             )
         else:
             super().__init__(
