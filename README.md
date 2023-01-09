@@ -625,12 +625,14 @@ There are two primary branches for this integration, `master` and `dev` . Master
 ## Change log
 
 - 3.2.3
-  - Bump api to v1.0.1
+  - Bump api to v1.0.2
   - Add event data to wiser events - issue [#324](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/324)
   - Fix error setting away mode action for shutters - issue [#329](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/329)
   - Add support for Heating Actuator floor temp sensor - issue [#334](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/334)
   - Improve error handling/notification for setting schedule via YAML file - issue [#325](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/325)
   - Add service for setting opentherm parameters
+  - Fix beta issue creating floor temp sensor when not fitted due to odd hub data - issue [#340](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/340)
+  - Fix beta issue of error when calling boost all
 
 - 3.2.2
   - Bump api to v0.1.8
