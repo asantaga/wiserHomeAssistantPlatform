@@ -128,6 +128,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     WiserLTSPowerSensor(
                         data, heating_actuator.id, sensor_type="Energy"
                     ),
+                    WiserLTSTempSensor(
+                        data, heating_actuator.id, sensor_type="floor_current_temp"
+                    ),
                 ]
             )
 
@@ -652,6 +655,10 @@ class WiserLTSTempSensor(WiserSensor):
             super().__init__(
                 data, id, f"LTS Temperature {data.wiserhub.rooms.get_by_id(id).name}"
             )
+        elif sensor_type == "floor_current_temp":
+            super().__init__(
+                data, id, f"LTS Temperature {data.wiserhub.devices.get_by_id(id).name}"
+            )
         else:
             super().__init__(
                 data,
@@ -667,6 +674,10 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.rooms.get_by_id(
                 self._device_id
             ).current_temperature
+        elif self._lts_sensor_type == "floor_current_temp":
+            self._state = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).floor_temperature_sensor.measured_temperature
         else:
             if (
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
@@ -685,13 +696,17 @@ class WiserLTSTempSensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
+        if self._lts_sensor_type == "floor_current_temp":
+            return {
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }
         return {
             "name": get_device_name(self._data, self._device_id, "room"),
             "identifiers": {
                 (DOMAIN, get_identifier(self._data, self._device_id, "room"))
             },
-            "manufacturer": MANUFACTURER,
-            "model": "Room",
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
