@@ -27,16 +27,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
     # Add min, max and offset for any heating actuator floor temp sensors
-    for actuator in [
-        actuator
-        for actuator in data.wiserhub.devices.heating_actuators.all
-        if actuator.floor_temperature_sensor
+    for heating_actuator in [
+        heating_actuator
+        for heating_actuator in data.wiserhub.devices.heating_actuators.all
+        if heating_actuator.floor_temperature_sensor
+        and heating_actuator.floor_temperature_sensor.sensor_type != "Not_Fitted"
     ]:
         wiser_numbers.extend(
             [
-                # WiserFloorTempSensorNumber(data, actuator, "minimum_temperature"),
-                # WiserFloorTempSensorNumber(data, actuator, "maximum_temperature"),
-                WiserFloorTempSensorNumber(data, actuator, "temperature_offset"),
+                WiserFloorTempSensorNumber(
+                    data, heating_actuator, "temperature_offset"
+                ),
             ],
         )
     async_add_entities(wiser_numbers)

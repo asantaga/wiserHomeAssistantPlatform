@@ -98,7 +98,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         wiser_temp_probes = []
         _LOGGER.debug("Setting up Heating Actuator floor temp entities")
         for heating_actuator in coordinator.wiserhub.devices.heating_actuators.all:
-            if heating_actuator.floor_temperature_sensor:
+            if (
+                heating_actuator.floor_temperature_sensor
+                and heating_actuator.floor_temperature_sensor.sensor_type
+                != "Not_Fitted"
+            ):
                 wiser_temp_probes.extend(
                     [WiserTempProbe(hass, coordinator, heating_actuator.id)]
                 )
