@@ -635,6 +635,9 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Add service for setting opentherm parameters
   - Fix beta issue creating floor temp sensor when not fitted due to odd hub data - issue [#340](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/340)
   - Fix beta issue of error when calling boost all
+  - Fix beta issue of error setting schedules from YAML file
+  - Added LTS Floor Temp Sensor for Heating Actuators
+
 
 - 3.2.2
   - Bump api to v0.1.8
