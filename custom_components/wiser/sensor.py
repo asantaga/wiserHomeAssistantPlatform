@@ -114,9 +114,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 )
 
         # Add humidity sensor for Roomstat
-
         for roomstat in data.wiserhub.devices.roomstats.all:
-
             wiser_sensors.append(WiserLTSHumiditySensor(data, roomstat.id))
 
     # Add LTS sensors - for room Power and Energy for heating actuators
@@ -128,11 +126,18 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     WiserLTSPowerSensor(
                         data, heating_actuator.id, sensor_type="Energy"
                     ),
-                    WiserLTSTempSensor(
-                        data, heating_actuator.id, sensor_type="floor_current_temp"
-                    ),
                 ]
             )
+            if (
+                heating_actuator.floor_temperature_sensor
+                and heating_actuator.floor_temperature_sensor.sensor_type
+                != "Not_Fitted"
+            ):
+                wiser_sensors.extend(
+                    WiserLTSTempSensor(
+                        data, heating_actuator.id, sensor_type="floor_current_temp"
+                    )
+                )
 
         # Add heating channels demand
         for channel in data.wiserhub.heating_channels.all:
@@ -481,12 +486,62 @@ class WiserSystemCircuitState(WiserSensor):
                 f"is_smartvalve_preventing_demand_{heating_channel.name}"
             ] = heating_channel.is_smart_valve_preventing_demand
             if self._data.wiserhub.system.opentherm.connection_status == "Connected":
-                opentherm = self._data.wiserhub.system.opentherm.operational_data
-                attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
-                attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
-                attrs["ch_return_temperature"] = opentherm.ch_return_temperature
-                attrs["relative_modulation_level"] = opentherm.relative_modulation_level
-                attrs["hw_temperature"] = opentherm.hw_temperature
+                opentherm = self._data.wiserhub.system.opentherm
+                attrs[
+                    "ch_flow_active_lower_setpoint"
+                ] = opentherm.ch_flow_active_lower_setpoint
+                attrs[
+                    "ch_flow_active_upper_setpoint"
+                ] = opentherm.ch_flow_active_upper_setpoint
+                attrs["ch1_flow_enabled"] = opentherm.ch1_flow_enabled
+                attrs["ch1_flow_setpoint"] = opentherm.ch1_flow_setpoint
+                attrs["ch2_flow_enabled"] = opentherm.ch2_flow_enabled
+                attrs["ch2_flow_setpoint"] = opentherm.ch2_flow_setpoint
+                attrs["connection_status"] = opentherm.connection_status
+                attrs["hw_enabled"] = opentherm.hw_enabled
+                attrs["hw_flow_setpoint"] = opentherm.hw_flow_setpoint
+                attrs["operating_mode"] = opentherm.operating_mode
+                attrs["tracked_room_id"] = opentherm.tracked_room_id
+                attrs["room_setpoint"] = opentherm.room_setpoint
+                attrs["room_temperature"] = opentherm.room_temperature
+
+                operational_data = opentherm.operational_data
+                attrs["op_ch_flow_temperature"] = operational_data.ch_flow_temperature
+                attrs["op_ch_pressure_bar"] = operational_data.ch_pressure_bar
+                attrs[
+                    "op_ch_return_temperature"
+                ] = operational_data.ch_return_temperature
+                attrs[
+                    "op_relative_modulation_level"
+                ] = operational_data.relative_modulation_level
+                attrs["op_hw_temperature"] = operational_data.hw_temperature
+                attrs["op_slave_status"] = operational_data.slave_status
+
+                boiler_params = opentherm.boiler_parameters
+                attrs[
+                    "bp_ch_max_setpoint_read_write"
+                ] = boiler_params.ch_max_setpoint_read_write
+                attrs[
+                    "bp_ch_max_setpoint_transfer_enable"
+                ] = boiler_params.ch_max_setpoint_transfer_enable
+                attrs[
+                    "bp_ch_setpoint_lower_bound"
+                ] = boiler_params.ch_setpoint_lower_bound
+                attrs[
+                    "bp_ch_setpoint_upper_bound"
+                ] = boiler_params.ch_setpoint_upper_bound
+                attrs[
+                    "bp_hw_setpoint_read_write"
+                ] = boiler_params.hw_setpoint_read_write
+                attrs[
+                    "bp_hw_setpoint_transfer_enable"
+                ] = boiler_params.hw_setpoint_transfer_enable
+                attrs[
+                    "bp_hw_setpoint_lower_bound"
+                ] = boiler_params.hw_setpoint_lower_bound
+                attrs[
+                    "bp_hw_setpoint_upper_bound"
+                ] = boiler_params.hw_setpoint_upper_bound
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
