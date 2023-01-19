@@ -90,6 +90,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Add power sensors for smartplugs
     if data.wiserhub.devices.smartplugs:
+        _LOGGER.debug("Setting up Smart Plug power sensors")
         for smartplug in data.wiserhub.devices.smartplugs.all:
             wiser_sensors.extend(
                 [
@@ -115,10 +116,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
         # Add humidity sensor for Roomstat
         for roomstat in data.wiserhub.devices.roomstats.all:
+            _LOGGER.debug("Setting up Roomstat humidity sensors")
             wiser_sensors.append(WiserLTSHumiditySensor(data, roomstat.id))
 
     # Add LTS sensors - for room Power and Energy for heating actuators
     if data.wiserhub.devices.heating_actuators:
+        _LOGGER.debug("Setting up Heating Actuator LTS sensors")
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
             wiser_sensors.extend(
                 [
@@ -133,7 +136,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 and heating_actuator.floor_temperature_sensor.sensor_type
                 != "Not_Fitted"
             ):
-                wiser_sensors.extend(
+                _LOGGER.debug(f"Adding floor temp sensor for id {heating_actuator.id}")
+                wiser_sensors.append(
                     WiserLTSTempSensor(
                         data, heating_actuator.id, sensor_type="floor_current_temp"
                     )
@@ -141,11 +145,25 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
         # Add heating channels demand
         for channel in data.wiserhub.heating_channels.all:
+            _LOGGER.debug("Setting up Heating Demand LTS sensors")
             wiser_sensors.append(WiserLTSDemandSensor(data, channel.id, "heating"))
 
         # Add hotwater demand
         if data.wiserhub.hotwater:
+            _LOGGER.debug("Setting up HW sensorr")
             wiser_sensors.append(WiserLTSDemandSensor(data, 0, "hotwater"))
+
+        # Add opentherm flow & return temps
+        if data.wiserhub.system.opentherm.connection_status == "Connected":
+            _LOGGER.debug("Setting up Opentherm sensors")
+            wiser_sensors.extend(
+                [
+                    WiserLTSOpenthermSensor(data, 0, sensor_type="opentherm_flow_temp"),
+                    WiserLTSOpenthermSensor(
+                        data, 0, sensor_type="opentherm_return_temp"
+                    ),
+                ]
+            )
 
     async_add_entities(wiser_sensors, True)
 
@@ -163,7 +181,10 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
         self._device_name = None
         self._sensor_type = sensor_type
         self._state = None
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+        self._room = self._data.wiserhub.rooms.get_by_device_id(self._device_id)
+        _LOGGER.debug(
+            f"{self._data.wiserhub.system.name} {self.name} {'in room ' + self._room.name if self._room else ''} initalise"
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -486,62 +507,12 @@ class WiserSystemCircuitState(WiserSensor):
                 f"is_smartvalve_preventing_demand_{heating_channel.name}"
             ] = heating_channel.is_smart_valve_preventing_demand
             if self._data.wiserhub.system.opentherm.connection_status == "Connected":
-                opentherm = self._data.wiserhub.system.opentherm
-                attrs[
-                    "ch_flow_active_lower_setpoint"
-                ] = opentherm.ch_flow_active_lower_setpoint
-                attrs[
-                    "ch_flow_active_upper_setpoint"
-                ] = opentherm.ch_flow_active_upper_setpoint
-                attrs["ch1_flow_enabled"] = opentherm.ch1_flow_enabled
-                attrs["ch1_flow_setpoint"] = opentherm.ch1_flow_setpoint
-                attrs["ch2_flow_enabled"] = opentherm.ch2_flow_enabled
-                attrs["ch2_flow_setpoint"] = opentherm.ch2_flow_setpoint
-                attrs["connection_status"] = opentherm.connection_status
-                attrs["hw_enabled"] = opentherm.hw_enabled
-                attrs["hw_flow_setpoint"] = opentherm.hw_flow_setpoint
-                attrs["operating_mode"] = opentherm.operating_mode
-                attrs["tracked_room_id"] = opentherm.tracked_room_id
-                attrs["room_setpoint"] = opentherm.room_setpoint
-                attrs["room_temperature"] = opentherm.room_temperature
-
-                operational_data = opentherm.operational_data
-                attrs["op_ch_flow_temperature"] = operational_data.ch_flow_temperature
-                attrs["op_ch_pressure_bar"] = operational_data.ch_pressure_bar
-                attrs[
-                    "op_ch_return_temperature"
-                ] = operational_data.ch_return_temperature
-                attrs[
-                    "op_relative_modulation_level"
-                ] = operational_data.relative_modulation_level
-                attrs["op_hw_temperature"] = operational_data.hw_temperature
-                attrs["op_slave_status"] = operational_data.slave_status
-
-                boiler_params = opentherm.boiler_parameters
-                attrs[
-                    "bp_ch_max_setpoint_read_write"
-                ] = boiler_params.ch_max_setpoint_read_write
-                attrs[
-                    "bp_ch_max_setpoint_transfer_enable"
-                ] = boiler_params.ch_max_setpoint_transfer_enable
-                attrs[
-                    "bp_ch_setpoint_lower_bound"
-                ] = boiler_params.ch_setpoint_lower_bound
-                attrs[
-                    "bp_ch_setpoint_upper_bound"
-                ] = boiler_params.ch_setpoint_upper_bound
-                attrs[
-                    "bp_hw_setpoint_read_write"
-                ] = boiler_params.hw_setpoint_read_write
-                attrs[
-                    "bp_hw_setpoint_transfer_enable"
-                ] = boiler_params.hw_setpoint_transfer_enable
-                attrs[
-                    "bp_hw_setpoint_lower_bound"
-                ] = boiler_params.hw_setpoint_lower_bound
-                attrs[
-                    "bp_hw_setpoint_upper_bound"
-                ] = boiler_params.hw_setpoint_upper_bound
+                opentherm = self._data.wiserhub.system.opentherm.operational_data
+                attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
+                attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
+                attrs["ch_return_temperature"] = opentherm.ch_return_temperature
+                attrs["relative_modulation_level"] = opentherm.relative_modulation_level
+                attrs["hw_temperature"] = opentherm.hw_temperature
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
@@ -762,7 +733,10 @@ class WiserLTSTempSensor(WiserSensor):
         return {
             "name": get_device_name(self._data, self._device_id, "room"),
             "identifiers": {
-                (DOMAIN, get_identifier(self._data, self._device_id, "room"))
+                (
+                    DOMAIN,
+                    get_identifier(self._data, self._device_id, "room"),
+                )
             },
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
@@ -775,6 +749,135 @@ class WiserLTSTempSensor(WiserSensor):
         if self._lts_sensor_type == "current_temp":
             return "mdi:home-thermometer"
         return "mdi:home-thermometer-outline"
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self):
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
+        if self._state == "Off":
+            return None
+        return TEMP_CELSIUS
+
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+
+class WiserLTSOpenthermSensor(WiserSensor):
+    """Sensor for long term stats for room temp and target temp"""
+
+    def __init__(self, data, id, sensor_type=""):
+        """Initialise the operation mode sensor."""
+        self._lts_sensor_type = sensor_type
+        if sensor_type == "opentherm_flow_temp":
+            super().__init__(data, id, f"LTS Boiler Flow Temperature")
+        elif sensor_type == "opentherm_return_temp":
+            super().__init__(data, id, f"LTS Boiler Return Temperature")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        if self._lts_sensor_type == "opentherm_flow_temp":
+            self._state = (
+                self._data.wiserhub.system.opentherm.operational_data.ch_flow_temperature
+            )
+        elif self._lts_sensor_type == "opentherm_return_temp":
+            self._state = (
+                self._data.wiserhub.system.opentherm.operational_data.ch_return_temperature
+            )
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(self._data, self._device_id),
+                )
+            },
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional info."""
+        attrs = {}
+        if self._lts_sensor_type == "opentherm_flow_temp":
+            opentherm = self._data.wiserhub.system.opentherm
+            attrs[
+                "ch_flow_active_lower_setpoint"
+            ] = opentherm.ch_flow_active_lower_setpoint
+            attrs[
+                "ch_flow_active_upper_setpoint"
+            ] = opentherm.ch_flow_active_upper_setpoint
+            attrs["ch1_flow_enabled"] = opentherm.ch1_flow_enabled
+            attrs["ch1_flow_setpoint"] = opentherm.ch1_flow_setpoint
+            attrs["ch2_flow_enabled"] = opentherm.ch2_flow_enabled
+            attrs["ch2_flow_setpoint"] = opentherm.ch2_flow_setpoint
+            attrs["connection_status"] = opentherm.connection_status
+            attrs["hw_enabled"] = opentherm.hw_enabled
+            attrs["hw_flow_setpoint"] = opentherm.hw_flow_setpoint
+            attrs["operating_mode"] = opentherm.operating_mode
+            attrs["tracked_room_id"] = opentherm.tracked_room_id
+            attrs["room_setpoint"] = opentherm.room_setpoint
+            attrs["room_temperature"] = opentherm.room_temperature
+
+            operational_data = opentherm.operational_data
+            attrs["ch_flow_temperature"] = operational_data.ch_flow_temperature
+            attrs["ch_pressure_bar"] = operational_data.ch_pressure_bar
+            attrs["ch_return_temperature"] = operational_data.ch_return_temperature
+            attrs[
+                "relative_modulation_level"
+            ] = operational_data.relative_modulation_level
+            attrs["hw_temperature"] = operational_data.hw_temperature
+            attrs["slave_status"] = operational_data.slave_status
+
+            boiler_params = opentherm.boiler_parameters
+            attrs[
+                "boiler_ch_max_setpoint_read_write"
+            ] = boiler_params.ch_max_setpoint_read_write
+            attrs[
+                "boiler_ch_max_setpoint_transfer_enable"
+            ] = boiler_params.ch_max_setpoint_transfer_enable
+            attrs[
+                "boiler_ch_setpoint_lower_bound"
+            ] = boiler_params.ch_setpoint_lower_bound
+            attrs[
+                "boiler_ch_setpoint_upper_bound"
+            ] = boiler_params.ch_setpoint_upper_bound
+            attrs[
+                "boiler_hw_setpoint_read_write"
+            ] = boiler_params.hw_setpoint_read_write
+            attrs[
+                "boiler_hw_setpoint_transfer_enable"
+            ] = boiler_params.hw_setpoint_transfer_enable
+            attrs[
+                "boiler_hw_setpoint_lower_bound"
+            ] = boiler_params.hw_setpoint_lower_bound
+            attrs[
+                "boiler_hw_setpoint_upper_bound"
+            ] = boiler_params.hw_setpoint_upper_bound
+        return attrs
+
+    @property
+    def icon(self):
+        """Return icon for sensor"""
+        return "mdi:thermometer-water"
 
     @property
     def device_class(self):
