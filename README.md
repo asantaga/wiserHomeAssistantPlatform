@@ -637,6 +637,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Fix beta issue of error when calling boost all
   - Fix beta issue of error setting schedules from YAML file
   - Added LTS Floor Temp Sensor for Heating Actuators
+  - Added flow and return temp sensors for Opentherm boilers - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
 
 
 - 3.2.2
