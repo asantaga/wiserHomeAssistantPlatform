@@ -29,7 +29,10 @@ from .const import (
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
 )
-from .helpers import get_device_name, get_identifier
+from .helpers import (
+    get_device_name,
+    get_identifier,
+)
 from .schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -198,7 +201,6 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        _LOGGER.warning(kwargs)
         if (
             kwargs.get("target_temp_low", None)
             != self._actuator.floor_temperature_sensor.minimum_temperature
@@ -333,16 +335,22 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def hvac_action(self):
         """Return hvac action from data."""
+        if self._room.mode == "Passive":
+            return "Passive Mode"
         return HVACAction.HEATING if self._room.is_heating else HVACAction.IDLE
 
     @property
     def hvac_mode(self):
-        return HVAC_MODE_WISER_TO_HASS[self._room.mode]
+        return (
+            None
+            if self._room.mode == "Passive"
+            else HVAC_MODE_WISER_TO_HASS[self._room.mode]
+        )
 
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return self._hvac_modes_list
+        return None if self._room.mode == "Passive" else self._hvac_modes_list
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
@@ -423,7 +431,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def state(self):
         """Return state"""
-        return HVAC_MODE_WISER_TO_HASS[self._room.mode]
+        return (
+            "Passive"
+            if self._room.mode == "Passive"
+            else HVAC_MODE_WISER_TO_HASS[self._room.mode]
+        )
 
     @property
     def extra_state_attributes(self):
@@ -472,7 +484,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_FLAGS
+        return (
+            ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            if self._room.mode == "Passive"
+            else SUPPORT_FLAGS
+        )
 
     @property
     def target_temperature(self):
@@ -484,27 +500,61 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             return None
         return self._room.current_target_temperature
 
+    @property
+    def target_temperature_step(self) -> float | None:
+        """Return the supported step of target temperature."""
+        return 0.5
+
+    @property
+    def target_temperature_high(self) -> float | None:
+        """Return the highbound target temperature we try to reach.
+        Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
+        """
+        return self._room.passive_mode_upper_temp
+
+    @property
+    def target_temperature_low(self) -> float | None:
+        """Return the lowbound target temperature we try to reach.
+        Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
+        """
+        return self._room.passive_mode_lower_temp
+
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        target_temperature = kwargs.get(ATTR_TEMPERATURE)
+        if self._room.mode == "Passive":
+            if kwargs.get("target_temp_low", None):
+                await self._room.set_passive_mode_lower_temp(
+                    kwargs.get("target_temp_low")
+                )
+                # await self._room.set_target_temperature(kwargs.get("target_temp_low"))
+                await self.async_force_update()
 
-        if target_temperature is None:
-            return False
-
-        if self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"] or (
-            self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"]
-            and self.state == HVACMode.AUTO
-        ):
-            _LOGGER.info(
-                f"Setting temperature for {self.name} to {target_temperature} using boost"
-            )
-            await self._room.set_target_temperature_for_duration(
-                target_temperature, self._data.boost_time
-            )
+            if kwargs.get("target_temp_high", None):
+                await self._room.set_passive_mode_upper_temp(
+                    kwargs.get("target_temp_high")
+                )
+                await self.async_force_update()
         else:
-            _LOGGER.info(f"Setting temperature for {self.name} to {target_temperature}")
-            await self._room.set_target_temperature(target_temperature)
-        await self.async_force_update()
+            target_temperature = kwargs.get(ATTR_TEMPERATURE)
+            if target_temperature is None:
+                return False
+
+            if self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"] or (
+                self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"]
+                and self.state == HVACMode.AUTO
+            ):
+                _LOGGER.info(
+                    f"Setting temperature for {self.name} to {target_temperature} using boost"
+                )
+                await self._room.set_target_temperature_for_duration(
+                    target_temperature, self._data.boost_time
+                )
+            else:
+                _LOGGER.info(
+                    f"Setting temperature for {self.name} to {target_temperature}"
+                )
+                await self._room.set_target_temperature(target_temperature)
+            await self.async_force_update()
         return True
 
     @property
