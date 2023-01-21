@@ -638,7 +638,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Fix beta issue of error setting schedules from YAML file
   - Added LTS Floor Temp Sensor for Heating Actuators
   - Added flow and return temp sensors for Opentherm boilers - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
-
+  - Added new passive mode for rooms with api smarts
 
 - 3.2.2
   - Bump api to v0.1.8
