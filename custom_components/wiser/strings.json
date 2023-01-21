@@ -43,6 +43,7 @@
           "hotwater_boost_time": "Default Hot Water Boost Duration",
           "setpoint_mode": "Setpoint Mode",
           "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature",
+          "automations": "Enable Integration Automations (beta)",
           "moments": "Enable Moments Buttons",
           "lts_sensors": "Enable LTS Sensors"
         }

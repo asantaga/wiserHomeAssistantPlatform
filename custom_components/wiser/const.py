@@ -46,6 +46,7 @@ SETPOINT_MODE_BOOST = "boost"
 SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
+CONF_AUTOMATIONS = "automations"
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
 CONF_HEATING_BOOST_TIME = "heating_boost_time"
 CONF_HW_BOOST_TIME = "hotwater_boost_time"

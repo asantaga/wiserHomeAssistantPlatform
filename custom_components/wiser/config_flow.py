@@ -23,6 +23,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import selector, SelectSelectorMode
 
 from .const import (
+    CONF_AUTOMATIONS,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_LTS_SENSORS,
@@ -267,6 +268,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     }
                 }
             ),
+            vol.Optional(
+                CONF_AUTOMATIONS,
+                default=self.config_entry.options.get(CONF_AUTOMATIONS, False),
+            ): bool,
             vol.Optional(
                 CONF_MOMENTS,
                 default=self.config_entry.options.get(CONF_MOMENTS, False),

@@ -26,6 +26,7 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from .const import (
+    CONF_AUTOMATIONS,
     CONF_MOMENTS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
@@ -83,11 +84,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 else MIN_SCAN_INTERVAL
             ),
         )
-        self.wiserhub = WiserAPI(
-            host=config_entry.data[CONF_HOST],
-            secret=config_entry.data[CONF_PASSWORD],
-            session=async_get_clientsession(hass),
-        )
+
         self.last_update_time = datetime.now()
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
@@ -104,10 +101,19 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.setpoint_mode = config_entry.options.get(
             CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE
         )
+        self.enable_automations = config_entry.options.get(CONF_AUTOMATIONS, False)
         self.enable_moments = config_entry.options.get(CONF_MOMENTS, False)
         self.enable_lts_sensors = config_entry.options.get(CONF_LTS_SENSORS, False)
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
+        )
+
+        self.wiserhub = WiserAPI(
+            host=config_entry.data[CONF_HOST],
+            secret=config_entry.data[CONF_PASSWORD],
+            session=async_get_clientsession(hass),
+            extra_config_file=hass.config.config_dir + "/.storage/wiser_custom_data",
+            enable_automations=self.enable_automations,
         )
 
     async def async_update_data(self) -> WiserData:

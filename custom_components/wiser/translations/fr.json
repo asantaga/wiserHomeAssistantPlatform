@@ -43,6 +43,7 @@
           "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",
           "setpoint_mode": "Mode de fonctionnement consigne",
           "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée",
+          "automations": "Autorisation des automatisations d'intégration (bêta)",
           "moments": "Autorisation de boutons Moments",
           "lts_sensors": "Autorisation capteurs LTS (Longue Durée de Sauvegarde)"
         }
