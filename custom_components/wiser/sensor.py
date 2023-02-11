@@ -375,9 +375,12 @@ class WiserDeviceSignalSensor(WiserSensor):
                 attrs["parent_node_id"] = self._device.parent_node_id
                 attrs["hub_route"] = "repeater"
                 attrs["repeater"] = (
-                    self._data.wiserhub.devices.get_by_node_id(
-                        self._device.parent_node_id
-                    ).name
+                    get_device_name(
+                        self._data,
+                        self._data.wiserhub.devices.get_by_node_id(
+                            self._device.parent_node_id
+                        ).id,
+                    )
                     if self._data.wiserhub.devices.get_by_node_id(
                         self._device.parent_node_id
                     )
