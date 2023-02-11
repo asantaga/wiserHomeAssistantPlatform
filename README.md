@@ -25,7 +25,6 @@ For more information checkout the AMAZING community thread available on
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
-- [Updating to v3.x from v2.x](#updating-to-v3x-from-v2x---important-please-read)
 - [Issues & Questions](#issues-and-questions)
 - [Providing You Hub Output as a JSON File](#providing-your-hub-output-as-a-json-file)
 - [Functionality of this Integration](#functionality)
@@ -47,21 +46,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.9.
-
-## Updating to v3.x from v2.x - IMPORTANT PLEASE READ
-
-If you are installing this integration for the first time, you can skip this section as you will be installing the latest version.  For those still hanging onto v2.x, we do recommend moving to v3 but please read the below first.
-
-Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading, a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
-
-If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
-
-We have tried hard to find a way to not have this as such a disruptive change but are unable to do so.  As such, please understand you may have quite a bit of work to reset your setup after upgrading to this.
-
-In most cases, it will be easier to remove the old integration and add this from new.
-
-However, we hope that many of the things that have previously needed scripts or automations will now have a much simpler way to do it and we can better maintain this setup going forward so future upgrades will be more straight forward.
+Requires a minimum of HA 2022.11.
 
 ## Issues and Questions
 
