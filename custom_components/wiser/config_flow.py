@@ -55,8 +55,13 @@ async def validate_input(hass, data):
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     wiserhub = WiserAPI(
-        data[CONF_HOST], data[CONF_PASSWORD], session=async_get_clientsession(hass)
+        host=data[CONF_HOST],
+        secret=data[CONF_PASSWORD],
+        session=async_get_clientsession(hass),
+        extra_config_file=hass.config.config_dir + "/.storage/wiser_custom_data",
+        enable_automations=False,
     )
+
     await wiserhub.read_hub_data()
     wiser_id = wiserhub.system.name
     return {"title": wiser_id, "unique_id": get_unique_id(wiser_id)}
