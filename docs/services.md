@@ -20,6 +20,7 @@ Please feel free to correct any errors or omissions by posting a PR to our Githu
 - [Set Schedule from String](#set-schedule-from-string)
 - [Copy Schedule](#copy-schedule)
 - [Assign Schedule](#assign-schedule)
+- [Set Opentherm Parameter](#set-opentherm-parameter)
 
 ### Supported HA Built In Services
 
@@ -331,6 +332,25 @@ data:
     schedule_id: 5
     to_entity_id: climate.wiser_lounge
 ```
+
+---
+
+## Set Opentherm Parameter
+
+**Service Name**: wiser.set_opentherm_parameter
+
+**Endpoint**: Optional if the parameter is nested the parent should be set as the endpoint.  Ie. preDefinedRemoteBoilerParameters
+
+**Parameter**: The parameter name you wish to change
+
+**Value**: The new value to set the parameter to
+
+**Hub**: Optional if you have multiple hubs in your setup.  Select the hub to send the command to
+
+### NOTES
+
+1. Not all parameters can be changed and you will get an error if this is the case.
+2. It is not known how these parameters effect the working of the hub.  Use at your own risk.
 
 # HA Built In Services
 

@@ -43,6 +43,7 @@
           "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
           "setpoint_mode": "Sollwert-Modus",
           "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist",
+          "automations": "Integrationsautomatisierung aktivieren (beta)",
           "moments": "Moments-Schaltflächen aktivieren",
           "lts_sensors": "LTS-Sensoren aktivieren"
         }

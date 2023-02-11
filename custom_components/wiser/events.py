@@ -54,17 +54,14 @@ WISER_EVENTS = [
     },
 ]
 
-WISER_COMMON_EVENT_DATA = {}
-
-"""
 WISER_COMMON_EVENT_DATA = {
     DOMAIN_CLIMATE: [
         "current_temperature",
         "current_target_temperature",
         "is_boosted",
+        "boost_time_remaining",
     ],
 }
-"""
 
 
 def fire_events(hass, entity_id: str, old_state: dict, new_state: dict):

@@ -4,6 +4,9 @@ import logging
 from .const import (
     ATTR_FILENAME,
     ATTR_HUB,
+    ATTR_OPENTHERM_ENDPOINT,
+    ATTR_OPENTHERM_PARAM,
+    ATTR_OPENTHERM_PARAM_VALUE,
     ATTR_SCHEDULE,
     ATTR_SCHEDULE_ID,
     ATTR_SCHEDULE_NAME,
@@ -14,6 +17,7 @@ from .const import (
     DOMAIN,
     WISER_SERVICES,
 )
+from .coordinator import WiserHubRESTError
 from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -77,6 +81,15 @@ async def async_setup_services(hass, data):
             vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(
                 int
             ),
+            vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
+        }
+    )
+
+    SEND_OPENTHERM_COMMAND_SCHEMA = vol.Schema(
+        {
+            vol.Optional(ATTR_OPENTHERM_ENDPOINT, default=""): vol.Coerce(str),
+            vol.Required(ATTR_OPENTHERM_PARAM): vol.Coerce(str),
+            vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Coerce(str),
             vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
         }
     )
@@ -303,6 +316,41 @@ async def async_setup_services(hass, data):
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
 
+    @callback
+    async def async_set_opentherm_parameter(service_call):
+        endpoint = service_call.data[ATTR_OPENTHERM_ENDPOINT]
+        param = service_call.data[ATTR_OPENTHERM_PARAM]
+        value = service_call.data[ATTR_OPENTHERM_PARAM_VALUE]
+        hub = service_call.data[ATTR_HUB]
+        instance = data
+
+        if get_instance_count(hass) > 1:
+            if not hub:
+                raise HomeAssistantError("Please specify a hub config entry id or name")
+                return None
+            else:
+                # Find hub from config_entry_id or hub name
+                if is_wiser_config_id(hass, hub):
+                    instance = hass.data[DOMAIN][hub][DATA]
+                else:
+                    # Find hub by name
+                    config_entry_id = get_config_entry_id_by_name(hass, hub)
+                    if config_entry_id:
+                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+
+        # If hub has opentherm
+        if instance.wiserhub.system.opentherm:
+            command = {param: value}
+            try:
+                await instance.wiserhub.system.opentherm.set_opentherm_parameter(
+                    endpoint, command
+                )
+            except WiserHubRESTError:
+                raise HomeAssistantError(
+                    "Error setting parameter.  This is an invalid parameter/endpoint or maybe a parameter that cannot be set"
+                )
+            await data.async_refresh()
+
     hass.services.async_register(
         DOMAIN,
         WISER_SERVICES["SERVICE_GET_SCHEDULE"],
@@ -352,3 +400,10 @@ async def async_setup_services(hass, data):
             async_boost_hotwater,
             schema=BOOST_HOTWATER_SCHEMA,
         )
+
+    hass.services.async_register(
+        DOMAIN,
+        WISER_SERVICES["SERVICE_SEND_OPENTHERM_COMMAND"],
+        async_set_opentherm_parameter,
+        schema=SEND_OPENTHERM_COMMAND_SCHEMA,
+    )

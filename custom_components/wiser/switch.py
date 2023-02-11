@@ -15,7 +15,12 @@ from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
-from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
+from .helpers import (
+    get_device_name,
+    get_identifier,
+    get_room_name,
+    get_unique_id,
+)
 from custom_components.wiser.schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -142,6 +147,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             ]
         )
 
+    # Add Room passive mode switches
+    if data.enable_automations:
+        for room in data.wiserhub.rooms.all:
+            if room.number_of_smartvalves > 0:
+                wiser_switches.append(
+                    WiserPassiveModeSwitch(
+                        hass, data, room.id, f"Wiser Passive Mode {room.name}"
+                    )
+                )
     async_add_entities(wiser_switches)
 
     return True
@@ -625,14 +639,80 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        fn = getattr(self._shutter, "set_" + self._key)
-        result = await fn(True)
+        await self._shutter.set_away_mode_action("Close")
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        fn = getattr(self._shutter, "set_" + self._key)
-        result = await fn(False)
+        await self._shutter.set_away_mode_action("NoChange")
+        await self.async_force_update()
+        return True
+
+
+class WiserPassiveModeSwitch(WiserSwitch):
+    """Room Passive Mode SwitchEntity Class."""
+
+    def __init__(self, hass, data, room_id, name):
+        """Initialize the sensor."""
+        self._name = name
+        self._room_id = room_id
+        self._hass = hass
+        super().__init__(data, name, "", "passive-mode", "mdi:thermostat-box")
+        self._is_on = (
+            self._data.wiserhub.rooms.get_by_id(self._room_id).mode == "Passive"
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._is_on = (
+            self._data.wiserhub.rooms.get_by_id(self._room_id).mode == "Passive"
+        )
+        self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, "passive-mode-switch", self.name, self._room_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._room_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
+            },
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return set of device state attributes."""
+        attrs = {}
+        return attrs
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        await self._data.wiserhub.rooms.get_by_id(self._room_id).enable_passive_mode(
+            True
+        )
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the device off."""
+        await self._data.wiserhub.rooms.get_by_id(self._room_id).enable_passive_mode(
+            False
+        )
         await self.async_force_update()
         return True

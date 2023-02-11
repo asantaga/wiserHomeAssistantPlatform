@@ -10,7 +10,7 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.2.2"
+VERSION = "3.3.0"
 WISER_PLATFORMS = [
     "climate",
     "sensor",
@@ -46,6 +46,7 @@ SETPOINT_MODE_BOOST = "boost"
 SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
+CONF_AUTOMATIONS = "automations"
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
 CONF_HEATING_BOOST_TIME = "heating_boost_time"
 CONF_HW_BOOST_TIME = "hotwater_boost_time"
@@ -56,6 +57,9 @@ CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
 # Custom Attributes
+ATTR_OPENTHERM_ENDPOINT = "endpoint"
+ATTR_OPENTHERM_PARAM = "parameter"
+ATTR_OPENTHERM_PARAM_VALUE = "parameter_value"
 ATTR_HUB = "hub"
 ATTR_TIME_PERIOD = "time_period"
 ATTR_FILENAME = "filename"
@@ -84,6 +88,7 @@ WISER_SERVICES = {
     "SERVICE_SET_SCHEDULE": "set_schedule",
     "SERVICE_SET_SCHEDULE_FROM_DATA": "set_schedule_from_string",
     "SERVICE_SET_DEVICE_MODE": "set_device_mode",
+    "SERVICE_SEND_OPENTHERM_COMMAND": "set_opentherm_parameter",
 }
 
 WISER_BOOST_PRESETS = {

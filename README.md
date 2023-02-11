@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.2.2
+# Wiser Home Assistant Integration v3.3.0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -13,27 +13,24 @@ For the latest version of the Wiser Home Assistant Platform please use the maste
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 3.2?
+## What's New in 3.3?
 
-- A lot of backend rework of the integration to utilise built in HA functions and make it more performant.
-  - Moved to a new fully async api from the old sync api
-  - Now utilises the data update coordinator functionality in HA instead of our own custom one
-  - Quite a bit of code tidying and black formatting
+- Improved support for Opentherm boilers with flow and return temp sensors and many attributes.
+- Support of heating actuator floor sensors
+- TRV passive mode (inspired by @robertwigley).  An inbuilt automation in the integration to create passive TRVs that will only heat when other rooms are heating.  Integration automations must be enabled to support this.
+- Improved data in Wiser events
+- Improved error handling for setting schedules from YAML files
 
-- Schedule files now support the All special day as well as Weekdays and Weekends.
-- New service to set a schedule from a string that supports templating.  See [Set Schedule From String](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md#set-schedule-from-string)
-- Schedule card options to show IDs and list view
-- Events and automation triggers. See [Events & Triggers](#events--triggers)
 
 ## Contents
 
 - [Minimum Requirements](#minimum-requirements)
-- [Updating to v3.x from v2.x](#updating-to-v3x-from-v2x---important-please-read)
 - [Issues & Questions](#issues-and-questions)
 - [Providing You Hub Output as a JSON File](#providing-your-hub-output-as-a-json-file)
 - [Functionality of this Integration](#functionality)
 - [Services Included in this Integration](https://github.com/asantaga/wiserHomeAssistantPlatform/blob/master/docs/services.md)
 - [Events & Triggers](#events--triggers)
+- [Integration Automations](#integration-automations)
 - [Installing](#code-installation)
 - [Configuration](#configuration)
 - [Managing Schedules with Home Assistant](#managing-schedules-with-home-assistant)
@@ -49,21 +46,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.9.
-
-## Updating to v3.x from v2.x - IMPORTANT PLEASE READ
-
-If you are installing this integration for the first time, you can skip this section as you will be installing the latest version.  For those still hanging onto v2.x, we do recommend moving to v3 but please read the below first.
-
-Some of the great new functionality below has only been possible by making some major changes to the integration code and how HA entities are registered.  As such, when upgrading, a number of existing entities in v2 will be replaced with new ones and the old ones will show unavailable.
-
-If you have custom scripts or automations for this integration, they are likely to break.  Equally, your Lovelace dashboards will also need updating with the new entities.
-
-We have tried hard to find a way to not have this as such a disruptive change but are unable to do so.  As such, please understand you may have quite a bit of work to reset your setup after upgrading to this.
-
-In most cases, it will be easier to remove the old integration and add this from new.
-
-However, we hope that many of the things that have previously needed scripts or automations will now have a much simpler way to do it and we can better maintain this setup going forward so future upgrades will be more straight forward.
+Requires a minimum of HA 2022.11.
 
 ## Issues and Questions
 
@@ -157,7 +140,6 @@ In order to download this file do the following:
 - **Events & Triggers**
   - A wiser_event event name with a type of boosted, started_heating and stopped_heating.  See [Events & Triggers](#events--triggers)
 
-
 - **Lovelace UI Cards**
   - Schedule Card to add, edit, delete and rename schedules
   - Zigbee Network Card to display your Wiser zigbee network connectivity
@@ -193,15 +175,17 @@ This method is best used when you want to play with the "latest and greatest" fr
 1. On your server clone the github repository into a suitable directory using the following command
    git clone `https://github.com/asantaga/wiserHomeAssistantPlatform.git`
 
-2. Switch to either the master or dev branch as per your requirements.
+2. Change to the wiserHomeAssistantPlatform directory
+
+3. Switch to either the master or dev branch as per your requirements (it will default to master branch after cloning).
    e.g.
    `git checkout master`
    or
    `git checkout dev`
 
-3. Create a `custom_components` directory within your Home Assistant directory config directory
+4. Create a `custom_components` directory (if it does not already exist) within your Home Assistant config directory
 
-4. Within the custom components directory copy the wiser folder, from the directory where you github cloned the wiser component, to your installations ```custom components``` directory.
+5. Within the wiserHomeAssistantPlatform/custom_components directory copy the `wiser` folder to your HA installations `custom components` directory, so that you have custom_components/wiser directory with the files in.
 
 ## Configuration
 
@@ -251,6 +235,8 @@ Select the configure link from the integrations page.  This will then show the c
 `Enable Moments Buttons` is to create buttons for Moments you have setup on the wiser app.  Default is unticked.
 
 `Enable LTS Sensors` is to create sensors for Long Term Statistics for rooms and hub heating and hot water demand.  Default is unticked.
+
+`Enable Integration Automations` is to enable access to in-built automations.  At the moment only passive mode is available.
 
 ## Managing Schedules with Home Assistant
 
@@ -483,7 +469,6 @@ You can either provide an entity ID to reference the schedule attached to that e
 - Lights - use the Light Mode select entity for the light eg. select.lounge_light_mode
 - Shutters - use the Shutter Mode select entity for the shutter eg. select.lounge_blinds_mode
 
-
 ## Events & Triggers
 
 The integration provides a wiser_event event name with types of boosted, started_heating, stopped_heating, target_temperature_increased and target_temperature_decreased, passing also the entity (read climate entity/room) that caused the event.  This can be used in 1 or 2 ways.
@@ -537,6 +522,15 @@ The integration provides a wiser_event event name with types of boosted, started
     mode: queued
     max: 10
     ```
+
+
+## Integration Automations
+
+In order to extend the capability of this integration and simplify complex problems by not having to write complex automations, we have added a new concept of integration automations.  Below are the current automations available with a description of how they work.  Please note, you need to enable Integration Automations in the integration config.
+
+### Passive Mode
+
+An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for TRVs and not Heating Actuators.  In each room will be a switch to enable/disable passive mode for that room.  In passive mode, the room is actually set to manual to the min temp (set by the thermostat card).  This allows the room to call for heat if the temp goes below the minimum.  When it is detected that other (non-passive) rooms are requesting heat, the manual temp of the passive rooms is raised in 0.5C increments until it reaches the max temp.  At any point, if all non-passive rooms are no longer calling for heat, the passive rooms are set back to their min temp.
 
 ## Schedule Card
 
@@ -625,10 +619,29 @@ There are two primary branches for this integration, `master` and `dev` . Master
 
 ## Change log
 
+- 3.3.0
+  - Bump api to v1.0.2
+  - Add event data to wiser events - issue [#324](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/324)
+  - Fix error setting away mode action for shutters - issue [#329](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/329)
+  - Add support for Heating Actuator floor temp sensor - issue [#334](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/334)
+  - Improve error handling/notification for setting schedule via YAML file - issue [#325](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/325)
+  - Add service for setting opentherm parameters
+  - Fix beta issue creating floor temp sensor when not fitted due to odd hub data - issue [#340](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/340)
+  - Fix beta issue of error when calling boost all
+  - Fix beta issue of error setting schedules from YAML file
+  - Fixed beta issue of error during setup
+  - Added LTS Floor Temp Sensor for Heating Actuators - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
+  - Added flow and return temp sensors for Opentherm boilers - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
+  - Added new passive mode for rooms with api smarts
+  - Improved repeater name on device signal entity - issue [#345](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/345)
+
+
 - 3.2.2
   - Bump api to v0.1.8
+  - v1.1.7 of schedule card
   - Add list view option to Schedule Card
   - Add Show ID option to schedule card standard view
+  - v1.1.0 of zigbee card
   - Fixed - Update status attribute does not show when failed
   - Fixed - Error if heating actuator has no assigned room - Issue [#321](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/321)
   - Added events for room started/stopped heating, target temperature increased/decreased and boosted
