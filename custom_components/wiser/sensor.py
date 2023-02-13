@@ -845,6 +845,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
                 "relative_modulation_level"
             ] = operational_data.relative_modulation_level
             attrs["hw_temperature"] = operational_data.hw_temperature
+            attrs["hw_flow_rate"] = operational_data.hw_flow_rate
             attrs["slave_status"] = operational_data.slave_status
 
             boiler_params = opentherm.boiler_parameters
@@ -854,6 +855,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
             attrs[
                 "boiler_ch_max_setpoint_transfer_enable"
             ] = boiler_params.ch_max_setpoint_transfer_enable
+            attrs["boiler_ch_setpoint"] = boiler_params.ch_setpoint
             attrs[
                 "boiler_ch_setpoint_lower_bound"
             ] = boiler_params.ch_setpoint_lower_bound
@@ -866,6 +868,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
             attrs[
                 "boiler_hw_setpoint_transfer_enable"
             ] = boiler_params.hw_setpoint_transfer_enable
+            attrs["boiler_hw_setpoint"] = boiler_params.hw_setpoint
             attrs[
                 "boiler_hw_setpoint_lower_bound"
             ] = boiler_params.hw_setpoint_lower_bound
