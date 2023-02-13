@@ -277,14 +277,6 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_AUTOMATIONS,
                 default=self.config_entry.options.get(CONF_AUTOMATIONS, False),
             ): bool,
-            vol.Optional(
-                CONF_MOMENTS,
-                default=self.config_entry.options.get(CONF_MOMENTS, False),
-            ): bool,
-            vol.Optional(
-                CONF_LTS_SENSORS,
-                default=self.config_entry.options.get(CONF_LTS_SENSORS, False),
-            ): bool,
         }
         return self.async_show_form(step_id="init", data_schema=vol.Schema(data_schema))
 

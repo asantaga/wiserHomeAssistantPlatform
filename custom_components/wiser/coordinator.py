@@ -102,8 +102,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE
         )
         self.enable_automations = config_entry.options.get(CONF_AUTOMATIONS, False)
-        self.enable_moments = config_entry.options.get(CONF_MOMENTS, False)
-        self.enable_lts_sensors = config_entry.options.get(CONF_LTS_SENSORS, False)
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
         )
