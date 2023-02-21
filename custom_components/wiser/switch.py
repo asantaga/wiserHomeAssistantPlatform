@@ -147,15 +147,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             ]
         )
 
-    # Add Room passive mode switches
-    if data.enable_automations:
-        for room in data.wiserhub.rooms.all:
-            if room.number_of_smartvalves > 0:
-                wiser_switches.append(
-                    WiserPassiveModeSwitch(
-                        hass, data, room.id, f"Wiser Passive Mode {room.name}"
-                    )
-                )
     async_add_entities(wiser_switches)
 
     return True
