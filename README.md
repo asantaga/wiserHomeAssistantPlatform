@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.0
+# Wiser Home Assistant Integration v3.4.0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -20,7 +20,6 @@ For more information checkout the AMAZING community thread available on
 - TRV passive mode (inspired by @robertwigley).  An inbuilt automation in the integration to create passive TRVs that will only heat when other rooms are heating.  Integration automations must be enabled to support this.
 - Improved data in Wiser events
 - Improved error handling for setting schedules from YAML files
-
 
 ## Contents
 
@@ -523,7 +522,6 @@ The integration provides a wiser_event event name with types of boosted, started
     max: 10
     ```
 
-
 ## Integration Automations
 
 In order to extend the capability of this integration and simplify complex problems by not having to write complex automations, we have added a new concept of integration automations.  Below are the current automations available with a description of how they work.  Please note, you need to enable Integration Automations in the integration config.
@@ -619,6 +617,13 @@ There are two primary branches for this integration, `master` and `dev` . Master
 
 ## Change log
 
+- 3.4.0
+  - Breaking change - added passive mode follow schedule which changes on/off switch for passive mode to selector for type of mode.  Please note, there is a bug in the thermostat card (due to be fixed in an upcoming release of HA frontend) which causes the high temperature setting to not show correctly in Passive Follow Schedule mode if you try to change it manually.
+  - Allow boost override when in passive mode - issue [#348](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/348)
+  - Added additional opentherm parameters - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
+  - Corrected error saving on/off schedule - issue [#349](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/349)
+
+
 - 3.3.0
   - Bump api to v1.0.2
   - Add event data to wiser events - issue [#324](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/324)
@@ -634,7 +639,6 @@ There are two primary branches for this integration, `master` and `dev` . Master
   - Added flow and return temp sensors for Opentherm boilers - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
   - Added new passive mode for rooms with api smarts
   - Improved repeater name on device signal entity - issue [#345](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/345)
-
 
 - 3.2.2
   - Bump api to v0.1.8
@@ -837,7 +841,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 2.3
   - Fix for error given by latest HA highlighting that I/O Detected in event loop - issue [#97](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/97)
   - Fix for climate graph not showing true state - issue [#98](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/98)
-  - Fixed heating boost - issue [#101]([https://github.com/asantaga/wiserHomeAssistantPlatform/issues/101)
+  - Fixed heating boost - issue [#101](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/101)
 
 - 2.2
   - Battery voltage across sensor types now consistent (1 decimal place no v)

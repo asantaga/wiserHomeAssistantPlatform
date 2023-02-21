@@ -7,7 +7,7 @@
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
   "dependencies": ["http", "websocket_api", "frontend", "lovelace"],
   "codeowners": ["@asantaga", "@msp1974"],
-  "version": "3.3.0",
-  "requirements": ["aioWiserHeatAPI==1.1.0"],
+  "version": "3.4.0",
+  "requirements": ["aioWiserHeatAPI==1.2.0"],
   "zeroconf": [{ "type": "_http._tcp.local.", "name": "wiser*" }]
 }
