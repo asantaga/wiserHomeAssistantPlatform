@@ -23,15 +23,14 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import selector, SelectSelectorMode
 
 from .const import (
-    CONF_AUTOMATIONS,
+    CONF_AUTOMATIONS_PASSIVE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
-    CONF_LTS_SENSORS,
-    CONF_MOMENTS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CONF_HW_BOOST_TIME,
     CONF_HOSTNAME,
+    CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
@@ -58,7 +57,7 @@ async def validate_input(hass, data):
         host=data[CONF_HOST],
         secret=data[CONF_PASSWORD],
         session=async_get_clientsession(hass),
-        extra_config_file=hass.config.config_dir + "/.storage/wiser_custom_data",
+        extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
         enable_automations=False,
     )
 
@@ -205,7 +204,22 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_automation_params(self, user_input=None):
+        if user_input is not None:
+            options = self.config_entry.options | user_input
+            return self.async_create_entry(title="", data=options)
+
+        data_schema = {
+            vol.Optional(
+                CONF_AUTOMATIONS_PASSIVE,
+                default=self.config_entry.options.get(CONF_AUTOMATIONS_PASSIVE, False),
+            ): bool,
+        }
+        return self.async_show_form(
+            step_id="automation_params", data_schema=vol.Schema(data_schema)
+        )
+
+    async def async_step_main_params(self, user_input=None):
         """Handle options flow."""
         if user_input is not None:
             if user_input[CONF_HOST]:
@@ -218,7 +232,8 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=data
                 )
-            return self.async_create_entry(title="", data=user_input)
+            options = self.config_entry.options | user_input
+            return self.async_create_entry(title="", data=options)
 
         data_schema = {
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
@@ -273,12 +288,16 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     }
                 }
             ),
-            vol.Optional(
-                CONF_AUTOMATIONS,
-                default=self.config_entry.options.get(CONF_AUTOMATIONS, False),
-            ): bool,
         }
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(data_schema))
+        return self.async_show_form(
+            step_id="main_params", data_schema=vol.Schema(data_schema)
+        )
+
+    async def async_step_init(self, user_input=None):
+        """Handle options flow."""
+        return self.async_show_menu(
+            step_id="init", menu_options=["main_params", "automation_params"]
+        )
 
 
 class CannotConnect(exceptions.HomeAssistantError):
