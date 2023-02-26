@@ -363,7 +363,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return list(self._room.mode) if self._is_passive_mode else self._hvac_modes_list
+        return [self._room.mode] if self._is_passive_mode else self._hvac_modes_list
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
