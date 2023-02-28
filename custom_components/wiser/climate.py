@@ -274,9 +274,6 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
         self._previous_target_temp = self.current_temperature
-        self._is_passive_mode = (
-            True if str(self._room.mode).startswith(TEXT_PASSIVE) else False
-        )
 
         # Set initial previous target temp based on config setting
         if self._schedule and self._data.previous_target_temp_option == "Schedule":
@@ -296,9 +293,6 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
-        self._is_passive_mode = (
-            True if str(self._room.mode).startswith(TEXT_PASSIVE) else False
-        )
 
         if not self._room.is_boosted:
             self._boosted_time = 0
@@ -348,22 +342,22 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def hvac_action(self):
         """Return hvac action from data."""
-        if self._is_passive_mode:
+        if self._room.is_passive_mode:
             return WISER_PASSIVE_MODES_TO_HACS[self._room.mode]
         return HVACAction.HEATING if self._room.is_heating else HVACAction.IDLE
 
     @property
     def hvac_mode(self):
         return (
-            self._room.mode
-            if self._is_passive_mode
+            TEXT_PASSIVE
+            if self._room.is_passive_mode
             else HVAC_MODE_WISER_TO_HASS[self._room.mode]
         )
 
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return [self._room.mode] if self._is_passive_mode else self._hvac_modes_list
+        return [TEXT_PASSIVE] if self._room.is_passive_mode else self._hvac_modes_list
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
@@ -417,7 +411,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        if not self._schedule or self._is_passive_mode:
+        if (not self._schedule) or self._room.is_passive_mode:
             return [
                 mode
                 for mode in list(WISER_PRESETS.keys())
@@ -445,8 +439,8 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     def state(self):
         """Return state"""
         return (
-            self._room.mode
-            if self._is_passive_mode
+            TEXT_PASSIVE
+            if self._room.is_passive_mode
             else HVAC_MODE_WISER_TO_HASS[self._room.mode]
         )
 
@@ -499,7 +493,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         """Return the list of supported features."""
         return (
             PASSIVE_MODE_SUPPORT_FLAGS
-            if self._is_passive_mode and not self._room.is_boosted
+            if self._room.is_passive_mode and not self._room.is_boosted
             else SUPPORT_FLAGS
         )
 
