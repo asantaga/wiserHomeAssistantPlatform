@@ -620,7 +620,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 ## Change log
 
 - 3.3.1
-  - Bump api to v1.2.3
+  - Bump api to v1.2.2
   - Breaking change - added passive mode follow schedule which changes on/off switch for passive mode to selector for type of mode.  Please note, there is a bug in the thermostat card (due to be fixed in an upcoming release of HA frontend) which causes the high temperature setting to not show correctly in Passive Follow Schedule mode if you try to change it manually.
   - Allow boost override when in passive mode - issue [#348](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/348)
   - Added additional opentherm parameters - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
