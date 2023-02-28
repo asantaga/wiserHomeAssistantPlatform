@@ -705,6 +705,8 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.rooms.get_by_id(
                 self._device_id
             ).current_temperature
+            if self._state == 5.0:
+                self._state = "Unavailable"
         elif self._lts_sensor_type == "floor_current_temp":
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
