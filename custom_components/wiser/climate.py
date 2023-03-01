@@ -532,7 +532,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        if self._is_passive_mode and not self._room.is_boosted:
+        if self._room.is_passive_mode and not self._room.is_boosted:
             if kwargs.get("target_temp_low", None):
                 await self._room.set_passive_mode_lower_temp(
                     kwargs.get("target_temp_low")
