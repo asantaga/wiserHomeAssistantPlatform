@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.1
+# Wiser Home Assistant Integration v3.3.1beta2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -528,9 +528,20 @@ In order to extend the capability of this integration and simplify complex probl
 
 ### Passive Mode
 
-An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for TRVs and not Heating Actuators.  In each room will be a selector to set Passive Manual (you set the min/max temp to range to be maintained) and Passive Follow Schedule (you set the min but the max is determined by the room schedule) for that room.  In passive mode, the room is actually set to manual to the min temp (set by the thermostat card).  This allows the room to call for heat if the temp goes below the minimum.  When it is detected that other (non-passive) rooms are requesting heat, the manual temp of the passive rooms is raised in 0.5C increments until it reaches the max temp.  At any point, if all non-passive rooms are no longer calling for heat, the passive rooms are set back to their min temp.
+An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for TRVs and not Heating Actuators.  In each room will be a switch to set Passive Mode on or off for that room.  
 
-This is designed to emulate a much requested Wiser hub function but is done in the integration code.  As such, when looking at the room in the Wiser app, it will not show passive mode.
+Passive mode is an automation built into the integration to create a much requested function that is not available from Wiser directly on the hub.
+
+Using a thermostat card, when enabling passive mode on a room, you will see a temp range with min and max to allow you to adjust the operating range of the room.
+
+When a room is set to Passive mode, it will not call for heat (ie make the boiler fire) unless the room temp is below the minimum room temp set (use the thermostat card to manage this).  If it is above this minimum temp, the room will not be heated unless another room that is not in passive mode calls for heat.  The passive mode room will not heat above the maximum temp irrespective of any other rooms calling for heat.
+
+Depending on the HVAC mode set (auto or heat/manual), Passive Mode will operate in 1 or 2 ways.
+
+HVAC Mode Auto - Passive mode will maintain the maximum temperature according to the scheduled temp and vary as the schedule varies.  You are able to change the min temp manually and this will be maintained but trying to change the max temp will cause it to revert to the scheduled temp.
+HVAC Mode Heat - Passive mode will operate based on the min/max values set by you and not alter.
+
+NOTE: As this is designed to emulate a much requested Wiser hub function but is done in the integration code, when looking at the room in the Wiser app, it will not show passive mode.
 
 ## Schedule Card
 
@@ -619,9 +630,16 @@ There are two primary branches for this integration, `master` and `dev` . Master
 
 ## Change log
 
-- 3.3.1
+- 3.3.1beta2
+  - Bump api to v1.3.0
+  - Breaking change - if you have installed and used passive mode in v3.3.1beta, this version will leave orphaned select entities that will need to be deleted manually.
+  - Reworking of passive mode to be based on the auto/heat/off HVAC modes with passive mode on/off switch
+  - Storage of the manual set temp in the (now existing) integration storage file to presist after a HA restart
+
+- 3.3.1beta
   - Bump api to v1.2.2
   - Breaking change - added passive mode follow schedule which changes on/off switch for passive mode to selector for type of mode.  Please note, there is a bug in the thermostat card (due to be fixed in an upcoming release of HA frontend) which causes the high temperature setting to not show correctly in Passive Follow Schedule mode if you try to change it manually.
+  - Breaking change - where the automations were enabled in v3.3.0, this willneed re-enabling in v3.3.1beta1 due to changes in the config configuration
   - Allow boost override when in passive mode - issue [#348](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/348)
   - Added additional opentherm parameters - issue [#337](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/337)
   - Corrected error saving on/off schedule - issue [#349](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/349)
