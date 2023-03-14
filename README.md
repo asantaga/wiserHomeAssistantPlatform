@@ -539,9 +539,10 @@ When a room is set to Passive mode, it will not call for heat (ie make the boile
 Depending on the HVAC mode set (auto or heat/manual), Passive Mode will operate in 1 or 2 ways.
 
 HVAC Mode Auto - Passive mode will maintain the maximum temperature according to the scheduled temp and vary as the schedule varies.  You are able to change the min temp manually and this will be maintained but trying to change the max temp will cause it to revert to the scheduled temp.
+
 HVAC Mode Heat - Passive mode will operate based on the min/max values set by you and not alter.
 
-NOTE: As this is designed to emulate a much requested Wiser hub function but is done in the integration code, when looking at the room in the Wiser app, it will not show passive mode.
+NOTE: As this is designed to emulate a much requested Wiser hub function but is done in the integration code, when looking at the room in the Wiser app, it will not show passive mode but may show target temps different to what you may be expecting.
 
 ## Schedule Card
 
