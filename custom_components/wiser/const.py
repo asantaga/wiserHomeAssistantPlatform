@@ -104,9 +104,9 @@ WISER_SETPOINT_MODES = {
 }
 
 WISER_PASSIVE_MODES_TO_HACS = {
-    "Disabled": "Disabled",
-    "Passive Manual": "Passive(M)",
-    "Passive Follow Schedule": "Passive(FS)",
+    "Auto": "Passive(FS)",
+    "Manual": "Passive(M)",
+    "Off": "",
 }
 
 WISER_RESTORE_TEMP_DEFAULT_OPTIONS = ["Current", "Scheduled", "Minimum"]

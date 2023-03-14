@@ -42,12 +42,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for shutter in data.wiserhub.devices.shutters.all:
             wiser_selects.extend([WiserShutterModeSelect(data, shutter.id)])
 
-    # ENable passive mode selectors for each room with TRVs
-    if data.enable_automations_passive_mode:
-        for room in data.wiserhub.rooms.all:
-            if room.number_of_smartvalves > 0:
-                wiser_selects.extend([WiserPassiveModeSelect(data, room.id)])
-
     async_add_entities(wiser_selects)
 
 
@@ -219,58 +213,3 @@ class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self.async_write_ha_state()
-
-
-class WiserPassiveModeSelect(WiserSelectEntity):
-    def __init__(self, data, room_id):
-        """Initialize the sensor."""
-        self._room_id = room_id
-        super().__init__(data)
-        self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
-        self._options = self._room.available_passive_modes
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        super()._handle_coordinator_update()
-        self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
-
-    @property
-    def current_option(self) -> str:
-        return self._room.passive_mode
-
-    async def async_select_option(self, option: str) -> None:
-        _LOGGER.debug(f"Setting {self.name} to {option}")
-        if option in self._options:
-            await self._room.set_passive_mode(option)
-            await self.async_force_update()
-        else:
-            _LOGGER.error(
-                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
-            )
-
-    @property
-    def unique_id(self):
-        """Return unique ID of device"""
-        return get_unique_id(
-            self._data, "WiserRoom", "passive-mode-type", self._room_id
-        )
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._room_id, "room"),
-            "identifiers": {
-                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
-            },
-            "manufacturer": MANUFACTURER,
-            "model": ROOM.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
