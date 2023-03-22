@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.1beta2
+# Wiser Home Assistant Integration v3.3.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -528,21 +528,9 @@ In order to extend the capability of this integration and simplify complex probl
 
 ### Passive Mode
 
-An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for TRVs and not Heating Actuators.  In each room will be a switch to set Passive Mode on or off for that room.  
+An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for rooms with TRVs and not Heating Actuators.  In each room will be a switch to set Passive Mode on or off for that room.
 
-Passive mode is an automation built into the integration to create a much requested function that is not available from Wiser directly on the hub.
-
-Using a thermostat card, when enabling passive mode on a room, you will see a temp range with min and max to allow you to adjust the operating range of the room.
-
-When a room is set to Passive mode, it will not call for heat (ie make the boiler fire) unless the room temp is below the minimum room temp set (use the thermostat card to manage this).  If it is above this minimum temp, the room will not be heated unless another room that is not in passive mode calls for heat.  The passive mode room will not heat above the maximum temp irrespective of any other rooms calling for heat.
-
-Depending on the HVAC mode set (auto or heat/manual), Passive Mode will operate in 1 or 2 ways.
-
-HVAC Mode Auto - Passive mode will maintain the maximum temperature according to the scheduled temp and vary as the schedule varies.  You are able to change the min temp manually and this will be maintained but trying to change the max temp will cause it to revert to the scheduled temp.
-
-HVAC Mode Heat - Passive mode will operate based on the min/max values set by you and not alter.
-
-NOTE: As this is designed to emulate a much requested Wiser hub function but is done in the integration code, when looking at the room in the Wiser app, it will not show passive mode but may show target temps different to what you may be expecting.
+More detailed information on this automation is available [here](docs/inbuilt_automations.md)
 
 ## Schedule Card
 
@@ -630,6 +618,10 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.3.1
+  - Bump api to v1.3.1
+  - Added is_passive attribute to climate entity
 
 - 3.3.1beta2
   - Bump api to v1.3.0
