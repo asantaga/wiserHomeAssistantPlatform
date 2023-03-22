@@ -281,6 +281,12 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             self._data.previous_target_temp_option.lower()
         )
 
+        # Set passive mode temperature increment value if enabled
+        if self._room.is_passive_mode:
+            self._room.passive_temperature_increment = (
+                self._data.passive_temperature_increment
+            )
+
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
 
     async def async_force_update(self):

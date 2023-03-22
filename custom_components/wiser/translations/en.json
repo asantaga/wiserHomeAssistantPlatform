@@ -57,7 +57,8 @@
         "title": "Wiser Integration Options",
         "description": "Enable in-built automations",
         "data": {
-          "automations_passive_mode": "Passive Mode"
+          "automations_passive_mode": "Passive Mode",
+          "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
         }
       }
     }

@@ -57,7 +57,8 @@
         "title": "Wiser Integrationsoptionen",
         "description": "Aktivieren Sie integrierte Automatisierungen",
         "data": {
-          "automations_passive_mode": "Passivmodus"
+          "automations_passive_mode": "Passivmodus",
+          "passive_mode_temperature_increments": "Temperaturerhöhungen im passiven Modus"
         }
       }
     }

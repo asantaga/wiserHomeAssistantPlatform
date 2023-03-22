@@ -41,6 +41,7 @@ DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
+DEFAULT_PASSIVE_TEMP_INCREMENT = 0.5
 
 # Setpoint Modes
 SETPOINT_MODE_BOOST = "boost"
@@ -48,6 +49,7 @@ SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
 CONF_AUTOMATIONS_PASSIVE = "automations_passive_mode"
+CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT = "passive_mode_temperature_increments"
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
 CONF_HEATING_BOOST_TIME = "heating_boost_time"
 CONF_HW_BOOST_TIME = "hotwater_boost_time"

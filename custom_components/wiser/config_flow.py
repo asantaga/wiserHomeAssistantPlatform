@@ -24,6 +24,7 @@ from homeassistant.helpers.selector import selector, SelectSelectorMode
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
+    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
@@ -33,6 +34,7 @@ from .const import (
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
+    DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
@@ -214,6 +216,23 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_AUTOMATIONS_PASSIVE,
                 default=self.config_entry.options.get(CONF_AUTOMATIONS_PASSIVE, False),
             ): bool,
+            vol.Optional(
+                CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                default=self.config_entry.options.get(
+                    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                    DEFAULT_PASSIVE_TEMP_INCREMENT,
+                ),
+            ): selector(
+                {
+                    "number": {
+                        "min": 0.5,
+                        "max": 20,
+                        "step": 0.5,
+                        "unit_of_measurement": "°C",
+                        "mode": "box",
+                    }
+                }
+            ),
         }
         return self.async_show_form(
             step_id="automation_params", data_schema=vol.Schema(data_schema)

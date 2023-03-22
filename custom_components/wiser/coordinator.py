@@ -27,9 +27,11 @@ from aioWiserHeatAPI.wiserhub import (
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
+    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CUSTOM_DATA_STORE,
+    DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SETPOINT_MODE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
@@ -109,6 +111,10 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         # Automation option params
         self.enable_automations_passive_mode = config_entry.options.get(
             CONF_AUTOMATIONS_PASSIVE, False
+        )
+
+        self.passive_temperature_increment = config_entry.options.get(
+            CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
         )
 
         self.wiserhub = WiserAPI(
