@@ -26,15 +26,16 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from .const import (
-    CONF_AUTOMATIONS,
-    CONF_MOMENTS,
+    CONF_AUTOMATIONS_PASSIVE,
+    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CUSTOM_DATA_STORE,
+    DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SETPOINT_MODE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
-    CONF_LTS_SENSORS,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_SCAN_INTERVAL,
@@ -89,6 +90,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
+
+        # Main option params
         self.boost_temp = config_entry.options.get(
             CONF_HEATING_BOOST_TEMP, DEFAULT_BOOST_TEMP
         )
@@ -101,19 +104,25 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.setpoint_mode = config_entry.options.get(
             CONF_SETPOINT_MODE, DEFAULT_SETPOINT_MODE
         )
-        self.enable_automations = config_entry.options.get(CONF_AUTOMATIONS, False)
-        self.enable_moments = config_entry.options.get(CONF_MOMENTS, False)
-        self.enable_lts_sensors = config_entry.options.get(CONF_LTS_SENSORS, False)
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
+        )
+
+        # Automation option params
+        self.enable_automations_passive_mode = config_entry.options.get(
+            CONF_AUTOMATIONS_PASSIVE, False
+        )
+
+        self.passive_temperature_increment = config_entry.options.get(
+            CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
         )
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
             secret=config_entry.data[CONF_PASSWORD],
             session=async_get_clientsession(hass),
-            extra_config_file=hass.config.config_dir + "/.storage/wiser_custom_data",
-            enable_automations=self.enable_automations,
+            extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
+            enable_automations=self.enable_automations_passive_mode,
         )
 
     async def async_update_data(self) -> WiserData:

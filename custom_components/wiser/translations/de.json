@@ -33,8 +33,16 @@
   "options": {
     "step": {
       "init": {
-        "title": "Wiser Heat Hub-Optionen",
+        "title": "Wiser Integrationsoptionen",
         "description": "Wiser-Parameter ändern.",
+        "menu_options": {
+          "main_params": "Hauptparameter",
+          "automation_params": "Aktivieren Sie integrierte Automatisierungen"
+        }
+      },
+      "main_params": {
+        "title": "Wiser Integrationsoptionen",
+        "description": "Hauptparameter",
         "data": {
           "host": "IP Adresse",
           "scan_interval": "Scan Intervall",
@@ -42,10 +50,15 @@
           "heating_boost_time": "Boost Dauer",
           "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
           "setpoint_mode": "Sollwert-Modus",
-          "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist",
-          "automations": "Integrationsautomatisierung aktivieren (beta)",
-          "moments": "Moments-Schaltflächen aktivieren",
-          "lts_sensors": "LTS-Sensoren aktivieren"
+          "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist"
+        }
+      },
+      "automation_params": {
+        "title": "Wiser Integrationsoptionen",
+        "description": "Aktivieren Sie integrierte Automatisierungen",
+        "data": {
+          "automations_passive_mode": "Passivmodus",
+          "passive_mode_temperature_increments": "Temperaturerhöhungen im passiven Modus"
         }
       }
     }

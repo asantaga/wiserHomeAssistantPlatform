@@ -33,19 +33,32 @@
   "options": {
     "step": {
       "init": {
-        "title": "Options Box Wiser",
+        "title": "Wiser possibilités d'intégration",
         "description": "Réglages des paramètres Wiser.",
+        "menu_options": {
+          "main_params": "Paramètres principaux",
+          "automation_params": "Paramètres d'automatisation"
+        }
+      },
+      "main_params": {
+        "title": "Wiser possibilités d'intégration",
+        "description": "Paramètres principaux",
         "data": {
           "host": "Adresse IP ou nom d'hote",
           "scan_interval": " Période d'acquisition",
-          "heating_boost_temp": "Défault Temperature de Boost chauffage",
-          "heating_boost_time": "Défault Durée de Boost chauffage",
-          "hotwater_boost_time": "Défault Durée de Boost Eau Chaude",
+          "heating_boost_temp": "Défault temperature de boost chauffage",
+          "heating_boost_time": "Défault durée de boost chauffage",
+          "hotwater_boost_time": "Défault durée de boost eau chaude",
           "setpoint_mode": "Mode de fonctionnement consigne",
-          "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée",
-          "automations": "Autorisation des automatisations d'intégration (bêta)",
-          "moments": "Autorisation de boutons Moments",
-          "lts_sensors": "Autorisation capteurs LTS (Longue Durée de Sauvegarde)"
+          "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée"
+        }
+      },
+      "automation_params": {
+        "title": "Wiser possibilités d'intégration",
+        "description": "Activer les automatisations intégrées",
+        "data": {
+          "automations_passive_mode": "Mode passif",
+          "passive_mode_temperature_increments": "Incréments de température en mode passif"
         }
       }
     }

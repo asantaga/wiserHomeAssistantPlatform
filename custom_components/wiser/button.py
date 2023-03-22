@@ -36,7 +36,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             ]
         )
 
-    if data.enable_moments and data.wiserhub.moments:
+    if data.wiserhub.moments:
         _LOGGER.debug("Setting up Moments buttons")
         for moment in data.wiserhub.moments.all:
             wiser_buttons.append(WiserMomentsButton(data, moment.id))

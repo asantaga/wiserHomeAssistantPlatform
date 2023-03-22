@@ -10,7 +10,7 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.3.0"
+VERSION = "3.4.0"
 WISER_PLATFORMS = [
     "climate",
     "sensor",
@@ -25,6 +25,7 @@ DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
 MIN_SCAN_INTERVAL = 30
+CUSTOM_DATA_STORE = "/.storage/wiser_custom_data"
 
 # Hub
 MANUFACTURER = "Drayton Wiser"
@@ -40,19 +41,19 @@ DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
+DEFAULT_PASSIVE_TEMP_INCREMENT = 0.5
 
 # Setpoint Modes
 SETPOINT_MODE_BOOST = "boost"
 SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
-CONF_AUTOMATIONS = "automations"
+CONF_AUTOMATIONS_PASSIVE = "automations_passive_mode"
+CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT = "passive_mode_temperature_increments"
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
 CONF_HEATING_BOOST_TIME = "heating_boost_time"
 CONF_HW_BOOST_TIME = "hotwater_boost_time"
 CONF_SETPOINT_MODE = "setpoint_mode"
-CONF_MOMENTS = "moments"
-CONF_LTS_SENSORS = "lts_sensors"
 CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 
@@ -99,9 +100,9 @@ WISER_BOOST_PRESETS = {
 }
 
 WISER_SETPOINT_MODES = {
-    "Normal": "normal",
-    "Boost": "boost",
-    "BoostAuto": "boost in auto mode only",
+    "Normal": "Normal",
+    "Boost": "Boost",
+    "BoostAuto": "Boost in auto mode only",
 }
 
 WISER_RESTORE_TEMP_DEFAULT_OPTIONS = ["Current", "Scheduled", "Minimum"]

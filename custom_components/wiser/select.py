@@ -4,6 +4,7 @@ from .const import (
     DATA,
     DOMAIN,
     MANUFACTURER,
+    ROOM,
 )
 
 from .helpers import get_device_name, get_unique_id, get_identifier

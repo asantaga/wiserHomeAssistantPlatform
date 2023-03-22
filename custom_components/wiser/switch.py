@@ -148,7 +148,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         )
 
     # Add Room passive mode switches
-    if data.enable_automations:
+    if data.enable_automations_passive_mode:
         for room in data.wiserhub.rooms.all:
             if room.number_of_smartvalves > 0:
                 wiser_switches.append(
@@ -156,6 +156,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         hass, data, room.id, f"Wiser Passive Mode {room.name}"
                     )
                 )
+
     async_add_entities(wiser_switches)
 
     return True
@@ -659,17 +660,17 @@ class WiserPassiveModeSwitch(WiserSwitch):
         self._room_id = room_id
         self._hass = hass
         super().__init__(data, name, "", "passive-mode", "mdi:thermostat-box")
-        self._is_on = (
-            self._data.wiserhub.rooms.get_by_id(self._room_id).mode == "Passive"
-        )
+        self._is_on = self._data.wiserhub.rooms.get_by_id(
+            self._room_id
+        ).passive_mode_enabled
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._is_on = (
-            self._data.wiserhub.rooms.get_by_id(self._room_id).mode == "Passive"
-        )
+        self._is_on = self._data.wiserhub.rooms.get_by_id(
+            self._room_id
+        ).passive_mode_enabled
         self.async_write_ha_state()
 
     @property
@@ -703,16 +704,14 @@ class WiserPassiveModeSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self._data.wiserhub.rooms.get_by_id(self._room_id).enable_passive_mode(
-            True
-        )
+        await self._data.wiserhub.rooms.get_by_id(self._room_id).set_passive_mode(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self._data.wiserhub.rooms.get_by_id(self._room_id).enable_passive_mode(
-            False
-        )
+        room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        await room.set_passive_mode(False)
+        await room.cancel_overrides()
         await self.async_force_update()
         return True
