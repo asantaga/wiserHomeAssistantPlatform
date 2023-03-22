@@ -103,10 +103,4 @@ WISER_SETPOINT_MODES = {
     "BoostAuto": "Boost in auto mode only",
 }
 
-WISER_PASSIVE_MODES_TO_HACS = {
-    "Auto": "Passive(FS)",
-    "Manual": "Passive(M)",
-    "Off": "",
-}
-
 WISER_RESTORE_TEMP_DEFAULT_OPTIONS = ["Current", "Scheduled", "Minimum"]

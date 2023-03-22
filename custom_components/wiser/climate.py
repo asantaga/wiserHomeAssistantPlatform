@@ -26,7 +26,6 @@ from .const import (
     MANUFACTURER,
     ROOM,
     WISER_BOOST_PRESETS,
-    WISER_PASSIVE_MODES_TO_HACS,
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
 )
@@ -384,7 +383,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         """Get current preset mode."""
         try:
             if self._room.is_passive_mode:
-                return WISER_PASSIVE_MODES_TO_HACS[self._room.mode]
+                return TEXT_PASSIVE
             elif self._room.preset_mode == "Boost":
                 if int(self._room.boost_time_remaining / 60) != 0:
                     return f"{STATUS_BOOST} {int(self._room.boost_time_remaining/60)}m"
@@ -434,6 +433,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs["is_boosted"] = self._room.is_boosted
         attrs["is_override"] = self._room.is_override
         attrs["is_heating"] = self._room.is_heating
+        attrs["is_passive"] = self._room.is_passive_mode
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
 
