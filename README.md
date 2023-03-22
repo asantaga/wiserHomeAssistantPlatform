@@ -622,6 +622,9 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.3.1
   - Bump api to v1.3.1
   - Added is_passive attribute to climate entity
+  - Added that away mode overrides passive mode
+  - Added config option to manage passive mode temperature increments
+  - Added hub update if built in automations make changes to hub to reflect current status immediately
 
 - 3.3.1beta2
   - Bump api to v1.3.0
