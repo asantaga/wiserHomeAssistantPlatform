@@ -186,11 +186,11 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return None
+        return []
 
     @property
     def hvac_mode(self):
-        return "heat"
+        return HVACMode.HEAT
 
     @property
     def max_temp(self):
