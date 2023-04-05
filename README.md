@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.1
+# Wiser Home Assistant Integration v3.3.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -45,7 +45,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.11.
+Requires a minimum of HA 2023.2 and therefore Python 3.10.
 
 ## Issues and Questions
 
@@ -618,6 +618,11 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.3.2
+  - Fix issue with HA hanging when trying to change Alexa exposed entities with this integration enabled - issue [#360](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/360)
+  - Fix issue whereby the passive mode increments are not maintained on hub update - issue [#359](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/359)
+  - Added attribute to climate entity to see passive mode temp increment value
 
 - 3.3.1
   - Bump api to v1.3.1

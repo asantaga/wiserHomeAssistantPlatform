@@ -186,11 +186,11 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return None
+        return []
 
     @property
     def hvac_mode(self):
-        return "heat"
+        return HVACMode.HEAT
 
     @property
     def max_temp(self):
@@ -276,6 +276,15 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
 
+        self._set_api_parameters()
+
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
+
+    async def async_force_update(self):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        await self._data.async_refresh()
+
+    def _set_api_parameters(self):
         # Set room stored manual target temp based on options (if not already set)
         self._room.stored_manual_target_temperature_alt_source = (
             self._data.previous_target_temp_option.lower()
@@ -287,18 +296,14 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                 self._data.passive_temperature_increment
             )
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
-
-    async def async_force_update(self):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
-        await self._data.async_refresh()
-
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
+
+        self._set_api_parameters()
 
         if not self._room.is_boosted:
             self._boosted_time = 0
@@ -462,6 +467,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             attrs["next_schedule_change"] = str(self._room.schedule.next.time)
             attrs["next_schedule_datetime"] = str(self._room.schedule.next.datetime)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
+
+        if self._room.is_passive_mode:
+            attrs[
+                "passive_mode_temp_increment"
+            ] = self._room.passive_temperature_increment
 
         return attrs
 
