@@ -45,7 +45,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Minimum Requirements
 
-Requires a minimum of HA 2022.11.
+Requires a minimum of HA 2023.2 and therefore Python 3.10.
 
 ## Issues and Questions
 
