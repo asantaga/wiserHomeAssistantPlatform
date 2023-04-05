@@ -468,6 +468,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             attrs["next_schedule_datetime"] = str(self._room.schedule.next.datetime)
             attrs["next_schedule_temp"] = self._room.schedule.next.setting
 
+        if self._room.is_passive_mode:
+            attrs[
+                "passive_mode_temp_increment"
+            ] = self._room.passive_temperature_increment
+
         return attrs
 
     @property
