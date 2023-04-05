@@ -622,6 +622,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.3.2
   - Fix issue with HA hanging when trying to change Alexa exposed entities with this integration enabled - issue [#360](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/360)
   - Fix issue whereby the passive mode increments are not maintained on hub update - issue [#359](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/359)
+  - Added attribute to climate entity to see passive mode temp increment value
 
 - 3.3.1
   - Bump api to v1.3.1
