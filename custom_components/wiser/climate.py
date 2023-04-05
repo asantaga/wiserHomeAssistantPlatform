@@ -276,6 +276,15 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
 
+        self._set_api_parameters()
+
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
+
+    async def async_force_update(self):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        await self._data.async_refresh()
+
+    def _set_api_parameters(self):
         # Set room stored manual target temp based on options (if not already set)
         self._room.stored_manual_target_temperature_alt_source = (
             self._data.previous_target_temp_option.lower()
@@ -287,18 +296,14 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                 self._data.passive_temperature_increment
             )
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
-
-    async def async_force_update(self):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
-        await self._data.async_refresh()
-
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
+
+        self._set_api_parameters()
 
         if not self._room.is_boosted:
             self._boosted_time = 0
