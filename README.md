@@ -622,6 +622,7 @@ There are two primary branches for this integration, `master` and `dev` . Master
 - 3.3.3
   - Fix issue of passive mode temperature increment setting not working - issue [#359](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/359)
   - Improved error handling if the extra config file should get corrupted - issue [#364](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/364)
+  - Current target temp now uses DisplayedSetPoint from hub to better show correct temp when EcoIQ is active
 
 - 3.3.2
   - Fix issue with HA hanging when trying to change Alexa exposed entities with this integration enabled - issue [#360](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/360)
