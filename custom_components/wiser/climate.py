@@ -400,7 +400,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
-        _LOGGER.info(f"Setting Preset Mode {preset_mode} for {self._room.name}")
+        _LOGGER.debug(f"Setting Preset Mode {preset_mode} for {self._room.name}")
         try:
             await self._room.set_preset(preset_mode)
         except ValueError as ex:
@@ -503,7 +503,6 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        _LOGGER.info(kwargs)
         if self._room.is_passive_mode and not self._room.is_boosted:
             if kwargs.get("target_temp_low", None):
                 await self._room.set_passive_mode_lower_temp(
@@ -522,14 +521,14 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                 self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"]
                 and self.state == HVACMode.AUTO
             ):
-                _LOGGER.info(
+                _LOGGER.debug(
                     f"Setting temperature for {self.name} to {target_temperature} using boost"
                 )
                 await self._room.set_target_temperature_for_duration(
                     target_temperature, self._data.boost_time
                 )
             else:
-                _LOGGER.info(
+                _LOGGER.debug(
                     f"Setting temperature for {self.name} to {target_temperature}"
                 )
                 await self._room.set_target_temperature(target_temperature)
@@ -558,12 +557,12 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             temperature_delta = self._data.boost_temp
 
         if temperature_delta > 0:
-            _LOGGER.info(
+            _LOGGER.debug(
                 f"Boosting heating for {self._room.name} by {temperature_delta}C for {time_period}m "
             )
             await self._room.boost(temperature_delta, time_period)
         if temperature > 0 and temperature_delta == 0:
-            _LOGGER.info(
+            _LOGGER.debug(
                 f"Boosting heating for {self._room.name} to {temperature}C for {time_period}m "
             )
             await self._room.set_target_temperature_for_duration(
