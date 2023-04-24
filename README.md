@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.3
+# Wiser Home Assistant Integration v3.3.4
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -528,7 +528,7 @@ In order to extend the capability of this integration and simplify complex probl
 
 ### Passive Mode
 
-An automation that allows you to set a room to only heat when other rooms are heating.  This is only available for rooms with TRVs and not Heating Actuators.  In each room will be a switch to set Passive Mode on or off for that room.
+An automation that allows you to set a room to only heat when other rooms are heating on the same heating channel.  This is only available for rooms with TRVs and not Heating Actuators.  In each room will be a switch to set Passive Mode on or off for that room.
 
 More detailed information on this automation is available [here](docs/inbuilt_automations.md)
 
@@ -618,6 +618,9 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.3.4
+  - Fix issue with passive mode whereby it did not factor heating channels for multi channel hubs
 
 - 3.3.3
   - Fix issue of passive mode temperature increment setting not working - issue [#359](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/359)

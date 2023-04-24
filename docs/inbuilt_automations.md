@@ -4,7 +4,7 @@ Currently there is only a single in built automation but more may come in the fu
 
 ## Passive Mode
 
-Passive mode is designed to achieve a function that is not natively available from Wiser on the hub.  It is designed to set a room to only heat when other non-passive mode rooms call for heat (causing the boiler to fire).
+Passive mode is designed to achieve a function that is not natively available from Wiser on the hub.  It is designed to set a room to only heat when other non-passive mode rooms call for heat (causing the boiler to fire).  It respects heating channels, so for hubs with 2 heating channels, it will only activate a pssive room if an active room on that channel is heating.
 
 It does this by setting the target temperature of the room lower than the current temp (down to the minimum setting) when no non-passive rooms are heating and then increasing the target temperature of the room when non-passive rooms are calling for heat thus heating the room to the set maximum temperature without the room itself causing the boiler to fire.
 
