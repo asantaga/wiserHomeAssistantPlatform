@@ -140,12 +140,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.last_update_status = "Success"
 
             _LOGGER.info(f"Hub update completed for {self.wiserhub.system.name}")
-            _LOGGER.info(
-                f"Man setpoint - {self.wiserhub.api_parameters.stored_manual_target_temperature_alt_source}"
-            )
-            _LOGGER.info(
-                f"Passive Incr - {self.wiserhub.api_parameters.passive_mode_increment}"
-            )
 
             # Send event to websockets to notify hub update
             async_dispatcher_send(
