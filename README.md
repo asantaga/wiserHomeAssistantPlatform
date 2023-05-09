@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.4
+# Wiser Home Assistant Integration v3.3.5
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -618,6 +618,10 @@ And many many more, please see github pull requests for more info
 There are two primary branches for this integration, `master` and `dev` . Master will be the primary "production" branch and "dev" will be the branch used for development. Other branches will likely exist where we build code into and then merge into dev, which in turn gets merged into master when all is good and dandy.
 
 ## Change log
+
+- 3.3.5
+  - Fix for eroneous current temp if lost signal with TRV - issue [#369](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/369)
+  - Reduced log error level for failed update form hub to warning
 
 - 3.3.4
   - Fix issue with passive mode whereby it did not factor heating channels for multi channel hubs
