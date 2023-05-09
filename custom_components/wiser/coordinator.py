@@ -152,7 +152,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             WiserHubRESTError,
         ) as ex:
             self.last_update_status = "Failed"
-            _LOGGER.error(ex)
+            _LOGGER.warning(ex)
         except Exception as ex:
             self.last_update_status = "Failed"
             _LOGGER.error(ex)
