@@ -487,7 +487,7 @@ async def async_register_websockets(hass, data):
             nodes.append(
                 {
                     "id": 0,
-                    "label": f"Wiser Hub\n{d.wiserhub.system.name}",
+                    "label": f"Wiser Hub",
                     "group": "Controller",
                 }
             )
