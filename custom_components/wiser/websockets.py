@@ -507,14 +507,16 @@ async def async_register_websockets(hass, data):
                 else:
                     lqi = f"{device.signal.displayed_signal_strength} ({device.signal.controller_signal_strength}%)"
 
-                edges.append(
-                    {
-                        "id": f"{device.node_id}-{device.parent_node_id}",
-                        "from": device.node_id,
-                        "to": device.parent_node_id,
-                        "label": lqi,
-                    }
-                )
+                edge = {
+                    "id": f"{device.node_id}-{device.parent_node_id}",
+                    "from": device.node_id,
+                    "to": device.parent_node_id,
+                    "label": lqi,
+                }
+                if lqi == "NoSignal":
+                    edge["color"] = "#db4437"
+
+                edges.append(edge)
 
             connection.send_result(msg["id"], {"nodes": nodes, "edges": edges})
         else:
