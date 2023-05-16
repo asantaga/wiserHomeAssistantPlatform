@@ -487,9 +487,8 @@ async def async_register_websockets(hass, data):
             nodes.append(
                 {
                     "id": 0,
-                    "label": d.wiserhub.system.name,
+                    "label": f"Wiser Hub",
                     "group": "Controller",
-                    "shape": "box",
                 }
             )
 
@@ -500,7 +499,6 @@ async def async_register_websockets(hass, data):
                         "id": device.node_id,
                         "label": f"{device.name}\n({room.name if room else 'No Room'})",
                         "group": device.product_type,
-                        "shape": "box",
                     }
                 )
 
@@ -509,9 +507,16 @@ async def async_register_websockets(hass, data):
                 else:
                     lqi = f"{device.signal.displayed_signal_strength} ({device.signal.controller_signal_strength}%)"
 
-                edges.append(
-                    {"from": device.node_id, "to": device.parent_node_id, "label": lqi}
-                )
+                edge = {
+                    "id": f"{device.node_id}-{device.parent_node_id}",
+                    "from": device.node_id,
+                    "to": device.parent_node_id,
+                    "label": lqi,
+                }
+                if lqi == "NoSignal":
+                    edge["color"] = "#db4437"
+
+                edges.append(edge)
 
             connection.send_result(msg["id"], {"nodes": nodes, "edges": edges})
         else:
