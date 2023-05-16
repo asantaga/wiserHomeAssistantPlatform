@@ -26,4 +26,11 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.3.6
+  - Improved Zigbee network card
+
+- v3.3.5
+  - Fix for eroneous current temp if lost signal with TRV - issue #369
+  - Reduced log error level for failed update form hub to warning
+
 A full change log can be seen on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log)
