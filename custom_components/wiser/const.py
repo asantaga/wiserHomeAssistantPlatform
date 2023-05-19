@@ -10,7 +10,7 @@ DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.3.6"
+VERSION = "3.3.7"
 WISER_PLATFORMS = [
     "climate",
     "sensor",

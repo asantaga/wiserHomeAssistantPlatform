@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.6
+# Wiser Home Assistant Integration v3.3.7
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -25,6 +25,11 @@ For more information checkout the AMAZING community thread available on
 - Improved zigbee network card
 
 ## Change log
+
+- v3.3.7
+  - Fix issue with zigbee card unable to save layout in stack card
+  - Updated libraries for schedule card to fix security vulnerabilities
+  - Fix colours missing on on/off schedule in schedule card
 
 - v3.3.6
   - Improved Zigbee network card
