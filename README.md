@@ -30,6 +30,7 @@ For more information checkout the AMAZING community thread available on
   - Fix issue with zigbee card unable to save layout in stack card
   - Updated libraries for schedule card to fix security vulnerabilities
   - Fix colours missing on on/off schedule in schedule card
+  - Minor UI improvements in schedule card
 
 - v3.3.6
   - Improved Zigbee network card
