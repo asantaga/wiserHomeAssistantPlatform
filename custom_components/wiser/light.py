@@ -94,11 +94,6 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
             "sw_version": self._device.firmware_version,
-            "serial_number": self._data.wiserhub.devices.get_by_id(
-                self._device_id
-            ).serial_number,
-            "product_type": self._device.product_type,
-            "product_identifier": self._device.product_identifier,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -108,9 +103,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs = {}
         # Room
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
-                self._device.room_id
-            ).name
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
         else:
             attrs["room"] = "Unassigned"
 
@@ -150,9 +143,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
             brightness = int(kwargs[ATTR_BRIGHTNESS])
-            _LOGGER.debug(
-                f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%"
-            )
+            _LOGGER.debug(f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%")
             await self._device.set_current_percentage(round((brightness / 255) * 100))
         else:
             _LOGGER.debug(f"Turning on {self.name}")
