@@ -33,10 +33,7 @@ MANUFACTURER = "Schneider Electric"
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORT_FLAGS = (
-    CoverEntityFeature.OPEN
-    | CoverEntityFeature.CLOSE
-    | CoverEntityFeature.SET_POSITION
-    | CoverEntityFeature.STOP
+    CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.SET_POSITION | CoverEntityFeature.STOP
 )
 
 
@@ -97,11 +94,6 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
-            "serial_number": self._data.wiserhub.devices.get_by_id(
-                self._device_id
-            ).serial_number,
-            "product_type": self._device.product_type,
-            "product_identifier": self._device.product_identifier,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -153,9 +145,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
 
         # Room
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
-                self._device.room_id
-            ).name
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
         else:
             attrs["room"] = "Unassigned"
 
