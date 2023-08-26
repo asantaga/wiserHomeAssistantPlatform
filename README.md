@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.8
+# Wiser Home Assistant Integration v3.3.9
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -25,6 +25,9 @@ For more information checkout the AMAZING community thread available on
 - Improved zigbee network card
 
 ## Change log
+
+- v3.3.9
+  - bump api to v1.3.5 to fix warning regarding async not awaited on extra config
 
 - v3.3.8
   - Fix extra key issue preventing loading on HA 2023.8.0 and above
