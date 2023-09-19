@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from homeassistant.components.button import ButtonEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -16,7 +17,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
 
@@ -45,7 +46,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class WiserButton(CoordinatorEntity, ButtonEntity):
-    def __init__(self, coordinator, name="Button"):
+    def __init__(self, coordinator, name="Button") -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -58,7 +59,9 @@ class WiserButton(CoordinatorEntity, ButtonEntity):
             asyncio.sleep(delay)
         state = await self.async_get_last_state()
         if state is not None and state.state is not None:
-            self.__last_pressed = dt_util.parse_datetime(state.state)
+            self.__last_pressed = (  # pylint: disable=unused-private-member
+                dt_util.parse_datetime(state.state)
+            )
         await self._data.async_refresh()
 
     @property
@@ -84,7 +87,7 @@ class WiserButton(CoordinatorEntity, ButtonEntity):
 
 
 class WiserBoostAllHeatingButton(WiserButton):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         super().__init__(data, "Boost All Heating")
 
     async def async_press(self):
@@ -99,7 +102,7 @@ class WiserBoostAllHeatingButton(WiserButton):
 
 
 class WiserCancelHeatingOverridesButton(WiserButton):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         super().__init__(data, "Cancel All Heating Overrides")
 
     async def async_press(self):
@@ -112,7 +115,7 @@ class WiserCancelHeatingOverridesButton(WiserButton):
 
 
 class WiserBoostHotWaterButton(WiserButton):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         super().__init__(data, "Boost Hot Water")
 
     async def async_press(self):
@@ -126,7 +129,7 @@ class WiserBoostHotWaterButton(WiserButton):
 
 
 class WiserCancelHotWaterOverridesButton(WiserButton):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         super().__init__(data, "Cancel Hot Water Overrides")
 
     async def async_press(self):
@@ -139,7 +142,7 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
 
 
 class WiserOverrideHotWaterButton(WiserButton):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         super().__init__(data, "Toggle Hot Water")
 
     async def async_press(self):
@@ -154,7 +157,7 @@ class WiserOverrideHotWaterButton(WiserButton):
 
 
 class WiserMomentsButton(WiserButton):
-    def __init__(self, data, moment_id):
+    def __init__(self, data, moment_id) -> None:
         self._moment_id = moment_id
         super().__init__(
             data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}"

@@ -1,17 +1,19 @@
 import logging
-import enum
-import json
 from typing import Union
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
 
 from aioWiserHeatAPI.const import WiserScheduleTypeEnum
 from aioWiserHeatAPI.wiserhub import WiserScheduleError
+from coordinator import WiserUpdateCoordinator
+
+from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class WiserScheduleEntity(object):
+class WiserScheduleEntity:
+    _data: WiserUpdateCoordinator
+
     def get_schedule_type(self, expand_level: bool = False):
         """Get scheudle type for entity"""
         schedule_type = WiserScheduleTypeEnum.heating
@@ -86,24 +88,33 @@ class WiserScheduleEntity(object):
     async def assign_schedule_to_another_entity(self, to_entity) -> None:
         if self._schedule:
             # Check they are on the same wiser hub
-            if self._data.wiserhub.system.name == to_entity._data.wiserhub.system.name:
+            if (
+                self._data.wiserhub.system.name
+                == to_entity._data.wiserhub.system.name  # pylint: disable=protected-access
+            ):
                 # Check they are of the same schedule type
                 if (hasattr(self, "_room_id") and hasattr(to_entity, "_room_id")) or (
                     hasattr(self, "_device_id") and hasattr(to_entity, "_device_id")
                 ):
                     try:
                         if hasattr(self, "_room_id"):
-                            to_entity_name = to_entity._room.name
+                            to_entity_name = (
+                                to_entity._room.name  # pylint: disable=protected-access
+                            )
                             entity_name = self._room.name
-                            to_id = to_entity._room_id
+                            to_id = (
+                                to_entity._room_id  # pylint: disable=protected-access
+                            )
                         else:
                             to_entity_name = to_entity._data.wiserhub.devices.get_by_id(
-                                to_entity._device_id
+                                to_entity._device_id  # pylint: disable=protected-access
                             ).name
                             entity_name = self._data.wiserhub.devices.get_by_id(
                                 self._device_id
                             ).name
-                            to_id = to_entity._device.device_type_id
+                            to_id = (
+                                to_entity._device.device_type_id  # pylint: disable=protected-access
+                            )
 
                         _LOGGER.info(
                             f"Assigning {entity_name} schedule to {to_entity_name}"
@@ -116,15 +127,20 @@ class WiserScheduleEntity(object):
                         )
                 else:
                     _LOGGER.error(
-                        f"Error assigning schedule.  You must assign schedules of the same type"
+                        "Error assigning schedule.  You must assign schedules of the same type"
                     )
             else:
                 _LOGGER.error(
-                    "Error assigning schedule. You cannot assign schedules across different Wiser Hubs.  Download form one and upload to the other instead"
+                    "Error assigning schedule. You cannot assign schedules across different Wiser Hubs"
                 )
         else:
+            schedule_device = (
+                self._room.name
+                if hasattr(self, "_room_id")
+                else self._data.wiserhub.devices.get_by_id(self._device_id).name
+            )
             _LOGGER.error(
-                f"Error assigning schedule. {self._room.name if hasattr(self, '_room_id') else self._data.wiserhub.devices.get_by_id(self._device_id).name} has no schedule assigned"
+                f"Error assigning schedule. {schedule_device} has no schedule assigned"
             )
 
     @callback
@@ -135,15 +151,23 @@ class WiserScheduleEntity(object):
             to_id = None
             # schedule = None
             schedule_type = self.get_schedule_type()
+            schedule_identifier = (
+                "id " + str(schedule_id) if schedule_id else "name " + schedule_name
+            )
             if hasattr(self, "_room_id"):
                 to_id = self._room_id
+
+                room_name = self._data.wiserhub.rooms.get_by_id(self._room_id).name
                 _LOGGER.info(
-                    f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to room {self._data.wiserhub.rooms.get_by_id(self._room_id).name}"
+                    f"Assigning {schedule_type.value} schedule with {schedule_identifier} to room {room_name}"
                 )
             else:
                 to_id = self._device.device_type_id
+                device_name = self._data.wiserhub.devices.get_by_id(
+                    self._device_id
+                ).name
                 _LOGGER.info(
-                    f"Assigning {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
+                    f"Assigning {schedule_type.value} schedule with {schedule_identifier} to device {device_name}"
                 )
 
             if schedule_name:
@@ -160,7 +184,7 @@ class WiserScheduleEntity(object):
                 await self._data.async_refresh()
             else:
                 _LOGGER.error(
-                    f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {'id ' + str(schedule_id) if schedule_id else 'name ' + schedule_name} does not exist"
+                    f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {schedule_identifier} does not exist"  # noqa: E501
                 )
         except Exception as ex:
             _LOGGER.error(
@@ -183,7 +207,7 @@ class WiserScheduleEntity(object):
                 to_id.append(self._device_id)
                 name = self._data.wiserhub.devices.get_by_id(self._device_id).name
                 _LOGGER.info(
-                    f"Creating {schedule_type.value} schedule with name {name} and assigning to device {self._data.wiserhub.devices.get_by_id(self._device_id).name}"
+                    f"Creating {schedule_type.value} schedule with name {name} and assigning to device {name}"
                 )
 
             await self._data.wiserhub.schedules.create_schedule(
@@ -229,11 +253,11 @@ class WiserScheduleEntity(object):
                                 )
                         else:
                             _LOGGER.error(
-                                f"Error copying schedule.  You cannot copy schedules of different types. "
+                                "Error copying schedule.  You cannot copy schedules of different types. "
                                 + f"{self.name} is type {self._schedule.schedule_type}"
-                                + f"{' - ' + self._schedule.schedule_level_type if hasattr(self._schedule,'schedule_level_type') else ''}"
+                                + f"{' - ' + self._schedule.schedule_level_type if hasattr(self._schedule,'schedule_level_type') else ''}"  # noqa: E501
                                 + f" and {to_entity.name} is type {to_entity._schedule.schedule_type}"
-                                + f"{' - ' + to_entity._schedule.schedule_level_type if hasattr(to_entity._schedule,'schedule_level_type') else ''}"
+                                + f"{' - ' + to_entity._schedule.schedule_level_type if hasattr(to_entity._schedule,'schedule_level_type') else ''}"  # noqa: E501
                             )
                     else:
                         _LOGGER.error(
@@ -241,12 +265,10 @@ class WiserScheduleEntity(object):
                         )
                 else:
                     _LOGGER.error(
-                        f"Cannot copy schedule to entity {to_entity.name}. Please see integration instructions for entities to choose"
+                        f"Cannot copy schedule to entity {to_entity.name}. Please see wiki for entities to choose"
                     )
             else:
-                _LOGGER.error(
-                    "You cannot copy schedules across different Wiser Hubs.  Download form one and upload to the other instead"
-                )
+                _LOGGER.error("You cannot copy schedules across different Wiser Hubs")
         else:
             _LOGGER.error(
                 f"Error copying schedule. {self.name} has no schedule assigned to copy"

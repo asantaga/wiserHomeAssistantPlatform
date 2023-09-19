@@ -1,15 +1,16 @@
+from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX
 
 
-def get_device_name(data, id, type="device"):
-    if type == "device":
-        device = data.wiserhub.devices.get_by_id(id)
+def get_device_name(data, device_id, device_type="device"):
+    if device_type == "device":
+        device = data.wiserhub.devices.get_by_id(device_id)
 
-        if id == 0:
+        if device_id == 0:
             return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
 
         if device.product_type == "iTRV":
-            device_room = data.wiserhub.rooms.get_by_device_id(id)
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
                 # To enable creating seperate devices for multiple TRVs in a room - issue #194
@@ -22,7 +23,7 @@ def get_device_name(data, id, type="device"):
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "RoomStat":
-            device_room = data.wiserhub.rooms.get_by_device_id(id)
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
@@ -32,7 +33,7 @@ def get_device_name(data, id, type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type == "HeatingActuator":
-            device_room = data.wiserhub.rooms.get_by_device_id(id)
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
                 # To enable creating seperate devices for multiple Heating Actuators in a room
@@ -41,7 +42,7 @@ def get_device_name(data, id, type="device"):
                     # 1 is lowest device id, 2 next lowest etc
                     ha_index = device_room.heating_actuator_ids.index(device.id) + 1
                     return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"
-                device_room = data.wiserhub.rooms.get_by_device_id(id)
+                device_room = data.wiserhub.rooms.get_by_device_id(device_id)
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
@@ -49,7 +50,7 @@ def get_device_name(data, id, type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["Shutter", "OnOffLight", "DimmableLight"]:
-            device_room = data.wiserhub.rooms.get_by_device_id(id)
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name} {device.name}"
@@ -57,27 +58,29 @@ def get_device_name(data, id, type="device"):
 
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
-    elif type == "room":
-        room = data.wiserhub.rooms.get_by_id(id)
+    elif device_type == "room":
+        room = data.wiserhub.rooms.get_by_id(device_id)
         return f"{ENTITY_PREFIX} {room.name}"
 
     else:
-        return f"{ENTITY_PREFIX} {type}"
+        return f"{ENTITY_PREFIX} {device_type}"
 
 
-def get_identifier(data, id, type="device"):
-    return f"{data.wiserhub.system.name} {get_device_name(data, id, type)}"
+def get_identifier(data, device_id, device_type="device"):
+    return (
+        f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
+    )
 
 
-def get_unique_id(data, device_type, entity_type, id):
-    return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{id}"
+def get_unique_id(data, device_type, entity_type, device_id):
+    return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
 
 
 def get_room_name(data, room_id):
     return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
 
 
-def get_instance_count(hass) -> int:
+def get_instance_count(hass: HomeAssistant) -> int:
     entries = [
         entry
         for entry in hass.config_entries.async_entries(DOMAIN)
@@ -86,7 +89,7 @@ def get_instance_count(hass) -> int:
     return len(entries)
 
 
-def is_wiser_config_id(hass, config_id):
+def is_wiser_config_id(hass: HomeAssistant, config_id):
     entry = [
         entry
         for entry in hass.config_entries.async_entries(DOMAIN)
@@ -97,7 +100,7 @@ def is_wiser_config_id(hass, config_id):
     return False
 
 
-def get_config_entry_id_by_name(hass, name) -> str or None:
+def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str or None:
     entry = [
         entry
         for entry in hass.config_entries.async_entries(DOMAIN)

@@ -11,7 +11,7 @@ import voluptuous as vol
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.helpers import config_validation as cv
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
@@ -93,7 +93,7 @@ WISER_SWITCHES = [
 ]
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
 
@@ -165,7 +165,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserSwitch(CoordinatorEntity, SwitchEntity):
     """Switch to set the status of the Wiser Operation Mode (Away/Normal)."""
 
-    def __init__(self, coordinator, name, key, type, icon):
+    def __init__(self, coordinator, name, key, device_type, icon) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -173,7 +173,7 @@ class WiserSwitch(CoordinatorEntity, SwitchEntity):
         self._icon = icon
         self._name = name
         self._is_on = False
-        self._type = type
+        self._type = device_type
         self._away_temperature = None
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} init")
 
@@ -209,17 +209,17 @@ class WiserSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        raise NotImplemented
+        raise NotImplementedError
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class WiserSystemSwitch(WiserSwitch):
     """Switch to set the status of a system switch"""
 
-    def __init__(self, data, name, key, icon):
+    def __init__(self, data, name, key, icon) -> None:
         """Initialize the sensor."""
         super().__init__(data, name, key, "system", icon)
         self._away_temperature = None
@@ -238,20 +238,16 @@ class WiserSystemSwitch(WiserSwitch):
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        """
-        await self.hass.async_add_executor_job(
-            setattr, self._data.wiserhub.system, self._key, True
-        )
-        """
+
         fn = getattr(self._data.wiserhub.system, "set_" + self._key)
-        result = await fn(True)
+        await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._data.wiserhub.system, "set_" + self._key)
-        result = await fn(False)
+        await fn(False)
         await self.async_force_update()
         return True
 
@@ -281,7 +277,7 @@ class WiserSystemSwitch(WiserSwitch):
 class WiserRoomSwitch(WiserSwitch):
     """Switch to set the status of a system switch"""
 
-    def __init__(self, data, name, key, icon, room_id):
+    def __init__(self, data, name, key, icon, room_id) -> None:
         """Initialize the sensor."""
         self._room_id = room_id
         super().__init__(data, name, key, "room", icon)
@@ -304,14 +300,14 @@ class WiserRoomSwitch(WiserSwitch):
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         fn = getattr(self._room, "set_" + self._key)
-        result = await fn(True)
+        await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._room, "set_" + self._key)
-        result = await fn(False)
+        await fn(False)
         await self.async_force_update()
         return True
 
@@ -338,7 +334,7 @@ class WiserRoomSwitch(WiserSwitch):
 class WiserDeviceSwitch(WiserSwitch):
     """Switch to set the status of a TRV/Roomstat switch"""
 
-    def __init__(self, data, name, key, icon, device_id):
+    def __init__(self, data, name, key, icon, device_id) -> None:
         """Initialize the sensor."""
         self._device_id = device_id
         super().__init__(data, name, key, "device-switch", icon)
@@ -361,14 +357,14 @@ class WiserDeviceSwitch(WiserSwitch):
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         fn = getattr(self._device, "set_" + self._key)
-        result = await fn(True)
+        await fn(True)
         await self.async_force_update()
         return True
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._device, "set_" + self._key)
-        result = await fn(False)
+        await fn(False)
         await self.async_force_update()
         return True
 
@@ -401,7 +397,7 @@ class WiserDeviceSwitch(WiserSwitch):
 class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     """Plug SwitchEntity Class."""
 
-    def __init__(self, data, plugId, name):
+    def __init__(self, data, plugId, name) -> None:
         """Initialize the sensor."""
         self._name = name
         self._device_id = plugId
@@ -486,7 +482,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
 class WiserSmartPlugAwayActionSwitch(WiserSwitch):
     """Plug SwitchEntity Class."""
 
-    def __init__(self, data, plugId, name):
+    def __init__(self, data, plugId, name) -> None:
         """Initialize the sensor."""
         self._name = name
         self._smart_plug_id = plugId
@@ -542,7 +538,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
 class WiserLightAwayActionSwitch(WiserSwitch):
     """Plug SwitchEntity Class."""
 
-    def __init__(self, data, LightId, name):
+    def __init__(self, data, LightId, name) -> None:
         """Initialize the sensor."""
         self._name = name
         self._light_id = LightId
@@ -598,7 +594,7 @@ class WiserLightAwayActionSwitch(WiserSwitch):
 class WiserShutterAwayActionSwitch(WiserSwitch):
     """Plug SwitchEntity Class."""
 
-    def __init__(self, data, ShutterId, name):
+    def __init__(self, data, ShutterId, name) -> None:
         """Initialize the sensor."""
         self._name = name
         self._shutter_id = ShutterId
@@ -654,7 +650,7 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 class WiserPassiveModeSwitch(WiserSwitch):
     """Room Passive Mode SwitchEntity Class."""
 
-    def __init__(self, hass, data, room_id, name):
+    def __init__(self, hass: HomeAssistant, data, room_id, name) -> None:
         """Initialize the sensor."""
         self._name = name
         self._room_id = room_id

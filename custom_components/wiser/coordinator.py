@@ -11,7 +11,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from homeassistant.const import (
     CONF_HOST,
-    CONF_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
 )
@@ -66,7 +65,6 @@ class WiserData:
 
 
 class WiserUpdateCoordinator(DataUpdateCoordinator):
-
     config_entry: ConfigEntry
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:

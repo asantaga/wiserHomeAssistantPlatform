@@ -9,14 +9,14 @@ import logging
 from .events import fire_events
 import voluptuous as vol
 
-from homeassistant.components.climate.const import (
+from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
     ClimateEntityFeature,
 )
 from homeassistant.components.climate import ClimateEntity
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
-from homeassistant.core import callback
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM, TEMP_OFF
@@ -92,7 +92,7 @@ PASSIVE_MODE_SUPPORT_FLAGS = (
 )
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get coordinator
 
@@ -141,7 +141,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     """Wiser temp probe climate entity object"""
 
-    def __init__(self, hass, coordinator, actuator_id):
+    def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._hass = hass
@@ -254,7 +254,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def temperature_unit(self):
         """Return temp units."""
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
     def unique_id(self):
@@ -265,7 +265,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
 class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
-    def __init__(self, hass, coordinator, room_id):
+    def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._hass = hass
@@ -275,6 +275,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
+        self._boosted_time = 0
 
         self.passive_temperature_increment = self._data.passive_temperature_increment
 
@@ -538,7 +539,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def temperature_unit(self):
         """Return temp units."""
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
     def unique_id(self):

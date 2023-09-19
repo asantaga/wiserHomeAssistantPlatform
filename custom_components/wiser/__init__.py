@@ -7,6 +7,7 @@ msparker@sky.com
 import asyncio
 import logging
 
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
@@ -29,7 +30,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry):
+async def async_setup_entry(hass: HomeAssistant, config_entry):
     """Set up Wiser from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -74,7 +75,7 @@ async def async_setup_entry(hass, config_entry):
     return True
 
 
-async def async_update_device_registry(hass, config_entry):
+async def async_update_device_registry(hass: HomeAssistant, config_entry):
     """Update device registry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     device_registry = dr.async_get(hass)
@@ -91,22 +92,24 @@ async def async_update_device_registry(hass, config_entry):
     )
 
 
-async def _async_update_listener(hass, config_entry):
+async def _async_update_listener(hass: HomeAssistant, config_entry):
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_remove_config_entry_device(hass, config_entry, device_entry) -> bool:
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry, device_entry
+) -> bool:
     """Delete device if not entities"""
     if device_entry.model == "Controller":
         _LOGGER.error(
-            "You cannot delete the Wiser Controller device via the device delete method.  Please remove the integration instead."
+            "You cannot delete the Wiser Controller using device delete.  Please remove the integration instead"
         )
         return False
     return True
 
 
-async def async_unload_entry(hass, config_entry):
+async def async_unload_entry(hass: HomeAssistant, config_entry):
     """Unload a config entry"""
 
     if get_instance_count(hass) == 0:

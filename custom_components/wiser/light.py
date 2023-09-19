@@ -7,19 +7,19 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
 from .helpers import get_device_name, get_identifier, get_unique_id
 from .schedules import WiserScheduleEntity
 
-MANUFACTURER = "Schneider Electric"
+MANUFACTURER = MANUFACTURER_SCHNEIDER
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
 
@@ -37,7 +37,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     """WiserLight ClientEntity Object."""
 
-    def __init__(self, coordinator, light_id):
+    def __init__(self, coordinator, light_id) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -103,7 +103,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs = {}
         # Room
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
+                self._device.room_id
+            ).name
         else:
             attrs["room"] = "Unassigned"
 
@@ -143,7 +145,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
             brightness = int(kwargs[ATTR_BRIGHTNESS])
-            _LOGGER.debug(f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%")
+            _LOGGER.debug(
+                f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%"
+            )
             await self._device.set_current_percentage(round((brightness / 255) * 100))
         else:
             _LOGGER.debug(f"Turning on {self.name}")
@@ -161,10 +165,6 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
 
 class WiserDimmableLight(WiserLight):
     """A Class for an Wiser light entity."""
-
-    def __init__(self, data, light_id):
-        """Initialize the sensor."""
-        super().__init__(data, light_id)
 
     @property
     def supported_color_modes(self):

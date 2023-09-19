@@ -18,7 +18,7 @@ from aioWiserHeatAPI.exceptions import (
 from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import selector, SelectSelectorMode
 
@@ -50,7 +50,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass, data):
+async def validate_input(hass: HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -85,7 +85,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the wiser flow."""
         self.discovery_info = {}
 
@@ -107,9 +107,12 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 validated = await validate_input(self.hass, user_input)
             except WiserHubAuthenticationError:
                 errors["base"] = "auth_failure"
-            except (WiserHubConnectionError):
+            except WiserHubConnectionError:
                 errors["base"] = "timeout_error"
-            except (WiserHubRESTError, RuntimeError, Exception) as ex:
+            except (
+                WiserHubRESTError,
+                RuntimeError,
+            ) as ex:
                 errors["base"] = "unknown"
                 _LOGGER.debug(ex)
 
@@ -165,11 +168,14 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             except WiserHubAuthenticationError:
                 _LOGGER.warning("Authentication failure connecting to Wiser Hub")
                 errors["base"] = "auth_failure"
-            except (WiserHubConnectionError):
+            except WiserHubConnectionError:
                 _LOGGER.warning("Connection timout error connecting to Wiser Hub")
                 errors["base"] = "timeout_error_discovery"
-            except (WiserHubRESTError, RuntimeError, Exception) as ex:
-                _LOGGER.exception("Unknown error connecting to Wiser Hub")
+            except (
+                WiserHubRESTError,
+                RuntimeError,
+            ) as ex:
+                _LOGGER.error("Unknown error connecting to Wiser Hub")
                 _LOGGER.debug(ex)
                 errors["base"] = "unknown"
 
@@ -202,7 +208,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for wiser hub."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry):
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
