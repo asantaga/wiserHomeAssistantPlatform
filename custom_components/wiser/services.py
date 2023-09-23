@@ -1,4 +1,6 @@
 # Initialise global services
+import os
+import aiofiles
 import voluptuous as vol
 import logging
 from .const import (
@@ -119,6 +121,12 @@ async def async_setup_services(hass: HomeAssistant, data):
             entity = get_entity_from_entity_id(entity_id)
             if entity:
                 if hasattr(entity, "get_schedule"):
+                    # Remove leading slash on config if exists
+                    filename = str(filename).replace("/config", "config")
+                    # Check if dir exists, if not create it.
+                    file_dir = os.path.dirname(filename)
+                    if not os.path.exists(file_dir):
+                        await aiofiles.os.makedirs(file_dir, exist_ok=True)
                     fn = getattr(entity, "get_schedule")
                     await fn(filename)
                 else:
