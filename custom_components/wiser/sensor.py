@@ -20,7 +20,6 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfEnergy,
 )
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -760,10 +759,6 @@ class WiserLTSTempSensor(WiserSensor):
             return None
         return UnitOfTemperature.CELSIUS
 
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
 
 class WiserLTSOpenthermSensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
@@ -892,10 +887,6 @@ class WiserLTSOpenthermSensor(WiserSensor):
             return None
         return UnitOfTemperature.CELSIUS
 
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
 
 class WiserLTSHumiditySensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
@@ -962,10 +953,6 @@ class WiserLTSHumiditySensor(WiserSensor):
     @property
     def native_unit_of_measurement(self):
         return "%"
-
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
 
 
 class WiserLTSDemandSensor(WiserSensor):
@@ -1042,10 +1029,6 @@ class WiserLTSDemandSensor(WiserSensor):
     @property
     def native_unit_of_measurement(self):
         return PERCENTAGE
-
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
 
 
 class WiserLTSPowerSensor(WiserSensor):
@@ -1158,7 +1141,3 @@ class WiserLTSPowerSensor(WiserSensor):
             return UnitOfPower.WATT
         else:
             return UnitOfEnergy.KILO_WATT_HOUR
-
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
