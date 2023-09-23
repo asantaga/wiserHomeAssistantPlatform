@@ -410,6 +410,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         await self.async_force_update()
 
     @property
+    def room(self):
+        """Return room"""
+        return self._room
+
+    @property
     def state(self):
         """Return state"""
         return HVAC_MODE_WISER_TO_HASS[self._room.mode]
