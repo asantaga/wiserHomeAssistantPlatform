@@ -233,6 +233,11 @@ class WiserBatterySensor(WiserSensor):
         self.async_write_ha_state()
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._device.battery.voltage is not None
+
+    @property
     def device_class(self):
         """Return the class of the sensor."""
         return SensorDeviceClass.BATTERY
