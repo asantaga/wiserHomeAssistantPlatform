@@ -392,6 +392,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             # Show integration and api version info
             attrs["api_version"] = self._data.wiserhub.version
             attrs["integration_version"] = VERSION
+            attrs["uptime"] = self._data.wiserhub.status.uptime
+            attrs["last_reset_reason"] = self._data.wiserhub.status.last_reset_reason
 
         # Other
         if self._sensor_type == "RoomStat":
