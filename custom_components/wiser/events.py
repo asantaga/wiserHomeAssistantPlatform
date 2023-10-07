@@ -2,13 +2,13 @@ import logging
 
 from homeassistant.const import (
     CONF_ATTRIBUTE,
-    CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
 
-from homeassistant.components.climate.const import DOMAIN as DOMAIN_CLIMATE
+from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE
+from homeassistant.core import HomeAssistant
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,10 +64,8 @@ WISER_COMMON_EVENT_DATA = {
 }
 
 
-def fire_events(hass, entity_id: str, old_state: dict, new_state: dict):
+def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state: dict):
     for event in WISER_EVENTS:
-        fire_event = False
-
         if hasattr(old_state, event[CONF_ATTRIBUTE]):
             if (
                 (
@@ -91,7 +89,6 @@ def fire_events(hass, entity_id: str, old_state: dict, new_state: dict):
                     and getattr(new_state, event[CONF_ATTRIBUTE]) == event[CONF_VALUE]
                 )
             ):
-
                 message = {CONF_ENTITY_ID: entity_id, CONF_TYPE: event[CONF_TYPE]}
                 old_state_attr = {}
                 new_state_attr = {}

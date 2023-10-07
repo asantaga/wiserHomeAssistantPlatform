@@ -8,7 +8,7 @@ from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM
 
 from awesomeversion import AwesomeVersion
 from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -16,7 +16,7 @@ HA_VERSION_OBJ = AwesomeVersion(HA_VERSION)
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
     wiser_numbers = []
@@ -44,7 +44,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
-    def __init__(self, coordinator, name):
+    def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -135,7 +135,7 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
 
 
 class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
-    def __init__(self, coordinator, actuator, type):
+    def __init__(self, coordinator, actuator, device_type) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator

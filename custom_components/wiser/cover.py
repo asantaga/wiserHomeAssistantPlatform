@@ -13,7 +13,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .schedules import WiserScheduleEntity
@@ -21,23 +21,25 @@ from .schedules import WiserScheduleEntity
 from .const import (
     DATA,
     DOMAIN,
-    MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
 )
 from .helpers import get_device_name, get_identifier
 
 import logging
 
-# TODO: Set this based on model of hub
-MANUFACTURER = "Schneider Electric"
+MANUFACTURER = MANUFACTURER_SCHNEIDER
 
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORT_FLAGS = (
-    CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.SET_POSITION | CoverEntityFeature.STOP
+    CoverEntityFeature.OPEN
+    | CoverEntityFeature.CLOSE
+    | CoverEntityFeature.SET_POSITION
+    | CoverEntityFeature.STOP
 )
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser shutter device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
 
@@ -53,7 +55,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     """Wisershutter ClientEntity Object."""
 
-    def __init__(self, coordinator, shutter_id):
+    def __init__(self, coordinator, shutter_id) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -79,12 +81,6 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     def supported_features(self):
         """Flag supported features."""
         return SUPPORT_FLAGS
-
-    # TODO: What is this for?
-    @property
-    def scheduled_position(self):
-        """Return scheduled position from data."""
-        return self._device.scheduled_lift
 
     @property
     def device_info(self):
@@ -145,7 +141,9 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
 
         # Room
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
+            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
+                self._device.room_id
+            ).name
         else:
             attrs["room"] = "Unassigned"
 
@@ -166,7 +164,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             attrs["current_state"] = "Open"
         elif self._device.is_closed:
             attrs["current_state"] = "Closed"
-        elif self._device.is_open == False and self._device.is_closed == False:
+        elif not (self._device.is_open or self._device.is_closed):
             attrs["current_state"] = "Middle"
         attrs["lift_movement"] = self._device.lift_movement
 

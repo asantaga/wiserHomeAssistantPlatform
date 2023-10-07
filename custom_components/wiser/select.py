@@ -4,20 +4,19 @@ from .const import (
     DATA,
     DOMAIN,
     MANUFACTURER,
-    ROOM,
 )
 
 from .helpers import get_device_name, get_unique_id, get_identifier
 from .schedules import WiserScheduleEntity
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     wiser_selects = []
@@ -46,7 +45,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class WiserSelectEntity(CoordinatorEntity, SelectEntity):
-    def __init__(self, coordinator):
+    def __init__(self, coordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -111,7 +110,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
 
 
 class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         """Initialize the sensor."""
         super().__init__(data)
         self._hotwater = self._data.wiserhub.hotwater
@@ -162,7 +161,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
 
 class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, smartplug_id):
+    def __init__(self, data, smartplug_id) -> None:
         """Initialize the sensor."""
         self._device_id = smartplug_id
         super().__init__(data)
@@ -180,7 +179,7 @@ class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
 
 class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, light_id):
+    def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         self._device_id = light_id
         super().__init__(data)
@@ -198,7 +197,7 @@ class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
 
 class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, shutter_id):
+    def __init__(self, data, shutter_id) -> None:
         """Initialize the sensor."""
         self._device_id = shutter_id
         super().__init__(data)

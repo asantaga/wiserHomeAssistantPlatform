@@ -1,4 +1,6 @@
 # Initialise global services
+import os
+import aiofiles
 import voluptuous as vol
 import logging
 from .const import (
@@ -23,15 +25,14 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
 )
-from homeassistant.core import callback, ServiceCall
+from homeassistant.core import HomeAssistant, callback, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_services(hass, data):
-
+async def async_setup_services(hass: HomeAssistant, data):
     GET_SCHEDULE_SCHEMA = vol.Schema(
         {
             vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
@@ -120,11 +121,17 @@ async def async_setup_services(hass, data):
             entity = get_entity_from_entity_id(entity_id)
             if entity:
                 if hasattr(entity, "get_schedule"):
+                    # Remove leading slash on config if exists
+                    filename = str(filename).replace("/config", "config")
+                    # Check if dir exists, if not create it.
+                    file_dir = os.path.dirname(filename)
+                    if not os.path.exists(file_dir):
+                        await aiofiles.os.makedirs(file_dir, exist_ok=True)
                     fn = getattr(entity, "get_schedule")
                     await fn(filename)
                 else:
                     _LOGGER.error(
-                        f"Cannot save schedule from entity {entity_id}.  Please see integration instructions for entities to choose"
+                        f"Cannot save schedule from entity {entity_id}.  Please see wiki for entities to choose"
                     )
             else:
                 _LOGGER.error(
@@ -144,7 +151,7 @@ async def async_setup_services(hass, data):
                     await fn(filename)
                 else:
                     _LOGGER.error(
-                        f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose"
+                        f"Cannot set schedule for entity {entity_id}.  Please see wiki for entities to choose"
                     )
             else:
                 _LOGGER.error(
@@ -166,7 +173,7 @@ async def async_setup_services(hass, data):
                     await fn(schedule.async_render(parse_result=False))
                 else:
                     _LOGGER.error(
-                        f"Cannot set schedule for entity {entity_id}.  Please see integration instructions for entities to choose"
+                        f"Cannot set schedule for entity {entity_id}.  Please see wiki for entities to choose"
                     )
             else:
                 _LOGGER.error(
@@ -189,11 +196,14 @@ async def async_setup_services(hass, data):
                     await fn(to_entity)
                 else:
                     _LOGGER.error(
-                        f"Cannot copy schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose"
+                        f"Cannot copy schedule from entity {from_entity.name}.  Please see wiki for entities to choose"
                     )
             else:
+                from_entity_id_text = entity_id if not from_entity else ""
+                to_entity_id_text = to_entity_id if not to_entity else ""
+                and_text = " and " if not from_entity and not to_entity else ""
                 _LOGGER.error(
-                    f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration"
+                    f"Invalid entity - {from_entity_id_text}{and_text}{to_entity_id_text} does not exist in this integration"  # noqa=E501
                 )
             return False
 
@@ -217,11 +227,14 @@ async def async_setup_services(hass, data):
                         await fn(to_entity)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule from entity {from_entity.name}.  Please see integration instructions for entities to choose"
+                            f"Cannot assign schedule from entity {from_entity.name}. Please see wiki for entities to choose"  # noqa=E501
                         )
                 else:
+                    from_entity_id_text = entity_id if not from_entity else ""
+                    to_entity_id_text = to_entity_id if not to_entity else ""
+                    and_text = " and " if not from_entity and not to_entity else ""
                     _LOGGER.error(
-                        f"Invalid entity - {entity_id if not from_entity else ''}{' and ' if not from_entity and not to_entity else ''}{to_entity_id if not to_entity else ''} does not exist in this integration"
+                        f"Invalid entity - {from_entity_id_text}{and_text}{to_entity_id_text} does not exist in this integration"  # noqa=E501
                     )
         elif schedule_id:
             # Assign scheduel with id to this entity
@@ -233,7 +246,7 @@ async def async_setup_services(hass, data):
                         await fn(schedule_id, None)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose"
+                            f"Cannot assign schedule to entity {to_entity.name}. Please see wiki for entities to choose"
                         )
         elif schedule_name:
             # Assign schedule with name to this entity
@@ -245,7 +258,7 @@ async def async_setup_services(hass, data):
                         await fn(None, schedule_name)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose"
+                            f"Cannot assign schedule to entity {to_entity.name}. Please see wiki for entities to choose"
                         )
         else:
             # Create default schedule and assign to entity
@@ -256,7 +269,7 @@ async def async_setup_services(hass, data):
                     await fn()
                 else:
                     _LOGGER.error(
-                        f"Cannot assign schedule to entity {to_entity.name}.  Please see integration instructions for entities to choose"
+                        f"Cannot assign schedule to entity {to_entity.name}.  Please see wiki for entities to choose"
                     )
 
     @callback
@@ -268,16 +281,16 @@ async def async_setup_services(hass, data):
             entity = get_entity_from_entity_id(entity_id)
             if entity:
                 if hasattr(entity, "async_set_mode"):
-                    if mode.lower() in [option.lower() for option in entity._options]:
+                    if mode.lower() in [option.lower() for option in entity.options]:
                         fn = getattr(entity, "async_set_mode")
                         await fn(mode)
                     else:
                         _LOGGER.error(
-                            f"{mode} is not a valid mode for this device.  Options are {entity._options}"
+                            f"{mode} is not a valid mode for this device.  Options are {entity.options}"
                         )
                 else:
                     _LOGGER.error(
-                        f"Cannot set mode for entity {entity_id}.  Please see integration instructions for entities to choose"
+                        f"Cannot set mode for entity {entity_id}.  Please see wiki for entities to choose"
                     )
             else:
                 _LOGGER.error(
@@ -293,7 +306,6 @@ async def async_setup_services(hass, data):
         if get_instance_count(hass) > 1:
             if not hub:
                 raise HomeAssistantError("Please specify a hub config entry id or name")
-                return None
             else:
                 # Find hub from config_entry_id or hub name
                 if is_wiser_config_id(hass, hub):
@@ -310,7 +322,7 @@ async def async_setup_services(hass, data):
                 _LOGGER.info(f"Boosting Hot Water for {time_period}m")
                 await instance.wiserhub.hotwater.boost(time_period)
             else:
-                _LOGGER.info(f"Cancelling Hot Water boost")
+                _LOGGER.info("Cancelling Hot Water boost")
                 await instance.wiserhub.hotwater.cancel_overrides()
             await data.async_refresh()
         else:
@@ -327,7 +339,6 @@ async def async_setup_services(hass, data):
         if get_instance_count(hass) > 1:
             if not hub:
                 raise HomeAssistantError("Please specify a hub config entry id or name")
-                return None
             else:
                 # Find hub from config_entry_id or hub name
                 if is_wiser_config_id(hass, hub):
@@ -347,7 +358,7 @@ async def async_setup_services(hass, data):
                 )
             except WiserHubRESTError:
                 raise HomeAssistantError(
-                    "Error setting parameter.  This is an invalid parameter/endpoint or maybe a parameter that cannot be set"
+                    "Error setting parameter.  Invalid parameter/endpoint or maybe a parameter that cannot be set"
                 )
             await data.async_refresh()
 

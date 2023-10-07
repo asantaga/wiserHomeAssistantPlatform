@@ -29,6 +29,7 @@ CUSTOM_DATA_STORE = "/.storage/wiser_custom_data"
 
 # Hub
 MANUFACTURER = "Drayton Wiser"
+MANUFACTURER_SCHNEIDER = "Schneider Electric"
 ENTITY_PREFIX = "Wiser"
 ROOM = "Room"
 
