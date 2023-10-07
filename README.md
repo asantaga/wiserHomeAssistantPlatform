@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.9
+# Wiser Home Assistant Integration v3.3.10
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -25,6 +25,14 @@ For more information checkout the AMAZING community thread available on
 - Improved zigbee network card
 
 ## Change log
+
+- v3.3.10
+  - bump api to v1.3.8 to fix passive mode error if room trv/roomstat goes offline
+  - make battery sensor unavailable if no battery info provided by hub (previously showed 0%)
+  - add uptime and last reset reason to Hub signal sensor
+  - make LTS sensors normal sensors instead of diagnostic sensors so they show in Area card - issue #381
+  - save schedule service will now create directory for file if it doesn't exist
+  - correct relative modulation level magnitude
 
 - v3.3.9
   - bump api to v1.3.5 to fix warning regarding async not awaited on extra config
