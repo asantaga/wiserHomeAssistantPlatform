@@ -168,7 +168,6 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_device_class = SensorDeviceClass.POWER_FACTOR
         self._data = coordinator
         self._device = None
         self._device_id = device_id
@@ -197,6 +196,11 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
         return self._state
 
     @property
+    def native_value(self):
+        """Return the native value of this entity"""
+        return self._state
+
+    @property
     def unique_id(self):
         """Return uniqueid."""
         return get_unique_id(self._data, "sensor", self._sensor_type, self._device_id)
@@ -219,7 +223,6 @@ class WiserBatterySensor(WiserSensor):
 
     def __init__(self, data, device_id=0, sensor_type="") -> None:
         """Initialise the battery sensor."""
-        self._attr_device_class = SensorDeviceClass.BATTERY
         super().__init__(data, device_id, sensor_type)
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._state = self._device.battery.percent
@@ -245,7 +248,7 @@ class WiserBatterySensor(WiserSensor):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement of this entity."""
-        return "%"
+        return PERCENTAGE
 
     @property
     def extra_state_attributes(self):
@@ -298,6 +301,11 @@ class WiserDeviceSignalSensor(WiserSensor):
     async def async_update(self) -> None:
         """Fetch new state data for the sensor."""
         await super().async_update()
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the native uom"""
+        return None
 
     @property
     def name(self):
