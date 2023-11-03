@@ -28,7 +28,7 @@ For more information checkout the AMAZING community thread available on
 
 - v3.3.11
   - Add check for overrides to prevent turning off away modewhen selecting cancel overrides when none exist (Wiser hub bug)
-  - Correct sensor device class and native values to fix history not displaying issue in HA
+  - Correct sensor device class and native values to fix history not displaying issue in HA 2023.11
 
 - v3.3.10
   - bump api to v1.3.8 to fix passive mode error if room trv/roomstat goes offline
