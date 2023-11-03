@@ -168,7 +168,6 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_device_class = SensorDeviceClass.POWER_FACTOR
         self._data = coordinator
         self._device = None
         self._device_id = device_id
@@ -278,6 +277,7 @@ class WiserDeviceSignalSensor(WiserSensor):
 
     def __init__(self, data, device_id=0, sensor_type="") -> None:
         """Initialise the device sensor."""
+        self._attr_device_class = SensorDeviceClass.BATTERY
         super().__init__(data, device_id, sensor_type)
         if self._device_id == 0:
             self._device = self._data.wiserhub.system
