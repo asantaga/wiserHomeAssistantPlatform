@@ -9,6 +9,7 @@ import asyncio
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
+    ATTR_TILT_POSITION,    
     CoverEntity,
     CoverEntityFeature,
 )
@@ -173,6 +174,37 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         attrs["manual_lift"] = self._device.manual_lift
         attrs["target_lift"] = self._device.target_lift
         attrs["scheduled_lift"] = self._device.scheduled_lift
+
+# Data provided by a wiser Hub generation 2
+
+        # Zigbee uuid
+        attrs["type"] = self._device.type_comm
+        attrs["uuid"] = self._device.uuid
+        attrs["endpoint"] = self._device.endpoint
+        attrs["device_id"] = self._device_id
+
+        # Tilt settings
+        attrs["tilt_enabled"] = self._device.drive_config.tilt_enabled
+        attrs["tilt_time"] = self._device.drive_config.tilt_time
+        attrs["tilt_angle_closed"] = self._device.drive_config.tilt_angle_closed
+        attrs["tilt_angle_open"] = self._device.drive_config.tilt_angle_open
+
+        # features supported
+        attrs["is_lift_position_supported"] = self._device.is_lift_position_supported
+        attrs["is_tilt_supported"] = self._device.is_tilt_supported
+        # tilt Positions Added LGO
+        attrs["tilt_movement"] = self._device.tilt_movement
+
+        # tilt Positions Added LGO
+        attrs["current_tilt"] = self._device.current_tilt
+        attrs["manual_tilt"] = self._device.manual_tilt
+        attrs["target_tilt"] = self._device.target_lift
+        attrs["scheduled_lift"] = self._device.scheduled_lift
+
+        # Summer comfort Added LGO
+        attrs["respect_summer_comfort"] = self._device.respect_summer_comfort
+        attrs["summer_comfort_lift"] = self._device.summer_comfort_lift
+        attrs["summer_comfort_tilt"] = self._device.summer_comfort_tilt
 
         # Schedule
         attrs["schedule_id"] = self._device.schedule_id

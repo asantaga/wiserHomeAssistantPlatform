@@ -353,6 +353,13 @@ class WiserDeviceSignalSensor(WiserSensor):
             "displayed_signal_strength"
         ] = self._device.signal.displayed_signal_strength
 
+#   Wiser hub V2 
+        # Zigbee uuid
+        attrs["uuid"] = self._device.uuid
+        attrs["type"] = self._device.type_comm
+#       attrs["endpoint"] = self._device.endpoint
+#   End Wiser hub V2   
+#  
         # For non controller device
         if self._device_id != 0:
             attrs["serial_number"] = self._device.serial_number
