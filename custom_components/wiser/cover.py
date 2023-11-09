@@ -89,7 +89,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
+            "model": self._data.wiserhub.devices.get_by_id(self._device_id).product_type,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
