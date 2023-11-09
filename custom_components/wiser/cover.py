@@ -184,6 +184,16 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         attrs["target_lift"] = self._device.target_lift
         attrs["scheduled_lift"] = self._device.scheduled_lift
 
+        if self._device.is_tilt_supported:
+            # Tilt settings
+            attrs["current_tilt"] = self._device.current_tilt
+            attrs["manual_tilt"] = self._device.manual_tilt
+            attrs["target_tilt"] = self._device.target_tilt
+            attrs["tilt_time"] = self._device.drive_config.tilt_time
+            attrs["tilt_angle_closed"] = self._device.drive_config.tilt_angle_closed
+            attrs["tilt_angle_open"] = self._device.drive_config.tilt_angle_open
+            attrs["tilt_movement"] = self._device.tilt_movement
+
         # Schedule
         attrs["schedule_id"] = self._device.schedule_id
         if self._device.schedule:
