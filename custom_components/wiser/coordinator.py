@@ -84,6 +84,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             ),
         )
 
+        self.hub_version = 0
         self.last_update_time = datetime.now()
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
@@ -134,6 +135,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
     async def async_update_data(self) -> WiserData:
         try:
             await self.wiserhub.read_hub_data()
+            self.hub_version = self.wiserhub.system.hardware_generation
             self.last_update_time = datetime.now()
             self.last_update_status = "Success"
 
