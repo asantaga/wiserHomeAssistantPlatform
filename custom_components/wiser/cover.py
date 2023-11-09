@@ -6,6 +6,8 @@ Angelosantagata@gmail.com
 
 """
 import asyncio
+import logging
+from typing import Any
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -25,8 +27,6 @@ from .const import (
 )
 from .helpers import get_device_name, get_identifier
 
-import logging
-
 MANUFACTURER = MANUFACTURER_SCHNEIDER
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ SUPPORT_FLAGS = (
     | CoverEntityFeature.SET_POSITION
     | CoverEntityFeature.STOP
 )
+
+TILT_SUPPORT_FLAGS = (CoverEntityFeature.OPEN_TILT | CoverEntityFeature.CLOSE_TILT | CoverEntityFeature.SET_TILT_POSITION | CoverEntityFeature.STOP_TILT)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -80,6 +82,8 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def supported_features(self):
         """Flag supported features."""
+        if self._device.is_tilt_supported:
+            return SUPPORT_FLAGS + TILT_SUPPORT_FLAGS
         return SUPPORT_FLAGS
 
     @property
@@ -107,6 +111,11 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     def current_cover_position(self):
         """Return current position from data."""
         return self._device.current_lift
+
+    @property
+    def current_cover_tilt_position(self) -> int | None:
+        """Return current position of cover tilt."""
+        return self._device.current_tilt
 
     @property
     def is_closed(self):
@@ -208,4 +217,28 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         """Stop shutter"""
         _LOGGER.debug(f"Stopping {self.name}")
         await self._device.stop()
+        await self.async_force_update()
+
+    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
+        """Move the cover tilt to a specific position."""
+        position = kwargs[ATTR_POSITION]
+        _LOGGER.debug(f"Setting cover tilt position for {self.name} to {position}")
+        await self._device.open_titl(position)
+        await self.async_force_update()
+
+    async def async_close_cover_tilt(self, **kwargs):
+        """Close shutter"""
+        _LOGGER.debug(f"Closing tilt {self.name}")
+        await self._device.close_tilt()
+        await self.async_force_update()
+
+    async def async_open_cover_tilt(self, **kwargs: Any) -> None:
+        """Open the cover tilt."""
+        await self._device.open_tilt()
+        await self.async_force_update()
+
+    async def async_stop_cover_tilt(self, **kwargs):
+        """Stop shutter"""
+        _LOGGER.debug(f"Stopping tilt {self.name}")
+        await self._device.stop_tilt()
         await self.async_force_update()
