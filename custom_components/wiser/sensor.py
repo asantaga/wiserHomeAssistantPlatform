@@ -103,7 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for power_tag in data.wiserhub.devices.power_tags.all:
             wiser_sensors.extend(
                 [
-                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="Power"),
+                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="Power", name="Power"),
                     WiserLTSPowerSensor(data, power_tag.id, sensor_type="Energy", name="Energy Delivered"),
                     WiserLTSPowerSensor(data, power_tag.id, sensor_type="EnergyReceived", name="Energy Received"),
                     WiserCurrentVoltageSensor(data, power_tag.id, sensor_type="Voltage"),
@@ -1130,6 +1130,7 @@ class WiserLTSPowerSensor(WiserSensor):
         self._device_id = device_id
         self._lts_sensor_type = sensor_type
         self._device = data.wiserhub.devices.get_by_id(device_id)
+        self._sensor_name = name
         if self._device.room_id == 0:
             device_name = self._device.product_type + " " + str(self._device.id)
         else:
@@ -1139,7 +1140,7 @@ class WiserLTSPowerSensor(WiserSensor):
             super().__init__(
                 data,
                 device_id,
-                f"{name.title()} {device_name}"
+                f"{name.title()} "
             )
         else:
             if sensor_type == "Power":
@@ -1180,6 +1181,14 @@ class WiserLTSPowerSensor(WiserSensor):
                 2,
             )
         self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        if self._sensor_name:
+            return f"{get_device_name(self._data, self._device_id)} {self._sensor_name}"
+        else:
+            return get_device_name(self._data, 0, self._sensor_type)
 
     @property
     def device_info(self):
