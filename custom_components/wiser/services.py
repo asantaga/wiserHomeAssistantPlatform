@@ -125,7 +125,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     filename = str(filename).replace("/config", "config")
                     # Check if dir exists, if not create it.
                     file_dir = os.path.dirname(filename)
-                    if not os.path.exists(file_dir):
+                    if file_dir and not os.path.exists(file_dir):
                         await aiofiles.os.makedirs(file_dir, exist_ok=True)
                     fn = getattr(entity, "get_schedule")
                     await fn(filename)
