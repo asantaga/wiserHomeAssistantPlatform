@@ -11,6 +11,7 @@ from typing import Any
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
+    ATTR_TILT_POSITION,
     CoverEntity,
     CoverEntityFeature,
 )
@@ -221,9 +222,9 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
-        position = kwargs[ATTR_POSITION]
+        position = kwargs[ATTR_TILT_POSITION]
         _LOGGER.debug(f"Setting cover tilt position for {self.name} to {position}")
-        await self._device.open_titl(position)
+        await self._device.open_tilt(position)
         await self.async_force_update()
 
     async def async_close_cover_tilt(self, **kwargs):
