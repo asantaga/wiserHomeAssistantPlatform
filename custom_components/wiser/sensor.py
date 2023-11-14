@@ -618,6 +618,7 @@ class WiserCurrentVoltageSensor(WiserSensor):
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self.async_write_ha_state()
 
     @property
     def device_class(self):
