@@ -1,6 +1,14 @@
+from dataclasses import dataclass
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX
 
+@dataclass
+class WiserHubAttribute:
+    path: str
+
+@dataclass
+class WiserDeviceAttribute:
+    path: str
 
 def get_device_name(data, device_id, device_type="device"):
     if device_type == "device":
@@ -81,6 +89,21 @@ def get_unique_id(data, device_type, entity_type, device_id):
 
 def get_room_name(data, room_id):
     return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
+
+def get_device_by_node_id(data, node_id: int):
+    return data.wiserhub.devices.get_by_node_id(node_id)
+
+def get_hot_water_operation_mode(data, device) -> str:
+    preset = None
+    mode = "Manual" if device.mode != "Auto" else "Auto"
+    if device.is_boosted:
+       preset = f"Boost {int(device.boost_time_remaining/60)}m"
+    elif device.is_override:
+        preset = "Override"
+    elif device.is_away_mode:
+        preset = "Away Mode"
+
+    return f"{mode}{' - ' + preset if preset else ''}"
 
 
 def get_instance_count(hass: HomeAssistant) -> int:
