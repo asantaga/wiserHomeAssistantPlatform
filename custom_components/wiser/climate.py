@@ -454,36 +454,40 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
 #Added by LGO
     #Climate capabilities
-        attrs["heating_supported"] = self._room.climate_capabilities.heating_supported
-        attrs["cooling_supported"] = self._room.climate_capabilities.cooling_supported
+        
+        attrs["heating_supported"] = self._room.capabilities.heating_supported
+        
+        attrs["cooling_supported"] = self._room.capabilities.cooling_supported
 
-        attrs["minimum_heat_set_point"] = self._room.climate_capabilities.minimum_heat_set_point
-        attrs["maximum_heat_set_point"] = self._room.climate_capabilities.maximum_heat_set_point
-        attrs["minimum_cool_set_point"] = self._room.climate_capabilities.minimum_cool_set_point
-        attrs["maximum_cool_set_point"] = self._room.climate_capabilities.maximum_cool_set_point
-        attrs["setpoint_step"] = self._room.climate_capabilities.setpoint_step
+        attrs["minimum_heat_set_point"] = self._room.capabilities.minimum_heat_set_point
+        attrs["maximum_heat_set_point"] = self._room.capabilities.maximum_heat_set_point
+        attrs["minimum_cool_set_point"] = self._room.capabilities.minimum_cool_set_point
+        attrs["maximum_cool_set_point"] = self._room.capabilities.maximum_cool_set_point
+        attrs["setpoint_step"] = self._room.capabilities.setpoint_step
 
-        attrs["ambient_temperature"] = self._room.climate_capabilities.ambient_temperature
-        attrs["temperature_control"] = self._room.climate_capabilities.temperature_control
-        attrs["open_window_detection"] = self._room.climate_capabilities.open_window_detection
-        attrs["hydronic_channel_selection"] = self._room.climate_capabilities.hydronic_channel_selection
-        attrs["on_off_supported"] = self._room.climate_capabilities.on_off_supported
-
+        attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
+        attrs["temperature_control"] = self._room.capabilities.temperature_control
+        attrs["open_window_detection"] = self._room.capabilities.open_window_detection
+        attrs["hydronic_channel_selection"] = self._room.capabilities.hydronic_channel_selection       
+        attrs["on_off_supported"] = self._room.capabilities.on_off_supported
+        
     # Summer comfort
+        
         attrs["include_in_summer_comfort"] = self._room.include_in_summer_comfort
         attrs["hvac_mode"] = self._room.hvac_mode
         attrs["floor_sensor_state"] = self._room.floor_sensor_state
         attrs["name"] = self._room.name
         
         #occupancy
+        
         attrs["occupancy_capable"] = self._room.occupancy_capable
         if self._room.occupancy_capable:
             attrs["occupancy"] = self._room.occupancy
             attrs["occupied_heating_set_point"] = self._room.occupied_heating_set_point
             attrs["unoccupied_heating_set_point"] = self._room.unoccupied_heating_set_point
         attrs["climate_demand_for_ui"] = self._room.climate_demand_for_ui
-
-
+        attrs["occupancy"] = self._room.occupancy
+        
 #End Added by LGO
 
         # Room can have no schedule
