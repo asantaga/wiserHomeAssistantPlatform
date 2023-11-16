@@ -16,6 +16,8 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     UnitOfTemperature,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
     PERCENTAGE,
     UnitOfPower,
     UnitOfEnergy,
@@ -29,6 +31,7 @@ from .const import (
     DATA,
     DOMAIN,
     MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
     SIGNAL_STRENGTH_ICONS,
     VERSION,
 )
@@ -93,6 +96,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 [
                     WiserSmartplugPower(data, smartplug.id, sensor_type="Power"),
                     WiserSmartplugPower(data, smartplug.id, sensor_type="Total Power"),
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Power", name="Equipment Power"),
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Energy Delivered"),
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Total Energy"),
+                ]
+            )
+
+    # Add power sensors for PTE (v2Hub)
+    if data.wiserhub.devices.power_tags:
+        for power_tag in data.wiserhub.devices.power_tags.all:
+            wiser_sensors.extend(
+                [
+                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="Power", name="Equipment Power"),
+                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="Energy", name="Equipment Energy Delivered"),
+                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="EnergyReceived", name="Equipment Energy Received"),
+                    WiserCurrentVoltageSensor(data, power_tag.id, sensor_type="Voltage"),
+                    WiserCurrentVoltageSensor(data, power_tag.id, sensor_type="Current"),
+                    WiserLTSPowerSensor(data, power_tag.id, sensor_type="Energy", name="Equipment Total Energy"),
                 ]
             )
 
@@ -123,7 +143,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserLTSPowerSensor(
                         data, heating_actuator.id, sensor_type="Energy"
                     ),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Power", name="Equipment Power"),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Energy Delivered"),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Total Energy"),
                 ]
+                
             )
             if (
                 heating_actuator.floor_temperature_sensor
@@ -352,16 +376,20 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs[
             "displayed_signal_strength"
         ] = self._device.signal.displayed_signal_strength
-
+#Added by LGO
 #   Wiser hub V2 
         # Zigbee uuid
         attrs["uuid"] = self._device.uuid
         attrs["type"] = self._device.type_comm
 #       attrs["endpoint"] = self._device.endpoint
+
 #   End Wiser hub V2   
-#  
+# End Added by LGO 
+
         # For non controller device
         if self._device_id != 0:
+            attrs["product_model"] = self._device.product_model
+            attrs["product_identifier"] = self._device.product_identifier
             attrs["serial_number"] = self._device.serial_number
             attrs["hub_route"] = "direct"
 
@@ -412,9 +440,21 @@ class WiserDeviceSignalSensor(WiserSensor):
             # Show integration and api version info
             attrs["api_version"] = self._data.wiserhub.version
             attrs["integration_version"] = VERSION
-            attrs["uptime"] = self._data.wiserhub.status.uptime
-            attrs["last_reset_reason"] = self._data.wiserhub.status.last_reset_reason
 
+            # Show status info if exists
+            if self._data.wiserhub.status:
+                attrs["uptime"] = self._data.wiserhub.status.uptime
+                attrs["last_reset_reason"] = self._data.wiserhub.status.last_reset_reason
+#Added by LGO
+            # summer comfort            
+            attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
+            attrs["indoor_discomfort_temperature"] = self._device.indoor_discomfort_temperature
+            attrs["outdoor_discomfort_temperature"] = self._device.outdoor_discomfort_temperature
+            attrs["summer_comfort_available"] = self._device.summer_comfort_available
+            attrs["summer_discomfort_prevention"] = self._device.summer_discomfort_prevention
+            attrs["hardware_generation"] = self._device.hardware_generation        
+                        
+#End Added by LGO
         # Other
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(
@@ -438,6 +478,42 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["output_type"] = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).output_type
+
+#Added by LGO 
+#       # Power tag 
+              
+        if self._sensor_type in ["PowerTagE", "PTE"] :   
+            attrs["vendor"] = MANUFACTURER_SCHNEIDER
+            attrs["product_model"] = self._device.product_model
+            attrs["product_type"] = self._device.equipment.product_type
+            #attrs["product_identifier"] = self._device.product_identifier
+            attrs["raw_total_active_power"] = self._device.raw_total_active_power
+            attrs["number_of_phases"] = self._device.number_of_phases
+            attrs["installation_type"] = self._device.installation_type
+            attrs["equipment_family"] = self._device.equipment.equipment_family
+           
+            attrs["direction"] = self._device.direction
+            attrs["grid_limit"] = self._device.grid_limit
+            attrs["grid_limit_uom"] = self._device.grid_limit_uom
+            attrs["operating_status"] = self._device.operating_status
+            attrs["fault_status"] = self._device.fault_status
+            attrs["energy_export"] = self._device.energy_export
+            #Data equipment
+            """
+            attrs["total_active_power"] = self._device.total_active_power
+            attrs["active_power"] = self._device.active_power
+            attrs["current_summation_delivered"] = self._device.current_summation_delivered
+            attrs["current_summation_received"] = self._device.current_summation_received
+            attrs["rms_voltage"] = self._device.rms_voltage
+            
+            """
+            attrs["rms_current"] = self._device.rms_current
+            attrs["rms_voltage"] = self._device.rms_voltage
+            attrs["current_summation_delivered"] = self._device.delivered_power
+            attrs["current_summation_received"] = self._device.received_power
+            attrs["total_active_power"] = self._device.total_active_power
+            attrs["active_power"] = self._device.instantaneous_power
+#End Added by LGO  
 
         return attrs
 
@@ -595,6 +671,65 @@ class WiserSystemOperationModeSensor(WiserSensor):
         )
         attrs["last_update_status"] = self._data.last_update_status
         return attrs
+
+
+class WiserCurrentVoltageSensor(WiserSensor):
+    """Sensor for voltage of equipment devices"""
+    def __init__(self, data, device_id, sensor_type="") -> None:
+        super().__init__(data, device_id, sensor_type)
+        self._device = data.wiserhub.devices.get_by_id(device_id)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    @property
+    def device_class(self):
+        """Return sensor device class"""
+        if self._sensor_type == "voltage":
+            return SensorDeviceClass.VOLTAGE
+        if self._sensor_type == "current":
+            return SensorDeviceClass.CURRENT
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
+
+    @property
+    def icon(self):
+        """Return icon."""
+        return "mdi:lightning-bolt-circle"
+
+    @property
+    def state(self) -> float:
+        """Return the state of the entity."""
+        if self._sensor_type == "Voltage":
+            return self._device.equipment.power.rms_voltage
+        if self._sensor_type == "Current":
+            return self._device.equipment.power.rms_current
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        if self._sensor_type == "Voltage":
+            return UnitOfElectricPotential.VOLT
+        if self._sensor_type == "Current":
+            return UnitOfElectricCurrent.AMPERE
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
 
 class WiserSmartplugPower(WiserSensor):
@@ -1056,47 +1191,70 @@ class WiserLTSDemandSensor(WiserSensor):
 class WiserLTSPowerSensor(WiserSensor):
     """Sensor for long term stats for heating actuators power and energy"""
 
-    def __init__(self, data, device_id, sensor_type="") -> None:
+    def __init__(self, data, device_id, sensor_type="", name="") -> None:
         """Initialise the operation mode sensor."""
+        self._device_id = device_id
         self._lts_sensor_type = sensor_type
-        device = data.wiserhub.devices.get_by_id(device_id)
-        if device.room_id == 0:
-            device_name = device.product_type + " " + str(device.id)
+        self._device = data.wiserhub.devices.get_by_id(device_id)
+        self._sensor_name = name
+        if self._device.room_id == 0:
+            device_name = self._device.product_type + " " + str(self._device.id)
         else:
-            device_name = data.wiserhub.rooms.get_by_id(device.room_id).name
+            device_name = data.wiserhub.rooms.get_by_id(self._device.room_id).name
 
-        if sensor_type == "Power":
+        if name:
             super().__init__(
                 data,
                 device_id,
-                f"LTS Power {device_name}",
+                f"{name.title()} "
             )
         else:
-            super().__init__(
-                data,
-                device_id,
-                f"LTS Energy {device_name}",
-            )
-
-        self._device = data.wiserhub.devices.heating_actuators.get_by_id(device_id)
+            if sensor_type == "Power":
+                super().__init__(
+                    data,
+                    device_id,
+                    f"LTS Power {device_name}",
+                )
+            else:
+                super().__init__(
+                    data,
+                    device_id,
+                    f"LTS Energy {device_name}",
+                )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
         if self._lts_sensor_type == "Power":
-            self._state = self._data.wiserhub.devices.heating_actuators.get_by_id(
+            self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).instantaneous_power
-        else:
+        elif self._lts_sensor_type == "Energy":
             self._state = round(
-                self._data.wiserhub.devices.heating_actuators.get_by_id(
+                self._data.wiserhub.devices.get_by_id(
                     self._device_id
                 ).delivered_power
                 / 1000,
                 2,
             )
+        elif self._lts_sensor_type == "EnergyReceived":
+            self._state = round(
+                self._data.wiserhub.devices.get_by_id(
+                    self._device_id
+                ).received_power
+                / 1000,
+                2,
+            )
         self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        if self._sensor_name:
+            return f"{get_device_name(self._data, self._device_id)} {self._sensor_name}"
+        else:
+            return get_device_name(self._data, 0, self._sensor_type)
 
     @property
     def device_info(self):
@@ -1127,11 +1285,12 @@ class WiserLTSPowerSensor(WiserSensor):
         if self._lts_sensor_type == "Power":
             return (
                 "mdi:home-lightning-bolt"
-                if self._data.wiserhub.devices.heating_actuators.get_by_id(
-                    self._device_id
-                ).instantaneous_power
-                > 0
-                else "mdi:home-lightning-bolt-outline"
+
+                # if self._data.wiserhub.devices.get_by_id(
+                #    self._device_id
+                # ).instantaneous_power
+                # > 0
+                # else "mdi:home-lightning-bolt-outline"
             )
         if self._lts_sensor_type == "Energy":
             return "mdi:home-lightning-bolt"
