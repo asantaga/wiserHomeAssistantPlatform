@@ -91,7 +91,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-            "manufacturer": MANUFACTURER,
+            "manufacturer": MANUFACTURER_SCHNEIDER,
             "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
@@ -110,6 +110,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             attrs["room"] = "Unassigned"
 
         # Identification
+        attrs["vendor"] = MANUFACTURER_SCHNEIDER
         attrs["name"] = self._device.name
         attrs["model"] = self._device.model
         attrs["product_type"] = self._device.product_type
