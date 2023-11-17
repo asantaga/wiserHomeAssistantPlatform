@@ -37,6 +37,7 @@
         "description": "Wiser-Parameter ändern.",
         "menu_options": {
           "main_params": "Hauptparameter",
+          "hw_climate_params": "Warmwasser-Klimaparameter",
           "automation_params": "Aktivieren Sie integrierte Automatisierungen"
         }
       },
@@ -51,6 +52,17 @@
           "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
           "setpoint_mode": "Sollwert-Modus",
           "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist"
+        }
+      },
+      "hw_climate_params": {
+        "title": "Wiser Integrationsoptionen",
+        "description": "Warmwasser-Klimaparameter",
+        "data": {
+          "hotwater_climate": "Aktivieren Sie die Climate-Entität",
+          "hotwater_auto_mode": "Warmwasser-Automatikmodus",
+          "hotwater_heat_mode": "Warmwasser-Heizmodus",
+          "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor",
+          "hotwater_target_temperature": "Standard-Warmwasser-Zieltemperatur"
         }
       },
       "automation_params": {
