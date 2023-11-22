@@ -76,10 +76,10 @@ WISER_SWITCHES = [
         "name": "Summer Comfort Enabled",
         "key": "summer_comfort_enabled",
         "icon": "mdi:sofa",
-        "type": "system",
+        "type": "system"
     },
     {
-        "name": "Summer_Discomfort Prevention",
+        "name": "Summer Discomfort Prevention",
         "key": "summer_discomfort_prevention",
         "icon": "mdi:beach",
         "type": "system",
@@ -89,6 +89,13 @@ WISER_SWITCHES = [
         "name": "Window Detection",
         "key": "window_detection_active",
         "icon": "mdi:window-closed",
+        "type": "room",
+    },
+
+    {
+        "name": "Include In Summer Comfort",
+        "key": "include_in_summer_comfort",
+        "icon": "mdi:sofa",
         "type": "room",
     },
     
@@ -287,7 +294,9 @@ class WiserSystemSwitch(WiserSwitch):
 
         if self._name == "Away Mode":
             attrs["away_mode_temperature"] = self._away_temperature
-
+        if self._name == "Summer Discomfort Prevention":
+            attrs["indoor_discomfort_temperature"] = self._data.wiserhub.system.indoor_discomfort_temperature
+            attrs["outdoor_discomfort_temperature"] = self._data.wiserhub.system.outdoor_discomfort_temperature
         return attrs
 
 
@@ -730,7 +739,7 @@ class WiserPassiveModeSwitch(WiserSwitch):
         return True
 
 class WiserShutterSummerComfortSwitch(WiserSwitch):
-    """Plug SwitchEntity Class."""
+    """Shutter Respect Summer Comfort Class."""
 
     def __init__(self, data, ShutterId, name) -> None:
         """Initialize the sensor."""
@@ -738,14 +747,14 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         self._shutter_id = ShutterId
         super().__init__(data, name, "", "shutter", "mdi:sofa")
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
-        self._is_on = True if self._shutter.respect_summer_comfort == "off" else False
+        self._is_on = True if self._shutter.respect_summer_comfort == False else False
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
-        self._is_on = True if self._shutter.respect_summer_comfort == "off" else False
+        self._is_on = True if self._shutter.respect_summer_comfort == True else False
         self.async_write_ha_state()
 
     @property
@@ -771,6 +780,15 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
             "sw_version": self._shutter.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+    
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        attrs = {}     
+        
+        attrs["summer_comfort_lift"] = self._shutter.summer_comfort_lift
+        attrs["summer_comfort_tilt"] = self._shutter.summer_comfort_tilt
+        return attrs
 
     async def async_turn_on(self, **kwargs):
         """Turn the respect summer comfort on."""
@@ -783,3 +801,4 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         await self._shutter.set_respect_summer_comfort("false")
         await self.async_force_update()
         return True
+
