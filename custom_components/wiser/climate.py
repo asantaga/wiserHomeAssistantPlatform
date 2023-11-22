@@ -453,23 +453,20 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
 
 #Added by LGO
-    #Climate capabilities
-        
-        attrs["heating_supported"] = self._room.capabilities.heating_supported
-        
-        attrs["cooling_supported"] = self._room.capabilities.cooling_supported
-
-        attrs["minimum_heat_set_point"] = self._room.capabilities.minimum_heat_set_point
-        attrs["maximum_heat_set_point"] = self._room.capabilities.maximum_heat_set_point
-        attrs["minimum_cool_set_point"] = self._room.capabilities.minimum_cool_set_point
-        attrs["maximum_cool_set_point"] = self._room.capabilities.maximum_cool_set_point
-        attrs["setpoint_step"] = self._room.capabilities.setpoint_step
-
-        attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
-        attrs["temperature_control"] = self._room.capabilities.temperature_control
-        attrs["open_window_detection"] = self._room.capabilities.open_window_detection
-        attrs["hydronic_channel_selection"] = self._room.capabilities.hydronic_channel_selection       
-        attrs["on_off_supported"] = self._room.capabilities.on_off_supported
+    #Climate capabilities only with Hub Vé
+        if self._room.capabilities:
+            attrs["heating_supported"] = self._room.capabilities.heating_supported       
+            attrs["cooling_supported"] = self._room.capabilities.cooling_supported
+            attrs["minimum_heat_set_point"] = self._room.capabilities.minimum_heat_set_point
+            attrs["maximum_heat_set_point"] = self._room.capabilities.maximum_heat_set_point
+            attrs["minimum_cool_set_point"] = self._room.capabilities.minimum_cool_set_point
+            attrs["maximum_cool_set_point"] = self._room.capabilities.maximum_cool_set_point
+            attrs["setpoint_step"] = self._room.capabilities.setpoint_step
+            attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
+            attrs["temperature_control"] = self._room.capabilities.temperature_control
+            attrs["open_window_detection"] = self._room.capabilities.open_window_detection
+            attrs["hydronic_channel_selection"] = self._room.capabilities.hydronic_channel_selection       
+            attrs["on_off_supported"] = self._room.capabilities.on_off_supported
         
     # Summer comfort
         
