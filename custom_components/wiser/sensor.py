@@ -391,6 +391,9 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["product_model"] = self._device.product_model
             attrs["product_identifier"] = self._device.product_identifier
             attrs["serial_number"] = self._device.serial_number
+            #ota
+            attrs["ota_verion"] = self._device.ota_version
+            attrs["ota_hardware_verion"] = self._device.ota_hardware_version
             attrs["hub_route"] = "direct"
 
             if self._device.signal.device_reception_rssi is not None:
@@ -486,7 +489,7 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["vendor"] = MANUFACTURER_SCHNEIDER
             attrs["product_model"] = self._device.product_model
             attrs["product_type"] = self._device.equipment.product_type
-            #attrs["product_identifier"] = self._device.product_identifier
+            attrs["rfid"] = self._device.rfid
             attrs["raw_total_active_power"] = self._device.raw_total_active_power
             attrs["number_of_phases"] = self._device.number_of_phases
             attrs["installation_type"] = self._device.installation_type

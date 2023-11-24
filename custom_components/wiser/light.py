@@ -118,6 +118,10 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs["product_model"] = self._device.product_model
         attrs["serial_number"] = self._device.serial_number
         attrs["firmware"] = self._device.firmware_version
+        #ota
+        attrs["ota_verion"] = self._device.ota_version
+        attrs["ota_hardware_verion"] = self._device.ota_hardware_version
+
 
 #   Wiser hub V2
         # Zigbee uuid
