@@ -1,14 +1,18 @@
 from dataclasses import dataclass
+from functools import reduce
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX
+
 
 @dataclass
 class WiserHubAttribute:
     path: str
 
+
 @dataclass
 class WiserDeviceAttribute:
     path: str
+
 
 def get_device_name(data, device_id, device_type="device"):
     if device_type == "device":
@@ -27,14 +31,18 @@ def get_device_name(data, device_id, device_type="device"):
                     # 1 is lowest device id, 2 next lowest etc
                     sv_index = device_room.smartvalve_ids.index(device.id) + 1
                     return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{sv_index}"
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                )
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                )
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "UnderFloorHeating":
@@ -48,10 +56,14 @@ def get_device_name(data, device_id, device_type="device"):
                 if device_room.number_of_heating_actuators > 1:
                     # Get index of iTRV in room so they are numbered 1,2 etc instead of device id
                     # 1 is lowest device id, 2 next lowest etc
-                    ha_index = device_room.heating_actuator_ids.index(device.id) + 1
+                    ha_index = (
+                        device_room.heating_actuator_ids.index(device.id) + 1
+                    )
                     return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}-{ha_index}"
                 device_room = data.wiserhub.rooms.get_by_device_id(device_id)
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                )
             return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
         if device.product_type == "SmartPlug":
@@ -78,26 +90,28 @@ def get_device_name(data, device_id, device_type="device"):
 
 
 def get_identifier(data, device_id, device_type="device"):
-    return (
-        f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
-    )
+    return f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
 
 
 def get_unique_id(data, device_type, entity_type, device_id):
-    return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+    return (
+        f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+    )
 
 
 def get_room_name(data, room_id):
     return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
 
+
 def get_device_by_node_id(data, node_id: int):
     return data.wiserhub.devices.get_by_node_id(node_id)
+
 
 def get_hot_water_operation_mode(data, device) -> str:
     preset = None
     mode = "Manual" if device.mode != "Auto" else "Auto"
     if device.is_boosted:
-       preset = f"Boost {int(device.boost_time_remaining/60)}m"
+        preset = f"Boost {int(device.boost_time_remaining/60)}m"
     elif device.is_override:
         preset = "Override"
     elif device.is_away_mode:
@@ -135,3 +149,11 @@ def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str or None:
     if entry:
         return entry[0].entry_id
     return None
+
+
+def getattrd(self, obj, name):
+    """Same as getattr(), but allows dot notation lookup"""
+    try:
+        return reduce(getattr, name.split("."), obj)
+    except AttributeError:
+        raise
