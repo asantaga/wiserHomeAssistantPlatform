@@ -19,7 +19,9 @@ MANUFACTURER = MANUFACTURER_SCHNEIDER
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, config_entry, async_add_entities
+):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
 
@@ -42,9 +44,13 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         super().__init__(coordinator)
         self._data = coordinator
         self._device_id = light_id
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_id(
+            self._device_id
+        )
         self._schedule = self._device.schedule
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+        _LOGGER.debug(
+            f"{self._data.wiserhub.system.name} {self.name} initialise"
+        )
 
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self.name}")
@@ -55,7 +61,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_id(
+            self._device_id
+        )
         self._schedule = self._device.schedule
         self.async_write_ha_state()
 
@@ -77,7 +85,11 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     def icon(self):
         """Return icon."""
         if self._device.mode == "Auto":
-            return "mdi:lightbulb-auto" if self.is_on else "mdi:lightbulb-auto-outline"
+            return (
+                "mdi:lightbulb-auto"
+                if self.is_on
+                else "mdi:lightbulb-auto-outline"
+            )
         else:
             return "mdi:lightbulb" if self.is_on else "mdi:lightbulb-outline"
 
@@ -90,9 +102,13 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Return device specific attributes."""
         return {
             "name": get_device_name(self._data, self._device_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._device_id))
+            },
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
+            "model": self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).product_type,
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
@@ -102,7 +118,10 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Return state attributes."""
         attrs = {}
         # Room
-        if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
+        if (
+            self._data.wiserhub.rooms.get_by_id(self._device.room_id)
+            is not None
+        ):
             attrs["room"] = self._data.wiserhub.rooms.get_by_id(
                 self._device.room_id
             ).name
@@ -135,8 +154,12 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         if self._device.schedule:
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
-            attrs["next_schedule_change"] = str(self._device.schedule.next.time)
-            attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
+            attrs["next_schedule_change"] = str(
+                self._device.schedule.next.time
+            )
+            attrs["next_schedule_datetime"] = str(
+                self._device.schedule.next.datetime
+            )
             attrs["next_schedule_state"] = self._device.schedule.next.setting
 
         return attrs
@@ -148,7 +171,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             _LOGGER.debug(
                 f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%"
             )
-            await self._device.set_current_percentage(round((brightness / 255) * 100))
+            await self._device.set_current_percentage(
+                round((brightness / 255) * 100)
+            )
         else:
             _LOGGER.debug(f"Turning on {self.name}")
             await self._device.turn_on()
@@ -194,5 +219,7 @@ class WiserDimmableLight(WiserLight):
         # Schedule
         if self._device.schedule:
             del attrs["next_schedule_state"]
-            attrs["next_schedule_percentage"] = self._device.schedule.next.setting
+            attrs[
+                "next_schedule_percentage"
+            ] = self._device.schedule.next.setting
         return attrs
