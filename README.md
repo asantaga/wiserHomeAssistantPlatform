@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.3.11
+# Wiser Home Assistant Integration v3.4.0beta
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -15,16 +15,18 @@ Detailed information about this integration has now been moved to our [Wiki page
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 3.3?
+## What's New in 3.4?
 
-- Improved support for Opentherm boilers with flow and return temp sensors and many attributes.
-- Support of heating actuator floor sensors
-- TRV passive mode (inspired by @robertwigley).  An inbuilt automation in the integration to create passive TRVs that will only heat when other rooms are heating.  Integration automations must be enabled to support this.
-- Improved data in Wiser events
-- Improved error handling for setting schedules from YAML files
-- Improved zigbee network card
+- Added support for v2 hub
+- Added PowerTagE support
 
 ## Change log
+
+- v3.4.0beta
+  - Fixed issue in HA 2023.12 with errors reading hub
+  - Add PowerTagE support (v2 hub)
+  - Add tilt functions for shutters (v2 hub)
+  - Fixed issue whereby non ASCII chars are removed in device/room names - issues #396
 
 - v3.3.11
   - Add check for overrides to prevent turning off away modewhen selecting cancel overrides when none exist (Wiser hub bug)
