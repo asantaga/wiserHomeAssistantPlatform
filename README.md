@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.0beta
+# Wiser Home Assistant Integration v3.4.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -21,6 +21,11 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 
 ## Change log
+
+- v3.4.1
+  - Corrected error deleting schedule
+  - Handle space at end of secret key and prevent error (issue [#409](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/409))
+  - Updated schedule card to v1.3.2 - fixed some UI bugs, added ability to hide info and assignments via config (issue [#404](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/404))
 
 - v3.4.0beta
   - Fixed issue in HA 2023.12 with errors reading hub
