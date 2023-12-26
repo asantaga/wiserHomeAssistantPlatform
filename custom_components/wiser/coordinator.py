@@ -1,43 +1,36 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
-from dataclasses import dataclass
-
-from homeassistant.config_entries import ConfigEntry
-
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
-)
 
 from aioWiserHeatAPI.wiserhub import (
-    TEMP_MINIMUM,
     TEMP_MAXIMUM,
+    TEMP_MINIMUM,
     WiserAPI,
-    WiserHubConnectionError,
     WiserHubAuthenticationError,
+    WiserHubConnectionError,
     WiserHubRESTError,
 )
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-    CONF_RESTORE_MANUAL_TEMP_OPTION,
-    CONF_SETPOINT_MODE,
-    CUSTOM_DATA_STORE,
-    DEFAULT_PASSIVE_TEMP_INCREMENT,
-    DEFAULT_SETPOINT_MODE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
+    CONF_RESTORE_MANUAL_TEMP_OPTION,
+    CONF_SETPOINT_MODE,
+    CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
+    DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SETPOINT_MODE,
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
@@ -119,7 +112,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
-            session=async_get_clientsession(hass),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
             enable_automations=self.enable_automations_passive_mode,
         )
