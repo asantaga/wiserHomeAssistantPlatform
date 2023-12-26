@@ -22,6 +22,13 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.4.2
+  - Reverted to using aiohttp for communication and resolved issues caused by HA2023.12
+  - Fixed issue where hub communication would error due to command characters in payload (issue [#418](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/418))
+  - Updated schedule card to allow hiding of hot water schedule (issue [#415](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/415))
+  - Added more v2 hub features and attributes
+  - Improved error handling/logging when hub offline and command is issued
+
 - v3.4.1
   - Corrected error deleting schedule
   - Handle space at end of secret key and prevent error (issue [#409](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/409))
