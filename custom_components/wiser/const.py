@@ -14,7 +14,7 @@ WISER_CARDS = [
     {
         "name": "Wiser Schedule Card",
         "filename": "wiser-schedule-card.js",
-        "version": "1.3.2",
+        "version": "1.3.3",
     },
     {
         "name": "Wiser Zigbee Card",
