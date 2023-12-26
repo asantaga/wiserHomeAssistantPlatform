@@ -6,7 +6,7 @@ from .const import (
     MANUFACTURER,
 )
 
-from .helpers import get_device_name, get_unique_id, get_identifier
+from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
 from .schedules import WiserScheduleEntity
 
 from homeassistant.components.select import SelectEntity
@@ -75,6 +75,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
     def current_option(self) -> str:
         return self._device.mode
 
+    @hub_error_handler
     async def async_select_option(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} to {option}")
         if option in self._options:
