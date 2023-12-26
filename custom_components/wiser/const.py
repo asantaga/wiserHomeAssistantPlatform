@@ -5,12 +5,24 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+VERSION = "3.4.1"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
-WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
 
-VERSION = "3.4.1"
+WISER_CARDS = [
+    {
+        "name": "Wiser Schedule Card",
+        "filename": "wiser-schedule-card.js",
+        "version": "1.3.2",
+    },
+    {
+        "name": "Wiser Zigbee Card",
+        "filename": "wiser-zigbee-card.js",
+        "version": "2.1.1",
+    },
+]
+
 WISER_PLATFORMS = [
     "climate",
     "sensor",
