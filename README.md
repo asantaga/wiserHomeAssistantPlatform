@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.1
+# Wiser Home Assistant Integration v3.4.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -9,6 +9,8 @@ This repository contains a Home Assistant integration for the awesome Drayton Wi
 It also supports some European versions of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
 For the latest version of the Wiser Home Assistant Platform please install via HACS. If you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation as described in the Wiki.
+
+This integration requires a minimum HA version of 2023.12.
 
 Detailed information about this integration has now been moved to our [Wiki pages](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki)
 
