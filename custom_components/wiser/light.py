@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
-from .helpers import get_device_name, get_identifier, get_unique_id
+from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
 from .schedules import WiserScheduleEntity
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
@@ -141,6 +141,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
 
         return attrs
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
@@ -155,6 +156,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         await self.async_force_update(2)
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
         _LOGGER.debug(f"Turning off {self.name}")

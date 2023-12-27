@@ -67,7 +67,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Register custom cards
     cards = WiserCardRegistration(hass)
     await cards.async_register()
-    await cards.async_remove_gzip_files()
 
     _LOGGER.info(
         f"Wiser Component Setup Completed ({coordinator.wiserhub.system.name})"

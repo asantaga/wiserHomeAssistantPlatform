@@ -20,6 +20,7 @@ from .helpers import (
     get_identifier,
     get_room_name,
     get_unique_id,
+    hub_error_handler,
 )
 from custom_components.wiser.schedules import WiserScheduleEntity
 
@@ -73,9 +74,27 @@ WISER_SWITCHES = [
         "type": "system",
     },
     {
+        "name": "Summer Comfort Enabled",
+        "key": "summer_comfort_enabled",
+        "icon": "mdi:sofa",
+        "type": "system",
+    },
+    {
+        "name": "Summer Discomfort Prevention",
+        "key": "summer_discomfort_prevention",
+        "icon": "mdi:beach",
+        "type": "system",
+    },
+    {
         "name": "Window Detection",
         "key": "window_detection_active",
         "icon": "mdi:window-closed",
+        "type": "room",
+    },
+    {
+        "name": "Include In Summer Comfort",
+        "key": "include_in_summer_comfort",
+        "icon": "mdi:sofa",
         "type": "room",
     },
     {
@@ -104,12 +123,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             for room in [
                 room for room in data.wiserhub.rooms.all if len(room.devices) > 0
             ]:
-                wiser_switches.append(
-                    WiserRoomSwitch(
-                        data, switch["name"], switch["key"], switch["icon"], room.id
+                if getattr(room, switch["key"]) is not None:
+                    wiser_switches.append(
+                        WiserRoomSwitch(
+                            data, switch["name"], switch["key"], switch["icon"], room.id
+                        )
                     )
-                )
-        elif switch["type"] == "system":
+        elif (
+            switch["type"] == "system"
+            and getattr(data.wiserhub.system, switch["key"]) is not None
+        ):
             wiser_switches.append(
                 WiserSystemSwitch(data, switch["name"], switch["key"], switch["icon"])
             )
@@ -137,6 +160,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         wiser_switches.extend(
             [WiserShutterAwayActionSwitch(data, shutter.id, f"Wiser {shutter.name}")]
         )
+        if data.hub_version == 2:
+            wiser_switches.append(
+                WiserShutterSummerComfortSwitch(
+                    data, shutter.id, f"Wiser {shutter.name}"
+                )
+            )
 
     # Add SmartPlugs (if any)
     for plug in data.wiserhub.devices.smartplugs.all:
@@ -207,10 +236,12 @@ class WiserSwitch(CoordinatorEntity, SwitchEntity):
         """Return true if device is on."""
         return self._is_on
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         raise NotImplementedError
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         raise NotImplementedError
@@ -236,6 +267,7 @@ class WiserSystemSwitch(WiserSwitch):
             )
         self.async_write_ha_state()
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
 
@@ -244,6 +276,7 @@ class WiserSystemSwitch(WiserSwitch):
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._data.wiserhub.system, "set_" + self._key)
@@ -297,6 +330,7 @@ class WiserRoomSwitch(WiserSwitch):
         """Return the name of the Device."""
         return f"{get_room_name(self._data, self._room_id)} {self._name}"
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         fn = getattr(self._room, "set_" + self._key)
@@ -304,6 +338,7 @@ class WiserRoomSwitch(WiserSwitch):
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._room, "set_" + self._key)
@@ -354,6 +389,7 @@ class WiserDeviceSwitch(WiserSwitch):
         """Return the name of the Device."""
         return f"{get_device_name(self._data, self._device_id)} {self._name}"
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         fn = getattr(self._device, "set_" + self._key)
@@ -361,6 +397,7 @@ class WiserDeviceSwitch(WiserSwitch):
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         fn = getattr(self._device, "set_" + self._key)
@@ -466,12 +503,14 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
             attrs["next_schedule_state"] = self._device.schedule.next.setting
         return attrs
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._device.turn_on()
         await self.async_force_update(2)
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self._device.turn_off()
@@ -522,12 +561,14 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._smartplug.set_away_mode_action("Off")
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self._smartplug.set_away_mode_action("NoChange")
@@ -578,12 +619,14 @@ class WiserLightAwayActionSwitch(WiserSwitch):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._light.set_away_mode_action("Off")
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self._light.set_away_mode_action("NoChange")
@@ -634,12 +677,14 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._shutter.set_away_mode_action("Close")
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self._shutter.set_away_mode_action("NoChange")
@@ -698,16 +743,85 @@ class WiserPassiveModeSwitch(WiserSwitch):
         attrs = {}
         return attrs
 
+    @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._data.wiserhub.rooms.get_by_id(self._room_id).set_passive_mode(True)
         await self.async_force_update()
         return True
 
+    @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         await room.set_passive_mode(False)
         await room.cancel_overrides()
+        await self.async_force_update()
+        return True
+
+
+class WiserShutterSummerComfortSwitch(WiserSwitch):
+    """Shutter Respect Summer Comfort Class."""
+
+    def __init__(self, data, ShutterId, name) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._shutter_id = ShutterId
+        super().__init__(data, name, "", "shutter", "mdi:sofa")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.respect_summer_comfort == False else False
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.respect_summer_comfort == True else False
+        self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._shutter_id)} Respect Summer Comfort"
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, self._shutter.product_type, self.name, self._shutter_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._shutter_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._shutter.product_type,
+            "sw_version": self._shutter.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        attrs = {}
+
+        attrs["summer_comfort_lift"] = self._shutter.summer_comfort_lift
+        attrs["summer_comfort_tilt"] = self._shutter.summer_comfort_tilt
+        return attrs
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the respect summer comfort on."""
+        await self._shutter.set_respect_summer_comfort("true")
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the respect summer comfort off."""
+        await self._shutter.set_respect_summer_comfort("false")
         await self.async_force_update()
         return True
