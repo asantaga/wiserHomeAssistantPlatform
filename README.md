@@ -29,6 +29,7 @@ For more information checkout the AMAZING community thread available on
   - Bumped api to v1.5.5
   - Fixed issue where hub communication would error due to command characters in payload (issue [#418](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/418))
   - Updated schedule card to allow hiding of hot water schedule (issue [#415](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/415))
+  - Included version in card resources to improve updating of new versions
   - Added more v2 hub features and attributes
   - Improved error handling/logging when hub offline and command is issued
 
