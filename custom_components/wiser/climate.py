@@ -44,6 +44,7 @@ from .const import (
 from .helpers import (
     get_device_name,
     get_identifier,
+    hub_error_handler,
 )
 from .schedules import WiserScheduleEntity
 
@@ -232,6 +233,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
         """Return Name of device."""
         return f"{get_device_name(self._data, self._actuator_id)} Floor Temp"
 
+    @hub_error_handler
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         if (
@@ -378,6 +380,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         """Return the list of available operation modes."""
         return self._hvac_modes_list
 
+    @hub_error_handler
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
         _LOGGER.debug(f"Setting HVAC mode to {hvac_mode} for {self._room.name}")
@@ -424,6 +427,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         """Return the list of available preset modes."""
         return self._room.available_presets
 
+    @hub_error_handler
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
         _LOGGER.debug(f"Setting Preset Mode {preset_mode} for {self._room.name}")
@@ -476,6 +480,51 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs["comfort_mode_score"] = self._room.comfort_mode_score
         attrs["control_direction"] = self._room.control_direction
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
+
+        # Added by LGO
+        # Climate capabilities only with Hub Vé
+        if self._room.capabilities:
+            attrs["heating_supported"] = self._room.capabilities.heating_supported
+            attrs["cooling_supported"] = self._room.capabilities.cooling_supported
+            attrs[
+                "minimum_heat_set_point"
+            ] = self._room.capabilities.minimum_heat_set_point
+            attrs[
+                "maximum_heat_set_point"
+            ] = self._room.capabilities.maximum_heat_set_point
+            attrs[
+                "minimum_cool_set_point"
+            ] = self._room.capabilities.minimum_cool_set_point
+            attrs[
+                "maximum_cool_set_point"
+            ] = self._room.capabilities.maximum_cool_set_point
+            attrs["setpoint_step"] = self._room.capabilities.setpoint_step
+            attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
+            attrs["temperature_control"] = self._room.capabilities.temperature_control
+            attrs[
+                "open_window_detection"
+            ] = self._room.capabilities.open_window_detection
+            attrs[
+                "hydronic_channel_selection"
+            ] = self._room.capabilities.hydronic_channel_selection
+            attrs["on_off_supported"] = self._room.capabilities.on_off_supported
+
+        # Summer comfort
+
+        attrs["include_in_summer_comfort"] = self._room.include_in_summer_comfort
+        attrs["floor_sensor_state"] = self._room.floor_sensor_state
+
+        # occupancy
+
+        attrs["occupancy_capable"] = self._room.occupancy_capable
+        if self._room.occupancy_capable:
+            attrs["occupancy"] = self._room.occupancy
+            attrs["occupied_heating_set_point"] = self._room.occupied_heating_set_point
+            attrs[
+                "unoccupied_heating_set_point"
+            ] = self._room.unoccupied_heating_set_point
+
+        # End Added by LGO
 
         # Room can have no schedule
         if self._room.schedule:
@@ -532,6 +581,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         """
         return self._room.passive_mode_lower_temp
 
+    @hub_error_handler
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if self._room.is_passive_mode and not self._room.is_boosted:
@@ -578,6 +628,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
         )
 
+    @hub_error_handler
     @callback
     async def async_boost_heating(
         self, time_period: int, temperature_delta=0, temperature=0

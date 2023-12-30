@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.1
+# Wiser Home Assistant Integration v3.4.2
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -9,6 +9,8 @@ This repository contains a Home Assistant integration for the awesome Drayton Wi
 It also supports some European versions of the Wiser Hub under the Schneider Electric brand, including support for lights and blinds.
 
 For the latest version of the Wiser Home Assistant Platform please install via HACS. If you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation as described in the Wiki.
+
+**This integration requires a minimum HA version of 2023.12.**
 
 Detailed information about this integration has now been moved to our [Wiki pages](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki)
 
@@ -21,6 +23,15 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 
 ## Change log
+
+- v3.4.2
+  - Reverted to using aiohttp for communication and resolved issues caused by HA2023.12
+  - Bumped api to v1.5.5
+  - Fixed issue where hub communication would error due to command characters in payload (issue [#418](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/418))
+  - Updated schedule card to allow hiding of hot water schedule (issue [#415](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/415))
+  - Included version in card resources to improve updating of new versions
+  - Added more v2 hub features and attributes
+  - Improved error handling/logging when hub offline and command is issued
 
 - v3.4.1
   - Corrected error deleting schedule

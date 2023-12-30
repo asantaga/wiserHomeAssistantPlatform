@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .helpers import get_device_name, get_unique_id, get_identifier
+from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
 
 from .const import (
     DATA,
@@ -90,6 +90,7 @@ class WiserBoostAllHeatingButton(WiserButton):
     def __init__(self, data) -> None:
         super().__init__(data, "Boost All Heating")
 
+    @hub_error_handler
     async def async_press(self):
         boost_time = self._data.boost_time
         boost_temp = self._data.boost_temp
@@ -105,6 +106,7 @@ class WiserCancelHeatingOverridesButton(WiserButton):
     def __init__(self, data) -> None:
         super().__init__(data, "Cancel All Heating Overrides")
 
+    @hub_error_handler
     async def async_press(self):
         await self._data.wiserhub.system.cancel_all_overrides()
         await self.async_force_update()
@@ -118,6 +120,7 @@ class WiserBoostHotWaterButton(WiserButton):
     def __init__(self, data) -> None:
         super().__init__(data, "Boost Hot Water")
 
+    @hub_error_handler
     async def async_press(self):
         boost_time = self._data.hw_boost_time
         await self._data.wiserhub.hotwater.boost(boost_time)
@@ -132,6 +135,7 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
     def __init__(self, data) -> None:
         super().__init__(data, "Cancel Hot Water Overrides")
 
+    @hub_error_handler
     async def async_press(self):
         await self._data.wiserhub.hotwater.cancel_overrides()
         await self.async_force_update()
@@ -145,6 +149,7 @@ class WiserOverrideHotWaterButton(WiserButton):
     def __init__(self, data) -> None:
         super().__init__(data, "Toggle Hot Water")
 
+    @hub_error_handler
     async def async_press(self):
         await self._data.wiserhub.hotwater.override_state(
             "Off" if self._data.wiserhub.hotwater.current_state == "On" else "On"
@@ -163,6 +168,7 @@ class WiserMomentsButton(WiserButton):
             data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}"
         )
 
+    @hub_error_handler
     async def async_press(self):
         await self._data.wiserhub.moments.get_by_id(self._moment_id).activate()
         await self.async_force_update()

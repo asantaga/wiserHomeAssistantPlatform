@@ -15,18 +15,12 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
-
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
+from .helpers import get_device_name, get_identifier, hub_error_handler
 from .schedules import WiserScheduleEntity
-
-from .const import (
-    DATA,
-    DOMAIN,
-    MANUFACTURER_SCHNEIDER,
-)
-from .helpers import get_device_name, get_identifier
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
 
@@ -39,7 +33,12 @@ SUPPORT_FLAGS = (
     | CoverEntityFeature.STOP
 )
 
-TILT_SUPPORT_FLAGS = (CoverEntityFeature.OPEN_TILT | CoverEntityFeature.CLOSE_TILT | CoverEntityFeature.SET_TILT_POSITION | CoverEntityFeature.STOP_TILT)
+TILT_SUPPORT_FLAGS = (
+    CoverEntityFeature.OPEN_TILT
+    | CoverEntityFeature.CLOSE_TILT
+    | CoverEntityFeature.SET_TILT_POSITION
+    | CoverEntityFeature.STOP_TILT
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -83,7 +82,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def supported_features(self):
         """Flag supported features."""
-        if self._device.is_tilt_supported:
+        if self._device.drive_config.tilt_enabled:
             return SUPPORT_FLAGS + TILT_SUPPORT_FLAGS
         return SUPPORT_FLAGS
 
@@ -94,7 +93,9 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.devices.get_by_id(self._device_id).product_type,
+            "model": self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).product_type,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -116,7 +117,9 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current position of cover tilt."""
-        return self._device.current_tilt
+        """ If tilt feauture is enabled"""
+        if self._device.drive_config.tilt_enabled:
+            return self._device.current_tilt
 
     @property
     def is_closed(self):
@@ -159,6 +162,10 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
 
         # Settings
         attrs["shutter_id"] = self._device_id
+        # features supported
+        attrs["is_lift_position_supported"] = self._device.is_lift_position_supported
+        attrs["is_tilt_supported"] = self._device.is_tilt_supported
+
         attrs["away_mode_action"] = self._device.away_mode_action
         attrs["mode"] = self._device.mode
         attrs["lift_open_time"] = self._device.drive_config.open_time
@@ -184,7 +191,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         attrs["target_lift"] = self._device.target_lift
         attrs["scheduled_lift"] = self._device.scheduled_lift
 
-        if self._device.is_tilt_supported:
+        if self._device.drive_config.tilt_enabled:
             # Tilt settings
             attrs["current_tilt"] = self._device.current_tilt
             attrs["manual_tilt"] = self._device.manual_tilt
@@ -193,6 +200,11 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             attrs["tilt_angle_closed"] = self._device.drive_config.tilt_angle_closed
             attrs["tilt_angle_open"] = self._device.drive_config.tilt_angle_open
             attrs["tilt_movement"] = self._device.tilt_movement
+
+        # Summer comfort Added LGO
+        attrs["respect_summer_comfort"] = self._device.respect_summer_comfort
+        attrs["summer_comfort_lift"] = self._device.summer_comfort_lift
+        attrs["summer_comfort_tilt"] = self._device.summer_comfort_tilt
 
         # Schedule
         attrs["schedule_id"] = self._device.schedule_id
@@ -205,6 +217,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
 
         return attrs
 
+    @hub_error_handler
     async def async_set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
         position = kwargs[ATTR_POSITION]
@@ -212,24 +225,28 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         await self._device.open(position)
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_close_cover(self, **kwargs):
-        """Close shutter"""
+        """Close shutter."""
         _LOGGER.debug(f"Closing {self.name}")
         await self._device.close()
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_open_cover(self, **kwargs):
-        """Close shutter"""
+        """Open shutter."""
         _LOGGER.debug(f"Opening {self.name}")
         await self._device.open()
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_stop_cover(self, **kwargs):
-        """Stop shutter"""
+        """Stop shutter."""
         _LOGGER.debug(f"Stopping {self.name}")
         await self._device.stop()
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
         position = kwargs[ATTR_TILT_POSITION]
@@ -237,19 +254,22 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         await self._device.open_tilt(position)
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_close_cover_tilt(self, **kwargs):
-        """Close shutter"""
+        """Close shutter tilt."""
         _LOGGER.debug(f"Closing tilt {self.name}")
         await self._device.close_tilt()
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
-        """Open the cover tilt."""
+        """Open shutter tilt."""
         await self._device.open_tilt()
         await self.async_force_update()
 
+    @hub_error_handler
     async def async_stop_cover_tilt(self, **kwargs):
-        """Stop shutter"""
+        """Stop shutter tilt."""
         _LOGGER.debug(f"Stopping tilt {self.name}")
         await self._device.stop_tilt()
         await self.async_force_update()
