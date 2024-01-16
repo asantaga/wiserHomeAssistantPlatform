@@ -304,6 +304,10 @@ class WiserSystemSwitch(WiserSwitch):
         if self._name == "Away Mode":
             attrs["away_mode_temperature"] = self._away_temperature
 
+        if self._name == "Summer Discomfort Prevention":
+            attrs["indoor_discomfort_temperature"] = self._data.wiserhub.system.indoor_discomfort_temperature
+            attrs["outdoor_discomfort_temperature"] = self._data.wiserhub.system.outdoor_discomfort_temperature
+
         return attrs
 
 
@@ -495,6 +499,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         attrs["away_mode_action"] = self._device.away_mode_action
         attrs["scheduled_state"] = self._device.scheduled_state
         attrs["schedule_id"] = self._device.schedule_id
+
         if self._device.schedule:
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
