@@ -457,7 +457,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
 
         # Added by LGO
-        # Climate capabilities only with Hub Vé
+        # Climate capabilities only with Hub V2
         if self._room.capabilities:
             attrs["heating_supported"] = self._room.capabilities.heating_supported
             attrs["cooling_supported"] = self._room.capabilities.cooling_supported
@@ -487,7 +487,9 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         # Summer comfort
 
         attrs["include_in_summer_comfort"] = self._room.include_in_summer_comfort
+        attrs["hvac_mode"] = self._room.hvac_mode
         attrs["floor_sensor_state"] = self._room.floor_sensor_state
+        attrs["name"] = self._room.name
 
         # occupancy
 
@@ -498,6 +500,8 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             attrs[
                 "unoccupied_heating_set_point"
             ] = self._room.unoccupied_heating_set_point
+        attrs["climate_demand_for_ui"] = self._room.climate_demand_for_ui
+        attrs["occupancy"] = self._room.occupancy
 
         # End Added by LGO
 
