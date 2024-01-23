@@ -6,9 +6,9 @@ Angelosantagata@gmail.com
 
 """
 VERSION = "3.4.1"
-DOMAIN = "wiser"
+DOMAIN = "wiser_test"
 DATA_WISER_CONFIG = "wiser_config"
-URL_BASE = "/wiser"
+URL_BASE = "/wiser_test"
 
 WISER_CARDS = [
     {
