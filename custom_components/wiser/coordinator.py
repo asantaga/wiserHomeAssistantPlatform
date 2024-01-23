@@ -12,7 +12,7 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -111,6 +111,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
+            port=config_entry.data[CONF_PORT],
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
             enable_automations=self.enable_automations_passive_mode,
