@@ -262,6 +262,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_NAME: self.config_entry.data[CONF_NAME],
                 }
                 user_input.pop(CONF_HOST)
+                user_input.pop(CONF_PORT)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=data
                 )
@@ -270,6 +271,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = {
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
+            vol.Optional(CONF_PORT, default=self.config_entry.data[CONF_PORT]): str,
             vol.Optional(
                 CONF_SCAN_INTERVAL,
                 default=self.config_entry.options.get(
