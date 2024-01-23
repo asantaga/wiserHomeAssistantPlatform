@@ -1,5 +1,5 @@
 {
-  "domain": "wiser_testing",
+  "domain": "wiser",
   "name": "Drayton Wiser Integration for Home Assistant",
   "codeowners": [
     "@asantaga",
