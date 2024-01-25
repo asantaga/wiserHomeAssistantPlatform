@@ -110,6 +110,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             attrs["room"] = "Unassigned"
 
         # Identification
+        attrs["vendor"] = MANUFACTURER_SCHNEIDER
         attrs["name"] = self._device.name
         attrs["model"] = self._device.model
         attrs["product_type"] = self._device.product_type
@@ -117,6 +118,13 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs["product_model"] = self._device.product_model
         attrs["serial_number"] = self._device.serial_number
         attrs["firmware"] = self._device.firmware_version
+
+        # Zigbee uuid
+        attrs["type"] = self._device.type_comm
+        attrs["uuid"] = self._device.uuid
+        attrs["endpoint"] = self._device.endpoint
+
+        attrs["device_id"] = self._device_id
 
         # Settings
         attrs["is_dimmable"] = self._device.is_dimmable
