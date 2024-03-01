@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.2
+# Wiser Home Assistant Integration v3.4.3
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -10,7 +10,7 @@ It also supports some European versions of the Wiser Hub under the Schneider Ele
 
 For the latest version of the Wiser Home Assistant Platform please install via HACS. If you want bleeding edge then checkout the dev branch, or look out for beta releases via HACS. Depending on what you choose you may need to use the Manual Code Installation as described in the Wiki.
 
-**This integration requires a minimum HA version of 2023.12.**
+**This integration requires a minimum HA version of 2024.2.**
 
 Detailed information about this integration has now been moved to our [Wiki pages](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki)
 
@@ -23,6 +23,11 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 
 ## Change log
+
+- v3.4.3
+  - Fixed Warning error in logs caused by new HA2024.2 requirement to explicity support Turn On/Off for climate entities (issue [#435](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/435))
+  - Bump api to v1.5.7 to fix issue setting lower target temp when in passive mode
+
 
 - v3.4.2
   - Reverted to using aiohttp for communication and resolved issues caused by HA2023.12

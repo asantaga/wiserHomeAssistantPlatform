@@ -8,6 +8,8 @@ Angelosantagata@gmail.com
 from datetime import datetime
 import logging
 
+from aioWiserHeatAPI.const import TEXT_UNKNOWN
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
@@ -256,20 +258,28 @@ class WiserBatterySensor(WiserSensor):
         """Initialise the battery sensor."""
         super().__init__(data, device_id, sensor_type)
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._state = self._device.battery.percent
+        self._state = self._get_battery_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._state = self._device.battery.percent
+        self._state = self._get_battery_state()
         self.async_write_ha_state()
+
+    def _get_battery_state(self) -> int | str:
+        # TODO: Move this into api
+        if self._device.battery.percent:
+            return self._device.battery.percent
+        if self._device.battery.level == "Normal":
+            return 100
+        return 0
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._device.battery.voltage is not None
+        return self._device.battery.level != TEXT_UNKNOWN
 
     @property
     def device_class(self):
@@ -467,6 +477,13 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["output_type"] = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).output_type
+
+        if self._sensor_type == "SmokeAlarmDevice":
+            attrs["led_brightness"] = self._device.led_brightness
+            attrs["alarm_sound_mode"] = self._device.alarm_sound_mode
+            attrs["alarm_sound_level"] = self._device.alarm_sound_level
+            attrs["life_time"] = self._device.life_time
+            attrs["hush_duration"] = self._device.hush_duration
 
         return attrs
 

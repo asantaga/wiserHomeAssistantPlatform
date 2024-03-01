@@ -86,10 +86,16 @@ HVAC_MODE_HASS_TO_WISER = {
 }
 
 SUPPORT_FLAGS = (
-    ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+    ClimateEntityFeature.TARGET_TEMPERATURE
+    | ClimateEntityFeature.PRESET_MODE
+    | ClimateEntityFeature.TURN_ON
+    | ClimateEntityFeature.TURN_OFF
 )
 PASSIVE_MODE_SUPPORT_FLAGS = (
-    ClimateEntityFeature.TARGET_TEMPERATURE_RANGE | ClimateEntityFeature.PRESET_MODE
+    ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+    | ClimateEntityFeature.PRESET_MODE
+    | ClimateEntityFeature.TURN_ON
+    | ClimateEntityFeature.TURN_OFF
 )
 
 
@@ -141,6 +147,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
 class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     """Wiser temp probe climate entity object"""
+
+    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
@@ -266,6 +274,8 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
 
 class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
+
+    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
