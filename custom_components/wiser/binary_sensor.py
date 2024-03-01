@@ -23,7 +23,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES
 from .entity import WiserBaseEntity
-from .helpers import getattrd
+from .helpers import WiserDeviceAttribute, getattrd
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +57,28 @@ WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
         device_collection="rooms",
         device_class=BinarySensorDeviceClass.WINDOW,
         value_fn=lambda x: x.is_heating,
+    ),
+    # Hot Water
+    WiserBinarySensorEntityDescription(
+        key="hot_water_state",
+        name="Hot Water",
+        device="hotwater",
+        icon_fn=lambda x: "mdi:fire" if x.current_state == "On" else "mdi:fire-off",
+        value_fn=lambda x: x.current_state == "On",
+        extra_state_attributes={
+            "boost_end": WiserDeviceAttribute("boost_end_time"),
+            "boost_time_remaining": lambda x: int(x.boost_time_remaining / 60),
+            "away_mode_supressed": WiserDeviceAttribute("away_mode_suppressed"),
+            "is_away_mode": WiserDeviceAttribute("is_away_mode"),
+            "is_boosted": WiserDeviceAttribute("is_boosted"),
+            "is_override": WiserDeviceAttribute("hw.is_override"),
+            "schedule_id": WiserDeviceAttribute("schedule.id"),
+            "schedule_name": WiserDeviceAttribute("schedule.name"),
+            "next_day_change": WiserDeviceAttribute("schedule.next.day"),
+            "next_schedule_change": WiserDeviceAttribute("schedule.next.time"),
+            "next_schedule_datetime": WiserDeviceAttribute("schedule.next.datetime"),
+            "next_schedule_state": WiserDeviceAttribute("schedule.next.setting"),
+        },
     ),
     # Smoke Alarms
     WiserBinarySensorEntityDescription(
