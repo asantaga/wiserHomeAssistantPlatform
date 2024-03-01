@@ -178,6 +178,15 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         turn_on_fn=lambda x: x.set_window_detection_active(True),
     ),
     WiserSwitchEntityDescription(
+        key="hot_water",
+        name="Hot Water",
+        device="hotwater",
+        icon_fn=lambda x: "mdi:fire" if x.current_state == "On" else "mdi:fire-off",
+        value_fn=lambda x: x.current_state == "On",
+        turn_off_fn=lambda x: x.override_state("Off"),
+        turn_on_fn=lambda x: x.override_state("On"),
+    ),
+    WiserSwitchEntityDescription(
         key="passive_mode",
         name="Passive Mode",
         device_collection="rooms",
