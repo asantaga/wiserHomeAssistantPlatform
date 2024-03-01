@@ -276,6 +276,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
+    _attr_translation_key = "wiser"
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
