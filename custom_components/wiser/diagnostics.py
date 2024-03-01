@@ -1,12 +1,13 @@
-"""Diagnostics support for Wiser"""
+"""Diagnostics support for Wiser."""
 from __future__ import annotations
 
 from typing import Any
 
+from aioWiserHeatAPI.cli import anonymise_data
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntry
-from aioWiserHeatAPI.cli import anonymise_data
 
 from .const import DOMAIN
 
@@ -26,4 +27,4 @@ def _async_get_diagnostics(
 ) -> dict[str, Any]:
     data = hass.data[DOMAIN][entry.entry_id]["data"]
 
-    return anonymise_data(data.wiserhub._raw_hub_data)
+    return anonymise_data(data.wiserhub.raw_hub_data)

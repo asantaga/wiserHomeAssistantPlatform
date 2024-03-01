@@ -2,6 +2,7 @@
 import voluptuous as vol
 
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -10,18 +11,17 @@ from homeassistant.const import (
     CONF_TYPE,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.helpers import config_validation as cv, entity_registry
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
-from .events import WISER_EVENTS, WISER_EVENT
+from .events import WISER_EVENT, WISER_EVENTS
 
 DEVICE = "device"
-SUPPORTED_DOMAINS = set(event[CONF_DOMAIN] for event in WISER_EVENTS)
+SUPPORTED_DOMAINS = {event[CONF_DOMAIN] for event in WISER_EVENTS}
 
-TRIGGER_TYPES = set(event[CONF_TYPE] for event in WISER_EVENTS)
+TRIGGER_TYPES = {event[CONF_TYPE] for event in WISER_EVENTS}
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
@@ -35,19 +35,17 @@ async def async_get_triggers(
     hass: HomeAssistant, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Climate devices."""
-    registry = entity_registry.async_get(hass)
+    registry = er.async_get(hass)
 
-    for entry in entity_registry.async_entries_for_device(registry, device_id):
+    for entry in er.async_entries_for_device(registry, device_id):
         if entry.domain not in SUPPORTED_DOMAINS:
             continue
 
-        trigger_types = set(
-            [
-                event_type[CONF_TYPE]
-                for event_type in WISER_EVENTS
-                if event_type[CONF_DOMAIN] == entry.domain
-            ]
-        )
+        trigger_types = {
+            event_type[CONF_TYPE]
+            for event_type in WISER_EVENTS
+            if event_type[CONF_DOMAIN] == entry.domain
+        }
 
         return [
             {

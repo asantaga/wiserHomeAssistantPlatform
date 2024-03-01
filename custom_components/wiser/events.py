@@ -1,15 +1,9 @@
+"""Raises HA events for Wiser hub actions."""
 import logging
 
-from homeassistant.const import (
-    CONF_ATTRIBUTE,
-    CONF_DOMAIN,
-    CONF_ENTITY_ID,
-    CONF_TYPE,
-)
-
 from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE
+from homeassistant.const import CONF_ATTRIBUTE, CONF_DOMAIN, CONF_ENTITY_ID, CONF_TYPE
 from homeassistant.core import HomeAssistant
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,6 +59,7 @@ WISER_COMMON_EVENT_DATA = {
 
 
 def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state: dict):
+    """Fire HA event."""
     for event in WISER_EVENTS:
         if hasattr(old_state, event[CONF_ATTRIBUTE]):
             if (
@@ -112,7 +107,9 @@ def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state:
                         message["new_state"] = new_state_attr
 
                 _LOGGER.debug(
-                    f"Firing wiser event with type {event[CONF_TYPE]} for {entity_id}"
+                    "Firing wiser event with type %s for %s",
+                    event[CONF_TYPE],
+                    entity_id,
                 )
                 hass.bus.fire(
                     WISER_EVENT,

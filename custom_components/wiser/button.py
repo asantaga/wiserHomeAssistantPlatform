@@ -1,172 +1,158 @@
-import asyncio
+"""Wiser Button Entities."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from inspect import signature
 import logging
+from typing import Any
 
-from homeassistant.components.button import ButtonEntity
+from aioWiserHeatAPI.const import TEXT_UNKNOWN
+from aioWiserHeatAPI.helpers.device import _WiserDevice
+from aioWiserHeatAPI.room import _WiserRoom
+
+from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .helpers import get_device_name, get_unique_id, get_identifier
-
-from .const import (
-    DATA,
-    DOMAIN,
-    MANUFACTURER,
-)
+from .const import DATA, DOMAIN, LEGACY_NAMES
+from .entity import WiserBaseEntity
+from .helpers import getattrd
 
 _LOGGER = logging.getLogger(__name__)
 
 
+@dataclass
+class WiserButtonEntityDescription(ButtonEntityDescription):
+    """A class that describes Wiser switch entities."""
+
+    name_fn: Callable[[Any], str] | None = None
+    device: str | None = None
+    device_collection: list | None = None
+    delay: int | None = None
+    available_fn: Callable[[Any], bool] | None = None
+    icon_fn: Callable[[Any], str] | None = None
+    unit_fn: Callable[[Any], str] | None = None
+    press_fn: Callable[[Any], float | str] | None = None
+    extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
+
+
+WISER_BUTTONS: tuple[WiserButtonEntityDescription, ...] = (
+    WiserButtonEntityDescription(
+        key="boost_all_heating",
+        name="Boost All Heating",
+        device="system",
+        icon="mdi:fire",
+        press_fn=lambda x, d: x.boost_all_rooms(d.boost_time, d.boost_temp),
+    ),
+    WiserButtonEntityDescription(
+        key="cancel_heating_overrides",
+        name="Cancel All Heating Overrides",
+        device="system",
+        icon="mdi:water-plus",
+        press_fn=lambda x: x.cancel_all_overrides(),
+    ),
+    WiserButtonEntityDescription(
+        key="boost_hot_water",
+        name="Boost Hot Water",
+        device="hotwater",
+        icon="mdi:water-plus",
+        press_fn=lambda x, d: x.boost(d.hw_boost_time),
+    ),
+    WiserButtonEntityDescription(
+        key="cancel_hot_water_overrides",
+        name="Cancel Hotwater Overrides",
+        device="hotwater",
+        icon="mdi:water-plus",
+        press_fn=lambda x: x.cancel_overrides(),
+    ),
+    WiserButtonEntityDescription(
+        key="toggle_hot_water",
+        name="Toggle Hot Water",
+        device="hotwater",
+        icon="mdi:water-boiler",
+        press_fn=lambda x: x.override_state("Off" if x.is_heating else "On"),
+    ),
+    # Moment buttons
+    WiserButtonEntityDescription(
+        key="moment",
+        name_fn=lambda x: f"Moment {x.name}",
+        device_collection="moments",
+        icon="mdi:water-boiler",
+        press_fn=lambda x: x.override_state("Off" if x.is_heating else "On"),
+    ),
+)
+
+
+def _attr_exist(device, entity_desc: WiserButtonEntityDescription) -> bool:
+    """Check if an attribute exists for device."""
+    try:
+        r = entity_desc.value_fn(device)
+        if r is not None and r != TEXT_UNKNOWN:
+            return True
+        return False
+    except AttributeError:
+        return False
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Set up Wiser climate device."""
+    """Initialize the entry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    wiser_sensors = []
 
-    _LOGGER.debug("Setting up Heating buttons")
-    wiser_buttons = [
-        WiserBoostAllHeatingButton(data),
-        WiserCancelHeatingOverridesButton(data),
-    ]
+    for button_desc in WISER_BUTTONS:
+        # get device or device collection
+        if button_desc.device_collection and getattrd(
+            data.wiserhub, button_desc.device_collection
+        ):
+            for device in getattrd(data.wiserhub, button_desc.device_collection).all:
+                if device:
+                    _LOGGER.info("Adding %s", device.name)
+                    wiser_sensors.append(
+                        WiserButton(
+                            data,
+                            button_desc,
+                            device,
+                        )
+                    )
+        elif button_desc.device and getattrd(data.wiserhub, button_desc.device):
+            device = getattrd(data.wiserhub, button_desc.device)
+            if device:
+                wiser_sensors.append(
+                    WiserButton(
+                        data,
+                        button_desc,
+                        device,
+                    )
+                )
 
-    if data.wiserhub.hotwater:
-        _LOGGER.debug("Setting up Hot Water buttons")
-        wiser_buttons.extend(
-            [
-                WiserBoostHotWaterButton(data),
-                WiserCancelHotWaterOverridesButton(data),
-                WiserOverrideHotWaterButton(data),
-            ]
-        )
+    async_add_entities(wiser_sensors)
 
-    if data.wiserhub.moments:
-        _LOGGER.debug("Setting up Moments buttons")
-        for moment in data.wiserhub.moments.all:
-            wiser_buttons.append(WiserMomentsButton(data, moment.id))
-
-    async_add_entities(wiser_buttons, True)
-
-
-class WiserButton(CoordinatorEntity, ButtonEntity):
-    def __init__(self, coordinator, name="Button") -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._data = coordinator
-        self._name = name
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
-
-    async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
-        if delay:
-            asyncio.sleep(delay)
-        state = await self.async_get_last_state()
-        if state is not None and state.state is not None:
-            self.__last_pressed = (  # pylint: disable=unused-private-member
-                dt_util.parse_datetime(state.state)
-            )
-        await self._data.async_refresh()
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(self._data, "button", self._name, 0)
-
-    @property
-    def name(self):
-        return get_device_name(self._data, 0, self._name)
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+    return True
 
 
-class WiserBoostAllHeatingButton(WiserButton):
-    def __init__(self, data) -> None:
-        super().__init__(data, "Boost All Heating")
+class WiserButton(WiserBaseEntity, ButtonEntity):
+    """Class for button entities."""
+
+    entity_description: WiserButtonEntityDescription
+    _attr_has_entity_name = False if LEGACY_NAMES else True
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        description: WiserButtonEntityDescription,
+        device: _WiserDevice | _WiserRoom | None = None,
+    ) -> None:
+        """Initialise class instance for Wiser switch."""
+        super().__init__(coordinator, description, device, "button")
 
     async def async_press(self):
-        boost_time = self._data.boost_time
-        boost_temp = self._data.boost_temp
-        await self._data.wiserhub.system.boost_all_rooms(boost_temp, boost_time)
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:fire"
-
-
-class WiserCancelHeatingOverridesButton(WiserButton):
-    def __init__(self, data) -> None:
-        super().__init__(data, "Cancel All Heating Overrides")
-
-    async def async_press(self):
-        await self._data.wiserhub.system.cancel_all_overrides()
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:fire-off"
-
-
-class WiserBoostHotWaterButton(WiserButton):
-    def __init__(self, data) -> None:
-        super().__init__(data, "Boost Hot Water")
-
-    async def async_press(self):
-        boost_time = self._data.hw_boost_time
-        await self._data.wiserhub.hotwater.boost(boost_time)
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:water-plus"
-
-
-class WiserCancelHotWaterOverridesButton(WiserButton):
-    def __init__(self, data) -> None:
-        super().__init__(data, "Cancel Hot Water Overrides")
-
-    async def async_press(self):
-        await self._data.wiserhub.hotwater.cancel_overrides()
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:water-off"
-
-
-class WiserOverrideHotWaterButton(WiserButton):
-    def __init__(self, data) -> None:
-        super().__init__(data, "Toggle Hot Water")
-
-    async def async_press(self):
-        await self._data.wiserhub.hotwater.override_state(
-            "Off" if self._data.wiserhub.hotwater.current_state == "On" else "On"
-        )
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:water-boiler"
-
-
-class WiserMomentsButton(WiserButton):
-    def __init__(self, data, moment_id) -> None:
-        self._moment_id = moment_id
-        super().__init__(
-            data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}"
-        )
-
-    async def async_press(self):
-        await self._data.wiserhub.moments.get_by_id(self._moment_id).activate()
-        await self.async_force_update()
-
-    @property
-    def icon(self):
-        return "mdi:home-thermometer"
+        """Press buton action."""
+        if self.entity_description.press_fn is None:
+            raise NotImplementedError()
+        no_of_params = len(signature(self.entity_description.press_fn).parameters)
+        if no_of_params == 2:
+            r = self.entity_description.press_fn(self._device, self._data)
+        else:
+            r = self.entity_description.press_fn(self._device)
+        await r
+        await self.async_force_update(delay=self.entity_description.delay)

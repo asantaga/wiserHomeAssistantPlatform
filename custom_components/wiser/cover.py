@@ -26,7 +26,7 @@ from .const import (
     DOMAIN,
     MANUFACTURER_SCHNEIDER,
 )
-from .helpers import get_device_name, get_identifier
+from .helpers import get_entity_name, get_identifier
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
 
@@ -39,7 +39,12 @@ SUPPORT_FLAGS = (
     | CoverEntityFeature.STOP
 )
 
-TILT_SUPPORT_FLAGS = (CoverEntityFeature.OPEN_TILT | CoverEntityFeature.CLOSE_TILT | CoverEntityFeature.SET_TILT_POSITION | CoverEntityFeature.STOP_TILT)
+TILT_SUPPORT_FLAGS = (
+    CoverEntityFeature.OPEN_TILT
+    | CoverEntityFeature.CLOSE_TILT
+    | CoverEntityFeature.SET_TILT_POSITION
+    | CoverEntityFeature.STOP_TILT
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -91,10 +96,12 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_device_name(self._data, self._device_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "name": get_entity_name(self._data, self._device),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device))},
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.devices.get_by_id(self._device_id).product_type,
+            "model": self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).product_type,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -106,7 +113,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device"""
-        return f"{get_device_name(self._data, self._device_id)} Control"
+        return f"{get_entity_name(self._data, self._device)} Control"
 
     @property
     def current_cover_position(self):

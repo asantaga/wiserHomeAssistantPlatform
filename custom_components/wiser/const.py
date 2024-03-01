@@ -1,5 +1,4 @@
-"""
-Constants  for Wiser Platform.
+"""Constants  for Wiser Platform.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
@@ -9,10 +8,12 @@ DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
+LEGACY_NAMES = True
 
 VERSION = "3.4.0"
 WISER_PLATFORMS = [
     "climate",
+    "binary_sensor",
     "sensor",
     "switch",
     "select",

@@ -1,36 +1,37 @@
-"""
-Config Flow for Wiser Rooms.
+"""Config Flow for Wiser Rooms.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
+import logging
 from typing import Any
-import voluptuous as vol
-from aioWiserHeatAPI.wiserhub import WiserAPI
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from aioWiserHeatAPI.exceptions import (
-    WiserHubConnectionError,
     WiserHubAuthenticationError,
+    WiserHubConnectionError,
     WiserHubRESTError,
 )
+from aioWiserHeatAPI.wiserhub import WiserAPI
+import voluptuous as vol
 
 from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import selector, SelectSelectorMode
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import SelectSelectorMode, selector
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
+    CONF_HOSTNAME,
+    CONF_HW_BOOST_TIME,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
-    CONF_HW_BOOST_TIME,
-    CONF_HOSTNAME,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -40,8 +41,6 @@ from .const import (
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
 )
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,13 +68,13 @@ async def validate_input(hass: HomeAssistant, data):
 
 
 def get_unique_id(wiser_id: str):
+    """Get unique id."""
     return str(f"{DOMAIN}-{wiser_id}")
 
 
 @config_entries.HANDLERS.register(DOMAIN)
 class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """
-    WiserFlowHandler configuration method.
+    """WiserFlowHandler configuration method.
 
     The schema version of the entries that it creates
     Home Assistant will call your migrate method if the version changes
@@ -96,8 +95,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return WiserOptionsFlowHandler(config_entry)
 
     async def async_step_user(self, user_input=None):
-        """
-        Handle a Wiser Heat Hub config flow start.
+        """Handle a Wiser Heat Hub config flow start.
 
         Manage device specific parameters.
         """
@@ -213,6 +211,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_automation_params(self, user_input=None):
+        """Automation parameter step."""
         if user_input is not None:
             options = self.config_entry.options | user_input
             return self.async_create_entry(title="", data=options)

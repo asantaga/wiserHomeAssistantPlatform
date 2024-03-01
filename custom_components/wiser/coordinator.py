@@ -1,43 +1,38 @@
+"""Data coordinator for Wiser hub."""
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
-from dataclasses import dataclass
-
-from homeassistant.config_entries import ConfigEntry
-
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
-)
 
 from aioWiserHeatAPI.wiserhub import (
-    TEMP_MINIMUM,
     TEMP_MAXIMUM,
+    TEMP_MINIMUM,
     WiserAPI,
-    WiserHubConnectionError,
     WiserHubAuthenticationError,
+    WiserHubConnectionError,
     WiserHubRESTError,
 )
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-    CONF_RESTORE_MANUAL_TEMP_OPTION,
-    CONF_SETPOINT_MODE,
-    CUSTOM_DATA_STORE,
-    DEFAULT_PASSIVE_TEMP_INCREMENT,
-    DEFAULT_SETPOINT_MODE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
+    CONF_RESTORE_MANUAL_TEMP_OPTION,
+    CONF_SETPOINT_MODE,
+    CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
+    DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SETPOINT_MODE,
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
@@ -47,6 +42,8 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class WiserSettings:
+    """Class to hold wiser settings."""
+
     minimum_temp: float
     maximum_temp: float
     boost_temp: float
@@ -60,11 +57,14 @@ class WiserSettings:
 
 @dataclass
 class WiserData:
-    # settings: WiserSettings = field(init=False, default_factory=dict)
+    """Class to hold wiser data."""
+
     data: dict
 
 
 class WiserUpdateCoordinator(DataUpdateCoordinator):
+    """Update coordinator to manage Wiser hub data."""
+
     config_entry: ConfigEntry
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -133,13 +133,14 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def async_update_data(self) -> WiserData:
+        """Update data from the Wiser hub."""
         try:
             await self.wiserhub.read_hub_data()
             self.hub_version = self.wiserhub.system.hardware_generation
             self.last_update_time = datetime.now()
             self.last_update_status = "Success"
 
-            _LOGGER.info(f"Hub update completed for {self.wiserhub.system.name}")
+            _LOGGER.info("Hub update completed for %s", self.wiserhub.system.name)
 
             # Send event to websockets to notify hub update
             async_dispatcher_send(
