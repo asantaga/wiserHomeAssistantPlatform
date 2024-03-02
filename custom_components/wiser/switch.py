@@ -22,7 +22,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES
 from .entity import WiserBaseEntity
-from .helpers import WiserHubAttribute, getattrd
+from .helpers import WiserHubAttribute, get_unique_id, getattrd
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,15 +50,17 @@ class WiserSwitchEntityDescription(SwitchEntityDescription):
     value_fn: Callable[[Any], bool] | None = None
     delay: int | None = None
     legacy_name: Callable[[Any], str] | None = None
+    legacy_type: str = None
     icon_fn: Callable[[Any], str] | None = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 
 WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
-        key="away_mode",
+        key="away_mode_enabled",
         name="Away Mode",
         legacy_name="Wiser Away Mode",
+        legacy_type="system",
         device="system",
         icon="mdi:beach",
         value_fn=lambda x: x.away_mode_enabled,
@@ -71,6 +73,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="valve_protection_enabled",
         name="Valve Protection",
+        legacy_name="Wiser Valve Protection",
+        legacy_type="system",
         device="system",
         icon="mdi:snowflake-alert",
         value_fn=lambda x: x.valve_protection_enabled,
@@ -80,6 +84,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="eco_mode_enabled",
         name="Eco Mode",
+        legacy_name="Wiser Eco Mode",
+        legacy_type="system",
         device="system",
         icon="mdi:leaf",
         value_fn=lambda x: x.eco_mode_enabled,
@@ -89,6 +95,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="away_mode_affects_hotwater",
         name="Away Mode Affects Hot Water",
+        legacy_name="Wiser Away Mode Affects Hot Water",
+        legacy_type="system",
         device="system",
         icon="mdi:water",
         value_fn=lambda x: x.away_mode_affects_hotwater,
@@ -98,6 +106,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="comfort_mode_enabled",
         name="Comfort Mode",
+        legacy_name="Wiser Comfort Mode",
+        legacy_type="system",
         device="system",
         icon="mdi:sofa",
         value_fn=lambda x: x.comfort_mode_enabled,
@@ -107,6 +117,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="automatic_daylight_saving_enabled",
         name="Daylight Saving",
+        legacy_name="Wiser Daylight Saving",
+        legacy_type="system",
         device="system",
         icon="mdi:leaf",
         value_fn=lambda x: x.automatic_daylight_saving_enabled,
@@ -116,6 +128,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="device_lock_enabled",
         name="Device Lock",
+        legacy_name="Wiser Device Lock",
+        legacy_type="device",
         device_collection="devices",
         icon="mdi:lock",
         value_fn=lambda x: x.device_lock_enabled,
@@ -125,6 +139,8 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="identify",
         name="Identify",
+        legacy_name="Wiser Identify",
+        legacy_type="device",
         device_collection="devices",
         icon="mdi:alarm-light",
         value_fn=lambda x: x.identify,
@@ -269,6 +285,13 @@ class WiserSwitch(WiserBaseEntity, SwitchEntity):
         if isinstance(ret_val, bool):
             return ret_val
         return False
+
+    @property
+    def unique_id(self):
+        """Return unique id of switch."""
+        return get_unique_id(
+            self._data, self.entity_description.legacy_type, "switch", self.name
+        )
 
     async def async_turn_off(self, **kwargs):
         """Turn the entity off."""
