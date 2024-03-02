@@ -21,6 +21,7 @@ from .const import DOMAIN, ENTITY_PREFIX, LEGACY_NAMES, MANUFACTURER, ROOM
 from .helpers import (
     WiserDeviceAttribute,
     WiserHubAttribute,
+    get_entity_description_attribute_from_function,
     get_entity_name,
     get_identifier,
     get_legacy_entity_name,
@@ -50,6 +51,16 @@ class WiserBaseEntity(CoordinatorEntity):
         super().__init__(coordinator)
         self._data = coordinator
         self._device = device
+        self._attr_has_entity_name = (
+            False
+            if LEGACY_NAMES
+            and (
+                description.legacy_type
+                or description.legacy_name_fn
+                or description.device
+            )
+            else True
+        )
         self.entity_class = entity_class
         self.entity_description = description
         self._attr_name = description.name
@@ -119,27 +130,24 @@ class WiserBaseEntity(CoordinatorEntity):
     def name(self) -> str:
         """Return entity name."""
         # TODO: Neaten this up when finished
-        if LEGACY_NAMES:
-            if hasattr(self.entity_description, "legacy_type"):
-                return get_legacy_entity_name(
-                    self._data, self.entity_description, self._device
-                )
+        name = self._attr_name
+        if not self._attr_has_entity_name:
+            name = get_legacy_entity_name(
+                self._data, self.entity_description, self._device
+            )
         elif (
-            hasattr(self.entity_description, "legacy_name_fn")
-            and self.entity_description.legacy_name_fn
-        ):
-            return self.entity_description.legacy_name_fn(self._device)
-        if (
             hasattr(self.entity_description, "name_fn")
             and self.entity_description.name_fn
         ):
-            return self.entity_description.name_fn(self._device)
-        return f"{ENTITY_PREFIX} {self._attr_name}" if LEGACY_NAMES else self._attr_name
+            name = get_entity_description_attribute_from_function(
+                self._data, self._device, self.entity_description.name_fn
+            )
+        return name
 
     @property
     def unique_id(self):
         """Return unique id."""
-        if LEGACY_NAMES:
+        if not self._attr_has_entity_name:
             if hasattr(self.entity_description, "legacy_type"):
                 return get_legacy_unique_id(
                     self._data, self.entity_description, self._device

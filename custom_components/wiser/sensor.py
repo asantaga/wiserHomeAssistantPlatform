@@ -62,6 +62,8 @@ class WiserSensorEntityDescription(SensorEntityDescription):
     icon_fn: Callable[[Any], str] | None = None
     unit_fn: Callable[[Any], str] | None = None
     value_fn: Callable[[Any], float | str] | None = None
+    legacy_name_fn: Callable[[Any], str] | None = None
+    legacy_type: str = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 
@@ -112,7 +114,13 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     # Heating Channel Sensors
     WiserSensorEntityDescription(
         key="heating_channel_state",
-        name_fn=lambda x: f"Heating Channel {x.id}",
+        name_fn=lambda d, x: "Heating"
+        if d.heating_channels.count == 1
+        else f"Heating Channel {x.id}",
+        legacy_name_fn=lambda d, x: "Heating"
+        if d.heating_channels.count == 1
+        else f"Heating Channel {x.id}",
+        legacy_type="system",
         device_collection="heating_channels",
         icon_fn=lambda x: "mdi:radiator-disabled"
         if x.heating_relay_status == "Off"
@@ -127,6 +135,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="heating_channel_demand",
         name_fn=lambda x: f"Heating Demand Channel {x.id}",
+        legacy_name_fn=lambda x: f"LTS Heating Demand Channel {x.id}",
+        legacy_type="system",
         device_collection="heating_channels",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
@@ -198,6 +208,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         name="Battery",
         device_collection="devices",
         device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
         unit_of_measurement=PERCENTAGE,
         value_fn=lambda x: x.battery.percent,
         extra_state_attributes={
@@ -271,8 +282,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         value_fn=lambda x: x.delivered_power,
     ),
     WiserSensorEntityDescription(
-        key="floor_temp",
-        name="Floor Temp",
+        key="floor_temperature",
+        name="Floor Temperature",
         device_collection="devices.heating_actuators",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -398,6 +409,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="room_heating_demand",
         name="Heating Demand",
+        legacy_name_fn=lambda x: f"LTS Heating Demand {x.name}",
+        legacy_type="room",
         device_collection="rooms",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
@@ -407,6 +420,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="room_current_temperature",
         name="Temperature",
+        legacy_name_fn=lambda x: f"LTS Temperature {x.name}",
+        legacy_type="room",
         device_collection="rooms",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -416,6 +431,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="room_target_temperature",
         name="Target Temperature",
+        legacy_name_fn=lambda x: f"LTS Target Temperature {x.name}",
+        legacy_type="room",
         device_collection="rooms",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -425,6 +442,8 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="room_current_humidity",
         name="Humidity",
+        legacy_name_fn=lambda x: f"LTS Humidity {x.name}",
+        legacy_type="room",
         device_collection="rooms",
         device_class=SensorDeviceClass.HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -451,7 +470,7 @@ def _attr_exist(device, switch_desc: WiserSensorEntityDescription) -> bool:
     """Check if an attribute exists for device."""
     try:
         r = switch_desc.value_fn(device)
-        if r is not None and r != TEXT_UNKNOWN:
+        if r is not None:
             return True
         return False
     except AttributeError:
@@ -498,7 +517,6 @@ class WiserSensor(WiserBaseEntity, SensorEntity):
     """Class to monitor sensors of a Wiser device."""
 
     entity_description: WiserSensorEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
 
     def __init__(
         self,

@@ -35,6 +35,8 @@ class WiserSelectEntityDescription(SelectEntityDescription):
     options_fn: Callable[[Any], str] | None = None
     set_fn: Callable[[Any], str] | None = None
     value_fn: Callable[[Any], float | str] | None = None
+    legacy_name_fn: Callable[[Any], str] | None = None
+    legacy_type: str = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 

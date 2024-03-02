@@ -49,6 +49,7 @@ class WiserSwitchEntityDescription(SwitchEntityDescription):
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
     value_fn: Callable[[Any], bool] | None = None
     delay: int | None = None
+    legacy_name_fn: Callable[[Any], str] | None = None
     legacy_type: str = None
     icon_fn: Callable[[Any], str] | None = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
@@ -139,7 +140,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Turns Off",
         device_collection="devices.lights",
         icon="mdi:lightbulb-off-outline",
-        legacy_type="device",
+        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
@@ -149,7 +150,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Closes",
         device_collection="devices.shutters",
         icon="mdi:window-shutter",
-        legacy_type="device",
+        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_CLOSE,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_CLOSE),
@@ -159,7 +160,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Turns Off",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
-        legacy_type="device",
+        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
@@ -169,7 +170,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Switch",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
-        legacy_type="device",
+        legacy_type="device-switch",
         value_fn=lambda x: x.is_on,
         delay=2,
         turn_off_fn=lambda x: x.turn_off(),
@@ -258,7 +259,6 @@ class WiserSwitch(WiserBaseEntity, SwitchEntity):
     """Switch to set the status of a Wiser boolean attribute."""
 
     entity_description: WiserSwitchEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
 
     def __init__(
         self,

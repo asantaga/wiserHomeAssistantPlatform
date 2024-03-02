@@ -1,11 +1,15 @@
 """Helper functions for Wiser integration."""
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import reduce
+from inspect import signature
 from typing import Any
 
 from aioWiserHeatAPI.devices import PRODUCT_TYPE_CONFIG
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
+from homeassistant.components.binary_sensor import BinarySensorEntityDescription
+from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.switch import SwitchEntityDescription
 
 from homeassistant.core import HomeAssistant
@@ -41,7 +45,8 @@ def get_entity_name(data, device: Any = None, name: str = None):
         # This is a system entity
         if name:
             return f"{ENTITY_PREFIX} {name}"
-        return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+        # return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+        return f"{ENTITY_PREFIX} Hub"
 
     if isinstance(device, _WiserDevice):
         if isinstance(device, _get_class_by_product_type("iTRV")):
@@ -105,24 +110,39 @@ def get_entity_name(data, device: Any = None, name: str = None):
         return f"{ENTITY_PREFIX} {device.name}"
 
     else:
-        return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+        # return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+        return f"{ENTITY_PREFIX} Hub"
 
 
 def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
     """Get legacy entity name to maintain backward compatibility."""
-    if isinstance(entity_description, SwitchEntityDescription):
-        if entity_description.legacy_type:
-            entity_type = entity_description.legacy_type
-        else:
-            entity_type = entity_description.device
+    name = (
+        get_entity_description_attribute_from_function(
+            data, device, entity_description.legacy_name_fn
+        )
+        if entity_description.legacy_name_fn
+        else entity_description.name
+    )
 
-        if entity_type:
+    entity_type = (
+        entity_description.legacy_type
+        if entity_description.legacy_type
+        else entity_description.device
+    )
+
+    if entity_type:
+        if isinstance(entity_description, (SwitchEntityDescription)):
             if entity_type == "system":
-                return f"{get_entity_name(data, name=entity_description.name)}"
+                return f"{get_entity_name(data, name=name)}"
             elif entity_type == "room":
-                return f"{get_room_name(data, device.id)} {entity_description.name}"
-            elif entity_type == "device":
-                return f"{get_entity_name(data, device)} {entity_description.name}"
+                return f"{get_room_name(data, device.id)} {name}"
+            elif entity_type in ["device", "device-switch"]:
+                return f"{get_entity_name(data, device)} {name}"
+        elif isinstance(entity_description, SensorEntityDescription):
+            if entity_type == "room":
+                return get_entity_name(data, name=name)
+            if entity_type in ["system", "hotwater"]:
+                return f"{get_entity_name(data, name=name)}"
     return get_entity_name(data, device)
 
 
@@ -139,12 +159,20 @@ def get_unique_id(data, device_type, entity_type, device_id):
 
 def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
     """Get legacy unique id to maintain backward compatibility."""
-    if isinstance(entity_description, SwitchEntityDescription):
-        if entity_description.legacy_type:
-            entity_type = entity_description.legacy_type
-        else:
-            entity_type = entity_description.device
+    name = (
+        get_entity_description_attribute_from_function(
+            data, device, entity_description.legacy_name_fn
+        )
+        if entity_description.legacy_name_fn
+        else entity_description.name
+    )
 
+    entity_type = (
+        entity_description.legacy_type
+        if entity_description.legacy_type
+        else entity_description.device
+    )
+    if isinstance(entity_description, (SwitchEntityDescription)):
         if entity_type:
             if entity_type in ["system", "room"]:
                 return get_unique_id(
@@ -157,9 +185,21 @@ def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
                 return get_unique_id(
                     data,
                     device.product_type,
+                    entity_description.name,
+                    device.id,
+                )
+            elif entity_type == "device-switch":
+                return get_unique_id(
+                    data,
+                    device.product_type,
                     get_legacy_entity_name(data, entity_description, device),
                     device.id,
                 )
+    elif isinstance(
+        entity_description, (BinarySensorEntityDescription, SensorEntityDescription)
+    ):
+        if entity_type in ["room", "system", "hotwater"]:
+            return get_unique_id(data, "sensor", name, device.id)
 
 
 def get_room_name(data, room_id):
@@ -226,3 +266,14 @@ def getattrd(obj, name):
         return reduce(getattr, name.split("."), obj)
     except AttributeError:
         return None
+
+
+def get_entity_description_attribute_from_function(
+    data, device, entity_description_attribute
+):
+    """Execute the entity description lambda function and return value."""
+    no_of_params = len(signature(entity_description_attribute).parameters)
+    if no_of_params == 1:
+        return entity_description_attribute(device)
+    elif no_of_params == 2:
+        return entity_description_attribute(data.wiserhub, device)

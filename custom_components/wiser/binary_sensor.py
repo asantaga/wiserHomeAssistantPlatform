@@ -39,10 +39,27 @@ class WiserBinarySensorEntityDescription(BinarySensorEntityDescription):
     icon_fn: Callable[[Any], str] | None = None
     unit_fn: Callable[[Any], str] | None = None
     value_fn: Callable[[Any], float | str] | None = None
+    legacy_name_fn: Callable[[Any], str] | None = None
+    legacy_type: str = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 
 WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
+    # System sensors
+    WiserBinarySensorEntityDescription(
+        key="heating_channel_status",
+        name_fn=lambda x: f"Heating Channel {x.id}",
+        device_collection="heating_channels",
+        icon_fn=lambda x: "mdi:radiator-disabled"
+        if x.heating_relay_status == "Off"
+        else "mdi:radiator",
+        value_fn=lambda x: x.heating_relay_status == "On",
+        extra_state_attributes={
+            "percentage_demand": lambda x: x.percentage_demand,
+            "room_ids": lambda x: x.room_ids,
+            "is_smartvalve_preventing_demand": lambda x: x.is_smart_valve_preventing_demand,
+        },
+    ),
     # Room Sensors
     WiserBinarySensorEntityDescription(
         key="room_is_heating",
@@ -122,7 +139,7 @@ def _attr_exist(device, entity_desc: WiserBinarySensorEntityDescription) -> bool
     """Check if an attribute exists for device."""
     try:
         r = entity_desc.value_fn(device)
-        if r is not None and r != TEXT_UNKNOWN:
+        if r is not None:
             return True
         return False
     except AttributeError:
@@ -169,7 +186,6 @@ class WiserSensor(WiserBaseEntity, BinarySensorEntity):
     """Class to monitor sensors of a Wiser device."""
 
     entity_description: WiserBinarySensorEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
 
     def __init__(
         self,

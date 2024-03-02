@@ -129,6 +129,7 @@ class WiserClimateEntityExtraDescription:
     name_fn: Callable[[Any], str] | str | None = None
     available_fn: Callable[[Any], bool] | None = None
     legacy_name_fn: Callable[[Any], str] | None = None
+    legacy_type: str = None
     icon_fn: Callable[[Any], str] | None = None
     device: str | None = None
     device_collection: list | None = None
@@ -237,7 +238,6 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
     """Wiser climate entity."""
 
     entity_description: WiserClimateEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
