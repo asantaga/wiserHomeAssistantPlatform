@@ -111,7 +111,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
-            port=config_entry.data[CONF_PORT],
+            port=config_entry.data.get(CONF_PORT, 80),
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
             enable_automations=self.enable_automations_passive_mode,

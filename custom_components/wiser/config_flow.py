@@ -17,7 +17,13 @@ from aioWiserHeatAPI.exceptions import (
 
 from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_PORT,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import selector, SelectSelectorMode
@@ -46,7 +52,11 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
-    {vol.Required(CONF_HOST): str, vol.Optional(CONF_PORT, default=80): int, vol.Required(CONF_PASSWORD): str}
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Optional(CONF_PORT, default=80): int,
+        vol.Required(CONF_PASSWORD): str,
+    }
 )
 
 
@@ -271,7 +281,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = {
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
-            vol.Optional(CONF_PORT, default=self.config_entry.data[CONF_PORT]): str,
+            vol.Optional(
+                CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)
+            ): str,
             vol.Optional(
                 CONF_SCAN_INTERVAL,
                 default=self.config_entry.options.get(
