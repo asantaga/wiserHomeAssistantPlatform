@@ -22,7 +22,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES
 from .entity import WiserBaseEntity
-from .helpers import WiserHubAttribute, get_unique_id, getattrd
+from .helpers import WiserHubAttribute, get_unique_id, getattrd, get_entity_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,6 @@ class WiserSwitchEntityDescription(SwitchEntityDescription):
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
     value_fn: Callable[[Any], bool] | None = None
     delay: int | None = None
-    legacy_name: Callable[[Any], str] | None = None
     legacy_type: str = None
     icon_fn: Callable[[Any], str] | None = None
     extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
@@ -59,22 +58,20 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="away_mode_enabled",
         name="Away Mode",
-        legacy_name="Wiser Away Mode",
-        legacy_type="system",
         device="system",
         icon="mdi:beach",
         value_fn=lambda x: x.away_mode_enabled,
         turn_off_fn=lambda x: x.set_away_mode_enabled(False),
         turn_on_fn=lambda x: x.set_away_mode_enabled(True),
         extra_state_attributes={
-            "away_mode_temp": WiserHubAttribute("system.away_mode_target_temperature"),
+            "away_mode_temperature": WiserHubAttribute(
+                "system.away_mode_target_temperature"
+            ),
         },
     ),
     WiserSwitchEntityDescription(
         key="valve_protection_enabled",
         name="Valve Protection",
-        legacy_name="Wiser Valve Protection",
-        legacy_type="system",
         device="system",
         icon="mdi:snowflake-alert",
         value_fn=lambda x: x.valve_protection_enabled,
@@ -84,8 +81,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="eco_mode_enabled",
         name="Eco Mode",
-        legacy_name="Wiser Eco Mode",
-        legacy_type="system",
         device="system",
         icon="mdi:leaf",
         value_fn=lambda x: x.eco_mode_enabled,
@@ -95,8 +90,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="away_mode_affects_hotwater",
         name="Away Mode Affects Hot Water",
-        legacy_name="Wiser Away Mode Affects Hot Water",
-        legacy_type="system",
         device="system",
         icon="mdi:water",
         value_fn=lambda x: x.away_mode_affects_hotwater,
@@ -106,8 +99,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="comfort_mode_enabled",
         name="Comfort Mode",
-        legacy_name="Wiser Comfort Mode",
-        legacy_type="system",
         device="system",
         icon="mdi:sofa",
         value_fn=lambda x: x.comfort_mode_enabled,
@@ -117,8 +108,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="automatic_daylight_saving_enabled",
         name="Daylight Saving",
-        legacy_name="Wiser Daylight Saving",
-        legacy_type="system",
         device="system",
         icon="mdi:leaf",
         value_fn=lambda x: x.automatic_daylight_saving_enabled,
@@ -128,10 +117,9 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="device_lock_enabled",
         name="Device Lock",
-        legacy_name="Wiser Device Lock",
-        legacy_type="device",
         device_collection="devices",
         icon="mdi:lock",
+        legacy_type="device",
         value_fn=lambda x: x.device_lock_enabled,
         turn_off_fn=lambda x: x.set_device_lock_enabled(False),
         turn_on_fn=lambda x: x.set_device_lock_enabled(True),
@@ -139,10 +127,9 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
     WiserSwitchEntityDescription(
         key="identify",
         name="Identify",
-        legacy_name="Wiser Identify",
-        legacy_type="device",
         device_collection="devices",
         icon="mdi:alarm-light",
+        legacy_type="device",
         value_fn=lambda x: x.identify,
         turn_off_fn=lambda x: x.set_identify(False),
         turn_on_fn=lambda x: x.set_identify(True),
@@ -152,6 +139,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Turns Off",
         device_collection="devices.lights",
         icon="mdi:lightbulb-off-outline",
+        legacy_type="device",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
@@ -161,6 +149,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Closes",
         device_collection="devices.shutters",
         icon="mdi:window-shutter",
+        legacy_type="device",
         value_fn=lambda x: x.away_mode_action == TEXT_CLOSE,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_CLOSE),
@@ -170,6 +159,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Away Mode Turns Off",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
+        legacy_type="device",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
@@ -179,6 +169,7 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Switch",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
+        legacy_type="device",
         value_fn=lambda x: x.is_on,
         delay=2,
         turn_off_fn=lambda x: x.turn_off(),
@@ -189,9 +180,21 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Window Detection",
         device_collection="rooms",
         icon="mdi:window-closed",
+        legacy_type="room",
         value_fn=lambda x: x.window_detection_active,
         turn_off_fn=lambda x: x.set_window_detection_active(False),
         turn_on_fn=lambda x: x.set_window_detection_active(True),
+    ),
+    WiserSwitchEntityDescription(
+        key="passive_mode",
+        name="Passive Mode",
+        device_collection="rooms",
+        icon="mdi:thermostat-box",
+        legacy_type="room",
+        available_fn=lambda x: x.number_of_smartvalves > 0,
+        value_fn=lambda x: x.passive_mode_enabled,
+        turn_off_fn=lambda x: x.set_passive_mode(False),
+        turn_on_fn=lambda x: x.set_passive_mode(True),
     ),
     WiserSwitchEntityDescription(
         key="hot_water",
@@ -201,16 +204,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         value_fn=lambda x: x.current_state == "On",
         turn_off_fn=lambda x: x.override_state("Off"),
         turn_on_fn=lambda x: x.override_state("On"),
-    ),
-    WiserSwitchEntityDescription(
-        key="passive_mode",
-        name="Passive Mode",
-        device_collection="rooms",
-        icon="mdi:thermostat-box",
-        available_fn=lambda x: x.number_of_smartvalves > 0,
-        value_fn=lambda x: x.passive_mode_enabled,
-        turn_off_fn=lambda x: x.set_passive_mode(False),
-        turn_on_fn=lambda x: x.set_passive_mode(True),
     ),
 )
 
@@ -285,13 +278,6 @@ class WiserSwitch(WiserBaseEntity, SwitchEntity):
         if isinstance(ret_val, bool):
             return ret_val
         return False
-
-    @property
-    def unique_id(self):
-        """Return unique id of switch."""
-        return get_unique_id(
-            self._data, self.entity_description.legacy_type, "switch", self.name
-        )
 
     async def async_turn_off(self, **kwargs):
         """Turn the entity off."""

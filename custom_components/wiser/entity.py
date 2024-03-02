@@ -23,6 +23,8 @@ from .helpers import (
     WiserHubAttribute,
     get_entity_name,
     get_identifier,
+    get_legacy_entity_name,
+    get_legacy_unique_id,
     get_unique_id,
     getattrd,
 )
@@ -84,20 +86,6 @@ class WiserBaseEntity(CoordinatorEntity):
         self.async_write_ha_state()
 
     @property
-    def unique_id(self):
-        """Return unique id."""
-        return get_unique_id(
-            self._data,
-            self.entity_class,
-            self.entity_description.key,
-            (
-                self._device.id
-                if isinstance(self._device, _WiserDevice | _WiserRoom | _WiserMoment)
-                else 0
-            ),
-        )
-
-    @property
     def device_info(self):
         """Return device specific attributes."""
         return {
@@ -130,9 +118,14 @@ class WiserBaseEntity(CoordinatorEntity):
     @property
     def name(self) -> str:
         """Return entity name."""
-        if (
-            LEGACY_NAMES
-            and hasattr(self.entity_description, "legacy_name_fn")
+        # TODO: Neaten this up when finished
+        if LEGACY_NAMES:
+            if hasattr(self.entity_description, "legacy_type"):
+                return get_legacy_entity_name(
+                    self._data, self.entity_description, self._device
+                )
+        elif (
+            hasattr(self.entity_description, "legacy_name_fn")
             and self.entity_description.legacy_name_fn
         ):
             return self.entity_description.legacy_name_fn(self._device)
@@ -142,6 +135,25 @@ class WiserBaseEntity(CoordinatorEntity):
         ):
             return self.entity_description.name_fn(self._device)
         return f"{ENTITY_PREFIX} {self._attr_name}" if LEGACY_NAMES else self._attr_name
+
+    @property
+    def unique_id(self):
+        """Return unique id."""
+        if LEGACY_NAMES:
+            if hasattr(self.entity_description, "legacy_type"):
+                return get_legacy_unique_id(
+                    self._data, self.entity_description, self._device
+                )
+        return get_unique_id(
+            self._data,
+            self.entity_class,
+            self.entity_description.key,
+            (
+                self._device.id
+                if isinstance(self._device, _WiserDevice | _WiserRoom | _WiserMoment)
+                else 0
+            ),
+        )
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:

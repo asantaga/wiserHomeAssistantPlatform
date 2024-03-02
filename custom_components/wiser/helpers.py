@@ -6,6 +6,7 @@ from typing import Any
 from aioWiserHeatAPI.devices import PRODUCT_TYPE_CONFIG
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
+from homeassistant.components.switch import SwitchEntityDescription
 
 from homeassistant.core import HomeAssistant
 
@@ -34,10 +35,12 @@ def _get_class_by_product_type(product_type: str):
     return PRODUCT_TYPE_CONFIG.get(product_type, {}).get("class")
 
 
-def get_entity_name(data, device: Any = None):
+def get_entity_name(data, device: Any = None, name: str = None):
     """Return name for Wier device."""
-    if not device:
+    if not device or device.id == 0:
         # This is a system entity
+        if name:
+            return f"{ENTITY_PREFIX} {name}"
         return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
 
     if isinstance(device, _WiserDevice):
@@ -105,6 +108,24 @@ def get_entity_name(data, device: Any = None):
         return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
 
 
+def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
+    """Get legacy entity name to maintain backward compatibility."""
+    if isinstance(entity_description, SwitchEntityDescription):
+        if entity_description.legacy_type:
+            entity_type = entity_description.legacy_type
+        else:
+            entity_type = entity_description.device
+
+        if entity_type:
+            if entity_type == "system":
+                return f"{get_entity_name(data, name=entity_description.name)}"
+            elif entity_type == "room":
+                return f"{get_room_name(data, device.id)} {entity_description.name}"
+            elif entity_type == "device":
+                return f"{get_entity_name(data, device)} {entity_description.name}"
+    return get_entity_name(data, device)
+
+
 def get_identifier(data, device: _WiserDevice | _WiserRoom | None = None):
     """Get identifier for Wiser device."""
     return f"{data.wiserhub.system.name} {get_entity_name(data, device)}"
@@ -114,6 +135,31 @@ def get_unique_id(data, device_type, entity_type, device_id):
     """Get unique id for device."""
 
     return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+
+
+def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
+    """Get legacy unique id to maintain backward compatibility."""
+    if isinstance(entity_description, SwitchEntityDescription):
+        if entity_description.legacy_type:
+            entity_type = entity_description.legacy_type
+        else:
+            entity_type = entity_description.device
+
+        if entity_type:
+            if entity_type in ["system", "room"]:
+                return get_unique_id(
+                    data,
+                    entity_type,
+                    "switch",
+                    get_legacy_entity_name(data, entity_description, device),
+                )
+            elif entity_type == "device":
+                return get_unique_id(
+                    data,
+                    device.product_type,
+                    get_legacy_entity_name(data, entity_description, device),
+                    device.id,
+                )
 
 
 def get_room_name(data, room_id):
