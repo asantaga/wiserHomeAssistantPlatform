@@ -287,6 +287,10 @@ class WiserBatterySensor(WiserSensor):
         return SensorDeviceClass.BATTERY
 
     @property
+    def state_class(self):
+        return SensorStateClass.MEASUREMENT
+
+    @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement of this entity."""
         return PERCENTAGE
