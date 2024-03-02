@@ -7,6 +7,7 @@
         "description": "Please enter the ip address and secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
+          "port": "Port number",
           "password": "Secret Key"
         }
       },
@@ -15,6 +16,7 @@
         "description": "Please enter the secret key obtained from the hub - {name}. \n Hostname: {hostname} \n IP Address: {ip_address}",
         "data": {
           "host": "IP Address or Hostname",
+          "port": "Port number",
           "password": "Secret Key"
         }
       }
@@ -45,6 +47,7 @@
         "description": "Main Parameters",
         "data": {
           "host": "IP Address or Hostname",
+          "port": "Port number",
           "scan_interval": "Scan Interval (secs)",
           "heating_boost_temp": "Default Heating Boost Temperature (°C)",
           "heating_boost_time": "Default Heating Boost Duration (mins)",
