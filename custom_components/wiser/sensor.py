@@ -1199,7 +1199,7 @@ class WiserLTSPowerSensor(WiserSensor):
             ).instantaneous_power
         elif self._lts_sensor_type == "Energy":
             self._state = round(
-                self._data.wiserhub.devices.get_by_id(self._device_id).delivered_power
+                self._data.wiserhub.devices.get_by_id(self._device_id).get("delivered_power", 0)
                 / 1000,
                 2,
             )
