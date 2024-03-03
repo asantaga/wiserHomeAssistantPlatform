@@ -12,7 +12,7 @@
         }
       },
       "zeroconf_confirm": {
-        "title": "Wiser Heat Hub Setup",
+        "title": "Wiser Heat Hub Setup ({name})",
         "description": "Please enter the secret key obtained from the hub - {name}. \n Hostname: {hostname} \n IP Address: {ip_address}",
         "data": {
           "host": "IP Address or Hostname",
