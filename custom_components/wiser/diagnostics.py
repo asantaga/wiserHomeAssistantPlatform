@@ -26,4 +26,4 @@ def _async_get_diagnostics(
 ) -> dict[str, Any]:
     data = hass.data[DOMAIN][entry.entry_id]["data"]
 
-    return anonymise_data(data.wiserhub._raw_hub_data)
+    return anonymise_data(data.wiserhub.raw_hub_data)
