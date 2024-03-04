@@ -25,6 +25,7 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.4
+  - Bump api to v1.5.11
   - Improved api retry handling for inconsitant errors coming from the hub causing errors in the log and entities to go unavailable (issues [#434](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/434), #436, #439)
   - Fixed Validation of translation placeholders error for German language (issue [#434](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/434)
   - Fixed diagnostic download failure (issue [#444](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/444))
