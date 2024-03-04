@@ -17,6 +17,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
+    STATE_UNAVAILABLE,
     UnitOfTemperature,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -836,7 +837,7 @@ class WiserLTSTempSensor(WiserSensor):
                 ).current_target_temperature
                 == TEMP_OFF
             ):
-                self._state = None
+                self._state = STATE_UNAVAILABLE
             else:
                 self._state = self._data.wiserhub.rooms.get_by_id(
                     self._device_id
