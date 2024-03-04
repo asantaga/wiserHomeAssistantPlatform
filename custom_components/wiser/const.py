@@ -5,7 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-VERSION = "3.4.3"
+VERSION = "3.4.4"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"

@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.3
+# Wiser Home Assistant Integration v3.4.4
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -23,6 +23,13 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 
 ## Change log
+
+- v3.4.4
+  - Improved api retry handling for inconsitant errors coming from the hub causing errors in the log and entities to go unavailable (issues [#434](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/434), #436, #439)
+  - Fixed Validation of translation placeholders error for German language (issue [#434](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/434)
+  - Fixed diagnostic download failure (issue [#444](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/444))
+  - Fixed error with wall plugs not providing power data (issue [#446](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/446))
+  - Set state of target temp sensors to Unavailable when the climate HVAC mode is off (issue [#447](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/447), #378)
 
 - v3.4.3
   - Fixed Warning error in logs caused by new HA2024.2 requirement to explicity support Turn On/Off for climate entities (issue [#435](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/435))
