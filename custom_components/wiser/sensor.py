@@ -17,6 +17,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
+    STATE_UNAVAILABLE,
     UnitOfTemperature,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -285,6 +286,10 @@ class WiserBatterySensor(WiserSensor):
     def device_class(self):
         """Return the class of the sensor."""
         return SensorDeviceClass.BATTERY
+
+    @property
+    def state_class(self):
+        return SensorStateClass.MEASUREMENT
 
     @property
     def native_unit_of_measurement(self):
@@ -832,7 +837,7 @@ class WiserLTSTempSensor(WiserSensor):
                 ).current_target_temperature
                 == TEMP_OFF
             ):
-                self._state = "Off"
+                self._state = STATE_UNAVAILABLE
             else:
                 self._state = self._data.wiserhub.rooms.get_by_id(
                     self._device_id
@@ -883,8 +888,6 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def native_unit_of_measurement(self):
-        if self._state == "Off":
-            return None
         return UnitOfTemperature.CELSIUS
 
 
@@ -1190,18 +1193,22 @@ class WiserLTSPowerSensor(WiserSensor):
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
         if self._lts_sensor_type == "Power":
-            self._state = self._data.wiserhub.devices.get_by_id(
-                self._device_id
-            ).instantaneous_power
+            self._state = self._data.wiserhub.devices.get_by_id(self._device_id).get(
+                "instantaneous_power", 0
+            )
         elif self._lts_sensor_type == "Energy":
             self._state = round(
-                self._data.wiserhub.devices.get_by_id(self._device_id).delivered_power
+                self._data.wiserhub.devices.get_by_id(self._device_id).get(
+                    "delivered_power", 0
+                )
                 / 1000,
                 2,
             )
         elif self._lts_sensor_type == "EnergyReceived":
             self._state = round(
-                self._data.wiserhub.devices.get_by_id(self._device_id).received_power
+                self._data.wiserhub.devices.get_by_id(self._device_id).get(
+                    "received_power", 0
+                )
                 / 1000,
                 2,
             )

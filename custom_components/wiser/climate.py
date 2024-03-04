@@ -20,6 +20,7 @@ from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM, TEMP_OFF
+from aioWiserHeatAPI.devices import _WiserRoomStat, _WiserSmartValve
 from .const import (
     DATA,
     DOMAIN,
@@ -276,6 +277,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
+    _attr_translation_key = "wiser"
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
@@ -523,6 +525,33 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
         if self._room.is_passive_mode:
             attrs["passive_mode_temp_increment"] = self.passive_temperature_increment
+
+        # Climate devices (iTRVs and Roomstats)
+        attrs["number_of_trvs"] = len(
+            [
+                device
+                for device in self._room.devices
+                if isinstance(device, (_WiserSmartValve))
+            ]
+        )
+        attrs["number_of_trvs_locked"] = len(
+            [
+                device
+                for device in self._room.devices
+                if isinstance(device, (_WiserSmartValve)) and device.device_lock_enabled
+            ]
+        )
+        attrs["is_roomstat_locked"] = (
+            len(
+                [
+                    device
+                    for device in self._room.devices
+                    if isinstance(device, (_WiserRoomStat))
+                    and device.device_lock_enabled
+                ]
+            )
+            > 0
+        )
 
         return attrs
 

@@ -7,6 +7,7 @@
         "description": "Please enter the ip address and secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
+          "port": "Port number",
           "password": "Secret Key"
         }
       },
@@ -15,6 +16,7 @@
         "description": "Please enter the secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
+          "port": "Port number",
           "password": "Secret Key"
         }
       }

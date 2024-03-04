@@ -1,3 +1,5 @@
+"""Wiser Data Update Coordinator."""
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -12,10 +14,10 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
@@ -40,6 +42,8 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class WiserSettings:
+    """Class to hold settings."""
+
     minimum_temp: float
     maximum_temp: float
     boost_temp: float
@@ -53,11 +57,15 @@ class WiserSettings:
 
 @dataclass
 class WiserData:
+    """Class to hold Wiser data."""
+
     # settings: WiserSettings = field(init=False, default_factory=dict)
     data: dict
 
 
 class WiserUpdateCoordinator(DataUpdateCoordinator):
+    """Wiser hub data update coordinator."""
+
     config_entry: ConfigEntry
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -111,6 +119,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
+            port=config_entry.data.get(CONF_PORT, 80),
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
             enable_automations=self.enable_automations_passive_mode,
@@ -125,27 +134,26 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def async_update_data(self) -> WiserData:
+        """Update data from hub."""
         try:
+            self.last_update_status = "Failed"
             await self.wiserhub.read_hub_data()
             self.hub_version = self.wiserhub.system.hardware_generation
             self.last_update_time = datetime.now()
             self.last_update_status = "Success"
 
-            _LOGGER.info(f"Hub update completed for {self.wiserhub.system.name}")
+            _LOGGER.info("Hub update completed for %s", self.wiserhub.system.name)
 
             # Send event to websockets to notify hub update
             async_dispatcher_send(
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        except (
-            WiserHubConnectionError,
-            WiserHubAuthenticationError,
-            WiserHubRESTError,
-        ) as ex:
-            self.last_update_status = "Failed"
-            _LOGGER.warning(ex)
-        except Exception as ex:
-            self.last_update_status = "Failed"
-            _LOGGER.error(ex)
-            raise ex
+        except WiserHubConnectionError as ex:
+            raise TimeoutError(ex) from ex
+        except WiserHubAuthenticationError as ex:
+            raise UpdateFailed(ex) from ex
+        except WiserHubRESTError as ex:
+            raise UpdateFailed(ex) from ex
+        except Exception as ex:  # pylint: disable=broad-except
+            raise UpdateFailed(ex) from ex

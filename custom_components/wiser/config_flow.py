@@ -17,7 +17,13 @@ from aioWiserHeatAPI.exceptions import (
 
 from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_PORT,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import selector, SelectSelectorMode
@@ -46,7 +52,11 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
-    {vol.Required(CONF_HOST): str, vol.Required(CONF_PASSWORD): str}
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Optional(CONF_PORT, default=80): int,
+        vol.Required(CONF_PASSWORD): str,
+    }
 )
 
 
@@ -57,6 +67,7 @@ async def validate_input(hass: HomeAssistant, data):
     """
     wiserhub = WiserAPI(
         host=data[CONF_HOST],
+        port=data[CONF_PORT],
         secret=data[CONF_PASSWORD],
         session=async_get_clientsession(hass),
         extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
@@ -140,6 +151,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not discovery_info.name.startswith("WiserHeat"):
             return self.async_abort(reason="not_wiser_hub")
         host = discovery_info.host
+        port = discovery_info.port
         zctype = discovery_info.type
         name = discovery_info.name.replace(f".{zctype}", "")
 
@@ -151,6 +163,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self.discovery_info.update(
             {
                 CONF_HOST: host,
+                CONF_PORT: port,
                 CONF_HOSTNAME: discovery_info.hostname.replace(".local.", ".local"),
                 CONF_NAME: name,
             }
@@ -192,12 +205,16 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 "name": self.discovery_info[CONF_NAME],
                 "hostname": self.discovery_info[CONF_HOSTNAME],
                 "ip_address": self.discovery_info[CONF_HOST],
+                "port": self.discovery_info[CONF_PORT],
             },
             data_schema=vol.Schema(
                 {
                     vol.Required(
                         CONF_HOST, default=self.discovery_info[CONF_HOST]
                     ): str,
+                    vol.Optional(
+                        CONF_PORT, default=self.discovery_info[CONF_PORT]
+                    ): int,
                     vol.Required(CONF_PASSWORD): str,
                 }
             ),
@@ -250,10 +267,12 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             if user_input[CONF_HOST]:
                 data = {
                     CONF_HOST: user_input[CONF_HOST],
+                    CONF_PORT: user_input[CONF_PORT],
                     CONF_PASSWORD: self.config_entry.data[CONF_PASSWORD],
                     CONF_NAME: self.config_entry.data[CONF_NAME],
                 }
                 user_input.pop(CONF_HOST)
+                user_input.pop(CONF_PORT)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=data
                 )
@@ -262,6 +281,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = {
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
+            vol.Optional(
+                CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)
+            ): str,
             vol.Optional(
                 CONF_SCAN_INTERVAL,
                 default=self.config_entry.options.get(
