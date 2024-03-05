@@ -25,9 +25,9 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.5
-  - Bump api to v1.5.12 to improve performance of improve retry handling
-  - Fixed issue caused by v3.4.4 that heating actuators and power tags error on load (issue [#449](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/449), #450)
-  - Fixed error setting up integration in config flow caused by session parameter being passed when no longer required
+  - Bump api to v1.5.12 to improve performance of improved retry handling
+  - Fixed issue caused by v3.4.4 that heating actuators and power tags error on load (issue [#449](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/449), [#450](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/450))
+  - Fixed error setting up integration in config flow caused by session parameter being passed when no longer required (issue [#446](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/446))
   - Fixed issue on 3 channel hubs with Heating sensor names
   - Fixed issue with signal sensor showing unknown on startup until first refresh
   - Changed preset icon to HA standard
