@@ -26,7 +26,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import selector, SelectSelectorMode
+from homeassistant.helpers.selector import selector, EntitySelector, EntitySelectorConfig, SelectSelectorMode
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
@@ -37,12 +37,22 @@ from .const import (
     CONF_SETPOINT_MODE,
     CONF_HW_BOOST_TIME,
     CONF_HOSTNAME,
+    CONF_HW_AUTO_MODE,
+    CONF_HW_CLIMATE,
+    CONF_HW_HEAT_MODE,
+    CONF_HW_SENSOR_ENTITY_ID,
+    CONF_HW_TARGET_TEMP,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
+    DEFAULT_HW_AUTO_MODE,
+    DEFAULT_HW_HEAT_MODE,
+    DEFAULT_HW_TARGET_TEMP,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    WISER_HW_AUTO_MODES,
+    WISER_HW_HEAT_MODES,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
 )
@@ -260,6 +270,66 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="automation_params", data_schema=vol.Schema(data_schema)
         )
 
+    async def async_step_hw_climate_params(self, user_input=None):
+        if user_input is not None:
+            options = self.config_entry.options | user_input
+            return self.async_create_entry(title="", data=options)
+
+        data_schema = {
+            vol.Optional(
+                CONF_HW_CLIMATE,
+                default=self.config_entry.options.get(CONF_HW_CLIMATE, False),
+            ): bool,
+            vol.Optional(
+                CONF_HW_SENSOR_ENTITY_ID,
+                default=self.config_entry.options.get(
+                    CONF_HW_SENSOR_ENTITY_ID
+                ),
+            ): EntitySelector(
+                EntitySelectorConfig(
+                    domain=["sensor", "number", "input_number"],
+                    device_class="temperature",
+                    multiple=False,
+                )
+            ),
+            vol.Optional(
+                CONF_HW_AUTO_MODE,
+                default=self.config_entry.options.get(
+                    CONF_HW_AUTO_MODE, list(WISER_HW_AUTO_MODES.values())[0]
+                ),
+            ): selector(
+                {
+                    "select": {
+                        "options": list(WISER_HW_AUTO_MODES.values()),
+                        "mode": SelectSelectorMode.DROPDOWN,
+                    }
+                }
+            ),
+            vol.Optional(
+                CONF_HW_HEAT_MODE,
+                default=self.config_entry.options.get(
+                    CONF_HW_HEAT_MODE, list(WISER_HW_HEAT_MODES.values())[0]
+                ),
+            ): selector(
+                {
+                    "select": {
+                        "options": list(WISER_HW_HEAT_MODES.values()),
+                        "mode": SelectSelectorMode.DROPDOWN,
+                    }
+                }
+            ),
+            vol.Optional(
+                CONF_HW_TARGET_TEMP,
+                default=self.config_entry.options.get(
+                    CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
+                ),
+            ): int,
+        }
+
+        return self.async_show_form(
+            step_id="hw_climate_params", data_schema=vol.Schema(data_schema)
+        )
+
     async def async_step_main_params(self, user_input=None):
         """Handle options flow."""
         if user_input is not None:
@@ -342,7 +412,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
         return self.async_show_menu(
-            step_id="init", menu_options=["main_params", "automation_params"]
+            step_id="init", menu_options=["main_params", "hw_climate_params", "automation_params"]
         )
 
 

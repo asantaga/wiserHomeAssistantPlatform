@@ -37,6 +37,7 @@
         "description": "Réglages des paramètres Wiser.",
         "menu_options": {
           "main_params": "Paramètres principaux",
+          "hw_climate_params": "Paramètres climatiques de l'eau chaude",
           "automation_params": "Paramètres d'automatisation"
         }
       },
@@ -51,6 +52,18 @@
           "hotwater_boost_time": "Défault durée de boost eau chaude",
           "setpoint_mode": "Mode de fonctionnement consigne",
           "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée"
+        }
+      },
+      "hw_climate_params": {
+        "title": "Wiser possibilités d'intégration",
+        "description": "Paramètres climatiques de l'eau chaude",
+        "data": {
+          "hotwater_climate": "Activer l'entité climatique",
+          "hotwater_auto_mode": "Mode automatique d'eau chaude",
+          "hotwater_heat_mode": "Mode de chauffage de l'eau chaude",
+          "hotwater_sensor_entity_id": "Capteur de température d'eau chaude",
+          "hotwater_schedule_mode": "Mode de programmation d'eau chaude",
+          "hotwater_target_temperature": "Défaulttempérature cible de l'eau chaud"
         }
       },
       "automation_params": {
