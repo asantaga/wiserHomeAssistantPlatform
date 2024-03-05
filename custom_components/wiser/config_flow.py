@@ -57,7 +57,6 @@ async def validate_input(hass: HomeAssistant, data):
     wiserhub = WiserAPI(
         host=data[CONF_HOST],
         secret=data[CONF_PASSWORD],
-        session=async_get_clientsession(hass),
         extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
         enable_automations=False,
     )
