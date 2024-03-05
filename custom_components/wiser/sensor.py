@@ -541,6 +541,18 @@ class WiserSystemCircuitState(WiserSensor):
         self.async_write_ha_state()
 
     @property
+    def name(self):
+        """Return name of sensor."""
+        if (
+            self._sensor_type == "Heating"
+            and len(self._data.wiserhub.heating_channels.all) > 1
+        ):
+            return get_device_name(
+                self._data, 0, self._sensor_type + " Channel " + str(self._device_id)
+            )
+        return get_device_name(self._data, 0, self._sensor_type)
+
+    @property
     def icon(self):
         """Return icon."""
         if self._sensor_type == "Heating":
