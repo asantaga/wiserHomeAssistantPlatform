@@ -39,6 +39,7 @@
         "description": "Select parameters to amend",
         "menu_options": {
           "main_params": "Main Parameters",
+          "hw_climate_params": "Hot Water Climate Parameters",
           "automation_params": "Automation Parameters"
         }
       },
@@ -54,6 +55,17 @@
           "hotwater_boost_time": "Default Hot Water Boost Duration (mins)",
           "setpoint_mode": "Setpoint Mode",
           "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature"
+        }
+      },
+      "hw_climate_params": {
+        "title": "Wiser Integration Options",
+        "description": "Hot Water Climate Parameters",
+        "data": {
+          "hotwater_climate": "Enable The Climate Entity",
+          "hotwater_auto_mode": "Hot Water Auto Mode",
+          "hotwater_heat_mode": "Hot Water Heat Mode",
+          "hotwater_sensor_entity_id": "Hot Water Temperature Sensor",
+          "hotwater_target_temperature": "Default Hot Water Target Temperature (°C)"
         }
       },
       "automation_params": {
