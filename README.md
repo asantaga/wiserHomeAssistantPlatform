@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.4
+# Wiser Home Assistant Integration v3.4.5
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -23,6 +23,14 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 
 ## Change log
+
+- v3.4.5
+  - Bump api to v1.5.12 to improve performance of improve retry handling
+  - Fixed issue caused by v3.4.4 that heating actuators and power tags error on load (issue [#449](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/449), #450)
+  - Fixed error setting up integration in config flow caused by session parameter being passed when no longer required
+  - Fixed issue on 3 channel hubs with Heating sensor names
+  - Fixed issue with signal sensor showing unknown on startup until first refresh
+  - Changed preset icon to HA standard
 
 - v3.4.4
   - Bump api to v1.5.11
