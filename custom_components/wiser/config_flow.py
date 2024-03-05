@@ -69,7 +69,6 @@ async def validate_input(hass: HomeAssistant, data):
         host=data[CONF_HOST],
         port=data[CONF_PORT],
         secret=data[CONF_PASSWORD],
-        session=async_get_clientsession(hass),
         extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
         enable_automations=False,
     )
