@@ -332,6 +332,7 @@ class WiserDeviceSignalSensor(WiserSensor):
             self._device = self._data.wiserhub.system
         else:
             self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.signal.displayed_signal_strength
 
     @callback
     def _handle_coordinator_update(self) -> None:
