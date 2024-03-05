@@ -4,7 +4,7 @@
             "wiser": {
                 "state_attributes": {
                     "preset_mode": {
-                        "default": "mdi:home-thermometer",
+                        "default": "mdi:tune-variant",
                         "state": {
                             "Advance Schedule": "mdi:calendar-arrow-right",
                             "Cancel Overrides": "mdi:close-circle",
