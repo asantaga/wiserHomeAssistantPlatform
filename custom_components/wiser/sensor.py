@@ -207,6 +207,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         key="battery",
         name="Battery",
         device_collection="devices",
+        legacy_type="device",
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         unit_of_measurement=PERCENTAGE,
@@ -220,6 +221,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         key="signal",
         name="Signal",
         device_collection="devices",
+        legacy_type="device",
         icon_fn=lambda x: SIGNAL_STRENGTH_ICONS[x.signal.displayed_signal_strength]
         if x.signal.displayed_signal_strength in SIGNAL_STRENGTH_ICONS
         else SIGNAL_STRENGTH_ICONS["NoSignal"],

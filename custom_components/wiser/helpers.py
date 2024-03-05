@@ -143,6 +143,8 @@ def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
                 return get_entity_name(data, name=name)
             if entity_type in ["system", "hotwater"]:
                 return f"{get_entity_name(data, name=name)}"
+            if entity_type in ["device"]:
+                return f"{get_entity_name(data, device)} {name}"
     return get_entity_name(data, device)
 
 
@@ -198,7 +200,7 @@ def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
     elif isinstance(
         entity_description, (BinarySensorEntityDescription, SensorEntityDescription)
     ):
-        if entity_type in ["room", "system", "hotwater"]:
+        if entity_type in ["room", "system", "hotwater", "device"]:
             return get_unique_id(data, "sensor", name, device.id)
 
 
