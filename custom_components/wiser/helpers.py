@@ -143,7 +143,7 @@ def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
                 return get_entity_name(data, name=name)
             if entity_type in ["system", "hotwater"]:
                 return f"{get_entity_name(data, name=name)}"
-            if entity_type in ["device"]:
+            if entity_type in ["device", "signal"]:
                 return f"{get_entity_name(data, device)} {name}"
     return get_entity_name(data, device)
 
@@ -202,6 +202,10 @@ def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
     ):
         if entity_type in ["room", "system", "hotwater", "device"]:
             return get_unique_id(data, "sensor", name, device.id)
+        elif entity_type in ["signal"]:
+            return get_unique_id(
+                data, device.product_type, entity_description.name, device.id
+            )
 
 
 def get_room_name(data, room_id):

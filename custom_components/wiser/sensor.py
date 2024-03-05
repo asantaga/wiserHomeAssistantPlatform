@@ -221,7 +221,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         key="signal",
         name="Signal",
         device_collection="devices",
-        legacy_type="device",
+        legacy_type="signal",
         icon_fn=lambda x: SIGNAL_STRENGTH_ICONS[x.signal.displayed_signal_strength]
         if x.signal.displayed_signal_strength in SIGNAL_STRENGTH_ICONS
         else SIGNAL_STRENGTH_ICONS["NoSignal"],
