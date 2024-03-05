@@ -1193,25 +1193,36 @@ class WiserLTSPowerSensor(WiserSensor):
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
         if self._lts_sensor_type == "Power":
-            self._state = self._data.wiserhub.devices.get_by_id(self._device_id).get(
-                "instantaneous_power", 0
-            )
+            if self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).instantaneous_power:
+                self._state = self._data.wiserhub.devices.get_by_id(
+                    self._device_id
+                ).instantaneous_power
+            else:
+                self._state = 0
         elif self._lts_sensor_type == "Energy":
-            self._state = round(
-                self._data.wiserhub.devices.get_by_id(self._device_id).get(
-                    "delivered_power", 0
+            if self._data.wiserhub.devices.get_by_id(self._device_id).delivered_power:
+                self._state = round(
+                    self._data.wiserhub.devices.get_by_id(
+                        self._device_id
+                    ).delivered_power
+                    / 1000,
+                    2,
                 )
-                / 1000,
-                2,
-            )
+            else:
+                self._state = 0
         elif self._lts_sensor_type == "EnergyReceived":
-            self._state = round(
-                self._data.wiserhub.devices.get_by_id(self._device_id).get(
-                    "received_power", 0
+            if self._data.wiserhub.devices.get_by_id(self._device_id).received_power:
+                self._state = round(
+                    self._data.wiserhub.devices.get_by_id(
+                        self._device_id
+                    ).received_power
+                    / 1000,
+                    2,
                 )
-                / 1000,
-                2,
-            )
+            else:
+                self._state = 0
         self.async_write_ha_state()
 
     @property
