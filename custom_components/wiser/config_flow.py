@@ -26,7 +26,12 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.selector import selector, EntitySelector, EntitySelectorConfig, SelectSelectorMode
+from homeassistant.helpers.selector import (
+    selector,
+    EntitySelector,
+    EntitySelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
     CONF_AUTOMATIONS_PASSIVE,
@@ -241,7 +246,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_automation_params(self, user_input=None):
         if user_input is not None:
             options = self.config_entry.options | user_input
-            return self.async_create_entry(title="", data=options)
+            return self.async_create_entry(data=options)
 
         data_schema = {
             vol.Optional(
@@ -273,7 +278,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_hw_climate_params(self, user_input=None):
         if user_input is not None:
             options = self.config_entry.options | user_input
-            return self.async_create_entry(title="", data=options)
+            return self.async_create_entry(data=options)
 
         data_schema = {
             vol.Optional(
@@ -282,9 +287,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             ): bool,
             vol.Optional(
                 CONF_HW_SENSOR_ENTITY_ID,
-                default=self.config_entry.options.get(
-                    CONF_HW_SENSOR_ENTITY_ID
-                ),
+                default=self.config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID),
             ): EntitySelector(
                 EntitySelectorConfig(
                     domain=["sensor", "number", "input_number"],
@@ -340,19 +343,19 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_PASSWORD: self.config_entry.data[CONF_PASSWORD],
                     CONF_NAME: self.config_entry.data[CONF_NAME],
                 }
-                user_input.pop(CONF_HOST)
-                user_input.pop(CONF_PORT)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=data
                 )
             options = self.config_entry.options | user_input
-            return self.async_create_entry(title="", data=options)
+            options.pop(CONF_HOST)
+            options.pop(CONF_PORT)
+            return self.async_create_entry(data=options)
 
         data_schema = {
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
             vol.Optional(
                 CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)
-            ): str,
+            ): int,
             vol.Optional(
                 CONF_SCAN_INTERVAL,
                 default=self.config_entry.options.get(
@@ -412,7 +415,8 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
         return self.async_show_menu(
-            step_id="init", menu_options=["main_params", "hw_climate_params", "automation_params"]
+            step_id="init",
+            menu_options=["main_params", "hw_climate_params", "automation_params"],
         )
 
 
