@@ -268,6 +268,10 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="power",
         name="Current Power",
+        legacy_type="device",
+        legacy_name_fn=lambda d, x: f"LTS Power {d.rooms.get_by_id(x.room_id).name}"
+        if x.room_id
+        else f"{x.product_type} {x.id}",
         device_collection="devices.heating_actuators",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -277,6 +281,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="energy_delivered",
         name="Energy Delivered",
+        legacy_type="device",
         device_collection="devices.heating_actuators",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -286,6 +291,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
     WiserSensorEntityDescription(
         key="floor_temperature",
         name="Floor Temperature",
+        legacy_type="device",
         device_collection="devices.heating_actuators",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
