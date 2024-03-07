@@ -141,7 +141,7 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._data = coordinator
         self._actuator = actuator
-        self._name = type
+        self._name = device_type
         self._value = getattr(self._actuator.floor_temperature_sensor, self._name)
 
         # Support prior to 2022.7.0 Versions without deprecation warning
