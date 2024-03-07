@@ -38,7 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     await coordinator.async_config_entry_first_refresh()
 
-    if not coordinator.last_update_success:
+    if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
 
     # Update listener for config option changes

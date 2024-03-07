@@ -14,7 +14,13 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -120,12 +126,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
         )
-        self.hw_sensor_entity_id = config_entry.options.get(
-            CONF_HW_SENSOR_ENTITY_ID
-        )
-        self.enable_hw_climate = config_entry.options.get(
-            CONF_HW_CLIMATE, False
-        )
+        self.hw_sensor_entity_id = config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID)
+        self.enable_hw_climate = config_entry.options.get(CONF_HW_CLIMATE, False)
         self.hw_target_temperature = config_entry.options.get(
             CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
         )
@@ -177,11 +179,15 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        except WiserHubConnectionError as ex:
-            raise TimeoutError(ex) from ex
-        except WiserHubAuthenticationError as ex:
-            raise UpdateFailed(ex) from ex
-        except WiserHubRESTError as ex:
-            raise UpdateFailed(ex) from ex
+        except (
+            WiserHubConnectionError,
+            WiserHubAuthenticationError,
+            WiserHubRESTError,
+        ) as ex:
+            _LOGGER.warning(
+                "Error fetching wiser (%s) data. %s",
+                f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
+                ex,
+            )
         except Exception as ex:  # pylint: disable=broad-except
             raise UpdateFailed(ex) from ex

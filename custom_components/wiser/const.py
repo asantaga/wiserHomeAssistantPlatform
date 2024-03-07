@@ -36,7 +36,7 @@ WISER_PLATFORMS = [
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
-MIN_SCAN_INTERVAL = 30
+MIN_SCAN_INTERVAL = 10
 CUSTOM_DATA_STORE = "/.storage/wiser_custom_data"
 
 # Hub
