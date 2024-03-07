@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.5
+# Wiser Home Assistant Integration v3.4.6
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -24,6 +24,13 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.4.6
+  - Bump api to v1.5.13 to improve retry handling to include hub conneciton error
+  - Prevent entities going unavailable if hub update failed
+  - Fix issue with floor temp offset slider not loading
+  - Fix hass.components.websocket_api deprecation warning in HA 2024.3 (issue [#455](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/455))
+  - Fix unique ids not unique error when changing configuration options
+
 - v3.4.5
   - Bump api to v1.5.12 to improve performance of improved retry handling
   - Fixed issue caused by v3.4.4 that heating actuators and power tags error on load (issue [#449](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/449), [#450](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/450))
@@ -46,7 +53,6 @@ For more information checkout the AMAZING community thread available on
 - v3.4.3
   - Fixed Warning error in logs caused by new HA2024.2 requirement to explicity support Turn On/Off for climate entities (issue [#435](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/435))
   - Bump api to v1.5.7 to fix issue setting lower target temp when in passive mode
-
 
 - v3.4.2
   - Reverted to using aiohttp for communication and resolved issues caused by HA2023.12
