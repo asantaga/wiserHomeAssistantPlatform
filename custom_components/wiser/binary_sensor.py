@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from aioWiserHeatAPI.const import TEXT_UNKNOWN
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
 
@@ -21,7 +20,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DATA, DOMAIN, LEGACY_NAMES
+from .const import DATA, DOMAIN
 from .entity import WiserBaseEntity
 from .helpers import WiserDeviceAttribute, getattrd
 
@@ -160,7 +159,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 if _attr_exist(device, sensor_desc):
                     _LOGGER.info("Adding %s", device.name)
                     wiser_sensors.append(
-                        WiserSensor(
+                        WiserBinarySensor(
                             data,
                             sensor_desc,
                             device,
@@ -170,7 +169,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             device = getattrd(data.wiserhub, sensor_desc.device)
             if _attr_exist(device, sensor_desc):
                 wiser_sensors.append(
-                    WiserSensor(
+                    WiserBinarySensor(
                         data,
                         sensor_desc,
                         device,
@@ -182,7 +181,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     return True
 
 
-class WiserSensor(WiserBaseEntity, BinarySensorEntity):
+class WiserBinarySensor(WiserBaseEntity, BinarySensorEntity):
     """Class to monitor sensors of a Wiser device."""
 
     entity_description: WiserBinarySensorEntityDescription
