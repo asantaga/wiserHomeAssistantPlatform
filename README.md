@@ -30,6 +30,7 @@ For more information checkout the AMAZING community thread available on
   - Fix issue with floor temp offset slider not loading
   - Fix hass.components.websocket_api deprecation warning in HA 2024.3 (issue [#455](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/455))
   - Fix unique ids not unique error when changing configuration options
+  - Add new automation to control hot water with a climate entity and an external temperature sensor on your water tank by @markchalloner. See wiki for more info.
 
 - v3.4.5
   - Bump api to v1.5.12 to improve performance of improved retry handling
