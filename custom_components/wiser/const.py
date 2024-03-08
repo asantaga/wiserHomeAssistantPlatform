@@ -5,7 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-VERSION = "3.4.5"
+VERSION = "3.4.6"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
@@ -36,7 +36,7 @@ WISER_PLATFORMS = [
 DATA = "data"
 UPDATE_TRACK = "update_track"
 UPDATE_LISTENER = "update_listener"
-MIN_SCAN_INTERVAL = 30
+MIN_SCAN_INTERVAL = 10
 CUSTOM_DATA_STORE = "/.storage/wiser_custom_data"
 
 # Hub
@@ -44,6 +44,7 @@ MANUFACTURER = "Drayton Wiser"
 MANUFACTURER_SCHNEIDER = "Schneider Electric"
 ENTITY_PREFIX = "Wiser"
 ROOM = "Room"
+HOT_WATER = "Hot Water"
 
 # Notifications
 NOTIFICATION_ID = "wiser_notification"
@@ -55,6 +56,9 @@ DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
 DEFAULT_PASSIVE_TEMP_INCREMENT = 0.5
+DEFAULT_HW_AUTO_MODE = "Normal"
+DEFAULT_HW_HEAT_MODE = "Normal"
+DEFAULT_HW_TARGET_TEMP = 60
 
 # Setpoint Modes
 SETPOINT_MODE_BOOST = "boost"
@@ -69,6 +73,11 @@ CONF_HW_BOOST_TIME = "hotwater_boost_time"
 CONF_SETPOINT_MODE = "setpoint_mode"
 CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
+CONF_HW_AUTO_MODE = "hotwater_auto_mode"
+CONF_HW_CLIMATE = "hotwater_climate"
+CONF_HW_HEAT_MODE = "hotwater_heat_mode"
+CONF_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
+CONF_HW_TARGET_TEMP = "hotwater_target_temperature"
 
 # Custom Attributes
 ATTR_OPENTHERM_ENDPOINT = "endpoint"
@@ -110,6 +119,16 @@ WISER_BOOST_PRESETS = {
     "Boost 1h": 60,
     "Boost 2h": 120,
     "Boost 3h": 180,
+}
+
+WISER_HW_AUTO_MODES = {
+    "Normal": "Normal",
+    "Once": "Once",
+}
+
+WISER_HW_HEAT_MODES = {
+    "Normal": "Normal",
+    "Override": "Override",
 }
 
 WISER_SETPOINT_MODES = {

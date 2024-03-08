@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.5
+# Wiser Home Assistant Integration v3.4.6
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -21,8 +21,17 @@ For more information checkout the AMAZING community thread available on
 
 - Added support for v2 hub
 - Added PowerTagE support
+- Climate entity for controlling hot water with external tank temp sensor
 
 ## Change log
+
+- v3.4.6
+  - Bump api to v1.5.13 to improve retry handling to include hub conneciton error
+  - Prevent entities going unavailable if hub update failed
+  - Fix issue with floor temp offset slider not loading
+  - Fix hass.components.websocket_api deprecation warning in HA 2024.3 (issue [#455](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/455))
+  - Fix unique ids not unique error when changing configuration options
+  - Add new automation to control hot water with a climate entity and an external temperature sensor on your water tank by @markchalloner. See wiki for more info.
 
 - v3.4.5
   - Bump api to v1.5.12 to improve performance of improved retry handling
@@ -46,7 +55,6 @@ For more information checkout the AMAZING community thread available on
 - v3.4.3
   - Fixed Warning error in logs caused by new HA2024.2 requirement to explicity support Turn On/Off for climate entities (issue [#435](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/435))
   - Bump api to v1.5.7 to fix issue setting lower target temp when in passive mode
-
 
 - v3.4.2
   - Reverted to using aiohttp for communication and resolved issues caused by HA2023.12

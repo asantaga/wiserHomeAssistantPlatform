@@ -14,7 +14,13 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -24,12 +30,20 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
+    CONF_HW_AUTO_MODE,
     CONF_HW_BOOST_TIME,
+    CONF_HW_CLIMATE,
+    CONF_HW_HEAT_MODE,
+    CONF_HW_SENSOR_ENTITY_ID,
+    CONF_HW_TARGET_TEMP,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
+    DEFAULT_HW_AUTO_MODE,
+    DEFAULT_HW_HEAT_MODE,
+    DEFAULT_HW_TARGET_TEMP,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETPOINT_MODE,
@@ -52,7 +66,12 @@ class WiserSettings:
     setpoint_mode: str
     enable_moments: bool
     enable_lts_sensors: bool
+    enable_hw_climate: bool
     previous_target_temp_option: str
+    hw_auto_mode: str
+    hw_heat_mode: str
+    hw_sensor_entity_id: str
+    hw_target_temperature: float
 
 
 @dataclass
@@ -107,6 +126,17 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
         )
+        self.hw_sensor_entity_id = config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID)
+        self.enable_hw_climate = config_entry.options.get(CONF_HW_CLIMATE, False)
+        self.hw_target_temperature = config_entry.options.get(
+            CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
+        )
+        self.hw_auto_mode = config_entry.options.get(
+            CONF_HW_AUTO_MODE, DEFAULT_HW_AUTO_MODE
+        )
+        self.hw_heat_mode = config_entry.options.get(
+            CONF_HW_HEAT_MODE, DEFAULT_HW_HEAT_MODE
+        )
 
         # Automation option params
         self.enable_automations_passive_mode = config_entry.options.get(
@@ -149,11 +179,15 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
             return True
-        except WiserHubConnectionError as ex:
-            raise TimeoutError(ex) from ex
-        except WiserHubAuthenticationError as ex:
-            raise UpdateFailed(ex) from ex
-        except WiserHubRESTError as ex:
-            raise UpdateFailed(ex) from ex
+        except (
+            WiserHubConnectionError,
+            WiserHubAuthenticationError,
+            WiserHubRESTError,
+        ) as ex:
+            _LOGGER.warning(
+                "Error fetching wiser (%s) data. %s",
+                f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
+                ex,
+            )
         except Exception as ex:  # pylint: disable=broad-except
             raise UpdateFailed(ex) from ex
