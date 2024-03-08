@@ -21,6 +21,7 @@ For more information checkout the AMAZING community thread available on
 
 - Added support for v2 hub
 - Added PowerTagE support
+- Climate entity for controlling hot water with external tank temp sensor
 
 ## Change log
 
