@@ -1,5 +1,4 @@
-"""
-Drayton Wiser Compoment for Wiser System.
+"""Drayton Wiser Compoment for Wiser System.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 msparker@sky.com
@@ -13,12 +12,6 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
-from .coordinator import WiserUpdateCoordinator
-from .frontend import WiserCardRegistration
-from .helpers import get_device_name, get_identifier, get_instance_count
-from .services import async_setup_services
-from .websockets import async_register_websockets
-
 from .const import (
     DATA,
     DOMAIN,
@@ -27,6 +20,11 @@ from .const import (
     WISER_PLATFORMS,
     WISER_SERVICES,
 )
+from .coordinator import WiserUpdateCoordinator
+from .frontend import WiserCardRegistration
+from .helpers import get_device_name, get_identifier, get_instance_count
+from .services import async_setup_services
+from .websockets import async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     await cards.async_register()
 
     _LOGGER.info(
-        f"Wiser Component Setup Completed ({coordinator.wiserhub.system.name})"
+        "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
     )
     return True
 
@@ -100,7 +98,7 @@ async def _async_update_listener(hass: HomeAssistant, config_entry):
 async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry, device_entry
 ) -> bool:
-    """Delete device if not entities"""
+    """Delete device if not entities."""
     if device_entry.model == "Controller":
         _LOGGER.error(
             "You cannot delete the Wiser Controller using device delete.  Please remove the integration instead"
@@ -110,7 +108,7 @@ async def async_remove_config_entry_device(
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry):
-    """Unload a config entry"""
+    """Unload a config entry."""
 
     if get_instance_count(hass) == 0:
         # Unload lovelace module resource if only instance
@@ -120,7 +118,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry):
 
         # Deregister services if only instance
         _LOGGER.debug("Unregister Wiser services")
-        for k, service in WISER_SERVICES.items():
+        for service in WISER_SERVICES.values():
             hass.services.async_remove(DOMAIN, service)
 
     _LOGGER.debug("Unload Wiser integration platforms")
