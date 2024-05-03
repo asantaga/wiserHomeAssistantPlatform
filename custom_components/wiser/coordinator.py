@@ -164,6 +164,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.passive_temperature_increment
         )
 
+        self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
+
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""
         try:
