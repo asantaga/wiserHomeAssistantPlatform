@@ -215,7 +215,7 @@ async def async_setup_services(hass: HomeAssistant, data):
         schedule_name = service_call.data.get(ATTR_SCHEDULE_NAME)
         to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
 
-        if entity_id:
+        if entity_id is not None:
             # Assign schedule from this entity to another
             for to_entity_id in to_entity_ids:
                 from_entity = get_entity_from_entity_id(entity_id)
@@ -236,7 +236,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     _LOGGER.error(
                         f"Invalid entity - {from_entity_id_text}{and_text}{to_entity_id_text} does not exist in this integration"  # noqa=E501
                     )
-        elif schedule_id:
+        elif schedule_id is not None:
             # Assign scheduel with id to this entity
             for to_entity_id in to_entity_ids:
                 to_entity = get_entity_from_entity_id(to_entity_id)
@@ -248,7 +248,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                         _LOGGER.error(
                             f"Cannot assign schedule to entity {to_entity.name}. Please see wiki for entities to choose"
                         )
-        elif schedule_name:
+        elif schedule_name is not None:
             # Assign schedule with name to this entity
             for to_entity_id in to_entity_ids:
                 to_entity = get_entity_from_entity_id(to_entity_id)
