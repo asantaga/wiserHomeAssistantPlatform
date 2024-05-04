@@ -5,6 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+
 from datetime import datetime
 import logging
 
@@ -18,6 +19,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
     UnitOfTemperature,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -396,9 +398,9 @@ class WiserDeviceSignalSensor(WiserSensor):
         # Zigbee Data
         attrs["node_id"] = self._device.node_id
         attrs["zigbee_channel"] = self._data.wiserhub.system.zigbee.network_channel
-        attrs[
-            "displayed_signal_strength"
-        ] = self._device.signal.displayed_signal_strength
+        attrs["displayed_signal_strength"] = (
+            self._device.signal.displayed_signal_strength
+        )
 
         # For non controller device
         if self._device_id != 0:
@@ -406,24 +408,24 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["hub_route"] = "direct"
 
             if self._device.signal.device_reception_rssi is not None:
-                attrs[
-                    "device_reception_RSSI"
-                ] = self._device.signal.device_reception_rssi
+                attrs["device_reception_RSSI"] = (
+                    self._device.signal.device_reception_rssi
+                )
                 attrs["device_reception_LQI"] = self._device.signal.device_reception_lqi
-                attrs[
-                    "device_reception_percent"
-                ] = self._device.signal.device_signal_strength
+                attrs["device_reception_percent"] = (
+                    self._device.signal.device_signal_strength
+                )
 
             if self._device.signal.controller_reception_rssi is not None:
-                attrs[
-                    "controller_reception_RSSI"
-                ] = self._device.signal.controller_reception_rssi
-                attrs[
-                    "controller_reception_LQI"
-                ] = self._device.signal.controller_reception_lqi
-                attrs[
-                    "controller_reception_percent"
-                ] = self._device.signal.controller_signal_strength
+                attrs["controller_reception_RSSI"] = (
+                    self._device.signal.controller_reception_rssi
+                )
+                attrs["controller_reception_LQI"] = (
+                    self._device.signal.controller_reception_lqi
+                )
+                attrs["controller_reception_percent"] = (
+                    self._device.signal.controller_signal_strength
+                )
 
             if self._device.parent_node_id > 0:
                 attrs["parent_node_id"] = self._device.parent_node_id
@@ -443,9 +445,9 @@ class WiserDeviceSignalSensor(WiserSensor):
         else:
             # Show Wifi info
             attrs["wifi_strength"] = self._device.signal.controller_reception_rssi
-            attrs[
-                "wifi_strength_percent"
-            ] = self._device.signal.controller_signal_strength
+            attrs["wifi_strength_percent"] = (
+                self._device.signal.controller_signal_strength
+            )
             attrs["wifi_SSID"] = self._device.network.ssid
             attrs["wifi_IP"] = self._device.network.ip_address
 
@@ -456,9 +458,9 @@ class WiserDeviceSignalSensor(WiserSensor):
             # Show status info if exists
             if self._data.wiserhub.status:
                 attrs["uptime"] = self._data.wiserhub.status.uptime
-                attrs[
-                    "last_reset_reason"
-                ] = self._data.wiserhub.status.last_reset_reason
+                attrs["last_reset_reason"] = (
+                    self._data.wiserhub.status.last_reset_reason
+                )
 
         # Other
         if self._sensor_type == "RoomStat":
@@ -574,13 +576,13 @@ class WiserSystemCircuitState(WiserSensor):
             heating_channel = self._data.wiserhub.heating_channels.get_by_id(
                 self._device_id
             )
-            attrs[
-                f"percentage_demand_{heating_channel.name}"
-            ] = heating_channel.percentage_demand
+            attrs[f"percentage_demand_{heating_channel.name}"] = (
+                heating_channel.percentage_demand
+            )
             attrs[f"room_ids_{heating_channel.name}"] = heating_channel.room_ids
-            attrs[
-                f"is_smartvalve_preventing_demand_{heating_channel.name}"
-            ] = heating_channel.is_smart_valve_preventing_demand
+            attrs[f"is_smartvalve_preventing_demand_{heating_channel.name}"] = (
+                heating_channel.is_smart_valve_preventing_demand
+            )
             if self._data.wiserhub.system.opentherm.connection_status == "Connected":
                 opentherm = self._data.wiserhub.system.opentherm.operational_data
                 attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
@@ -741,14 +743,14 @@ class WiserSmartplugPower(WiserSensor):
             # Fix for api/hub returning 0 value in some situations causing issues with energy
             # monitoring showing high usage
             # Issue 223
-            if self._device.delivered_power > -1:
+            if self._device.delivered_power is not None:
                 self._state = round(self._device.delivered_power / 1000, 2)
                 self._last_delivered_power = round(
                     self._device.delivered_power / 1000, 2
                 )
 
             else:
-                self._state = self._last_delivered_power
+                self._state = self._last_delivered_power or STATE_UNKNOWN
         self.async_write_ha_state()
 
     @property
@@ -945,12 +947,12 @@ class WiserLTSOpenthermSensor(WiserSensor):
         attrs = {}
         if self._lts_sensor_type == "opentherm_flow_temp":
             opentherm = self._data.wiserhub.system.opentherm
-            attrs[
-                "ch_flow_active_lower_setpoint"
-            ] = opentherm.ch_flow_active_lower_setpoint
-            attrs[
-                "ch_flow_active_upper_setpoint"
-            ] = opentherm.ch_flow_active_upper_setpoint
+            attrs["ch_flow_active_lower_setpoint"] = (
+                opentherm.ch_flow_active_lower_setpoint
+            )
+            attrs["ch_flow_active_upper_setpoint"] = (
+                opentherm.ch_flow_active_upper_setpoint
+            )
             attrs["ch1_flow_enabled"] = opentherm.ch1_flow_enabled
             attrs["ch1_flow_setpoint"] = opentherm.ch1_flow_setpoint
             attrs["ch2_flow_enabled"] = opentherm.ch2_flow_enabled
@@ -967,40 +969,40 @@ class WiserLTSOpenthermSensor(WiserSensor):
             attrs["ch_flow_temperature"] = operational_data.ch_flow_temperature
             attrs["ch_pressure_bar"] = operational_data.ch_pressure_bar
             attrs["ch_return_temperature"] = operational_data.ch_return_temperature
-            attrs[
-                "relative_modulation_level"
-            ] = operational_data.relative_modulation_level
+            attrs["relative_modulation_level"] = (
+                operational_data.relative_modulation_level
+            )
             attrs["hw_temperature"] = operational_data.hw_temperature
             attrs["hw_flow_rate"] = operational_data.hw_flow_rate
             attrs["slave_status"] = operational_data.slave_status
 
             boiler_params = opentherm.boiler_parameters
-            attrs[
-                "boiler_ch_max_setpoint_read_write"
-            ] = boiler_params.ch_max_setpoint_read_write
-            attrs[
-                "boiler_ch_max_setpoint_transfer_enable"
-            ] = boiler_params.ch_max_setpoint_transfer_enable
+            attrs["boiler_ch_max_setpoint_read_write"] = (
+                boiler_params.ch_max_setpoint_read_write
+            )
+            attrs["boiler_ch_max_setpoint_transfer_enable"] = (
+                boiler_params.ch_max_setpoint_transfer_enable
+            )
             attrs["boiler_ch_setpoint"] = boiler_params.ch_setpoint
-            attrs[
-                "boiler_ch_setpoint_lower_bound"
-            ] = boiler_params.ch_setpoint_lower_bound
-            attrs[
-                "boiler_ch_setpoint_upper_bound"
-            ] = boiler_params.ch_setpoint_upper_bound
-            attrs[
-                "boiler_hw_setpoint_read_write"
-            ] = boiler_params.hw_setpoint_read_write
-            attrs[
-                "boiler_hw_setpoint_transfer_enable"
-            ] = boiler_params.hw_setpoint_transfer_enable
+            attrs["boiler_ch_setpoint_lower_bound"] = (
+                boiler_params.ch_setpoint_lower_bound
+            )
+            attrs["boiler_ch_setpoint_upper_bound"] = (
+                boiler_params.ch_setpoint_upper_bound
+            )
+            attrs["boiler_hw_setpoint_read_write"] = (
+                boiler_params.hw_setpoint_read_write
+            )
+            attrs["boiler_hw_setpoint_transfer_enable"] = (
+                boiler_params.hw_setpoint_transfer_enable
+            )
             attrs["boiler_hw_setpoint"] = boiler_params.hw_setpoint
-            attrs[
-                "boiler_hw_setpoint_lower_bound"
-            ] = boiler_params.hw_setpoint_lower_bound
-            attrs[
-                "boiler_hw_setpoint_upper_bound"
-            ] = boiler_params.hw_setpoint_upper_bound
+            attrs["boiler_hw_setpoint_lower_bound"] = (
+                boiler_params.hw_setpoint_lower_bound
+            )
+            attrs["boiler_hw_setpoint_upper_bound"] = (
+                boiler_params.hw_setpoint_upper_bound
+            )
         return attrs
 
     @property
@@ -1187,35 +1189,40 @@ class WiserLTSPowerSensor(WiserSensor):
 
         if name:
             super().__init__(data, device_id, f"{name.title()} ")
+        elif sensor_type == "Power":
+            super().__init__(
+                data,
+                device_id,
+                f"LTS Power {device_name}",
+            )
         else:
-            if sensor_type == "Power":
-                super().__init__(
-                    data,
-                    device_id,
-                    f"LTS Power {device_name}",
-                )
-            else:
-                super().__init__(
-                    data,
-                    device_id,
-                    f"LTS Energy {device_name}",
-                )
+            super().__init__(
+                data,
+                device_id,
+                f"LTS Energy {device_name}",
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
         if self._lts_sensor_type == "Power":
-            if self._data.wiserhub.devices.get_by_id(
-                self._device_id
-            ).instantaneous_power:
+            if (
+                self._data.wiserhub.devices.get_by_id(
+                    self._device_id
+                ).instantaneous_power
+                is not None
+            ):
                 self._state = self._data.wiserhub.devices.get_by_id(
                     self._device_id
                 ).instantaneous_power
             else:
-                self._state = 0
+                self._state = STATE_UNKNOWN
         elif self._lts_sensor_type == "Energy":
-            if self._data.wiserhub.devices.get_by_id(self._device_id).delivered_power:
+            if (
+                self._data.wiserhub.devices.get_by_id(self._device_id).delivered_power
+                is not None
+            ):
                 self._state = round(
                     self._data.wiserhub.devices.get_by_id(
                         self._device_id
@@ -1224,9 +1231,12 @@ class WiserLTSPowerSensor(WiserSensor):
                     2,
                 )
             else:
-                self._state = 0
+                self._state = STATE_UNKNOWN
         elif self._lts_sensor_type == "EnergyReceived":
-            if self._data.wiserhub.devices.get_by_id(self._device_id).received_power:
+            if (
+                self._data.wiserhub.devices.get_by_id(self._device_id).received_power
+                is not None
+            ):
                 self._state = round(
                     self._data.wiserhub.devices.get_by_id(
                         self._device_id
@@ -1235,7 +1245,7 @@ class WiserLTSPowerSensor(WiserSensor):
                     2,
                 )
             else:
-                self._state = 0
+                self._state = STATE_UNKNOWN
         self.async_write_ha_state()
 
     @property
