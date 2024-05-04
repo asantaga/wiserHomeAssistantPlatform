@@ -1,5 +1,6 @@
 """Wiser Data Update Coordinator."""
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -163,6 +164,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.passive_temperature_increment
         )
 
+        self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
+
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""
         try:
@@ -189,5 +192,11 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
                 ex,
             )
+        except asyncio.CancelledError:
+            _LOGGER.warning("Asyncio task cancelled during hub update!")
         except Exception as ex:  # pylint: disable=broad-except
-            raise UpdateFailed(ex) from ex
+            _LOGGER.error(
+                "Unknown error fetching wiser (%s) data. %s.  Please report this error to the integration owner",
+                f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
+                ex,
+            )

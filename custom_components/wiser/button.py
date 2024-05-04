@@ -1,18 +1,15 @@
+"""Button entities."""
+
 import asyncio
 import logging
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
-from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
-
-from .const import (
-    DATA,
-    DOMAIN,
-    MANUFACTURER,
-)
+from .const import DATA, DOMAIN, MANUFACTURER
+from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,22 +36,26 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     if data.wiserhub.moments:
         _LOGGER.debug("Setting up Moments buttons")
-        for moment in data.wiserhub.moments.all:
-            wiser_buttons.append(WiserMomentsButton(data, moment.id))
+        wiser_buttons = [
+            WiserMomentsButton(data, moment.id) for moment in data.wiserhub.moments.all
+        ]
 
     async_add_entities(wiser_buttons, True)
 
 
 class WiserButton(CoordinatorEntity, ButtonEntity):
+    """Class to handle a button entity."""
+
     def __init__(self, coordinator, name="Button") -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
         self._name = name
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        """Force an update from the hub."""
+        _LOGGER.debug("Hub update initiated by %s", self.name)
         if delay:
             asyncio.sleep(delay)
         state = await self.async_get_last_state()
@@ -71,6 +72,7 @@ class WiserButton(CoordinatorEntity, ButtonEntity):
 
     @property
     def name(self):
+        """Return entity name."""
         return get_device_name(self._data, 0, self._name)
 
     @property
@@ -87,11 +89,15 @@ class WiserButton(CoordinatorEntity, ButtonEntity):
 
 
 class WiserBoostAllHeatingButton(WiserButton):
+    """Class to handle Heating button."""
+
     def __init__(self, data) -> None:
+        """Init."""
         super().__init__(data, "Boost All Heating")
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         boost_time = self._data.boost_time
         boost_temp = self._data.boost_temp
         await self._data.wiserhub.system.boost_all_rooms(boost_temp, boost_time)
@@ -99,58 +105,78 @@ class WiserBoostAllHeatingButton(WiserButton):
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:fire"
 
 
 class WiserCancelHeatingOverridesButton(WiserButton):
+    """Class to handle heating overrides button."""
+
     def __init__(self, data) -> None:
+        """Init."""
         super().__init__(data, "Cancel All Heating Overrides")
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         await self._data.wiserhub.system.cancel_all_overrides()
         await self.async_force_update()
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:fire-off"
 
 
 class WiserBoostHotWaterButton(WiserButton):
+    """Class to handle hot water button."""
+
     def __init__(self, data) -> None:
+        """Init."""
         super().__init__(data, "Boost Hot Water")
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         boost_time = self._data.hw_boost_time
         await self._data.wiserhub.hotwater.boost(boost_time)
         await self.async_force_update()
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:water-plus"
 
 
 class WiserCancelHotWaterOverridesButton(WiserButton):
+    """Class to handle cancel hot water overrides button."""
+
     def __init__(self, data) -> None:
+        """Init."""
         super().__init__(data, "Cancel Hot Water Overrides")
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         await self._data.wiserhub.hotwater.cancel_overrides()
         await self.async_force_update()
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:water-off"
 
 
 class WiserOverrideHotWaterButton(WiserButton):
+    """Class to handle hot water override button."""
+
     def __init__(self, data) -> None:
+        """Init."""
         super().__init__(data, "Toggle Hot Water")
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         await self._data.wiserhub.hotwater.override_state(
             "Off" if self._data.wiserhub.hotwater.current_state == "On" else "On"
         )
@@ -158,11 +184,15 @@ class WiserOverrideHotWaterButton(WiserButton):
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:water-boiler"
 
 
 class WiserMomentsButton(WiserButton):
+    """Class to handle moments button."""
+
     def __init__(self, data, moment_id) -> None:
+        """Init."""
         self._moment_id = moment_id
         super().__init__(
             data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}"
@@ -170,9 +200,11 @@ class WiserMomentsButton(WiserButton):
 
     @hub_error_handler
     async def async_press(self):
+        """Handle button press."""
         await self._data.wiserhub.moments.get_by_id(self._moment_id).activate()
         await self.async_force_update()
 
     @property
     def icon(self):
+        """Return icon."""
         return "mdi:home-thermometer"

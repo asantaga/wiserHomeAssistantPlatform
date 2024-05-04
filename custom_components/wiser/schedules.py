@@ -147,37 +147,66 @@ class WiserScheduleEntity:
             to_id = None
             schedule_type = self.get_schedule_type()
             schedule_identifier = (
-                "id " + str(schedule_id) if schedule_id else "name " + schedule_name
+                "id " + str(schedule_id)
+                if schedule_id is not None
+                else "name " + schedule_name
             )
-            if hasattr(self, "room"):
-                to_id = self.room.id
-                room_name = self.room.name
-                _LOGGER.debug(
-                    f"Assigning {schedule_type.value} schedule with {schedule_identifier} to room {room_name}"
-                )
-            else:
-                to_id = self.device.device_type_id
-                device_name = self.device.name
-                _LOGGER.info(
-                    f"Assigning {schedule_type.value} schedule with {schedule_identifier} to device {device_name}"
-                )
 
-            if schedule_name:
-                schedule = self.data.wiserhub.schedules.get_by_name(
-                    schedule_type, schedule_name
-                )
-            elif schedule_id:
-                schedule = self.data.wiserhub.schedules.get_by_id(
-                    schedule_type, schedule_id
-                )
-
-            if schedule:
-                await schedule.assign_schedule(to_id)
-                await self.data.async_refresh()
+            if schedule_id == 0:
+                if hasattr(self, "room"):
+                    if self.schedule:
+                        _LOGGER.debug(
+                            f"Unassigning {schedule_type.value} schedule with id {self.schedule.id} from room {self.room.name}"
+                        )
+                        await self.schedule.unassign_schedule(self.room.id)
+                    else:
+                        _LOGGER.warning(
+                            f"Unable to unassign schedule from {self.room.name} as no schedule is assigned"
+                        )
+                else:
+                    if self.schedule:
+                        _LOGGER.debug(
+                            f"Unassigning {schedule_type.value} schedule with id {self.schedule.id} from room {self.device.name}"
+                        )
+                        await self.schedule.unassign_schedule(
+                            self.device.device_type_id
+                        )
+                        await self.data.async_refresh()
+                    else:
+                        _LOGGER.warning(
+                            f"Unable to unassign schedule from {self.device.name} as no schedule is assigned"
+                        )
             else:
-                _LOGGER.error(
-                    f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {schedule_identifier} does not exist"  # noqa: E501
-                )
+                if hasattr(self, "room"):
+                    to_id = self.room.id
+                    room_name = self.room.name
+                    _LOGGER.debug(
+                        f"Assigning {schedule_type.value} schedule with {schedule_identifier} to room {room_name}"
+                    )
+                else:
+                    to_id = self.device.device_type_id
+                    device_name = self.device.name
+                    _LOGGER.info(
+                        f"Assigning {schedule_type.value} schedule with {schedule_identifier} to device {device_name}"
+                    )
+
+                schedule = None
+                if schedule_name:
+                    schedule = self.data.wiserhub.schedules.get_by_name(
+                        schedule_type, schedule_name
+                    )
+                elif schedule_id:
+                    schedule = self.data.wiserhub.schedules.get_by_id(
+                        schedule_type, schedule_id
+                    )
+
+                if schedule:
+                    await schedule.assign_schedule(to_id)
+                    await self.data.async_refresh()
+                else:
+                    _LOGGER.error(
+                        f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {schedule_identifier} does not exist"  # noqa: E501
+                    )
         except Exception as ex:  # pylint: disable=broad-exception-caught
             _LOGGER.error(
                 f"Error assigning schedule with id {schedule_id} to {self.name}. {ex}"

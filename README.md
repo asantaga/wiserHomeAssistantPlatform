@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.6
+# Wiser Home Assistant Integration v3.4.7
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -24,6 +24,15 @@ For more information checkout the AMAZING community thread available on
 - Climate entity for controlling hot water with external tank temp sensor
 
 ## Change log
+
+- v3.4.7
+  - Bump api to v1.5.14 to improve handling of hub connection errors
+  - Fix - improve handling of hub update failures - [#434](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/434)
+  - Fix - set entity values to unknown if not provided in the hub update - [#471](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/471)
+  - Fix - removed use of async_add_job - [#463](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/463)
+  - Fix - add color modes to lights - [#458](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/458)
+  - Fix - use default boost temp with presets - [#467](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/467)
+  - Add ability to unassign a schedule via the assign schedule service - [#470](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/470)
 
 - v3.4.6
   - Bump api to v1.5.13 to improve retry handling to include hub conneciton error

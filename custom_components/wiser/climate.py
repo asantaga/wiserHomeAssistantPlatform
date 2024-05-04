@@ -1,21 +1,28 @@
-"""
-Climate Platform Device for Wiser Rooms.
+"""Climate Platform Device for Wiser Rooms.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+
 import logging
 import math
-from .events import fire_events
+
+from aioWiserHeatAPI.const import (
+    TEXT_BOOST,
+    WISER_BOOST_DURATION,
+    WiserPresetOptionsEnum,
+)
+from aioWiserHeatAPI.devices import _WiserRoomStat, _WiserSmartValve
+from aioWiserHeatAPI.wiserhub import TEMP_MAXIMUM, TEMP_MINIMUM, TEMP_OFF
 import voluptuous as vol
 
 from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
     HVACAction,
     HVACMode,
-    ClimateEntityFeature,
 )
-from homeassistant.components.climate import ClimateEntity
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     EVENT_HOMEASSISTANT_START,
@@ -23,34 +30,25 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import callback, CoreState, HomeAssistant
+from homeassistant.core import CoreState, HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from aioWiserHeatAPI.const import (
-    TEXT_BOOST,
-    WISER_BOOST_DURATION,
-    WiserPresetOptionsEnum,
-)
-from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM, TEMP_OFF
-from aioWiserHeatAPI.devices import _WiserRoomStat, _WiserSmartValve
+
 from .const import (
     DATA,
     DOMAIN,
+    HOT_WATER,
     MANUFACTURER,
     ROOM,
-    HOT_WATER,
     WISER_BOOST_PRESETS,
-    WISER_HW_HEAT_MODES,
     WISER_HW_AUTO_MODES,
+    WISER_HW_HEAT_MODES,
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
 )
-from .helpers import (
-    get_device_name,
-    get_identifier,
-    hub_error_handler,
-)
+from .events import fire_events
+from .helpers import get_device_name, get_identifier, hub_error_handler
 from .schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -181,7 +179,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
 
 class WiserTempProbe(CoordinatorEntity, ClimateEntity):
-    """Wiser temp probe climate entity object"""
+    """Wiser temp probe climate entity object."""
 
     _enable_turn_on_off_backwards_compatibility = False
 
@@ -195,15 +193,16 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
             self._actuator_id
         )
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
+        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
 
     async def async_force_update(self):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        """Force update from hub."""
+        _LOGGER.debug("Hub update initiated by %s", self.name)
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug("%s updating", self.name)
         self._actuator = self._data.wiserhub.devices.heating_actuators.get_by_id(
             self._actuator_id
         )
@@ -234,6 +233,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_mode(self):
+        """Return HVAC mode."""
         return HVACMode.HEAT
 
     @property
@@ -285,6 +285,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach.
+
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._actuator.floor_temperature_sensor.maximum_temperature
@@ -292,6 +293,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach.
+
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._actuator.floor_temperature_sensor.minimum_temperature
@@ -320,22 +322,23 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._data = coordinator
         self._room_id = room_id
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
-        self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
+        self._hvac_modes_list = list(HVAC_MODE_HASS_TO_WISER.keys())
         self._is_heating = self._room.is_heating
         self._schedule = self._room.schedule
         self._boosted_time = 0
 
         self.passive_temperature_increment = self._data.passive_temperature_increment
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initailise")
+        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
 
     async def async_force_update(self):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        """Force update form hub."""
+        _LOGGER.debug("Hub update initiated by %s", self.name)
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug("%s updating", self.name)
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
@@ -394,6 +397,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     @property
     def hvac_mode(self):
+        """Return HVAC mode."""
         return HVAC_MODE_WISER_TO_HASS[self._room.mode]
 
     @property
@@ -404,13 +408,13 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @hub_error_handler
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new operation mode."""
-        _LOGGER.debug(f"Setting HVAC mode to {hvac_mode} for {self._room.name}")
+        _LOGGER.debug("Setting HVAC mode to %s for %s", hvac_mode, self._room.name)
         try:
             await self._room.set_mode(HVAC_MODE_HASS_TO_WISER[hvac_mode])
             await self.async_force_update()
             return True
         except KeyError:
-            _LOGGER.error(f"Invalid HVAC mode.  Options are {self.hvac_modes}")
+            _LOGGER.error("Invalid HVAC mode.  Options are %s", self.hvac_modes)
 
     @property
     def max_temp(self):
@@ -451,7 +455,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @hub_error_handler
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
-        _LOGGER.debug(f"Setting Preset Mode {preset_mode} for {self._room.name}")
+        _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._room.name)
         try:
             await self._room.set_preset(preset_mode)
         except ValueError as ex:
@@ -461,12 +465,12 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     @property
     def room(self):
-        """Return room"""
+        """Return room."""
         return self._room
 
     @property
     def state(self):
-        """Return state"""
+        """Return state."""
         return HVAC_MODE_WISER_TO_HASS[self._room.mode]
 
     @property
@@ -507,27 +511,27 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         if self._room.capabilities:
             attrs["heating_supported"] = self._room.capabilities.heating_supported
             attrs["cooling_supported"] = self._room.capabilities.cooling_supported
-            attrs[
-                "minimum_heat_set_point"
-            ] = self._room.capabilities.minimum_heat_set_point
-            attrs[
-                "maximum_heat_set_point"
-            ] = self._room.capabilities.maximum_heat_set_point
-            attrs[
-                "minimum_cool_set_point"
-            ] = self._room.capabilities.minimum_cool_set_point
-            attrs[
-                "maximum_cool_set_point"
-            ] = self._room.capabilities.maximum_cool_set_point
+            attrs["minimum_heat_set_point"] = (
+                self._room.capabilities.minimum_heat_set_point
+            )
+            attrs["maximum_heat_set_point"] = (
+                self._room.capabilities.maximum_heat_set_point
+            )
+            attrs["minimum_cool_set_point"] = (
+                self._room.capabilities.minimum_cool_set_point
+            )
+            attrs["maximum_cool_set_point"] = (
+                self._room.capabilities.maximum_cool_set_point
+            )
             attrs["setpoint_step"] = self._room.capabilities.setpoint_step
             attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
             attrs["temperature_control"] = self._room.capabilities.temperature_control
-            attrs[
-                "open_window_detection"
-            ] = self._room.capabilities.open_window_detection
-            attrs[
-                "hydronic_channel_selection"
-            ] = self._room.capabilities.hydronic_channel_selection
+            attrs["open_window_detection"] = (
+                self._room.capabilities.open_window_detection
+            )
+            attrs["hydronic_channel_selection"] = (
+                self._room.capabilities.hydronic_channel_selection
+            )
             attrs["on_off_supported"] = self._room.capabilities.on_off_supported
 
         # Summer comfort
@@ -541,9 +545,9 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         if self._room.occupancy_capable:
             attrs["occupancy"] = self._room.occupancy
             attrs["occupied_heating_set_point"] = self._room.occupied_heating_set_point
-            attrs[
-                "unoccupied_heating_set_point"
-            ] = self._room.unoccupied_heating_set_point
+            attrs["unoccupied_heating_set_point"] = (
+                self._room.unoccupied_heating_set_point
+            )
 
         # End Added by LGO
 
@@ -618,6 +622,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach.
+
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._room.passive_mode_upper_temp
@@ -625,6 +630,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach.
+
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._room.passive_mode_lower_temp
@@ -651,14 +657,16 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                 and self.state == HVACMode.AUTO
             ):
                 _LOGGER.debug(
-                    f"Setting temperature for {self.name} to {target_temperature} using boost"
+                    "Setting temperature for %s to %s using boost",
+                    self.name,
+                    target_temperature,
                 )
                 await self._room.set_target_temperature_for_duration(
                     target_temperature, self._data.boost_time
                 )
             else:
                 _LOGGER.debug(
-                    f"Setting temperature for {self.name} to {target_temperature}"
+                    "Setting temperature for %s to %s", self.name, target_temperature
                 )
                 await self._room.set_target_temperature(target_temperature)
         await self.async_force_update()
@@ -681,7 +689,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     async def async_boost_heating(
         self, time_period: int, temperature_delta=0, temperature=0
     ) -> None:
-        """Boost heating for room"""
+        """Boost heating for room."""
         # If neither temperature_delta or temperature set then use config boost temp. Issue #216
         if temperature_delta == 0 and temperature == 0:
             temperature_delta = self._data.boost_temp
@@ -712,7 +720,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._hass = hass
         self._data = coordinator
         self._hotwater = self._data.wiserhub.hotwater
-        self._hvac_modes_list = [modes for modes in HVAC_MODE_HASS_TO_WISER.keys()]
+        self._hvac_modes_list = list(HVAC_MODE_HASS_TO_WISER.keys())
         self._hotwater_id = self._hotwater.id
         self._is_heating = self._hotwater.is_heating
         self._schedule = self._hotwater.schedule
@@ -754,12 +762,13 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
     async def async_force_update(self):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        """Force update form hub."""
+        _LOGGER.debug("Hub update initiated by %s", self.name)
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug("%s updating", self.name)
 
         previous_hotwater_values = self._hotwater
         previous_hvac_mode = self.hvac_mode
@@ -821,6 +830,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     @property
     def is_hvac_mode_heat(self):
+        """Return if HVAC mode set to Heat."""
         return self._hotwater.mode == "Manual" and (
             self._hotwater.is_heating
             or (
@@ -831,6 +841,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     @property
     def hvac_mode(self):
+        """Return HVAC mode."""
         if self._hotwater.mode == "Manual" and not self.is_hvac_mode_heat:
             return HVACMode.OFF
         return HVAC_MODE_WISER_TO_HASS[self._hotwater.mode]
@@ -967,12 +978,12 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     @property
     def hotwater(self):
-        """Return hotwater"""
+        """Return hotwater."""
         return self._hotwater
 
     @property
     def state(self):
-        """Return state"""
+        """Return state."""
         return self.hvac_mode
 
     @property
@@ -1058,7 +1069,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         return True
 
     async def _async_set_temperature(self, hvac_mode, source, duration=None):
-        """Set hotwater state based on temperature"""
+        """Set hotwater state based on temperature."""
         _LOGGER.debug(f"Set temperature for HVAC mode {hvac_mode}")
 
         if hvac_mode == HVACMode.OFF:
