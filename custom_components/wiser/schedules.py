@@ -156,7 +156,7 @@ class WiserScheduleEntity:
                 if hasattr(self, "room"):
                     if self.schedule:
                         _LOGGER.debug(
-                            f"Unassigning {schedule_type.value} schedule with {self.schedule.id} from room {self.room.name}"
+                            f"Unassigning {schedule_type.value} schedule with id {self.schedule.id} from room {self.room.name}"
                         )
                         await self.schedule.unassign_schedule(self.room.id)
                     else:
@@ -166,7 +166,7 @@ class WiserScheduleEntity:
                 else:
                     if self.schedule:
                         _LOGGER.debug(
-                            f"Unassigning {schedule_type.value} schedule with {self.schedule.id} from room {self.device.name}"
+                            f"Unassigning {schedule_type.value} schedule with id {self.schedule.id} from room {self.device.name}"
                         )
                         await self.schedule.unassign_schedule(
                             self.device.device_type_id
