@@ -1,4 +1,5 @@
 """Support for Wiser lights via Wiser Hub"""
+
 import asyncio
 import logging
 
@@ -61,6 +62,12 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
 
     @property
     def supported_color_modes(self):
+        """Return supported color modes."""
+        return {ColorMode.ONOFF}
+
+    @property
+    def color_mode(self):
+        """Return color mode."""
         return {ColorMode.ONOFF}
 
     @property
@@ -170,6 +177,12 @@ class WiserDimmableLight(WiserLight):
 
     @property
     def supported_color_modes(self):
+        """Return supported color modes."""
+        return {ColorMode.BRIGHTNESS}
+
+    @property
+    def color_mode(self):
+        """Return color mode."""
         return {ColorMode.BRIGHTNESS}
 
     @property
