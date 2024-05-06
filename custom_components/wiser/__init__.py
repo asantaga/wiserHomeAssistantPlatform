@@ -3,6 +3,7 @@
 https://github.com/asantaga/wiserHomeAssistantPlatform
 msparker@sky.com
 """
+
 import asyncio
 import logging
 
@@ -50,7 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Setup platforms
     for platform in WISER_PLATFORMS:
-        hass.async_add_job(
+        hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
