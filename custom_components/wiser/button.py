@@ -36,9 +36,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     if data.wiserhub.moments:
         _LOGGER.debug("Setting up Moments buttons")
-        wiser_buttons = [
+        wiser_buttons.extend([
             WiserMomentsButton(data, moment.id) for moment in data.wiserhub.moments.all
-        ]
+        ])
 
     async_add_entities(wiser_buttons, True)
 
