@@ -29,11 +29,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     _LOGGER.debug("Setting up Away Mode setpoint setter")
     wiser_numbers.extend(
         [
-         WiserAwayModeTempNumber(data, "Away Mode Target Temperature"),
-         WiserDiscomfortIndoorTempNumber(data, "Indoor Discomfort Temperature"),
-         WiserDiscomfortOutdoorTempNumber(data, "Outdoor Discomfort Temperature"),
+        WiserAwayModeTempNumber(data, "Away Mode Target Temperature"),
         ]
-     )
+    )
+    _LOGGER.debug(" v2 hub Setting up Discomfort temperatures setter")
+    if data.wiserhub.system.hardware_generation == 2:
+        wiser_numbers.extend(
+            [
+            WiserDiscomfortIndoorTempNumber(data, "Indoor Discomfort Temperature"),
+            WiserDiscomfortOutdoorTempNumber(data, "Outdoor Discomfort Temperature"),
+            ]
+        )    
+
 
     # Add min, max and offset for any heating actuator floor temp sensors
     for heating_actuator in [
@@ -327,7 +334,7 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._data = coordinator
         self._actuator = actuator
-        self._name = type
+        self._name = device_type
         self._value = getattr(self._actuator.floor_temperature_sensor, self._name)
 
         # Support prior to 2022.7.0 Versions without deprecation warning
