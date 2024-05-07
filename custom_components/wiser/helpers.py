@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def hub_error_handler(func):
     """Decorator to handle hub errors"""
+
     async def wrapper(*args, **kwargs):
         try:
             await func(*args, **kwargs)
@@ -21,6 +22,7 @@ def hub_error_handler(func):
             WiserHubRESTError,
         ) as ex:
             _LOGGER.warning(ex)
+
     return wrapper
 
 
@@ -29,7 +31,7 @@ def get_device_name(data, device_id, device_type="device"):
         device = data.wiserhub.devices.get_by_id(device_id)
 
         if device_id == 0:
-            return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+            return f"{ENTITY_PREFIX} HeatHub {data.wiserhub.system.name}"
 
         if device.product_type == "iTRV":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
@@ -72,6 +74,9 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type == "PowerTagE":
+            return f"{ENTITY_PREFIX} {device.name}"
+
+        if device.product_type == "SmokeAlarmDevice":
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["Shutter", "OnOffLight", "DimmableLight"]:
