@@ -499,7 +499,6 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         attrs["away_mode_action"] = self._device.away_mode_action
         attrs["scheduled_state"] = self._device.scheduled_state
         attrs["schedule_id"] = self._device.schedule_id
-
         if self._device.schedule:
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
