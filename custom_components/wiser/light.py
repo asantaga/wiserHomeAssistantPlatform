@@ -125,6 +125,14 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs["serial_number"] = self._device.serial_number
         attrs["firmware"] = self._device.firmware_version
 
+        # Zigbee uuid
+        attrs["type"] = self._device.type_comm
+        attrs["uuid"] = self._device.uuid
+        attrs["endpoint"] = self._device.endpoint
+
+        attrs["device_id"] = self._device_id
+
+
         # Settings
         attrs["is_dimmable"] = self._device.is_dimmable
         attrs["mode"] = self._device.mode

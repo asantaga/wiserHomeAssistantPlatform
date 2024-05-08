@@ -304,6 +304,10 @@ class WiserSystemSwitch(WiserSwitch):
         if self._name == "Away Mode":
             attrs["away_mode_temperature"] = self._away_temperature
 
+        if self._name == "Summer Discomfort Prevention":
+            attrs["indoor_discomfort_temperature"] = self._data.wiserhub.system.indoor_discomfort_temperature
+            attrs["outdoor_discomfort_temperature"] = self._data.wiserhub.system.outdoor_discomfort_temperature
+
         return attrs
 
 
