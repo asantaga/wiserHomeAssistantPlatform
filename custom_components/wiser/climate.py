@@ -4,17 +4,17 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-from collections.abc import Callable
+
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from inspect import signature
 import logging
-import sys
 from typing import Any
 
-from aioWiserHeatAPI.const import TEXT_OFF, TEXT_UNKNOWN, WiserTempLimitsEnum
-from aioWiserHeatAPI.heating_actuator import _WiserHeatingActuator
+from aioWiserHeatAPI.const import TEXT_OFF, WiserTempLimitsEnum
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
+from aioWiserHeatAPI.roomstat import _WiserRoomStat
+from aioWiserHeatAPI.smartvalve import _WiserSmartValve
 from aioWiserHeatAPI.wiserhub import TEMP_OFF
 import voluptuous as vol
 
@@ -25,9 +25,13 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
+from homeassistant.helpers.entity_platform import (
+    AddEntitiesCallback,
+    async_get_current_platform,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -38,9 +42,9 @@ from .const import (
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
 )
-from .entity import WiserBaseEntity
+from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
 from .events import fire_events
-from .helpers import getattrd
+from .helpers import get_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,132 +98,175 @@ HVAC_MODE_HASS_TO_WISER = {
 SUPPORT_FLAGS = (
     ClimateEntityFeature.TARGET_TEMPERATURE
     | ClimateEntityFeature.PRESET_MODE
-    | ClimateEntityFeature.TURN_ON
     | ClimateEntityFeature.TURN_OFF
 )
 PASSIVE_MODE_SUPPORT_FLAGS = (
     ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
     | ClimateEntityFeature.PRESET_MODE
-    | ClimateEntityFeature.TURN_ON
     | ClimateEntityFeature.TURN_OFF
 )
 
 
-@dataclass
-class WiserEntityExtraAttribute:
-    """Class to hold extra attributes definition."""
-
-    name: str
-    value_fn: Callable[[Any], float | str | bool]
-
-
-@dataclass
-class WiserClimateEntityPreset:
-    """Class to hold preset definition entries."""
-
-    name: str
-    set_fn: Callable[[Any], float | str]
-
-
-@dataclass
-class WiserClimateEntityExtraDescription:
-    """Class to hold climate entity description keys."""
-
-    key: str | None = None
-    name_fn: Callable[[Any], str] | str | None = None
-    available_fn: Callable[[Any], bool] | None = None
-    legacy_name_fn: Callable[[Any], str] | None = None
-    legacy_type: str = None
-    icon_fn: Callable[[Any], str] | None = None
-    device: str | None = None
-    device_collection: list | None = None
-    entity_class: Any | None = None
-
-
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class WiserClimateEntityDescription(
-    ClimateEntityDescription, WiserClimateEntityExtraDescription
+    ClimateEntityDescription, WiserBaseEntityDescription
 ):
     """A class that describes Wiser climate entities."""
+
+    current_temp_fn: Callable[[Any], Awaitable[None]] | None = None
+    current_humidity_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_target_temp_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_high_target_temp_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_low_target_temp_fn: Callable[[Any], Awaitable[None]] | None = None
+    hvac_modes: list[str] | None = None
+    hvac_modes_fn: Callable[[Any], Awaitable[None]] | None = None
+    hvac_mode_fn: Callable[[Any], Awaitable[None]] | None = None
+    hvac_action_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_hvac_mode_fn: Callable[[Any], Awaitable[None]] | None = None
+    preset_modes_fn: Callable[[Any], Awaitable[None]] | None = None
+    preset_mode_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_preset_mode_fn: Callable[[Any], Awaitable[None]] | None = None
+    supported_features: int = 0
+    supported_features_fn: Callable[[Any], Awaitable[None]] | None = None
+    target_temp_fn: Callable[[Any], Awaitable[None]] | None = None
+    target_temp_high_fn: Callable[[Any], Awaitable[None]] | None = None
+    target_temp_low_fn: Callable[[Any], Awaitable[None]] | None = None
+    target_temp_step: float | None = 1
+    max_temp: int = 0
+    min_temp: int = 0
+    entity_class: Any | None = None
+    temperature_unit: UnitOfTemperature = UnitOfTemperature.CELSIUS
 
 
 WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
     WiserClimateEntityDescription(
         key="room_climate",
-        legacy_name_fn=lambda x: f"Wiser {x.name}",
         name="Climate",
         device_collection="rooms",
-        entity_class="WiserClimate",
+        supported=lambda room, hub: room.target_temperature_origin != "FromNoControl",
+        supported_features_fn=lambda x: PASSIVE_MODE_SUPPORT_FLAGS
+        if x.is_passive_mode
+        else SUPPORT_FLAGS,
+        max_temp=WiserTempLimitsEnum.heating.value.get("max"),
+        min_temp=WiserTempLimitsEnum.heating.value.get("min"),
+        # Current Values
+        current_temp_fn=lambda x: x.current_temperature,
+        current_humidity_fn=lambda x: x.current_humidity,
+        # HVAC
+        hvac_action_fn=lambda x: HVACAction.HEATING
+        if x.is_heating
+        else HVACAction.IDLE,
+        hvac_modes=list(HVAC_MODE_HASS_TO_WISER),
+        hvac_mode_fn=lambda x: HVAC_MODE_WISER_TO_HASS[x.mode],
+        set_hvac_mode_fn=lambda x, m: x.set_mode(m),
+        # Presets
+        preset_modes_fn=lambda x: x.available_presets,
+        # Target Temps
+        target_temp_step=0.5,
+        target_temp_fn=lambda x: x.current_target_temperature,
+        target_temp_high_fn=lambda x: x.passive_mode_upper_temp,
+        target_temp_low_fn=lambda x: x.passive_mode_lower_temp,
+        set_low_target_temp_fn=lambda x, t: x.set_passive_mode_lower_temp(t),
+        set_high_target_temp_fn=lambda x, t: x.set_passive_mode_upper_temp(t),
+        extra_state_attributes=[
+            WiserDeviceAttribute("window_state"),
+            WiserDeviceAttribute("window_detection_active"),
+            WiserDeviceAttribute("away_mode_suppressed"),
+            WiserDeviceAttribute("heating_type"),
+            WiserDeviceAttribute("number_of_heating_actuators"),
+            WiserDeviceAttribute("demand_type"),
+            WiserDeviceAttribute("target_temperature_origin"),
+            WiserDeviceAttribute("is_boosted"),
+            WiserDeviceAttribute("is_override"),
+            WiserDeviceAttribute("is_heating"),
+            WiserDeviceAttribute("is_passive_mode"),
+            WiserDeviceAttribute(
+                "control_output_state", lambda x: "On" if x.is_heating else "Off"
+            ),
+            WiserDeviceAttribute("heating_rate"),
+            WiserDeviceAttribute("boost_end_time"),
+            WiserDeviceAttribute(
+                "boost_time_remaining", lambda x: int(x.boost_time_remaining / 60)
+            ),
+            WiserDeviceAttribute("percentage_demand"),
+            WiserDeviceAttribute("comfort_mode_score"),
+            WiserDeviceAttribute("control_direction"),
+            WiserDeviceAttribute("displayed_setpoint"),
+            WiserDeviceAttribute("schedule_id", "schedule.id"),
+            WiserDeviceAttribute("schedule_name", "schedule.name"),
+            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
+            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
+            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
+            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
+            WiserDeviceAttribute("passive_temperature_increment"),
+            WiserDeviceAttribute(
+                "number_of_trvs",
+                lambda x: len(
+                    [
+                        device
+                        for device in x.devices
+                        if isinstance(device, (_WiserSmartValve))
+                    ]
+                ),
+            ),
+            WiserDeviceAttribute(
+                "number_of_trvs_locked",
+                lambda x: len(
+                    [
+                        device
+                        for device in x.devices
+                        if isinstance(device, (_WiserSmartValve))
+                        and device.device_lock_enabled
+                    ]
+                ),
+            ),
+            WiserDeviceAttribute(
+                "is_roomstat_locked",
+                lambda x: len(
+                    [
+                        device
+                        for device in x.devices
+                        if isinstance(device, (_WiserRoomStat))
+                        and device.device_lock_enabled
+                    ]
+                )
+                > 0,
+            ),
+        ],
     ),
     WiserClimateEntityDescription(
         key="floor_climate",
         name="Floor",
-        device_collection="heating_actuators",
-        available_fn=lambda x: x.floor_temperature_sensor.sensor_type != "Not_Fitted",
-        entity_class="WiserFloorClimate",
+        device_collection="devices.heating_actuators",
+        supported=lambda dev, hub: dev.floor_temperature_sensor.sensor_type
+        != "Not_Fitted",
+        supported_features=ClimateEntityFeature.TARGET_TEMPERATURE_RANGE,
+        max_temp=WiserTempLimitsEnum.floorHeatingMin.value.get("max"),
+        min_temp=WiserTempLimitsEnum.floorHeatingMin.value.get("min"),
+        current_temp_fn=lambda x: x.floor_temperature_sensor.measured_temperature,
+        hvac_mode_fn=lambda x: HVACMode.HEAT,  # Need to make this work
+        target_temp_high_fn=lambda x: x.floor_temperature_sensor.maximum_temperature,
+        target_temp_low_fn=lambda x: x.floor_temperature_sensor.minimum_temperature,
+        set_low_target_temp_fn=lambda x,
+        t: x.floor_temperature_sensor.set_minimum_temperature(t),
+        set_high_target_temp_fn=lambda x,
+        t: x.floor_temperature_sensor.set_maximun_temperature(t),
     ),
 )
 
 
-def _attr_exist(
-    data: dict,
-    device: _WiserDevice,
-    sensor_desc: WiserClimateEntityDescription,
-) -> bool:
-    """Check if an attribute exists for device."""
-    try:
-        no_of_params = len(signature(sensor_desc.value_fn).parameters)
-        if no_of_params == 2:
-            r = sensor_desc.value_fn(data, device)
-        else:
-            r = sensor_desc.value_fn(device)
-        if r is not None and r != TEXT_UNKNOWN:
-            return True
-        return False
-    except AttributeError:
-        return False
-
-
-def str_to_class(class_name: str):
-    """Get class from string."""
-    return getattr(sys.modules[__name__], class_name)
-
-
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Set up Wiser climate device."""
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+):
+    """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
-    wiser_climates = []
-
-    for climate_desc in WISER_CLIMATES:
-        # get device or device collection
-        if climate_desc.device_collection and getattrd(
-            data.wiserhub, climate_desc.device_collection
-        ):
-            for device in getattrd(data.wiserhub, climate_desc.device_collection).all:
-                if device:
-                    _LOGGER.info("Adding %s", device.name)
-                    wiser_climates.append(
-                        str_to_class(climate_desc.entity_class)(
-                            data,
-                            climate_desc,
-                            device,
-                        )
-                    )
-        elif climate_desc.device and getattrd(data.wiserhub, climate_desc.device):
-            device = getattrd(data.wiserhub, climate_desc.device)
-            if device:
-                wiser_climates.append(
-                    str_to_class(climate_desc.entity_class)(
-                        data,
-                        climate_desc,
-                        device,
-                    )
-                )
-
-    async_add_entities(wiser_climates)
+    entities = get_entities(data, WISER_CLIMATES, WiserClimate)
+    async_add_entities(entities)
 
     # Setup services
-    platform = entity_platform.async_get_current_platform()
+    platform = async_get_current_platform()
 
     platform.async_register_entity_service(
         WISER_SERVICES["SERVICE_BOOST_HEATING"],
@@ -233,11 +280,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         "async_boost_heating",
     )
 
+    return True
+
 
 class WiserClimate(WiserBaseEntity, ClimateEntity):
     """Wiser climate entity."""
 
     entity_description: WiserClimateEntityDescription
+    _attr_has_entity_name = not LEGACY_NAMES
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
@@ -252,17 +302,9 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
         self._boosted_time = 0
         # self.passive_temperature_increment = self._device.passive_temperature_increment
 
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
-
-    async def async_force_update(self):
-        """Force update from hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
-        await self._data.async_refresh()
-
     @callback
     def _handle_coordinator_update(self) -> None:
         previous_room_values = self._device
-
         super()._handle_coordinator_update()
 
         # self.passive_temperature_increment = self._data.passive_temperature_increment
@@ -280,56 +322,65 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
     @property
     def current_temperature(self):
         """Return current temp from data."""
-        return self._device.current_temperature
+        return self.entity_description.current_temp_fn(self._device)
 
     @property
     def current_humidity(self):
-        """Return current temp from data."""
-        return self._device.current_humidity
+        """Return current humidity from data."""
+        if self.entity_description.current_humidity_fn:
+            return self.entity_description.current_humidity_fn(self._device)
+        return None
 
     @property
     def icon(self):
         """Return icon to show if radiator is heating, not heating or set to off."""
         if self._device.mode == TEXT_OFF:
             return "mdi:radiator-off"
-        elif self._device.is_heating:
+        if self._device.is_heating:
             return "mdi:radiator"
-        else:
-            return "mdi:radiator-disabled"
+        return "mdi:radiator-disabled"
 
     @property
     def hvac_action(self):
         """Return hvac action from data."""
-        return HVACAction.HEATING if self._device.is_heating else HVACAction.IDLE
+        if self.entity_description.hvac_action_fn:
+            return self.entity_description.hvac_action_fn(self._device)
+        return None
 
     @property
     def hvac_mode(self):
         """Return current HVAC mode."""
-        return HVAC_MODE_WISER_TO_HASS[self._device.mode]
+        if self.entity_description.hvac_mode_fn:
+            return self.entity_description.hvac_mode_fn(self._device)
+        return None
 
     @property
     def hvac_modes(self):
         """Return the list of available operation modes."""
-        return list(HVAC_MODE_HASS_TO_WISER.keys())
+        if self.entity_description.hvac_modes_fn:
+            return self.entity_description.hvac_modes_fn(self._device)
+        return self.entity_description.hvac_modes
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set HVAC mode."""
         _LOGGER.debug("Setting HVAC mode to %s for %s", hvac_mode, self.name)
-        try:
-            await self._device.set_mode(HVAC_MODE_HASS_TO_WISER[hvac_mode])
-            await self.async_force_update()
-        except KeyError:
-            _LOGGER.error("Invalid HVAC mode.  Options are %s", self.hvac_modes)
+        if self.entity_description.set_hvac_mode_fn:
+            try:
+                hvac_mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
+                await self.entity_description.set_hvac_mode_fn(self._device, hvac_mode)
+                await self.async_force_update()
+            except KeyError:
+                _LOGGER.error("Invalid HVAC mode.  Options are %s", self.hvac_modes)
 
     @property
     def max_temp(self):
         """Return max temp from data."""
-        return WiserTempLimitsEnum.heating.value.get("max")
+        return self.entity_description.max_temp
 
     @property
     def min_temp(self):
         """Return min temp from data."""
-        return WiserTempLimitsEnum.heating.value.get("min")
+        return self.entity_description.min_temp
 
     @property
     def preset_mode(self):
@@ -337,91 +388,96 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
         try:
             if self._device.is_passive_mode:
                 return TEXT_PASSIVE
-            elif self._device.preset_mode == "Boost":
+            if self._device.preset_mode == "Boost":
                 if int(self._device.boost_time_remaining / 60) != 0:
                     return (
                         f"{STATUS_BOOST} {int(self._device.boost_time_remaining/60)}m"
                     )
-                else:
-                    return STATUS_BOOST
-            else:
-                return WISER_PRESET_TO_HASS[self._device.target_temperature_origin]
+                return STATUS_BOOST
+            return WISER_PRESET_TO_HASS[self._device.target_temperature_origin]
         except KeyError:
             return STATUS_BLANK
 
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return self._device.available_presets
+        if self.entity_description.preset_modes_fn:
+            return self.entity_description.preset_modes_fn(self._device)
+        return None
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
         _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._device.name)
         try:
-            await self._device.set_preset(preset_mode)
+            if self.entity_description.set_preset_mode_fn:
+                await self.entity_description.set_preset_mode_fn(self._device)
         except ValueError as ex:
             _LOGGER.error(ex)
-
         await self.async_force_update()
-
-    @property
-    def state(self):
-        """Return state."""
-        return HVAC_MODE_WISER_TO_HASS[self._device.mode]
 
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return (
-            PASSIVE_MODE_SUPPORT_FLAGS
-            if self._device.is_passive_mode
-            else SUPPORT_FLAGS
-        )
+        if self.entity_description.supported_features_fn:
+            return self.entity_description.supported_features_fn(self._device)
+        return self.entity_description.supported_features
 
     @property
     def target_temperature(self):
         """Return target temp."""
         if (
-            self._device.mode == TEXT_OFF
-            or self._device.current_target_temperature == TEMP_OFF
+            self.entity_description.target_temp_fn
+            and self._device.mode != TEXT_OFF
+            and self._device.current_target_temperature != TEMP_OFF
         ):
-            return None
-
-        return self._device.current_target_temperature
+            return self.entity_description.target_temp_fn(self._device)
+        return None
 
     @property
     def target_temperature_step(self) -> float | None:
         """Return the supported step of target temperature."""
-        return 0.5
+        return self.entity_description.target_temp_step
 
     @property
     def target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach."""
-        return self._device.passive_mode_upper_temp
+        if self.entity_description.target_temp_high_fn:
+            return self.entity_description.target_temp_high_fn(self._device)
+        return None
 
     @property
     def target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach."""
-        return self._device.passive_mode_lower_temp
+        if self.entity_description.target_temp_low_fn:
+            return self.entity_description.target_temp_low_fn(self._device)
+        return None
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
         if self._device.is_passive_mode and not self._device.is_boosted:
-            if kwargs.get("target_temp_low", None):
-                await self._device.set_passive_mode_lower_temp(
-                    kwargs.get("target_temp_low")
+            if (
+                kwargs.get("target_temp_low", None)
+                and self.entity_description.set_low_target_temp_fn
+            ):
+                await self.entity_description.set_low_target_temp_fn(
+                    self._device, kwargs.get("target_temp_low")
                 )
-            if kwargs.get("target_temp_high", None) and self.hvac_mode == HVACMode.HEAT:
-                await self._device.set_passive_mode_upper_temp(
-                    kwargs.get("target_temp_high")
+
+            if (
+                kwargs.get("target_temp_high", None)
+                and self.hvac_mode == HVACMode.HEAT
+                and self.entity_description.set_high_target_temp_fn
+            ):
+                await self.entity_description.set_high_target_temp_fn(
+                    self._device, kwargs.get("target_temp_high")
                 )
         else:
             target_temperature = kwargs.get(ATTR_TEMPERATURE)
             if target_temperature is None:
                 return False
 
-            if self._device.setpoint_mode == WISER_SETPOINT_MODES["Boost"] or (
-                self._device.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"]
+            if self._data.setpoint_mode == WISER_SETPOINT_MODES["Boost"] or (
+                self._data.setpoint_mode == WISER_SETPOINT_MODES["BoostAuto"]
                 and self.state == HVACMode.AUTO
             ):
                 _LOGGER.debug(
@@ -478,147 +534,3 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
                 temperature, time_period
             )
         await self.async_force_update()
-
-    @property
-    def extra_state_attributes(self):
-        """Return state attributes."""
-        attrs = {}
-        # Settings
-        attrs["window_state"] = self._device.window_state
-        attrs["window_detection_active"] = self._device.window_detection_active
-        attrs["away_mode_supressed"] = self._device.away_mode_suppressed
-        attrs["heating_type"] = self._device.heating_type
-        attrs["number_of_heating_actuators"] = self._device.number_of_heating_actuators
-        attrs["demand_type"] = self._device.demand_type
-
-        # Status
-        attrs["target_temperature_origin"] = self._device.target_temperature_origin
-        attrs["is_boosted"] = self._device.is_boosted
-        attrs["is_override"] = self._device.is_override
-        attrs["is_heating"] = self._device.is_heating
-        attrs["is_passive"] = self._device.is_passive_mode
-        attrs["control_output_state"] = "On" if self._device.is_heating else "Off"
-        attrs["heating_rate"] = self._device.heating_rate
-
-        # If boosted show boost end time
-        if self._device.is_boosted:
-            attrs["boost_end"] = self._device.boost_end_time
-
-        attrs["boost_time_remaining"] = int(self._device.boost_time_remaining / 60)
-        attrs["percentage_demand"] = self._device.percentage_demand
-        attrs["comfort_mode_score"] = self._device.comfort_mode_score
-        attrs["control_direction"] = self._device.control_direction
-        attrs["displayed_setpoint"] = self._device.displayed_setpoint
-
-        # Room can have no schedule
-        if self._device.schedule:
-            attrs["schedule_id"] = self._device.schedule.id
-            attrs["schedule_name"] = self._device.schedule.name
-            attrs["current_schedule_temp"] = self._device.schedule.current_setting
-            attrs["next_day_change"] = str(self._device.schedule.next.day)
-            attrs["next_schedule_change"] = str(self._device.schedule.next.time)
-            attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
-            attrs["next_schedule_temp"] = self._device.schedule.next.setting
-
-        # if self._device.is_passive_mode:
-        #    attrs["passive_mode_temp_increment"] = self.passive_temperature_increment
-        return attrs
-
-
-class WiserFloorClimate(WiserBaseEntity, ClimateEntity):
-    """Wiser temp probe climate entity object."""
-
-    entity_description: WiserClimateEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
-    _enable_turn_on_off_backwards_compatibility = False
-
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator,
-        description: WiserClimateEntityDescription,
-        device: _WiserHeatingActuator | None = None,
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, description, device, "climate")
-
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
-
-    async def async_force_update(self):
-        """Force update form hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
-        await self._data.async_refresh()
-
-    @property
-    def current_temperature(self):
-        """Return current temp from data."""
-        return self._device.floor_temperature_sensor.measured_temperature
-
-    @property
-    def icon(self):
-        """Return icon to show if radiator is heating, not heating or set to off."""
-        return "mdi:radiator-off"
-
-    @property
-    def hvac_modes(self):
-        """Return the list of available operation modes."""
-        return []
-
-    @property
-    def hvac_mode(self):
-        """Return HVAC mode."""
-        return HVACMode.HEAT
-
-    @property
-    def max_temp(self):
-        """Return max temp from data."""
-        return WiserTempLimitsEnum.floorHeatingMin.value.get("max")
-
-    @property
-    def min_temp(self):
-        """Return min temp from data."""
-        return WiserTempLimitsEnum.floorHeatingMin.value.get("min")
-
-    async def async_set_temperature(self, **kwargs) -> None:
-        """Set new target temperature."""
-        if (
-            kwargs.get("target_temp_low", None)
-            != self._device.floor_temperature_sensor.minimum_temperature
-        ):
-            await self._device.floor_temperature_sensor.set_minimum_temperature(
-                kwargs.get("target_temp_low")
-            )
-            await self.async_force_update()
-
-        if (
-            kwargs.get("target_temp_high", None)
-            != self._device.floor_temperature_sensor.maximum_temperature
-        ):
-            await self._device.floor_temperature_sensor.set_maximum_temperature(
-                kwargs.get("target_temp_high")
-            )
-            await self.async_force_update()
-
-    @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-
-    @property
-    def target_temperature_step(self) -> float | None:
-        """Return the supported step of target temperature."""
-        return 1
-
-    @property
-    def target_temperature_high(self) -> float | None:
-        """Return the highbound target temperature we try to reach."""
-        return self._device.floor_temperature_sensor.maximum_temperature
-
-    @property
-    def target_temperature_low(self) -> float | None:
-        """Return the lowbound target temperature we try to reach."""
-        return self._device.floor_temperature_sensor.minimum_temperature
-
-    @property
-    def temperature_unit(self):
-        """Return temp units."""
-        return UnitOfTemperature.CELSIUS

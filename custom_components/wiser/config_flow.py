@@ -4,6 +4,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
+
 import logging
 from typing import Any
 
@@ -20,7 +21,6 @@ from homeassistant.components import zeroconf
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import SelectSelectorMode, selector
 
 from .const import (
@@ -155,7 +155,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_zeroconf_confirm()
 
     async def async_step_zeroconf_confirm(
-        self, user_input: dict[str, Any] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle a confirmation flow initiated by zeroconf."""
         errors = {}

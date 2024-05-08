@@ -1,37 +1,22 @@
 """Helper functions for Wiser integration."""
-from collections.abc import Callable
-from dataclasses import dataclass
+
 from functools import reduce
 from inspect import signature
 from typing import Any
 
+from aioWiserHeatAPI.const import TEXT_UNKNOWN
 from aioWiserHeatAPI.devices import PRODUCT_TYPE_CONFIG
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
+
 from homeassistant.components.binary_sensor import BinarySensorEntityDescription
+from homeassistant.components.button import ButtonEntityDescription
+from homeassistant.components.number import NumberEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.switch import SwitchEntityDescription
-
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, ENTITY_PREFIX
-
-
-@dataclass
-class WiserAttribute:
-    """Class to hold attribute definition."""
-
-    path: str
-
-
-@dataclass
-class WiserHubAttribute(WiserAttribute):
-    """Hub attribute definition."""
-
-
-@dataclass
-class WiserDeviceAttribute(WiserAttribute):
-    """Device attribute definition."""
 
 
 def _get_class_by_product_type(product_type: str):
@@ -39,7 +24,7 @@ def _get_class_by_product_type(product_type: str):
     return PRODUCT_TYPE_CONFIG.get(product_type, {}).get("class")
 
 
-def get_entity_name(data, device: Any = None, name: str = None):
+def get_entity_name(data, device: Any = None, name: str | None = None):
     """Return name for Wier device."""
     if not device or device.id == 0:
         # This is a system entity
@@ -106,12 +91,11 @@ def get_entity_name(data, device: Any = None, name: str = None):
 
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
-    elif isinstance(device, _WiserRoom):
+    if isinstance(device, _WiserRoom):
         return f"{ENTITY_PREFIX} {device.name}"
 
-    else:
-        # return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
-        return f"{ENTITY_PREFIX} Hub"
+    # return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+    return f"{ENTITY_PREFIX} Hub"
 
 
 def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
@@ -132,19 +116,26 @@ def get_legacy_entity_name(data, entity_description, device: Any = None) -> str:
 
     if entity_type:
         if isinstance(entity_description, (SwitchEntityDescription)):
-            if entity_type == "system":
+            if entity_type in ["system", "hotwater"]:
                 return f"{get_entity_name(data, name=name)}"
-            elif entity_type == "room":
+            if entity_type == "room":
                 return f"{get_room_name(data, device.id)} {name}"
-            elif entity_type in ["device", "device-switch"]:
+            if entity_type in ["device", "device-switch"]:
                 return f"{get_entity_name(data, device)} {name}"
-        elif isinstance(entity_description, SensorEntityDescription):
+        elif isinstance(
+            entity_description, (BinarySensorEntityDescription, SensorEntityDescription)
+        ):
             if entity_type == "room":
                 return get_entity_name(data, name=name)
             if entity_type in ["system", "hotwater"]:
                 return f"{get_entity_name(data, name=name)}"
             if entity_type in ["device", "signal"]:
                 return f"{get_entity_name(data, device)} {name}"
+        elif isinstance(
+            entity_description, (ButtonEntityDescription | NumberEntityDescription)
+        ):
+            if entity_type in ["system", "hotwater"]:
+                return f"{get_entity_name(data, name=name)}"
     return get_entity_name(data, device)
 
 
@@ -176,21 +167,21 @@ def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
     )
     if isinstance(entity_description, (SwitchEntityDescription)):
         if entity_type:
-            if entity_type in ["system", "room"]:
+            if entity_type in ["system", "room", "hotwater"]:
                 return get_unique_id(
                     data,
                     entity_type,
                     "switch",
                     get_legacy_entity_name(data, entity_description, device),
                 )
-            elif entity_type == "device":
+            if entity_type == "device":
                 return get_unique_id(
                     data,
                     device.product_type,
                     entity_description.name,
                     device.id,
                 )
-            elif entity_type == "device-switch":
+            if entity_type == "device-switch":
                 return get_unique_id(
                     data,
                     device.product_type,
@@ -202,8 +193,10 @@ def get_legacy_unique_id(data, entity_description, device: Any = None) -> str:
     ):
         if entity_type in ["room", "system", "hotwater", "device"]:
             return get_unique_id(data, "sensor", name, device.id)
-        elif entity_type in ["signal"]:
+        if entity_type in ["signal"]:
             return get_unique_id(data, "sensor", device.product_type, device.id)
+    elif isinstance(entity_description, NumberEntityDescription):
+        return get_unique_id(data, "system", "number", entity_description.name)
 
 
 def get_room_name(data, room_id):
@@ -252,7 +245,7 @@ def is_wiser_config_id(hass: HomeAssistant, config_id):
     return False
 
 
-def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str or None:
+def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str | None:
     """Get a config entry id from a config entry name."""
     entry = [
         entry
@@ -279,5 +272,50 @@ def get_entity_description_attribute_from_function(
     no_of_params = len(signature(entity_description_attribute).parameters)
     if no_of_params == 1:
         return entity_description_attribute(device)
-    elif no_of_params == 2:
+    if no_of_params == 2:
         return entity_description_attribute(data.wiserhub, device)
+
+
+def value_attr_exist(device, entity_desc) -> bool:
+    """Check if an attribute exists for device."""
+    if entity_desc.value_fn:
+        try:
+            r = entity_desc.value_fn(device)
+            return bool(r is not None and r != TEXT_UNKNOWN)
+        except AttributeError:
+            return False
+    return True
+
+
+def get_entities(data, entity_descs: tuple, entity_class) -> list:
+    """Get entities to add from entity description tuple."""
+    entities = []
+
+    for entity_desc in entity_descs:
+        if entity_desc.device_collection:
+            # Add all entities from device collection
+            if getattrd(data.wiserhub, entity_desc.device_collection):
+                entities.extend(
+                    [
+                        entity_class(data, entity_desc, device)
+                        for device in getattrd(
+                            data.wiserhub, entity_desc.device_collection
+                        ).all
+                        if entity_desc.supported(device, data.wiserhub)
+                        and value_attr_exist(device, entity_desc)
+                    ]
+                )
+        else:
+            # Add individual entities
+            device = getattrd(data.wiserhub, entity_desc.device)
+            if entity_desc.supported(device, data.wiserhub) and value_attr_exist(
+                device, entity_desc
+            ):
+                entities.append(
+                    entity_class(
+                        data,
+                        entity_desc,
+                        device,
+                    )
+                )
+    return entities

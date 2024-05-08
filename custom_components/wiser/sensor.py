@@ -10,7 +10,6 @@ from inspect import signature
 import logging
 from typing import Any
 
-from aioWiserHeatAPI.const import TEXT_UNKNOWN
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
 
@@ -20,6 +19,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     PERCENTAGE,
@@ -30,41 +30,27 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import (
-    DATA,
-    DOMAIN,
-    LEGACY_NAMES,
-    MANUFACTURER,
-    SIGNAL_STRENGTH_ICONS,
-    VERSION,
-)
-from .entity import WiserBaseEntity
-from .helpers import (
+from .const import DATA, DOMAIN, MANUFACTURER, SIGNAL_STRENGTH_ICONS, VERSION
+from .entity import (
+    WiserAttribute,
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
     WiserDeviceAttribute,
     WiserHubAttribute,
-    get_hot_water_operation_mode,
-    getattrd,
 )
+from .helpers import get_entities, get_hot_water_operation_mode
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
-class WiserSensorEntityDescription(SensorEntityDescription):
+@dataclass(frozen=True, kw_only=True)
+class WiserSensorEntityDescription(SensorEntityDescription, WiserBaseEntityDescription):
     """A class that describes Wiser sensor entities."""
 
-    name_fn: Callable[[Any], str] | None = None
-    device: str | None = None
-    device_collection: list | None = None
-    available_fn: Callable[[Any], bool] | None = None
-    icon_fn: Callable[[Any], str] | None = None
     unit_fn: Callable[[Any], str] | None = None
-    value_fn: Callable[[Any], float | str] | None = None
-    legacy_name_fn: Callable[[Any], str] | None = None
-    legacy_type: str = None
-    extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 
 WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
@@ -77,24 +63,24 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         if x.signal.displayed_signal_strength in SIGNAL_STRENGTH_ICONS
         else SIGNAL_STRENGTH_ICONS["NoSignal"],
         value_fn=lambda x: x.signal.displayed_signal_strength,
-        extra_state_attributes={
-            "vendor": MANUFACTURER,
-            "product_type": WiserDeviceAttribute("product_type"),
-            "model_identifier": WiserDeviceAttribute("model"),
-            "firmware": WiserDeviceAttribute("firmware_version"),
-            "node_id": WiserDeviceAttribute("node_id"),
-            "zigbee_channel": WiserDeviceAttribute("zigbee.network_channel"),
-            "wifi_strength": WiserDeviceAttribute("signal.controller_reception_rssi"),
-            "wifi_strength_percent": WiserDeviceAttribute(
-                "signal.controller_signal_strength"
+        extra_state_attributes=[
+            WiserAttribute("vendor", MANUFACTURER),
+            WiserDeviceAttribute("product_type"),
+            WiserDeviceAttribute("model"),
+            WiserDeviceAttribute("firmware", "firmware_version"),
+            WiserDeviceAttribute("node_id"),
+            WiserDeviceAttribute("zigbee_channel", "zigbee.network_channel"),
+            WiserDeviceAttribute("wifi_strength", "signal.controller_reception_rssi"),
+            WiserDeviceAttribute(
+                "wifi_strength_percent", "signal.controller_signal_strength"
             ),
-            "wifi_SSID": WiserDeviceAttribute("network.ssid"),
-            "wifi_IP": WiserDeviceAttribute("network.ip_address"),
-            "api_version": WiserHubAttribute("version"),
-            "integration_version": VERSION,
-            "uptime": WiserHubAttribute("status.uptime"),
-            "last_reset_reason": WiserHubAttribute("status.last_reset_reason"),
-        },
+            WiserDeviceAttribute("wifi_SSID", "network.ssid"),
+            WiserDeviceAttribute("wifi_IP", "network.ip_address"),
+            WiserHubAttribute("api_version", "version"),
+            WiserAttribute("integration_version", VERSION),
+            WiserHubAttribute("uptime", "status.uptime"),
+            WiserHubAttribute("last_reset_reason", "status.last_reset_reason"),
+        ],
     ),
     WiserSensorEntityDescription(
         key="cloud",
@@ -126,11 +112,13 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         if x.heating_relay_status == "Off"
         else "mdi:radiator",
         value_fn=lambda x: x.heating_relay_status,
-        extra_state_attributes={
-            "percentage_demand": lambda x: x.percentage_demand,
-            "room_ids": lambda x: x.room_ids,
-            "is_smartvalve_preventing_demand": lambda x: x.is_smart_valve_preventing_demand,
-        },
+        extra_state_attributes=[
+            WiserDeviceAttribute("percentage_demand", "percentage_demand"),
+            WiserDeviceAttribute("room_ids", "room_ids"),
+            WiserDeviceAttribute(
+                "is_smartvalve_preventing_demand", "is_smart_valve_preventing_demand"
+            ),
+        ],
     ),
     WiserSensorEntityDescription(
         key="heating_channel_demand",
@@ -168,20 +156,22 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         device="hotwater",
         icon_fn=lambda x: "mdi:fire" if x.current_state == "On" else "mdi:fire-off",
         value_fn=lambda x: x.current_state,
-        extra_state_attributes={
-            "boost_end": WiserDeviceAttribute("boost_end_time"),
-            "boost_time_remaining": lambda x: int(x.boost_time_remaining / 60),
-            "away_mode_supressed": WiserDeviceAttribute("away_mode_suppressed"),
-            "is_away_mode": WiserDeviceAttribute("is_away_mode"),
-            "is_boosted": WiserDeviceAttribute("is_boosted"),
-            "is_override": WiserDeviceAttribute("hw.is_override"),
-            "schedule_id": WiserDeviceAttribute("schedule.id"),
-            "schedule_name": WiserDeviceAttribute("schedule.name"),
-            "next_day_change": WiserDeviceAttribute("schedule.next.day"),
-            "next_schedule_change": WiserDeviceAttribute("schedule.next.time"),
-            "next_schedule_datetime": WiserDeviceAttribute("schedule.next.datetime"),
-            "next_schedule_state": WiserDeviceAttribute("schedule.next.setting"),
-        },
+        extra_state_attributes=[
+            WiserDeviceAttribute("boost_end", "boost_end_time"),
+            WiserDeviceAttribute(
+                "boost_time_remaining", lambda x: int(x.boost_time_remaining / 60)
+            ),
+            WiserDeviceAttribute("away_mode_supressed"),
+            WiserDeviceAttribute("is_away_mode"),
+            WiserDeviceAttribute("is_boosted"),
+            WiserDeviceAttribute("is_override", "hw.is_override"),
+            WiserDeviceAttribute("schedule_id", "schedule.id"),
+            WiserDeviceAttribute("schedule_name", "schedule.name"),
+            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
+            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
+            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
+            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
+        ],
     ),
     # Opentherm Sensors
     WiserSensorEntityDescription(
@@ -211,11 +201,12 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         unit_of_measurement=PERCENTAGE,
+        supported=lambda dev, hub: hasattr(dev, "battery"),
         value_fn=lambda x: x.battery.percent,
-        extra_state_attributes={
-            "battery_voltage": WiserDeviceAttribute("battery.voltage"),
-            ATTR_BATTERY_LEVEL: WiserDeviceAttribute("battery.level"),
-        },
+        extra_state_attributes=[
+            WiserDeviceAttribute("battery_voltage", "battery.voltage"),
+            WiserDeviceAttribute(ATTR_BATTERY_LEVEL, "battery.level"),
+        ],
     ),
     WiserSensorEntityDescription(
         key="signal",
@@ -226,43 +217,51 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         if x.signal.displayed_signal_strength in SIGNAL_STRENGTH_ICONS
         else SIGNAL_STRENGTH_ICONS["NoSignal"],
         value_fn=lambda x: x.signal.displayed_signal_strength,
-        extra_state_attributes={
-            "vendor": MANUFACTURER,
-            "product_type": WiserDeviceAttribute("product_type"),
-            "model_identifier": WiserDeviceAttribute("model"),
-            "firmware": WiserDeviceAttribute("firmware_version"),
-            "node_id": WiserDeviceAttribute("node_id"),
-            "zigbee_channel": WiserDeviceAttribute("zigbee.network_channel"),
-            "serial_number": WiserDeviceAttribute("serial_number"),
-            "hub_route": lambda x: "Repeater" if x.parent_node_id > 0 else "Direct",
-            "device_reception_RSSI": WiserDeviceAttribute(
-                "signal.device_reception_rssi"
+        extra_state_attributes=[
+            WiserAttribute("vendor", MANUFACTURER),
+            WiserDeviceAttribute("product_type"),
+            WiserDeviceAttribute("model_identifier", "model"),
+            WiserDeviceAttribute("firmware", "firmware_version"),
+            WiserDeviceAttribute("node_id"),
+            WiserHubAttribute("zigbee_channel", "system.zigbee.network_channel"),
+            WiserDeviceAttribute("serial_number"),
+            WiserDeviceAttribute(
+                "hub_route", lambda x: "Repeater" if x.parent_node_id > 0 else "Direct"
             ),
-            "device_reception_LQI": WiserDeviceAttribute("signal.device_reception_lqi"),
-            "device_reception_percent": WiserDeviceAttribute(
-                "signal.device_signal_strength"
+            WiserDeviceAttribute(
+                "device_reception_RSSI", "signal.device_reception_rssi"
             ),
-            "controller_reception_RSSI": WiserDeviceAttribute(
-                "signal.controller_reception_rssi"
+            WiserDeviceAttribute("device_reception_LQI", "signal.device_reception_lqi"),
+            WiserDeviceAttribute(
+                "device_reception_percent", "signal.device_signal_strength"
             ),
-            "controller_reception_LQI": WiserDeviceAttribute(
-                "signal.controller_reception_lqi"
+            WiserDeviceAttribute(
+                "controller_reception_RSSI", "signal.controller_reception_rssi"
             ),
-            "controller_reception_percent": WiserDeviceAttribute(
-                "signal.controller_signal_strength"
+            WiserDeviceAttribute(
+                "controller_reception_LQI", "signal.controller_reception_lqi"
             ),
-            "parent_node_id": WiserDeviceAttribute("parent_node_id"),
-            # "repeater": lambda d, x: get_device_by_node_id(d, x.parent_node_id).name,
-        },
+            WiserDeviceAttribute(
+                "controller_reception_percent", "signal.controller_signal_strength"
+            ),
+            WiserDeviceAttribute("parent_node_id"),
+            WiserHubAttribute(
+                "repeater",
+                lambda d, h: h.devices.get_by_node_id(d.parent_node_id).name
+                if d.parent_node_id > 0
+                else "None",
+            ),
+        ],
     ),
     WiserSensorEntityDescription(
         key="schedule",
         name="Schedule",
         device_collection="devices",
+        supported=lambda dev, hub: hasattr(dev, "schedule"),
         value_fn=lambda x: x.schedule.next.datetime if x.schedule else None,
-        extra_state_attributes={
-            "setting": WiserDeviceAttribute("schedule.next.setting"),
-        },
+        extra_state_attributes=[
+            WiserDeviceAttribute("setting", "schedule.next.setting"),
+        ],
     ),
     # Heating Actuators
     WiserSensorEntityDescription(
@@ -316,7 +315,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         device_collection="devices.power_tags",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         value_fn=lambda x: x.received_power,
     ),
     WiserSensorEntityDescription(
@@ -325,7 +324,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         device_collection="devices.power_tags",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         value_fn=lambda x: x.delivered_power,
     ),
     WiserSensorEntityDescription(
@@ -401,7 +400,7 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        value_fn=lambda x: x.delivered_power if x.delivered_power >= 0 else None,
+        value_fn=lambda x: x.delivered_power,
     ),
     # Smoke Alarms
     WiserSensorEntityDescription(
@@ -463,60 +462,26 @@ WISER_SENSORS: tuple[WiserSensorEntityDescription, ...] = (
         name="Schedule",
         device_collection="rooms",
         value_fn=lambda x: "Active" if x.mode == "Auto" else "Inactive",
-        extra_state_attributes={
-            "schedule_id": WiserDeviceAttribute("schedule.id"),
-            "schedule_name": WiserDeviceAttribute("schedule.name"),
-            "scheduled_temperature": WiserDeviceAttribute("schedule.current_setting"),
-            "next_change": WiserDeviceAttribute("schedule.next.datetime"),
-            "next_temperature": WiserDeviceAttribute("schedule.next.setting"),
-        },
+        extra_state_attributes=[
+            WiserDeviceAttribute("schedule_id", "schedule.id"),
+            WiserDeviceAttribute("schedule_name", "schedule.name"),
+            WiserDeviceAttribute("scheduled_temperature", "schedule.current_setting"),
+            WiserDeviceAttribute("next_change", "schedule.next.datetime"),
+            WiserDeviceAttribute("next_temperature", "schedule.next.setting"),
+        ],
     ),
 )
 
 
-def _attr_exist(device, switch_desc: WiserSensorEntityDescription) -> bool:
-    """Check if an attribute exists for device."""
-    try:
-        r = switch_desc.value_fn(device)
-        if r is not None:
-            return True
-        return False
-    except AttributeError:
-        return False
-
-
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Initialize the entry."""
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+):
+    """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
-    wiser_sensors = []
-
-    for sensor_desc in WISER_SENSORS:
-        # get device or device collection
-        if sensor_desc.device_collection and getattrd(
-            data.wiserhub, sensor_desc.device_collection
-        ):
-            for device in getattrd(data.wiserhub, sensor_desc.device_collection).all:
-                if _attr_exist(device, sensor_desc):
-                    _LOGGER.info("Adding %s", device.name)
-                    wiser_sensors.append(
-                        WiserSensor(
-                            data,
-                            sensor_desc,
-                            device,
-                        )
-                    )
-        elif sensor_desc.device and getattrd(data.wiserhub, sensor_desc.device):
-            device = getattrd(data.wiserhub, sensor_desc.device)
-            if _attr_exist(device, sensor_desc):
-                wiser_sensors.append(
-                    WiserSensor(
-                        data,
-                        sensor_desc,
-                        device,
-                    )
-                )
-
-    async_add_entities(wiser_sensors)
+    entities = get_entities(data, WISER_SENSORS, WiserSensor)
+    async_add_entities(entities)
 
     return True
 

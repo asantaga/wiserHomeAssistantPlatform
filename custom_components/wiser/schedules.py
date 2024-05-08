@@ -15,9 +15,9 @@ class WiserScheduleEntity:
     def data(self):
         return self._data
 
-    @property
-    def schedule(self):
-        return self._schedule
+    # @property
+    # def schedule(self):
+    #    return self._schedule
 
     @property
     def device(self):

@@ -60,7 +60,7 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
     def get_hub_name(config_entry_id):
         try:
             api = hass.data[DOMAIN][config_entry_id][DATA]
-            return api.wiserhub.system.name
+            return api.wiserhub.system.name  # noqa: TRY300
         except:  # noqa: E722
             return None
 
@@ -70,9 +70,9 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
                 if hass.data[DOMAIN][entry_id][DATA].wiserhub.system.name == hub:
                     return hass.data[DOMAIN][entry_id][DATA]
             return None
-        else:
-            for entry_id in hass.data[DOMAIN]:
-                return hass.data[DOMAIN][entry_id][DATA]
+
+        for entry_id in hass.data[DOMAIN]:
+            return hass.data[DOMAIN][entry_id][DATA]
 
     def get_entity_from_entity_id(entity: str):
         """Get wiser entity from entity_id."""
@@ -94,8 +94,7 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
     ) -> None:
         """Publish schedules list data."""
         output = []
-        for entry in hass.data[DOMAIN]:
-            output.append(get_hub_name(entry))
+        output.extend([get_hub_name(entry) for entry in hass.data[DOMAIN]])
 
         # output = output.sort()
         connection.send_result(msg["id"], output)
@@ -144,16 +143,18 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
         d = get_api_for_hub(msg.get("hub"))
         if d:
             schedules = d.wiserhub.schedules.all
-            for schedule in schedules:
-                if schedule.schedule_type == schedule_type or not schedule_type:
-                    output.append(
-                        {
-                            "Id": schedule.id,
-                            "Type": schedule.schedule_type,
-                            "Name": schedule.name,
-                            "Assignments": len(schedule.assignment_ids),
-                        }
-                    )
+            output.extend(
+                [
+                    {
+                        "Id": schedule.id,
+                        "Type": schedule.schedule_type,
+                        "Name": schedule.name,
+                        "Assignments": len(schedule.assignment_ids),
+                    }
+                    for schedule in schedules
+                    if schedule.schedule_type == schedule_type or not schedule_type
+                ]
+            )
 
             connection.send_result(msg["id"], sorted(output, key=lambda n: n["Name"]))
         else:
@@ -234,8 +235,8 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
         if d:
             rooms = d.wiserhub.rooms.all
             room_list = []
-            for room in rooms:
-                room_list.append({"Id": room.id, "Name": room.name})
+            room_list.extend([{"Id": room.id, "Name": room.name} for room in rooms])
+
             connection.send_result(
                 msg["id"], sorted(room_list, key=lambda n: n["Name"])
             )
@@ -267,10 +268,13 @@ async def async_register_websockets(hass: HomeAssistant, data):  # noqa: C901
 
             device_list = []
             if devices:
-                for device in devices:
-                    device_list.append(
+                device_list.extend(
+                    [
                         {"Id": device.device_type_id, "Name": device.name}
-                    )
+                        for device in devices
+                    ]
+                )
+
                 connection.send_result(
                     msg["id"], sorted(device_list, key=lambda n: n["Name"])
                 )

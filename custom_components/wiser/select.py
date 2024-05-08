@@ -3,41 +3,37 @@
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 """
+
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 from typing import Any
 
-from aioWiserHeatAPI.const import TEXT_UNKNOWN
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
 
-from config.custom_components.wiser.entity import WiserBaseEntity
+from config.custom_components.wiser.entity import (
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
+)
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES
-from .helpers import getattrd
+from .helpers import get_entities
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
-class WiserSelectEntityDescription(SelectEntityDescription):
-    """A class that describes Wiser sensor entities."""
+@dataclass(frozen=True, kw_only=True)
+class WiserSelectEntityDescription(SelectEntityDescription, WiserBaseEntityDescription):
+    """A class that describes Wiser select entities."""
 
-    name_fn: Callable[[Any], str] | None = None
-    device: str | None = None
-    device_collection: list | None = None
-    available_fn: Callable[[Any], bool] | None = None
-    icon_fn: Callable[[Any], str] | None = None
     options_fn: Callable[[Any], str] | None = None
     set_fn: Callable[[Any], str] | None = None
-    value_fn: Callable[[Any], float | str] | None = None
-    legacy_name_fn: Callable[[Any], str] | None = None
-    legacy_type: str = None
-    extra_state_attributes: dict[str, Callable[[Any], float | str]] | None = None
 
 
 WISER_SELECTS: tuple[WiserSelectEntityDescription, ...] = (
@@ -76,56 +72,24 @@ WISER_SELECTS: tuple[WiserSelectEntityDescription, ...] = (
 )
 
 
-def _attr_exist(device, switch_desc: WiserSelectEntityDescription) -> bool:
-    """Check if an attribute exists for device."""
-    try:
-        r = switch_desc.value_fn(device)
-        if r is not None and r != TEXT_UNKNOWN:
-            return True
-        return False
-    except AttributeError:
-        return False
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+):
+    """Add the Wiser System Switch entities."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    entities = get_entities(data, WISER_SELECTS, WiserSelect)
+    async_add_entities(entities)
 
-
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Set up Wiser climate device."""
-    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
-    wiser_selects = []
-
-    for select_desc in WISER_SELECTS:
-        # get device or device collection
-        if select_desc.device_collection and getattrd(
-            data.wiserhub, select_desc.device_collection
-        ):
-            for device in getattrd(data.wiserhub, select_desc.device_collection).all:
-                if _attr_exist(device, select_desc):
-                    _LOGGER.info("Adding %s", device.name)
-                    wiser_selects.append(
-                        WiserSelect(
-                            data,
-                            select_desc,
-                            device,
-                        )
-                    )
-        elif select_desc.device and getattrd(data.wiserhub, select_desc.device):
-            device = getattrd(data.wiserhub, select_desc.device)
-            if _attr_exist(device, select_desc):
-                wiser_selects.append(
-                    WiserSelect(
-                        data,
-                        select_desc,
-                        device,
-                    )
-                )
-
-    async_add_entities(wiser_selects)
+    return True
 
 
 class WiserSelect(WiserBaseEntity, SelectEntity):
     """Class to provide select entities for Wiser device control."""
 
     entity_description: WiserSelectEntityDescription
-    _attr_has_entity_name = False if LEGACY_NAMES else True
+    _attr_has_entity_name = not LEGACY_NAMES
 
     def __init__(
         self,

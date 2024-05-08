@@ -1,6 +1,8 @@
 """Base entity class for Wiser devices."""
+
 import asyncio
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from inspect import signature
 import logging
 from typing import Any
@@ -12,16 +14,14 @@ from aioWiserHeatAPI.room import _WiserRoom
 from aioWiserHeatAPI.system import _WiserSystem
 
 from homeassistant.core import callback
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN, ENTITY_PREFIX, LEGACY_NAMES, MANUFACTURER, ROOM
+from .const import DOMAIN, LEGACY_NAMES, MANUFACTURER, ROOM
 from .helpers import (
-    WiserDeviceAttribute,
-    WiserHubAttribute,
-    get_entity_description_attribute_from_function,
     get_entity_name,
     get_identifier,
     get_legacy_entity_name,
@@ -33,13 +33,55 @@ from .helpers import (
 _LOGGER = logging.getLogger(__name__)
 
 
+@dataclass
+class WiserAttribute:
+    """Class to hold attribute definition."""
+
+    name: str
+    path: Callable | str | None = None
+
+
+@dataclass
+class WiserStaticAttribute(WiserAttribute):
+    """Hub attribute definition."""
+
+
+@dataclass
+class WiserHubAttribute(WiserAttribute):
+    """Hub attribute definition."""
+
+
+@dataclass
+class WiserDeviceAttribute(WiserAttribute):
+    """Device attribute definition."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class WiserBaseEntityDescription(EntityDescription):
+    """Base extension class for Wiser entity descriptions."""
+
+    device: str | None = None
+    device_collection: list | None = None
+    supported: Callable[[Any], bool] = lambda device, hub: True
+    value_fn: Callable[[Any], bool] | None = None
+    name_fn: Callable[[Any], str] | None = None
+    legacy_name_fn: Callable[[Any], str] | None = None
+    legacy_type: str = None
+    icon_fn: Callable[[Any], str] | None = None
+    extra_state_attributes: list[
+        dict[str, str] | WiserDeviceAttribute | WiserHubAttribute
+    ] = None
+    delay: int | None = None
+    entity_class: Any | None = None
+
+
 class WiserBaseEntity(CoordinatorEntity):
     """Base entity for Wiser entities."""
 
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        description: Any,
+        description: WiserBaseEntityDescription,
         device: _WiserDevice
         | _WiserRoom
         | _WiserSystem
@@ -51,15 +93,13 @@ class WiserBaseEntity(CoordinatorEntity):
         super().__init__(coordinator)
         self._data = coordinator
         self._device = device
-        self._attr_has_entity_name = (
-            False
-            if LEGACY_NAMES
+        self._attr_has_entity_name = not (
+            LEGACY_NAMES
             and (
                 description.legacy_type
                 or description.legacy_name_fn
                 or description.device
             )
-            else True
         )
         self.entity_class = entity_class
         self.entity_description = description
@@ -129,7 +169,6 @@ class WiserBaseEntity(CoordinatorEntity):
     @property
     def name(self) -> str:
         """Return entity name."""
-        # TODO: Neaten this up when finished
         name = self._attr_name
         if not self._attr_has_entity_name:
             name = get_legacy_entity_name(
@@ -139,16 +178,17 @@ class WiserBaseEntity(CoordinatorEntity):
             hasattr(self.entity_description, "name_fn")
             and self.entity_description.name_fn
         ):
-            name = get_entity_description_attribute_from_function(
-                self._data, self._device, self.entity_description.name_fn
-            )
+            name = self._get_callable_value(self.entity_description.name_fn)
         return name
 
     @property
     def unique_id(self):
         """Return unique id."""
         if not self._attr_has_entity_name:
-            if hasattr(self.entity_description, "legacy_type"):
+            if (
+                hasattr(self.entity_description, "legacy_type")
+                and self.entity_description.legacy_type
+            ):
                 return get_legacy_unique_id(
                     self._data, self.entity_description, self._device
                 )
@@ -168,30 +208,44 @@ class WiserBaseEntity(CoordinatorEntity):
         """Return extra state attributes for sensor."""
         attrs = {}
         if self.entity_description.extra_state_attributes:
-            for (
-                name,
-                value,
-            ) in self.entity_description.extra_state_attributes.items():
-                if isinstance(value, str):
-                    attrs[name] = value
-                elif isinstance(value, WiserHubAttribute):
+            for attr_desc in self.entity_description.extra_state_attributes:
+                if isinstance(attr_desc, WiserHubAttribute):
                     try:
-                        attrs[name] = getattrd(self._data.wiserhub, value.path)
-                    except AttributeError:
-                        continue
-                elif isinstance(value, WiserDeviceAttribute):
-                    try:
-                        attrs[name] = getattrd(self._device, value.path)
-                    except AttributeError:
-                        continue
-                elif isinstance(value, Callable):
-                    # Get number of params
-                    no_of_params = len(signature(value).parameters)
-                    try:
-                        if no_of_params == 2:
-                            attrs[name] = value(self._data, self._device)
+                        if isinstance(attr_desc.path, Callable):
+                            attrs[attr_desc.name] = self._get_callable_value(
+                                attr_desc.path
+                            )
                         else:
-                            attrs[name] = value(self._device)
+                            attrs[attr_desc.name] = getattrd(
+                                self._data.wiserhub, attr_desc.path
+                            )
                     except AttributeError:
                         continue
+                elif isinstance(attr_desc, WiserDeviceAttribute):
+                    try:
+                        if isinstance(attr_desc.path, Callable):
+                            attrs[attr_desc.name] = self._get_callable_value(
+                                attr_desc.path
+                            )
+                        else:
+                            attrs[attr_desc.name] = getattrd(
+                                self._device,
+                                attr_desc.path if attr_desc.path else attr_desc.name,
+                            )
+                    except AttributeError:
+                        continue
+                elif isinstance(attr_desc, WiserAttribute):
+                    attrs[attr_desc.name] = attr_desc.path
+
+        # return dict(sorted(attrs.items()))
         return attrs
+
+    def _get_callable_value(self, func: Callable):
+        """Get return value from lambda callable."""
+        no_of_params = len(signature(func).parameters)
+        try:
+            if no_of_params == 2:
+                return func(self._device, self._data.wiserhub)
+            return func(self._device)
+        except AttributeError:
+            return None

@@ -1,32 +1,34 @@
-"""
-Cover Platform Device for Wiser.
+"""Cover Platform Device for Wiser.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-import asyncio
+
+from dataclasses import dataclass
 import logging
 from typing import Any
 
+from aioWiserHeatAPI.helpers.device import _WiserDevice
+from aioWiserHeatAPI.shutter import _WiserShutter
+
+from homeassistant.components.button import ButtonEntityDescription
 from homeassistant.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
+    CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
+from .const import DATA, DOMAIN, LEGACY_NAMES, MANUFACTURER_SCHNEIDER
+from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
+from .helpers import get_entities
 from .schedules import WiserScheduleEntity
-
-from .const import (
-    DATA,
-    DOMAIN,
-    MANUFACTURER_SCHNEIDER,
-)
-from .helpers import get_entity_name, get_identifier
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
 
@@ -47,43 +49,97 @@ TILT_SUPPORT_FLAGS = (
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Set up Wiser shutter device."""
-    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
-
-    wiser_shutters = []
-    if data.wiserhub.devices.shutters:
-        _LOGGER.debug("Setting up shutter entities")
-        for shutter in data.wiserhub.devices.shutters.all:
-            if shutter.product_type == "Shutter":
-                wiser_shutters.append(WiserShutter(data, shutter.id))
-        async_add_entities(wiser_shutters, True)
+@dataclass(frozen=True, kw_only=True)
+class WiserCoverEntityDescription(ButtonEntityDescription, WiserBaseEntityDescription):
+    """A class that describes Wiser cover entities."""
 
 
-class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
+WISER_COVERS: tuple[WiserCoverEntityDescription, ...] = (
+    WiserCoverEntityDescription(
+        key="shutter",
+        name="Shutter",
+        device_collection="devices.shutters",
+        extra_state_attributes=[
+            WiserDeviceAttribute("name"),
+            WiserDeviceAttribute("model"),
+            WiserDeviceAttribute("product_type"),
+            WiserDeviceAttribute("product_identifier"),
+            WiserDeviceAttribute("product_model"),
+            WiserDeviceAttribute("serial_number"),
+            WiserDeviceAttribute("firmware", "firmware_version"),
+            WiserDeviceAttribute(
+                "room",
+                lambda d, h: h.rooms.get_by_id(d.room_id).name
+                if d.room_id != 0
+                else "Unassigned",
+            ),
+            WiserDeviceAttribute("shutter_id", "id"),
+            WiserDeviceAttribute("away_mode_action"),
+            WiserDeviceAttribute("mode"),
+            WiserDeviceAttribute("lift_open_time", "drive_config.open_time"),
+            WiserDeviceAttribute("lift_close_time", "drive_config.close_time"),
+            WiserDeviceAttribute("control_source"),
+            WiserDeviceAttribute("is_open"),
+            WiserDeviceAttribute("is_closed"),
+            WiserDeviceAttribute(
+                "current_state",
+                lambda x: "Open"
+                if x.is_open
+                else "Closed"
+                if x.is_closed
+                else "Middle",
+            ),
+            WiserDeviceAttribute("lift_movement"),
+            WiserDeviceAttribute("current_lift"),
+            WiserDeviceAttribute("manual_lift"),
+            WiserDeviceAttribute("target_lift"),
+            WiserDeviceAttribute("scheduled_lift"),
+            WiserDeviceAttribute("current_tilt"),
+            WiserDeviceAttribute("manual_tilt"),
+            WiserDeviceAttribute("target_tilt"),
+            WiserDeviceAttribute("tilt_time", "drive_config.tilt_time"),
+            WiserDeviceAttribute("tilt_angle_closed", "drive_config.tilt_angle_closed"),
+            WiserDeviceAttribute("tilt_angle_open", "drive_config.tilt_angle_open"),
+            WiserDeviceAttribute("tilt_movement"),
+            WiserDeviceAttribute("schedule_id", "schedule_id"),
+            WiserDeviceAttribute("schedule_name", "schedule.name"),
+            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
+            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
+            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
+            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
+        ],
+    ),
+)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+):
+    """Initialize the entry."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+    entities = get_entities(data, WISER_COVERS, WiserShutter)
+    async_add_entities(entities)
+
+    return True
+
+
+class WiserShutter(WiserBaseEntity, CoverEntity, WiserScheduleEntity):
     """Wisershutter ClientEntity Object."""
 
-    def __init__(self, coordinator, shutter_id) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._data = coordinator
-        self._device_id = shutter_id
-        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
-        self._schedule = self._device.schedule
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+    entity_description: WiserCoverEntityDescription
+    _attr_device_class: CoverDeviceClass = CoverDeviceClass.SHUTTER
+    _attr_has_entity_name = not LEGACY_NAMES
 
-    async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
-        if delay:
-            asyncio.sleep(delay)
-        await self._data.async_refresh()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug(f"{self.name} updating")
-        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
-        self._schedule = self._device.schedule
-        self.async_write_ha_state()
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        description: WiserCoverEntityDescription,
+        device: _WiserDevice | _WiserShutter | None = None,
+    ) -> None:
+        """Initialise class instance for Wiser switch."""
+        super().__init__(coordinator, description, device, "button")
 
     @property
     def supported_features(self):
@@ -93,160 +149,58 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         return SUPPORT_FLAGS
 
     @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_entity_name(self._data, self._device),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.devices.get_by_id(
-                self._device_id
-            ).product_type,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-    @property
-    def icon(self):
-        """Return icon to show if shutter is closed or Open."""
-        return "mdi:window-shutter" if self.is_closed else "mdi:window-shutter-open"
-
-    @property
-    def name(self):
-        """Return Name of device"""
-        return f"{get_entity_name(self._data, self._device)} Control"
-
-    @property
-    def current_cover_position(self):
-        """Return current position from data."""
+    def current_cover_position(self) -> int | None:
+        """Return shutter current position."""
         return self._device.current_lift
 
     @property
     def current_cover_tilt_position(self) -> int | None:
-        """Return current position of cover tilt."""
+        """Return current position of shutter tilt."""
         return self._device.current_tilt
 
     @property
-    def is_closed(self):
+    def is_closed(self) -> bool:
+        """Return if shutter is closed."""
         return self._device.is_closed
 
     @property
-    def is_opening(self):
-        return self._device.is_opening
-
-    @property
-    def is_closing(self):
+    def is_closing(self) -> bool:
+        """Return if shutter is closing."""
         return self._device.is_closing
 
     @property
-    def unique_id(self):
-        """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-Wisershutter-{self._device_id}-{self.name}"
+    def is_opening(self) -> bool:
+        """Return if shutter is opening."""
+        return self._device.is_opening
 
-    @property
-    def extra_state_attributes(self):
-        """Return state attributes."""
-        # Generic attributes
-        attrs = super().state_attributes
-        # Shutter Identification
-        attrs["name"] = self._device.name
-        attrs["model"] = self._device.model
-        attrs["product_type"] = self._device.product_type
-        attrs["product_identifier"] = self._device.product_identifier
-        attrs["product_model"] = self._device.product_model
-        attrs["serial_number"] = self._device.serial_number
-        attrs["firmware"] = self._device.firmware_version
-
-        # Room
-        if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
-            attrs["room"] = self._data.wiserhub.rooms.get_by_id(
-                self._device.room_id
-            ).name
-        else:
-            attrs["room"] = "Unassigned"
-
-        # Settings
-        attrs["shutter_id"] = self._device_id
-        attrs["away_mode_action"] = self._device.away_mode_action
-        attrs["mode"] = self._device.mode
-        attrs["lift_open_time"] = self._device.drive_config.open_time
-        attrs["lift_close_time"] = self._device.drive_config.close_time
-
-        # Command state
-        attrs["control_source"] = self._device.control_source
-
-        # Status
-        attrs["is_open"] = self._device.is_open
-        attrs["is_closed"] = self._device.is_closed
-        if self._device.is_open:
-            attrs["current_state"] = "Open"
-        elif self._device.is_closed:
-            attrs["current_state"] = "Closed"
-        elif not (self._device.is_open or self._device.is_closed):
-            attrs["current_state"] = "Middle"
-        attrs["lift_movement"] = self._device.lift_movement
-
-        # Positions
-        attrs["current_lift"] = self._device.current_lift
-        attrs["manual_lift"] = self._device.manual_lift
-        attrs["target_lift"] = self._device.target_lift
-        attrs["scheduled_lift"] = self._device.scheduled_lift
-
-        if self._device.is_tilt_supported:
-            # Tilt settings
-            attrs["current_tilt"] = self._device.current_tilt
-            attrs["manual_tilt"] = self._device.manual_tilt
-            attrs["target_tilt"] = self._device.target_tilt
-            attrs["tilt_time"] = self._device.drive_config.tilt_time
-            attrs["tilt_angle_closed"] = self._device.drive_config.tilt_angle_closed
-            attrs["tilt_angle_open"] = self._device.drive_config.tilt_angle_open
-            attrs["tilt_movement"] = self._device.tilt_movement
-
-        # Schedule
-        attrs["schedule_id"] = self._device.schedule_id
-        if self._device.schedule:
-            attrs["schedule_name"] = self._device.schedule.name
-            attrs["next_day_change"] = str(self._device.schedule.next.day)
-            attrs["next_schedule_change"] = str(self._device.schedule.next.time)
-            attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
-            attrs["next_schedule_state"] = self._device.schedule.next.setting
-
-        return attrs
-
-    async def async_set_cover_position(self, **kwargs):
-        """Move the cover to a specific position."""
-        position = kwargs[ATTR_POSITION]
-        _LOGGER.debug(f"Setting cover position for {self.name} to {position}")
-        await self._device.open(position)
-        await self.async_force_update()
-
-    async def async_close_cover(self, **kwargs):
-        """Close shutter"""
-        _LOGGER.debug(f"Closing {self.name}")
+    async def async_close_cover(self, **kwargs) -> None:
+        """Close the shutter."""
+        _LOGGER.debug("Closing %s", self.name)
         await self._device.close()
         await self.async_force_update()
 
-    async def async_open_cover(self, **kwargs):
-        """Close shutter"""
-        _LOGGER.debug(f"Opening {self.name}")
+    async def async_open_cover(self, **kwargs) -> None:
+        """Open the shutter."""
+        _LOGGER.debug("Opening %s", self.name)
         await self._device.open()
         await self.async_force_update()
 
-    async def async_stop_cover(self, **kwargs):
-        """Stop shutter"""
-        _LOGGER.debug(f"Stopping {self.name}")
+    async def async_set_cover_position(self, **kwargs) -> None:
+        """Move the shutter to a specific position."""
+        position = kwargs[ATTR_POSITION]
+        _LOGGER.debug("Setting cover position for %s to %s", self.name, position)
+        await self._device.open(position)
+        await self.async_force_update()
+
+    async def async_stop_cover(self, **kwargs) -> None:
+        """Stop the shutter."""
+        _LOGGER.debug("Stopping %s", self.name)
         await self._device.stop()
         await self.async_force_update()
 
-    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
-        """Move the cover tilt to a specific position."""
-        position = kwargs[ATTR_TILT_POSITION]
-        _LOGGER.debug(f"Setting cover tilt position for {self.name} to {position}")
-        await self._device.open_tilt(position)
-        await self.async_force_update()
-
-    async def async_close_cover_tilt(self, **kwargs):
-        """Close shutter"""
-        _LOGGER.debug(f"Closing tilt {self.name}")
+    async def async_close_cover_tilt(self, **kwargs) -> None:
+        """Close the shutter tilt."""
+        _LOGGER.debug("Closing tilt of %s", self.name)
         await self._device.close_tilt()
         await self.async_force_update()
 
@@ -255,8 +209,15 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         await self._device.open_tilt()
         await self.async_force_update()
 
-    async def async_stop_cover_tilt(self, **kwargs):
-        """Stop shutter"""
-        _LOGGER.debug(f"Stopping tilt {self.name}")
+    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
+        """Move the shutter tilt to a specific position."""
+        position = kwargs[ATTR_TILT_POSITION]
+        _LOGGER.debug("Setting cover tilt position for %s to %s", self.name, position)
+        await self._device.open_tilt(position)
+        await self.async_force_update()
+
+    async def async_stop_cover_tilt(self, **kwargs) -> None:
+        """Stop the shutter tilt."""
+        _LOGGER.debug("Stopping tilt of %s", self.name)
         await self._device.stop_tilt()
         await self.async_force_update()
