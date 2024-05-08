@@ -1,4 +1,5 @@
 """Data coordinator for Wiser hub."""
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -15,7 +16,6 @@ from aioWiserHeatAPI.wiserhub import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -145,7 +145,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             async_dispatcher_send(
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
-            return True
         except (
             WiserHubConnectionError,
             WiserHubAuthenticationError,
@@ -156,4 +155,5 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         except Exception as ex:
             self.last_update_status = "Failed"
             _LOGGER.error(ex)
-            raise ex
+            raise
+        return True

@@ -120,7 +120,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry):
 
         # Deregister services if only instance
         _LOGGER.debug("Unregister Wiser services")
-        for _k, service in WISER_SERVICES.items():
+        for service in WISER_SERVICES.values():
             hass.services.async_remove(DOMAIN, service)
 
     _LOGGER.debug("Unload Wiser integration platforms")

@@ -1,4 +1,5 @@
 """Raises HA events for Wiser hub actions."""
+
 import logging
 
 from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE
