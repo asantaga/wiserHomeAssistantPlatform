@@ -24,12 +24,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN
-from .entity import (
-    WiserBaseEntity,
-    WiserBaseEntityDescription,
-    WiserDeviceAttribute,
-    WiserHubAttribute,
-)
+from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
 from .helpers import get_entities
 
 _LOGGER = logging.getLogger(__name__)

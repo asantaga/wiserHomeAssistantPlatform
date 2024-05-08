@@ -1,4 +1,5 @@
-# Initialise global services
+"""Functions to handle registering and actioning services."""
+
 import logging
 import os
 
@@ -31,77 +32,80 @@ from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_c
 
 _LOGGER = logging.getLogger(__name__)
 
+GET_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
+    }
+)
 
-async def async_setup_services(hass: HomeAssistant, data):
-    GET_SCHEDULE_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-            vol.Optional(ATTR_FILENAME, default=""): vol.Coerce(str),
-        }
-    )
+SET_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_FILENAME): vol.Coerce(str),
+    }
+)
 
-    SET_SCHEDULE_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-            vol.Required(ATTR_FILENAME): vol.Coerce(str),
-        }
-    )
+SET_SCHEDULE_FROM_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_SCHEDULE): cv.template,
+    }
+)
 
-    SET_SCHEDULE_FROM_DATA_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-            vol.Required(ATTR_SCHEDULE): cv.template,
-        }
-    )
+COPY_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
+    }
+)
 
-    COPY_SCHEDULE_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-            vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
-        }
-    )
+ASSIGN_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_SCHEDULE_ID): vol.Coerce(int),
+        vol.Optional(ATTR_SCHEDULE_NAME): vol.Coerce(str),
+        vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
+    }
+)
 
-    ASSIGN_SCHEDULE_SCHEMA = vol.Schema(
-        {
-            vol.Optional(ATTR_ENTITY_ID): cv.entity_id,
-            vol.Optional(ATTR_SCHEDULE_ID): vol.Coerce(int),
-            vol.Optional(ATTR_SCHEDULE_NAME): vol.Coerce(str),
-            vol.Required(ATTR_TO_ENTITY_ID): cv.entity_ids,
-        }
-    )
+SET_DEVICE_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_MODE): vol.Coerce(str),
+    }
+)
 
-    SET_DEVICE_MODE_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-            vol.Required(ATTR_MODE): vol.Coerce(str),
-        }
-    )
+BOOST_HOTWATER_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(
+            int
+        ),
+        vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
+    }
+)
 
-    BOOST_HOTWATER_SCHEMA = vol.Schema(
-        {
-            vol.Optional(ATTR_TIME_PERIOD, default=DEFAULT_BOOST_TEMP_TIME): vol.Coerce(
-                int
-            ),
-            vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
-        }
-    )
+SEND_OPENTHERM_COMMAND_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_OPENTHERM_ENDPOINT, default=""): vol.Coerce(str),
+        vol.Required(ATTR_OPENTHERM_PARAM): vol.Coerce(str),
+        vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Coerce(str),
+        vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
+    }
+)
 
-    SEND_OPENTHERM_COMMAND_SCHEMA = vol.Schema(
-        {
-            vol.Optional(ATTR_OPENTHERM_ENDPOINT, default=""): vol.Coerce(str),
-            vol.Required(ATTR_OPENTHERM_PARAM): vol.Coerce(str),
-            vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Coerce(str),
-            vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
-        }
-    )
 
-    def get_entity_from_entity_id(entity: str):
-        """Get wiser entity from entity_id"""
-        domain = entity.split(".", 1)[0]
-        entity_comp = hass.data.get("entity_components", {}).get(domain)
-        if entity_comp:
-            return entity_comp.get_entity(entity)
-        return None
+def get_entity_from_entity_id(hass: HomeAssistant, entity: str):
+    """Get wiser entity from entity_id."""
+    domain = entity.split(".", 1)[0]
+    entity_comp = hass.data.get("entity_components", {}).get(domain)
+    if entity_comp:
+        return entity_comp.get_entity(entity)
+    return None
+
+
+async def async_setup_services(hass: HomeAssistant, data):  # noqa: C901
+    """Initialise the services."""
 
     @callback
     async def get_schedule(service_call):
@@ -118,7 +122,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     + ".yaml"
                 )
             )
-            entity = get_entity_from_entity_id(entity_id)
+            entity = get_entity_from_entity_id(hass, entity_id)
             if entity:
                 if hasattr(entity, "get_schedule"):
                     # Remove leading slash on config if exists
@@ -131,11 +135,12 @@ async def async_setup_services(hass: HomeAssistant, data):
                     await fn(filename)
                 else:
                     _LOGGER.error(
-                        f"Cannot save schedule from entity {entity_id}.  Please see wiki for entities to choose"
+                        "Cannot save schedule from entity %s.  Please see wiki for entities to choose",
+                        entity_id,
                     )
             else:
                 _LOGGER.error(
-                    f"Invalid entity. {entity_id} does not exist in this integration"
+                    "Invalid entity. %s does not exist in this integration", entity_id
                 )
 
     @callback
@@ -144,18 +149,19 @@ async def async_setup_services(hass: HomeAssistant, data):
         entity_ids = service_call.data[ATTR_ENTITY_ID]
         for entity_id in entity_ids:
             filename = service_call.data[ATTR_FILENAME]
-            entity = get_entity_from_entity_id(entity_id)
+            entity = get_entity_from_entity_id(hass, entity_id)
             if entity:
                 if hasattr(entity, "set_schedule"):
                     fn = getattr(entity, "set_schedule")
                     await fn(filename)
                 else:
                     _LOGGER.error(
-                        f"Cannot set schedule for entity {entity_id}.  Please see wiki for entities to choose"
+                        "Cannot set schedule for entity %s.  Please see wiki for entities to choose",
+                        entity_id,
                     )
             else:
                 _LOGGER.error(
-                    f"Invalid entity. {entity_id} does not exist in this integration"
+                    "Invalid entity. %s does not exist in this integration", entity_id
                 )
 
     @callback
@@ -166,28 +172,29 @@ async def async_setup_services(hass: HomeAssistant, data):
 
         entity_ids = service_call.data[ATTR_ENTITY_ID]
         for entity_id in entity_ids:
-            entity = get_entity_from_entity_id(entity_id)
+            entity = get_entity_from_entity_id(hass, entity_id)
             if entity:
                 if hasattr(entity, "set_schedule_from_data"):
                     fn = getattr(entity, "set_schedule_from_data")
                     await fn(schedule.async_render(parse_result=False))
                 else:
                     _LOGGER.error(
-                        f"Cannot set schedule for entity {entity_id}.  Please see wiki for entities to choose"
+                        "Cannot set schedule for entity %s.  Please see wiki for entities to choose",
+                        entity_id,
                     )
             else:
                 _LOGGER.error(
-                    f"Invalid entity. {entity_id} does not exist in this integration"
+                    "Invalid entity. %s does not exist in this integration", entity_id
                 )
 
     @callback
     async def copy_schedule(service_call):
-        """Handle the service call"""
+        """Handle the service call."""
         entity_id = service_call.data[ATTR_ENTITY_ID]
         to_entity_ids = service_call.data[ATTR_TO_ENTITY_ID]
         for to_entity_id in to_entity_ids:
-            from_entity = get_entity_from_entity_id(entity_id)
-            to_entity = get_entity_from_entity_id(to_entity_id)
+            from_entity = get_entity_from_entity_id(hass, entity_id)
+            to_entity = get_entity_from_entity_id(hass, to_entity_id)
 
             if from_entity and to_entity:
                 # Check from entity is a schedule entity
@@ -196,20 +203,24 @@ async def async_setup_services(hass: HomeAssistant, data):
                     await fn(to_entity)
                 else:
                     _LOGGER.error(
-                        f"Cannot copy schedule from entity {from_entity.name}.  Please see wiki for entities to choose"
+                        "Cannot copy schedule from entity %s.  Please see wiki for entities to choose",
+                        from_entity.name,
                     )
             else:
                 from_entity_id_text = entity_id if not from_entity else ""
                 to_entity_id_text = to_entity_id if not to_entity else ""
                 and_text = " and " if not from_entity and not to_entity else ""
                 _LOGGER.error(
-                    f"Invalid entity - {from_entity_id_text}{and_text}{to_entity_id_text} does not exist in this integration"  # noqa=E501
+                    "Invalid entity - %s%s%s does not exist in this integration",
+                    from_entity_id_text,
+                    and_text,
+                    to_entity_id_text,
                 )
             return False
 
     @callback
     async def assign_schedule(service_call):
-        """Handle the service call"""
+        """Handle the service call."""
         entity_id = service_call.data.get(ATTR_ENTITY_ID)
         schedule_id = service_call.data.get(ATTR_SCHEDULE_ID)
         schedule_name = service_call.data.get(ATTR_SCHEDULE_NAME)
@@ -218,8 +229,8 @@ async def async_setup_services(hass: HomeAssistant, data):
         if entity_id:
             # Assign schedule from this entity to another
             for to_entity_id in to_entity_ids:
-                from_entity = get_entity_from_entity_id(entity_id)
-                to_entity = get_entity_from_entity_id(to_entity_id)
+                from_entity = get_entity_from_entity_id(hass, entity_id)
+                to_entity = get_entity_from_entity_id(hass, to_entity_id)
 
                 if from_entity and to_entity:
                     if hasattr(from_entity, "assign_schedule_to_another_entity"):
@@ -227,49 +238,55 @@ async def async_setup_services(hass: HomeAssistant, data):
                         await fn(to_entity)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule from entity {from_entity.name}. Please see wiki for entities to choose"  # noqa=E501
+                            "Cannot assign schedule from entity %s. Please see wiki for entities to choose",
+                            from_entity.name,
                         )
                 else:
                     from_entity_id_text = entity_id if not from_entity else ""
                     to_entity_id_text = to_entity_id if not to_entity else ""
                     and_text = " and " if not from_entity and not to_entity else ""
                     _LOGGER.error(
-                        f"Invalid entity - {from_entity_id_text}{and_text}{to_entity_id_text} does not exist in this integration"  # noqa=E501
+                        "Invalid entity - %s%s%s does not exist in this integration",
+                        from_entity_id_text,
+                        and_text,
+                        to_entity_id_text,
                     )
         elif schedule_id:
             # Assign scheduel with id to this entity
             for to_entity_id in to_entity_ids:
-                to_entity = get_entity_from_entity_id(to_entity_id)
+                to_entity = get_entity_from_entity_id(hass, to_entity_id)
                 if to_entity:
                     if hasattr(to_entity, "assign_schedule_by_id_or_name"):
                         fn = getattr(to_entity, "assign_schedule_by_id_or_name")
                         await fn(schedule_id, None)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule to entity {to_entity.name}. Please see wiki for entities to choose"
+                            "Cannot assign schedule to entity %s. Please see wiki for entities to choose",
+                            to_entity.name,
                         )
         elif schedule_name:
             # Assign schedule with name to this entity
             for to_entity_id in to_entity_ids:
-                to_entity = get_entity_from_entity_id(to_entity_id)
+                to_entity = get_entity_from_entity_id(hass, to_entity_id)
                 if to_entity:
                     if hasattr(to_entity, "assign_schedule_by_id_or_name"):
                         fn = getattr(to_entity, "assign_schedule_by_id_or_name")
                         await fn(None, schedule_name)
                     else:
                         _LOGGER.error(
-                            f"Cannot assign schedule to entity {to_entity.name}. Please see wiki for entities to choose"
+                            "Cannot assign schedule to entity %s. Please see wiki for entities to choose".to_entity.name
                         )
         else:
             # Create default schedule and assign to entity
             for to_entity_id in to_entity_ids:
-                entity = get_entity_from_entity_id(to_entity_id)
+                entity = get_entity_from_entity_id(hass, to_entity_id)
                 if hasattr(entity, "create_schedule"):
                     fn = getattr(entity, "create_schedule")
                     await fn()
                 else:
                     _LOGGER.error(
-                        f"Cannot assign schedule to entity {to_entity.name}.  Please see wiki for entities to choose"
+                        "Cannot assign schedule to entity %s.  Please see wiki for entities to choose",
+                        to_entity.name,
                     )
 
     @callback
@@ -278,7 +295,7 @@ async def async_setup_services(hass: HomeAssistant, data):
         entity_ids = service_call.data[ATTR_ENTITY_ID]
         mode = service_call.data[ATTR_MODE]
         for entity_id in entity_ids:
-            entity = get_entity_from_entity_id(entity_id)
+            entity = get_entity_from_entity_id(hass, entity_id)
             if entity:
                 if hasattr(entity, "async_set_mode"):
                     if mode.lower() in [option.lower() for option in entity.options]:
@@ -286,15 +303,18 @@ async def async_setup_services(hass: HomeAssistant, data):
                         await fn(mode)
                     else:
                         _LOGGER.error(
-                            f"{mode} is not a valid mode for this device.  Options are {entity.options}"
+                            "%s is not a valid mode for this device.  Options are %s",
+                            mode,
+                            entity.options,
                         )
                 else:
                     _LOGGER.error(
-                        f"Cannot set mode for entity {entity_id}.  Please see wiki for entities to choose"
+                        "Cannot set mode for entity %s.  Please see wiki for entities to choose",
+                        entity_id,
                     )
             else:
                 _LOGGER.error(
-                    f"Invalid entity. {entity_id} does not exist in this integration"
+                    "Invalid entity. %s does not exist in this integration", entity_id
                 )
 
     @callback
@@ -306,20 +326,20 @@ async def async_setup_services(hass: HomeAssistant, data):
         if get_instance_count(hass) > 1:
             if not hub:
                 raise HomeAssistantError("Please specify a hub config entry id or name")
+
+            # Find hub from config_entry_id or hub name
+            if is_wiser_config_id(hass, hub):
+                instance = hass.data[DOMAIN][hub][DATA]
             else:
-                # Find hub from config_entry_id or hub name
-                if is_wiser_config_id(hass, hub):
-                    instance = hass.data[DOMAIN][hub][DATA]
-                else:
-                    # Find hub by name
-                    config_entry_id = get_config_entry_id_by_name(hass, hub)
-                    if config_entry_id:
-                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+                # Find hub by name
+                config_entry_id = get_config_entry_id_by_name(hass, hub)
+                if config_entry_id:
+                    instance = hass.data[DOMAIN][config_entry_id][DATA]
 
         # If hub has hotwater functionality, call boost
         if instance.wiserhub.hotwater:
             if time_period > 0:
-                _LOGGER.info(f"Boosting Hot Water for {time_period}m")
+                _LOGGER.info("Boosting Hot Water for %sm", time_period)
                 await instance.wiserhub.hotwater.boost(time_period)
             else:
                 _LOGGER.info("Cancelling Hot Water boost")
@@ -339,15 +359,15 @@ async def async_setup_services(hass: HomeAssistant, data):
         if get_instance_count(hass) > 1:
             if not hub:
                 raise HomeAssistantError("Please specify a hub config entry id or name")
+
+            # Find hub from config_entry_id or hub name
+            if is_wiser_config_id(hass, hub):
+                instance = hass.data[DOMAIN][hub][DATA]
             else:
-                # Find hub from config_entry_id or hub name
-                if is_wiser_config_id(hass, hub):
-                    instance = hass.data[DOMAIN][hub][DATA]
-                else:
-                    # Find hub by name
-                    config_entry_id = get_config_entry_id_by_name(hass, hub)
-                    if config_entry_id:
-                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+                # Find hub by name
+                config_entry_id = get_config_entry_id_by_name(hass, hub)
+                if config_entry_id:
+                    instance = hass.data[DOMAIN][config_entry_id][DATA]
 
         # If hub has opentherm
         if instance.wiserhub.system.opentherm:
@@ -356,10 +376,10 @@ async def async_setup_services(hass: HomeAssistant, data):
                 await instance.wiserhub.system.opentherm.set_opentherm_parameter(
                     endpoint, command
                 )
-            except WiserHubRESTError:
+            except WiserHubRESTError as ex:
                 raise HomeAssistantError(
                     "Error setting parameter.  Invalid parameter/endpoint or maybe a parameter that cannot be set"
-                )
+                ) from ex
             await data.async_refresh()
 
     hass.services.async_register(
