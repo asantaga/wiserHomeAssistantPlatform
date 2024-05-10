@@ -31,7 +31,6 @@ from .entity import (
     WiserBaseEntity,
     WiserBaseEntityDescription,
     WiserDeviceAttribute,
-    WiserV2DeviceAttribute,
 )
 from .helpers import get_entities
 from .schedules import WiserScheduleEntity

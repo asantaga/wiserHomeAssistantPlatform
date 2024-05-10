@@ -15,7 +15,6 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from .const import (
     DATA,
     DOMAIN,
-    ENTITY_PREFIX,
     MANUFACTURER,
     UPDATE_LISTENER,
     WISER_PLATFORMS,

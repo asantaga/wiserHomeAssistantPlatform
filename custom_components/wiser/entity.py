@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from inspect import signature
 import logging
 from typing import Any
 
@@ -26,7 +25,6 @@ from .helpers import (
     get_unique_id,
     get_vendor_name,
     getattrd,
-    value_attr_exist,
 )
 
 _LOGGER = logging.getLogger(__name__)
