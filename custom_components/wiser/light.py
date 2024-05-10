@@ -18,7 +18,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES, MANUFACTURER_SCHNEIDER
-from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
+from .entity import (
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
+    WiserDeviceAttribute,
+    WiserV2DeviceAttribute,
+)
 from .helpers import get_entities
 from .schedules import WiserScheduleEntity
 
@@ -33,10 +38,12 @@ class WiserLightEntityDescription(LightEntityDescription, WiserBaseEntityDescrip
 
 
 WISER_LIGHTS: tuple[WiserLightEntityDescription, ...] = (
+    # OnOffLights
     WiserLightEntityDescription(
         key="light",
         name="Light",
         device_collection="devices.lights",
+        supported=lambda dev, hub: not dev.is_dimmable,
         extra_state_attributes=[
             WiserDeviceAttribute("room_id"),
             WiserDeviceAttribute(
@@ -46,13 +53,7 @@ WISER_LIGHTS: tuple[WiserLightEntityDescription, ...] = (
                 else "Unassigned",
             ),
             # Identification
-            WiserDeviceAttribute("name"),
-            WiserDeviceAttribute("model"),
-            WiserDeviceAttribute("product_type"),
-            WiserDeviceAttribute("product_identifier"),
-            WiserDeviceAttribute("product_model"),
-            WiserDeviceAttribute("serial_number"),
-            WiserDeviceAttribute("firmware", "firmware_version"),
+            WiserDeviceAttribute("device_id", "id"),
             # Settings
             WiserDeviceAttribute("is_dimmable"),
             WiserDeviceAttribute("mode"),
@@ -62,13 +63,49 @@ WISER_LIGHTS: tuple[WiserLightEntityDescription, ...] = (
             # Status
             WiserDeviceAttribute("current_state"),
             WiserDeviceAttribute("target_state"),
-            # Schedule
-            WiserDeviceAttribute("schedule_id", "schedule_id"),
-            WiserDeviceAttribute("schedule_name", "schedule.name"),
-            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
-            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
-            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
-            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
+            # V2 only attributes
+            WiserV2DeviceAttribute("type", "type_comm"),
+            WiserV2DeviceAttribute("uuid"),
+            WiserV2DeviceAttribute("endpoint"),
+        ],
+    ),
+    # Dimable Lights
+    WiserLightEntityDescription(
+        key="light",
+        name="Light",
+        device_collection="devices.lights",
+        supported=lambda dev, hub: dev.is_dimmable,
+        extra_state_attributes=[
+            WiserDeviceAttribute("room_id"),
+            WiserDeviceAttribute(
+                "room",
+                lambda d, h: h.rooms.get_by_id(d.room_id).name
+                if d.room_id != 0
+                else "Unassigned",
+            ),
+            # Identification
+            WiserDeviceAttribute("device_id", "id"),
+            # Settings
+            WiserDeviceAttribute("is_dimmable"),
+            WiserDeviceAttribute("mode"),
+            WiserDeviceAttribute("away_mode_action"),
+            # Command State
+            WiserDeviceAttribute("control_source"),
+            # Status
+            WiserDeviceAttribute("current_state"),
+            WiserDeviceAttribute("target_state"),
+            # Settings
+            WiserDeviceAttribute("output_range_minimum", "output_range.minimum"),
+            WiserDeviceAttribute("output_range_maximum", "output_range.maximum"),
+            WiserDeviceAttribute("current_percentage"),
+            WiserDeviceAttribute("current_level"),
+            WiserDeviceAttribute("target_percentage"),
+            WiserDeviceAttribute("manual_level"),
+            WiserDeviceAttribute("override_level"),
+            # V2 only attributes
+            WiserV2DeviceAttribute("type", "type_comm"),
+            WiserV2DeviceAttribute("uuid"),
+            WiserV2DeviceAttribute("endpoint"),
         ],
     ),
 )

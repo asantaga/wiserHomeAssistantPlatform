@@ -42,7 +42,12 @@ from .const import (
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
 )
-from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
+from .entity import (
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
+    WiserDeviceAttribute,
+    WiserV2DeviceAttribute,
+)
 from .events import fire_events
 from .helpers import get_entities
 
@@ -169,6 +174,8 @@ WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
         set_low_target_temp_fn=lambda x, t: x.set_passive_mode_lower_temp(t),
         set_high_target_temp_fn=lambda x, t: x.set_passive_mode_upper_temp(t),
         extra_state_attributes=[
+            WiserDeviceAttribute("hvac_mode"),
+            WiserDeviceAttribute("name"),
             WiserDeviceAttribute("window_state"),
             WiserDeviceAttribute("window_detection_active"),
             WiserDeviceAttribute("away_mode_suppressed"),
@@ -232,14 +239,27 @@ WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
                 )
                 > 0,
             ),
+            # V2 only attrs
+            WiserV2DeviceAttribute(
+                "heating_supported", "capabilities.heating_supported"
+            ),
+            WiserV2DeviceAttribute(
+                "cooling_supported", "capabilities.cooling_supported"
+            ),
+            WiserV2DeviceAttribute("include_in_summer_comfort"),
+            WiserV2DeviceAttribute("occupancy_capable"),
+            WiserV2DeviceAttribute("occupancy"),
+            WiserV2DeviceAttribute("occupied_heating_set_point"),
+            WiserV2DeviceAttribute("unoccupied_heating_set_point"),
+            WiserV2DeviceAttribute("climate_demand_for_ui"),
         ],
     ),
     WiserClimateEntityDescription(
         key="floor_climate",
         name="Floor",
         device_collection="devices.heating_actuators",
-        supported=lambda dev, hub: dev.floor_temperature_sensor.sensor_type
-        != "Not_Fitted",
+        supported=lambda dev, hub: hasattr(dev.floor_temperature_sensor, "sensor_type")
+        and dev.floor_temperature_sensor.sensor_type != "Not_Fitted",
         supported_features=ClimateEntityFeature.TARGET_TEMPERATURE_RANGE,
         max_temp=WiserTempLimitsEnum.floorHeatingMin.value.get("max"),
         min_temp=WiserTempLimitsEnum.floorHeatingMin.value.get("min"),

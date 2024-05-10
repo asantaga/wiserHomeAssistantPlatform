@@ -26,7 +26,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN, LEGACY_NAMES, MANUFACTURER_SCHNEIDER
-from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
+from .entity import (
+    WiserAttribute,
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
+    WiserDeviceAttribute,
+    WiserV2DeviceAttribute,
+)
 from .helpers import get_entities
 from .schedules import WiserScheduleEntity
 
@@ -60,13 +66,9 @@ WISER_COVERS: tuple[WiserCoverEntityDescription, ...] = (
         name="Shutter",
         device_collection="devices.shutters",
         extra_state_attributes=[
+            WiserAttribute("vendor", MANUFACTURER_SCHNEIDER),
             WiserDeviceAttribute("name"),
-            WiserDeviceAttribute("model"),
-            WiserDeviceAttribute("product_type"),
-            WiserDeviceAttribute("product_identifier"),
-            WiserDeviceAttribute("product_model"),
-            WiserDeviceAttribute("serial_number"),
-            WiserDeviceAttribute("firmware", "firmware_version"),
+            WiserDeviceAttribute("device_id", "id"),
             WiserDeviceAttribute(
                 "room",
                 lambda d, h: h.rooms.get_by_id(d.room_id).name
@@ -101,12 +103,6 @@ WISER_COVERS: tuple[WiserCoverEntityDescription, ...] = (
             WiserDeviceAttribute("tilt_angle_closed", "drive_config.tilt_angle_closed"),
             WiserDeviceAttribute("tilt_angle_open", "drive_config.tilt_angle_open"),
             WiserDeviceAttribute("tilt_movement"),
-            WiserDeviceAttribute("schedule_id", "schedule_id"),
-            WiserDeviceAttribute("schedule_name", "schedule.name"),
-            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
-            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
-            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
-            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
         ],
     ),
 )

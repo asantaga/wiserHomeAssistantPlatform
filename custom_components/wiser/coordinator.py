@@ -1,5 +1,6 @@
 """Data coordinator for Wiser hub."""
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -14,7 +15,7 @@ from aioWiserHeatAPI.wiserhub import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -130,10 +131,12 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.wiserhub.api_parameters.passive_mode_increment = (
             self.passive_temperature_increment
         )
+        self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
 
     async def async_update_data(self) -> WiserData:
-        """Update data from the Wiser hub."""
+        """Update data from hub."""
         try:
+            self.last_update_status = "Failed"
             await self.wiserhub.read_hub_data()
             self.hub_version = self.wiserhub.system.hardware_generation
             self.last_update_time = datetime.now()
@@ -150,10 +153,17 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             WiserHubAuthenticationError,
             WiserHubRESTError,
         ) as ex:
-            self.last_update_status = "Failed"
-            _LOGGER.warning(ex)
-        except Exception as ex:
-            self.last_update_status = "Failed"
-            _LOGGER.error(ex)
-            raise
+            _LOGGER.warning(
+                "Error fetching wiser (%s) data. %s",
+                f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
+                ex,
+            )
+        except asyncio.CancelledError:
+            _LOGGER.warning("Asyncio task cancelled during hub update!")
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.error(
+                "Unknown error fetching wiser (%s) data. %s.  Please report this error to the integration owner",
+                f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
+                ex,
+            )
         return True

@@ -42,7 +42,9 @@ WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
     # System sensors
     WiserBinarySensorEntityDescription(
         key="heating_channel_status",
-        name_fn=lambda x: f"Heating Channel {x.id}",
+        name_fn=lambda d, h: "Heating"
+        if h.heating_channels.count == 1
+        else f"Heating Channel {d.id}",
         device_collection="heating_channels",
         icon_fn=lambda x: "mdi:radiator-disabled"
         if x.heating_relay_status == "Off"
@@ -51,8 +53,17 @@ WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
         extra_state_attributes=[
             WiserDeviceAttribute("percentage_demand"),
             WiserDeviceAttribute("room_ids"),
-            WiserDeviceAttribute("is_smartvalve_preventing_demand"),
+            WiserDeviceAttribute(
+                "is_smartvalve_preventing_demand", "is_smart_valve_preventing_demand"
+            ),
         ],
+    ),
+    WiserBinarySensorEntityDescription(
+        key="cloud",
+        name="Cloud",
+        device="system",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        value_fn=lambda x: x.cloud.connected_to_cloud,
     ),
     # Room Sensors
     WiserBinarySensorEntityDescription(
@@ -67,7 +78,10 @@ WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
         name="Window State",
         device_collection="rooms",
         device_class=BinarySensorDeviceClass.WINDOW,
-        value_fn=lambda x: x.is_heating,
+        supported=lambda room, hub: room.capabilities.open_window_detection
+        if room.capabilities
+        else True,
+        value_fn=lambda x: x.window_state == "Open",
     ),
     # Hot Water
     WiserBinarySensorEntityDescription(
@@ -101,6 +115,13 @@ WISER_BINARY_SENSORS: tuple[WiserBinarySensorEntityDescription, ...] = (
         device_collection="devices.smokealarms",
         device_class=BinarySensorDeviceClass.SMOKE,
         value_fn=lambda x: x.smoke_alarm,
+        extra_state_attributes=[
+            WiserDeviceAttribute("led_brightness"),
+            WiserDeviceAttribute("alarm_sound_mode"),
+            WiserDeviceAttribute("alarm_sound_level"),
+            WiserDeviceAttribute("life_time"),
+            WiserDeviceAttribute("hush_duration"),
+        ],
     ),
     WiserBinarySensorEntityDescription(
         key="heat_alarm",

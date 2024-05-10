@@ -23,7 +23,7 @@ from .const import (
 )
 from .coordinator import WiserUpdateCoordinator
 from .frontend import WiserCardRegistration
-from .helpers import get_identifier, get_instance_count
+from .helpers import get_entity_name, get_identifier, get_instance_count
 from .services import async_setup_services
 from .websockets import async_register_websockets
 
@@ -86,7 +86,7 @@ async def async_update_device_registry(hass: HomeAssistant, config_entry):
         },
         identifiers={(DOMAIN, get_identifier(data, None))},
         manufacturer=MANUFACTURER,
-        name=f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})",
+        name=get_entity_name(data, None, ""),
         model=data.wiserhub.system.model,
         sw_version=data.wiserhub.system.firmware_version,
     )

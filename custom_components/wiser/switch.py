@@ -24,7 +24,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DATA, DOMAIN
-from .entity import WiserBaseEntity, WiserBaseEntityDescription, WiserDeviceAttribute
+from .entity import (
+    WiserBaseEntity,
+    WiserBaseEntityDescription,
+    WiserDeviceAttribute,
+    WiserV2DeviceAttribute,
+)
 from .helpers import get_entities
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +55,7 @@ class WiserSwitchEntityDescription(SwitchEntityDescription, WiserBaseEntityDescr
 
 
 WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
+    # System
     WiserSwitchEntityDescription(
         key="away_mode_enabled",
         name="Away Mode",
@@ -103,17 +109,42 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         key="automatic_daylight_saving_enabled",
         name="Daylight Saving",
         device="system",
-        icon="mdi:leaf",
+        icon="mdi:clock-time-one",
         value_fn=lambda x: x.automatic_daylight_saving_enabled,
         turn_off_fn=lambda x: x.set_automatic_daylight_saving_enabled(False),
         turn_on_fn=lambda x: x.set_automatic_daylight_saving_enabled(True),
     ),
     WiserSwitchEntityDescription(
+        key="summer_comfort_enabled",
+        name="Summer Comfort Enabled",
+        device="system",
+        icon="mdi:sofa",
+        supported=lambda dev, hub: dev.summer_comfort_enabled is not None,
+        value_fn=lambda x: x.summer_comfort_enabled,
+        turn_off_fn=lambda x: x.set_summer_comfort_enabled(False),
+        turn_on_fn=lambda x: x.set_summer_comfort_enabled(True),
+        extra_state_attributes=[WiserV2DeviceAttribute("summer_comfort_available")],
+    ),
+    WiserSwitchEntityDescription(
+        key="summer_discomfort_prevention",
+        name="Summer Discomfort Prevention",
+        device="system",
+        icon="mdi:beach",
+        supported=lambda dev, hub: dev.summer_discomfort_prevention is not None,
+        value_fn=lambda x: x.summer_discomfort_prevention,
+        turn_off_fn=lambda x: x.set_summer_discomfort_prevention(False),
+        turn_on_fn=lambda x: x.set_summer_discomfort_prevention(True),
+        extra_state_attributes=[
+            WiserDeviceAttribute("indoor_discomfort_temperature"),
+            WiserDeviceAttribute("outdoor_discomfort_temperature"),
+        ],
+    ),
+    # All Devices
+    WiserSwitchEntityDescription(
         key="device_lock_enabled",
         name="Device Lock",
         device_collection="devices",
         icon="mdi:lock",
-        legacy_type="device",
         value_fn=lambda x: x.device_lock_enabled,
         turn_off_fn=lambda x: x.set_device_lock_enabled(False),
         turn_on_fn=lambda x: x.set_device_lock_enabled(True),
@@ -123,37 +154,50 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Identify",
         device_collection="devices",
         icon="mdi:alarm-light",
-        legacy_type="device",
         value_fn=lambda x: x.identify,
         turn_off_fn=lambda x: x.set_identify(False),
         turn_on_fn=lambda x: x.set_identify(True),
     ),
+    # Lights
     WiserSwitchEntityDescription(
         key="light_away_action",
         name="Away Mode Turns Off",
         device_collection="devices.lights",
         icon="mdi:lightbulb-off-outline",
-        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
     ),
+    # Shutters
     WiserSwitchEntityDescription(
         key="shutter_away_action",
         name="Away Mode Closes",
         device_collection="devices.shutters",
         icon="mdi:window-shutter",
-        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_CLOSE,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_CLOSE),
     ),
     WiserSwitchEntityDescription(
+        key="respect_summer_comfort",
+        name="Respect Summer Comfort",
+        device_collection="devices.shutters",
+        icon="mdi:window-shutter",
+        supported=lambda dev, hub: hub.system.hardware_generation == 2,
+        value_fn=lambda x: x.respect_summer_comfort,
+        turn_off_fn=lambda x: x.set_respect_summer_comfort(False),
+        turn_on_fn=lambda x: x.set_respect_summer_comfort(True),
+        extra_state_attributes=[
+            WiserDeviceAttribute("summer_comfort_lift"),
+            WiserDeviceAttribute("summer_comfort_tilt"),
+        ],
+    ),
+    # Smartplugs
+    WiserSwitchEntityDescription(
         key="smartplug_away_action",
         name="Away Mode Turns Off",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
-        legacy_type="device-switch",
         value_fn=lambda x: x.away_mode_action == TEXT_OFF,
         turn_off_fn=lambda x: x.set_away_mode_action(TEXT_NO_CHANGE),
         turn_on_fn=lambda x: x.set_away_mode_action(TEXT_OFF),
@@ -163,7 +207,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Switch",
         device_collection="devices.smartplugs",
         icon="mdi:power-socket-uk",
-        legacy_type="device-switch",
         value_fn=lambda x: x.is_on,
         delay=2,
         turn_off_fn=lambda x: x.turn_off(),
@@ -190,12 +233,15 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
             WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
         ],
     ),
+    # Rooms
     WiserSwitchEntityDescription(
         key="window_detection",
         name="Window Detection",
         device_collection="rooms",
         icon="mdi:window-closed",
-        legacy_type="room",
+        supported=lambda room, hub: room.capabilities.open_window_detection
+        if room.capabilities
+        else True,
         value_fn=lambda x: x.window_detection_active,
         turn_off_fn=lambda x: x.set_window_detection_active(False),
         turn_on_fn=lambda x: x.set_window_detection_active(True),
@@ -205,12 +251,22 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         name="Passive Mode",
         device_collection="rooms",
         icon="mdi:thermostat-box",
-        legacy_type="room",
         supported=lambda x, d: x.number_of_smartvalves > 0,
         value_fn=lambda x: x.passive_mode_enabled,
         turn_off_fn=lambda x: x.set_passive_mode(False),
         turn_on_fn=lambda x: x.set_passive_mode(True),
     ),
+    WiserSwitchEntityDescription(
+        key="include_in_summer_comfort",
+        name="Include In Summer Comfort",
+        device_collection="rooms",
+        icon="mdi:sofa",
+        supported=lambda x, d: x.include_in_summer_comfort is not None,
+        value_fn=lambda x: x.include_in_summer_comfort,
+        turn_off_fn=lambda x: x.set_include_in_summer_comfort(False),
+        turn_on_fn=lambda x: x.set_include_in_summer_comfort(True),
+    ),
+    # Hot water
     WiserSwitchEntityDescription(
         key="hot_water",
         name="Hot Water",
@@ -220,19 +276,6 @@ WISER_SWITCHES: tuple[WiserSwitchEntityDescription, ...] = (
         value_fn=lambda x: x.current_state == "On",
         turn_off_fn=lambda x: x.override_state("Off"),
         turn_on_fn=lambda x: x.override_state("On"),
-    ),
-    WiserSwitchEntityDescription(
-        key="summer_comfort",
-        name="Summer Comfort",
-        device_collection="devices.shutters",
-        supported=lambda dev, hub: dev.respect_summer_comfort,
-        value_fn=lambda x: x.respect_summer_comfort,
-        turn_off_fn=lambda x: x.set_respect_summer_comfort(False),
-        turn_on_fn=lambda x: x.set_respect_summer_comfort(True),
-        extra_state_attributes=[
-            WiserDeviceAttribute("summer_comfort_lift"),
-            WiserDeviceAttribute("summer_comfort_tilt"),
-        ],
     ),
 )
 

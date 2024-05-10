@@ -1,32 +1,32 @@
-"""Wiser Frontend functions."""
+"""Wiser Frontend."""
+
 import logging
 import os
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
-from ..const import URL_BASE, WISER_CARD_FILENAMES
+from ..const import URL_BASE, WISER_CARDS
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class WiserCardRegistration:
-    """Class for managing custom card registration."""
+    """Class to manage custom card registration."""
 
     def __init__(self, hass: HomeAssistant) -> None:
-        """Init class."""
+        """Initialise."""
         self.hass = hass
 
     async def async_register(self):
-        """Register custom cards."""
+        """Register wiser cards."""
         await self.async_register_wiser_path()
         if self.hass.data["lovelace"]["mode"] == "storage":
             await self.async_wait_for_lovelace_resources()
 
     # install card resources
     async def async_register_wiser_path(self):
-        """Register wiser path."""
-        # Register custom cards path
+        """Register custom cards path if not already registered."""
         self.hass.http.register_static_path(
             URL_BASE,
             self.hass.config.path("custom_components/wiser/frontend"),
@@ -34,7 +34,7 @@ class WiserCardRegistration:
         )
 
     async def async_wait_for_lovelace_resources(self) -> None:
-        """Wait for lovelace resources to load."""
+        """Wait for lovelace to be loaded."""
 
         async def check_lovelace_resources_loaded(now):
             if self.hass.data["lovelace"]["resources"].loaded:
@@ -48,32 +48,80 @@ class WiserCardRegistration:
         await check_lovelace_resources_loaded(0)
 
     async def async_register_wiser_cards(self):
-        """Register custom card resources."""
+        """Register cards in resources."""
         _LOGGER.debug("Installing Lovelace resources for Wiser cards")
-        for card_filename in WISER_CARD_FILENAMES:
-            url = f"{URL_BASE}/{card_filename}"
-            resource_loaded = [
-                res["url"]
-                for res in self.hass.data["lovelace"]["resources"].async_items()
-                if res["url"] == url
-            ]
-            if not resource_loaded:
+
+        # Get resources already registered
+        wiser_resources = [
+            resource
+            for resource in self.hass.data["lovelace"]["resources"].async_items()
+            if resource["url"].startswith(URL_BASE)
+        ]
+
+        for card in WISER_CARDS:
+            url = f"{URL_BASE}/{card.get('filename')}"
+
+            card_registered = False
+
+            for res in wiser_resources:
+                if self.get_resource_path(res["url"]) == url:
+                    card_registered = True
+                    # check version
+                    if self.get_resource_version(res["url"]) != card.get("version"):
+                        # Update card version
+                        _LOGGER.debug(
+                            "Updating %s to version %s",
+                            card.get("name"),
+                            card.get("version"),
+                        )
+                        await self.hass.data["lovelace"]["resources"].async_update_item(
+                            res.get("id"),
+                            {
+                                "res_type": "module",
+                                "url": url + "?v=" + card.get("version"),
+                            },
+                        )
+                        # Remove old gzipped files
+                        await self.async_remove_gzip_files()
+                    else:
+                        _LOGGER.debug(
+                            "%s already registered as version %s",
+                            card.get("name"),
+                            card.get("version"),
+                        )
+
+            if not card_registered:
+                _LOGGER.debug(
+                    "Registering %s as version %s",
+                    card.get("name"),
+                    card.get("version"),
+                )
                 await self.hass.data["lovelace"]["resources"].async_create_item(
-                    {"res_type": "module", "url": url}
+                    {"res_type": "module", "url": url + "?v=" + card.get("version")}
                 )
 
+    def get_resource_path(self, url: str):
+        """Return path."""
+        return url.split("?")[0]
+
+    def get_resource_version(self, url: str):
+        """Return version."""
+        try:
+            return url.split("?")[1].replace("v=", "")
+        except IndexError:
+            return 0
+
     async def async_unregister(self):
-        """Unregister custom cards."""
-        # Unload lovelace module resource
+        """Unload lovelace module resource."""
         if self.hass.data["lovelace"]["mode"] == "storage":
-            for card_filename in WISER_CARD_FILENAMES:
-                url = f"{URL_BASE}/{card_filename}"
+            for card in WISER_CARDS:
+                url = f"{URL_BASE}/{card.get('filename')}"
                 wiser_resources = [
                     resource
                     for resource in self.hass.data["lovelace"][
                         "resources"
                     ].async_items()
-                    if resource["url"] == url
+                    if str(resource["url"]).startswith(url)
                 ]
                 for resource in wiser_resources:
                     await self.hass.data["lovelace"]["resources"].async_delete_item(
@@ -81,7 +129,7 @@ class WiserCardRegistration:
                     )
 
     async def async_remove_gzip_files(self):
-        """Remove cached gzip file versions."""
+        """Remove cached gzip files."""
         path = self.hass.config.path("custom_components/wiser/frontend")
         gzip_files = [
             filename for filename in os.listdir(path) if filename.endswith(".gz")

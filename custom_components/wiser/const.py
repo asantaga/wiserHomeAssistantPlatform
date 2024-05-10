@@ -5,13 +5,26 @@ Angelosantagata@gmail.com
 
 """
 
+VERSION = "4.0.0"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 WISER_CARD_FILENAMES = ["wiser-schedule-card.js", "wiser-zigbee-card.js"]
-LEGACY_NAMES = True
+LEGACY_NAMES = False
 
-VERSION = "3.4.0"
+WISER_CARDS = [
+    {
+        "name": "Wiser Schedule Card",
+        "filename": "wiser-schedule-card.js",
+        "version": "1.3.3",
+    },
+    {
+        "name": "Wiser Zigbee Card",
+        "filename": "wiser-zigbee-card.js",
+        "version": "2.1.1",
+    },
+]
+
 WISER_PLATFORMS = [
     "climate",
     "binary_sensor",

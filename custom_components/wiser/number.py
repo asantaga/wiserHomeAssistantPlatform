@@ -19,6 +19,7 @@ from homeassistant.components.number import (
     NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -45,23 +46,53 @@ WISER_NUMBERS: tuple[WiserNumberEntityDescription, ...] = (
         key="away_mode_target_temperature",
         name="Away Mode Target Temperature",
         device="system",
+        icon="mdi:thermometer-low",
         min_value=TEMP_MINIMUM,
         max_value=TEMP_MAXIMUM,
         step=0.5,
         set_fn=lambda x, t: x.set_away_mode_target_temperature(t),
         value_fn=lambda x: x.away_mode_target_temperature,
+        unit_of_measurement=UnitOfTemperature.CELSIUS,
     ),
     WiserNumberEntityDescription(
         key="floor_temp_offset",
         name="Floor Temp Offset",
         device_collection="devices.heating_actuators",
+        icon="mdi:thermometer-low",
         min_value=-9,
         max_value=9,
         step=1,
-        supported=lambda dev, hub: dev.floor_temperature_sensor.sensor_type
-        != "Not_Fitted",
+        supported=lambda dev, hub: hasattr(dev.floor_temperature_sensor, "sensor_type")
+        and dev.floor_temperature_sensor.sensor_type != "Not_Fitted",
         set_fn=lambda x, t: x.floor_temperature_sensor.set_temperature_offset(t),
         value_fn=lambda x: x.floor_temperature_sensor.temperature_offset,
+        unit_of_measurement=UnitOfTemperature.CELSIUS,
+    ),
+    WiserNumberEntityDescription(
+        key="indoor_discomfort_temperature",
+        name="Indoor Discomfort Temperature",
+        device="system",
+        icon="mdi:home-thermometer",
+        min_value=20,
+        max_value=32,
+        step=0.5,
+        supported=lambda dev, hub: hub.system.hardware_generation == 2,
+        set_fn=lambda x, t: x.set_outdoor_discomfort_temperature(t),
+        value_fn=lambda x: x.outdoor_discomfort_temperature,
+        unit_of_measurement=UnitOfTemperature.CELSIUS,
+    ),
+    WiserNumberEntityDescription(
+        key="outdoor_discomfort_temperature",
+        name="Outdoor Discomfort Temperature",
+        device="system",
+        icon="mdi:home-thermometer",
+        min_value=20,
+        max_value=30,
+        step=0.5,
+        supported=lambda dev, hub: hub.system.hardware_generation == 2,
+        set_fn=lambda x, t: x.set_indoor_discomfort_temperature(t),
+        value_fn=lambda x: x.indoor_discomfort_temperature,
+        unit_of_measurement=UnitOfTemperature.CELSIUS,
     ),
 )
 
@@ -113,6 +144,16 @@ class WiserNumber(WiserBaseEntity, NumberEntity):
     def mode(self) -> NumberMode:
         """Return the mode of the entity."""
         return NumberMode.AUTO
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Return the unit of measurement of the sensor, if any."""
+        if self.entity_description.unit_of_measurement:
+            return self.entity_description.unit_of_measurement
+
+        if self._device and self.entity_description.unit_fn is not None:
+            return self.entity_description.unit_fn(self._device)
+        return super().native_unit_of_measurement
 
     @property
     def native_value(self):
