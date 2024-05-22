@@ -10,6 +10,7 @@ import logging
 from typing import Any
 
 from aioWiserHeatAPI.helpers.device import _WiserDevice
+from aioWiserHeatAPI.hot_water import _WiserHotwater
 from aioWiserHeatAPI.room import _WiserRoom
 
 from config.custom_components.wiser.entity import (
@@ -42,6 +43,7 @@ WISER_SELECTS: tuple[WiserSelectEntityDescription, ...] = (
         name="Mode",
         device="hotwater",
         options_fn=lambda x: x.available_modes,
+        supported=lambda dev, hub: dev is not None,
         set_fn=lambda x, m: x.set_mode(m),
         value_fn=lambda x: x.mode,
     ),
@@ -95,7 +97,7 @@ class WiserSelect(WiserBaseEntity, SelectEntity):
         self,
         coordinator: DataUpdateCoordinator,
         description: WiserSelectEntityDescription,
-        device: _WiserDevice | _WiserRoom | None = None,
+        device: _WiserDevice | _WiserRoom | _WiserHotwater | None = None,
     ) -> None:
         """Init wiser sensor."""
         super().__init__(coordinator, description, device, "select")

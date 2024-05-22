@@ -143,8 +143,11 @@ class WiserBaseEntity(CoordinatorEntity):
             if hasattr(self._device, "schedule") and self._device.schedule
             else None
         )
-
+        self._handle_coordinator_update_actions()
         self.async_write_ha_state()
+
+    def _handle_coordinator_update_actions(self) -> None:
+        """Add extra actions here."""
 
     @property
     def device_info(self):
@@ -252,5 +255,8 @@ class WiserBaseEntity(CoordinatorEntity):
                         continue
 
                 elif isinstance(attr_desc, WiserAttribute):
-                    attrs[attr_desc.name] = attr_desc.path
+                    if hasattr(self, attr_desc.path):
+                        attrs[attr_desc.name] = getattr(self, attr_desc.path)
+                    else:
+                        attrs[attr_desc.name] = attr_desc.path
         return attrs

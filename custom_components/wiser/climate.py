@@ -10,7 +10,13 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from aioWiserHeatAPI.const import TEXT_OFF, WiserTempLimitsEnum
+from aioWiserHeatAPI.const import (
+    TEMP_MINIMUM,
+    TEXT_OFF,
+    TEXT_ON,
+    WiserHotWaterClimateModeEnum,
+    WiserTempLimitsEnum,
+)
 from aioWiserHeatAPI.helpers.device import _WiserDevice
 from aioWiserHeatAPI.room import _WiserRoom
 from aioWiserHeatAPI.roomstat import _WiserRoomStat
@@ -26,16 +32,23 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
     async_get_current_platform,
 )
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     DATA,
+    DEFAULT_HW_MAX_TEMP,
     DOMAIN,
     LEGACY_NAMES,
     WISER_BOOST_PRESETS,
@@ -43,6 +56,7 @@ from .const import (
     WISER_SETPOINT_MODES,
 )
 from .entity import (
+    WiserAttribute,
     WiserBaseEntity,
     WiserBaseEntityDescription,
     WiserDeviceAttribute,
@@ -139,7 +153,6 @@ class WiserClimateEntityDescription(
     target_temp_step: float | None = 1
     max_temp: int = 0
     min_temp: int = 0
-    entity_class: Any | None = None
     temperature_unit: UnitOfTemperature = UnitOfTemperature.CELSIUS
 
 
@@ -166,6 +179,7 @@ WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
         set_hvac_mode_fn=lambda x, m: x.set_mode(m),
         # Presets
         preset_modes_fn=lambda x: x.available_presets,
+        set_preset_mode_fn=lambda x, m: x.set_preset(m),
         # Target Temps
         target_temp_step=0.5,
         target_temp_fn=lambda x: x.current_target_temperature,
@@ -173,6 +187,7 @@ WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
         target_temp_low_fn=lambda x: x.passive_mode_lower_temp,
         set_low_target_temp_fn=lambda x, t: x.set_passive_mode_lower_temp(t),
         set_high_target_temp_fn=lambda x, t: x.set_passive_mode_upper_temp(t),
+        set_target_temp_fn=lambda x, t: x.set_target_temperature(t),
         extra_state_attributes=[
             WiserDeviceAttribute("hvac_mode"),
             WiserDeviceAttribute("name"),
@@ -274,6 +289,52 @@ WISER_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
     ),
 )
 
+WISER_HW_CLIMATES: tuple[WiserClimateEntityDescription, ...] = (
+    WiserClimateEntityDescription(
+        key="hotwater_climate",
+        name="Hot Water",
+        device="hotwater",
+        supported_features_fn=lambda x: SUPPORT_FLAGS,
+        supported=lambda dev, hub: hub.hotwater is not None,
+        max_temp=DEFAULT_HW_MAX_TEMP,
+        min_temp=TEMP_MINIMUM,
+        # HVAC
+        hvac_action_fn=lambda x: HVACAction.HEATING
+        if x.is_heating
+        else HVACAction.IDLE,
+        hvac_modes=list(HVAC_MODE_HASS_TO_WISER),
+        hvac_mode_fn=lambda x: HVAC_MODE_WISER_TO_HASS[x.mode],
+        set_hvac_mode_fn=lambda x, m: x.set_mode(m),
+        # Presets
+        preset_modes_fn=lambda x: x.available_presets,
+        set_preset_mode_fn=lambda x, m: x.set_preset(m),
+        # Target Temps
+        target_temp_fn=lambda x: x.current_target_temperature,
+        set_target_temp_fn=lambda x, t: x.set_target_temperature(t),
+        target_temp_step=0.5,
+        extra_state_attributes=[
+            WiserDeviceAttribute("away_mode_suppressed"),
+            WiserDeviceAttribute("is_boosted"),
+            WiserDeviceAttribute("is_override"),
+            WiserDeviceAttribute("is_heating"),
+            WiserDeviceAttribute(
+                "control_output_state", lambda x: "On" if x.is_heating else "Off"
+            ),
+            WiserDeviceAttribute("boost_end_time"),
+            WiserDeviceAttribute(
+                "boost_time_remaining", lambda x: int(x.boost_time_remaining / 60)
+            ),
+            WiserDeviceAttribute("schedule_id", "schedule.id"),
+            WiserDeviceAttribute("schedule_name", "schedule.name"),
+            WiserDeviceAttribute("next_day_change", "schedule.next.day"),
+            WiserDeviceAttribute("next_schedule_change", "schedule.next.time"),
+            WiserDeviceAttribute("next_schedule_datetime", "schedule.next.datetime"),
+            WiserDeviceAttribute("next_schedule_state", "schedule.next.setting"),
+            WiserAttribute("keep_heating", "_keep_heating"),
+        ],
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -283,6 +344,9 @@ async def async_setup_entry(
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
     entities = get_entities(data, WISER_CLIMATES, WiserClimate)
+    async_add_entities(entities)
+
+    entities = get_entities(data, WISER_HW_CLIMATES, WiserHotWaterClimate)
     async_add_entities(entities)
 
     # Setup services
@@ -320,17 +384,13 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
         super().__init__(coordinator, description, device, "climate")
 
         self._boosted_time = 0
-        # self.passive_temperature_increment = self._device.passive_temperature_increment
 
     @callback
     def _handle_coordinator_update(self) -> None:
         previous_room_values = self._device
-        super()._handle_coordinator_update()
-
-        # self.passive_temperature_increment = self._data.passive_temperature_increment
-
         if not self._device.is_boosted:
             self._boosted_time = 0
+        super()._handle_coordinator_update()
 
         fire_events(
             self._data.hass,
@@ -388,7 +448,7 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
             try:
                 hvac_mode = HVAC_MODE_HASS_TO_WISER[hvac_mode]
                 await self.entity_description.set_hvac_mode_fn(self._device, hvac_mode)
-                await self.async_force_update()
+                await self.async_force_update(1)
             except KeyError:
                 _LOGGER.error("Invalid HVAC mode.  Options are %s", self.hvac_modes)
 
@@ -406,7 +466,10 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
     def preset_mode(self):
         """Get current preset mode."""
         try:
-            if self._device.is_passive_mode:
+            if (
+                hasattr(self._device, "is_passive_mode")
+                and self._device.is_passive_mode
+            ):
                 return TEXT_PASSIVE
             if self._device.preset_mode == "Boost":
                 if int(self._device.boost_time_remaining / 60) != 0:
@@ -414,7 +477,7 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
                         f"{STATUS_BOOST} {int(self._device.boost_time_remaining/60)}m"
                     )
                 return STATUS_BOOST
-            return WISER_PRESET_TO_HASS[self._device.target_temperature_origin]
+            return WISER_PRESET_TO_HASS[self._device.setpoint_origin]
         except KeyError:
             return STATUS_BLANK
 
@@ -430,7 +493,9 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
         _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._device.name)
         try:
             if self.entity_description.set_preset_mode_fn:
-                await self.entity_description.set_preset_mode_fn(self._device)
+                await self.entity_description.set_preset_mode_fn(
+                    self._device, preset_mode
+                )
         except ValueError as ex:
             _LOGGER.error(ex)
         await self.async_force_update()
@@ -554,3 +619,116 @@ class WiserClimate(WiserBaseEntity, ClimateEntity):
                 temperature, time_period
             )
         await self.async_force_update()
+
+
+class WiserHotWaterClimate(WiserClimate):
+    """Class to manage hotwater climate entity."""
+
+    _current_temperature: float | None = None
+    _keep_heating: bool = True
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        description: WiserClimateEntityDescription,
+        device: _WiserDevice | _WiserRoom | None = None,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, description, device)
+
+        self._boosted_time = 0
+        self._keep_heating = self._device.is_heating
+
+    async def async_added_to_hass(self):
+        """Run when entity about to be added."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, [self._data.hw_sensor_entity_id], self._async_sensor_changed
+            )
+        )
+
+    async def _async_sensor_changed(self, event) -> None:
+        """Handle temperature changes."""
+        sensor_state = self.hass.states.get(self._data.hw_sensor_entity_id)
+        _LOGGER.error(sensor_state)
+        if sensor_state is None or sensor_state.state in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+        ):
+            return
+
+        self._current_temperature = float(sensor_state.state)
+        _LOGGER.error("Updated temp sensor value - %s", self._current_temperature)
+        await self.automation_routine()
+        self.async_write_ha_state()
+
+    def _handle_coordinator_update_actions(self) -> None:
+        """Add extra actions here."""
+        if self._device.is_heating and not self._keep_heating:
+            self._keep_heating = True
+
+    @property
+    def current_temperature(self) -> float:
+        """Return current temperature."""
+        return self._current_temperature
+
+    async def async_set_temperature(self, **kwargs):
+        """Set new target temperatures."""
+        if target := kwargs.get(ATTR_TEMPERATURE):
+            await self._device.set_target_temperature(target)
+            await self.automation_routine()
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Set HW HVAC mode."""
+        await super().async_set_hvac_mode(hvac_mode)
+        await self.automation_routine()
+
+    async def automation_routine(self):
+        """Run hotwater automation routine."""
+        # TODO: Work with advance schedule.
+        # TODO: Work with boost
+        if self.hvac_mode in [HVACMode.HEAT, HVACMode.AUTO]:
+            if self.should_heat() and not self._device.is_heating:
+                await self._device.override_state(TEXT_ON)
+            elif not self.should_heat() and self._device.is_heating:
+                await self._device.override_state(TEXT_OFF)
+                if (
+                    self.hvac_mode == HVACMode.HEAT
+                    and self._data.hw_heat_mode == "Once"
+                ):
+                    self._keep_heating = False
+
+        await self.async_force_update()
+
+    def should_heat(self) -> bool:
+        """Return if hw should be heating."""
+        # TODO: Sort out delta to work correctly
+        if self.current_temperature < (
+            self.target_temperature - self._data.hw_heating_delta
+        ):
+            _LOGGER.error(
+                "Mode: %s, Curr: %s, Tar: %s, Is: %s, Ov: %s",
+                self.hvac_mode,
+                self.current_temperature,
+                self.target_temperature,
+                self._device.is_heating,
+                self._device.is_override,
+            )
+            if self.hvac_mode == HVACMode.HEAT:
+                if self._data.hw_heat_mode == "Normal" or (
+                    self._data.hw_heat_mode == "Once" and self._keep_heating
+                ):
+                    return True
+
+            elif self.hvac_mode == HVACMode.AUTO:
+                if self._device.schedule.current_setting == TEXT_ON and (
+                    self._data.hw_auto_mode == "Normal"
+                    or (
+                        self._data.hw_auto_mode == "Once"
+                        and not self._device.is_override
+                    )
+                ):
+                    return True
+        return False

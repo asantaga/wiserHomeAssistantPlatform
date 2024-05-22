@@ -117,6 +117,22 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
         )
 
+        # HW Climate Entity
+        self.hw_sensor_entity_id = "sensor.tank_temp_sensor"  # config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID)
+        self.enable_hw_climate = (
+            True  # config_entry.options.get(CONF_HW_CLIMATE, False)
+        )
+        self.hw_target_temperature = 60  # config_entry.options.get(
+        #    CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
+        # )
+        self.hw_auto_mode = "Once"  # config_entry.options.get(
+        # CONF_HW_AUTO_MODE, DEFAULT_HW_AUTO_MODE
+        # )
+        self.hw_heat_mode = "Once"  # config_entry.options.get(
+        # CONF_HW_HEAT_MODE, DEFAULT_HW_HEAT_MODE
+        # )
+        self.hw_heating_delta = 0
+
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
             secret=config_entry.data[CONF_PASSWORD],
@@ -132,6 +148,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.passive_temperature_increment
         )
         self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
+        self.wiserhub.api_parameters.hw_climate_mode = self.enable_hw_climate
 
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""

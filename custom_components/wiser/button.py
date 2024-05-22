@@ -38,6 +38,20 @@ WISER_BUTTONS: tuple[WiserButtonEntityDescription, ...] = (
         press_fn=lambda x, d: x.boost_all_rooms(d.boost_time, d.boost_temp),
     ),
     WiserButtonEntityDescription(
+        key="advance_heating_schedule",
+        name="Advance Schedule",
+        device_collection="rooms",
+        icon="mdi:calendar-arrow-right",
+        press_fn=lambda x: x.schedule_advance(),
+    ),
+    WiserButtonEntityDescription(
+        key="cancel_overrides",
+        name="Cancel Overrides",
+        device_collection="rooms",
+        icon="mdi:close-circle",
+        press_fn=lambda x: x.cancel_overrides(),
+    ),
+    WiserButtonEntityDescription(
         key="cancel_heating_overrides",
         name="Cancel All Heating Overrides",
         device="system",

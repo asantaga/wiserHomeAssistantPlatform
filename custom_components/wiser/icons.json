@@ -1,0 +1,30 @@
+{
+    "entity": {
+        "climate": {
+            "wiser": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "default": "mdi:tune-variant",
+                        "state": {
+                            "Advance Schedule": "mdi:calendar-arrow-right",
+                            "Cancel Overrides": "mdi:close-circle",
+                            "Boost 30m": "mdi:fraction-one-half",
+                            "Boost 1h": "mdi:numeric-1",
+                            "Boost 2h": "mdi:numeric-2",
+                            "Boost 3h": "mdi:numeric-3"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "services": {
+        "get_schedule": "mdi:calendar-export",
+        "set_schedule": "mdi:calendar-import",
+        "assign_schedule": "mdi:calendar-check",
+        "copy_schedule": "mdi:calendar-blank-multiple",
+        "set_device_mode": "mdi:home-switch-outline",
+        "boost_heating": "mdi:thermometer-chevron-up",
+        "set_opentherm_parameter": "mdi:application-cog-outline"
+    }
+}
