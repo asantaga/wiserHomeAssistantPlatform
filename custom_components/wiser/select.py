@@ -35,6 +35,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
             wiser_selects.extend([WiserLightModeSelect(data, light.id)])
+            if light.is_dimmable == True :
+                if light.is_led_indicator_supported == True :
+                    wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
+                if light.is_power_on_behaviour_supported == True:                
+                    wiser_selects.extend([WiserLightPowerOnBehaviourSelect(data, light.id)])
 
     if data.wiserhub.devices.shutters.count > 0:
         _LOGGER.debug("Setting up Shutter mode select")
@@ -108,6 +113,137 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+
+class WiserLightSelectEntity(CoordinatorEntity, SelectEntity):
+    def __init__(self, coordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, self._device_id)} Led Indicator"
+
+    @property
+    def options(self) -> list[str]:
+        return self._options
+
+    @property
+    def current_option(self) -> str:
+        return self._device.led_indicator
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self.async_set_led_indicator(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+    async def async_set_mode(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} mode to {option}")
+        await self._device.set_led_indicator(option)
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "led_indicator-select", self._device_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+class WiserLightPowerOnSelectEntity(CoordinatorEntity, SelectEntity):
+    def __init__(self, coordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, self._device_id)} Power_On Behaviour"
+
+    @property
+    def options(self) -> list[str]:
+        return self._options
+
+    @property
+    def current_option(self) -> str:
+        return self._device.power_on_behaviour
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self.async_set_power_on_behaviour(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+    async def async_set_mode(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} mode to {option}")
+        await self._device.set_led_indicator(option)
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "power_on_behaviour_select", self._device_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
 
 
 class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
@@ -213,3 +349,44 @@ class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self.async_write_ha_state()
+
+# Added by LGO44
+    
+class WiserLightLedIndicatorSelect(WiserLightSelectEntity, WiserScheduleEntity):
+    def __init__(self, data, light_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = light_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._options = self._device.available_led_indicator
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    async def async_set_led_indicator(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} led indicator {option}")
+        await self._device.set_led_indicator(option)
+
+ 
+class WiserLightPowerOnBehaviourSelect(WiserLightPowerOnSelectEntity, WiserScheduleEntity):
+    def __init__(self, data, light_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = light_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._options = self._device.available_power_on_behaviour
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    async def async_set_power_on_behaviour(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} power_on_behaviour {option}")
+        await self._device.set_power_on_behaviour(option)
