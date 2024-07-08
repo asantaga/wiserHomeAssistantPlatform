@@ -109,3 +109,4 @@ venv.bak/
 .mypy_cache/
 *.DS_Store
 .vscode/settings.json
+custom_components/wiser/const1.py
