@@ -49,10 +49,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     }
 
     # Setup platforms
-    for platform in WISER_PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(config_entry, platform)
-        )
+# Added by LGO    
+    # calls async_forward_entry_setup deprecated issue #485
+    await hass.config_entries.async_forward_entry_setups(config_entry,WISER_PLATFORMS)
+# Added by LGO
 
     # Setup websocket services for frontend cards
     await async_register_websockets(hass, coordinator)

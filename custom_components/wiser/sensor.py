@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for smartplug in data.wiserhub.devices.smartplugs.all:
         # Add a sensor equipment for smartplugs 
         # Hub V2 features   
-            if hasattr(device, "equipment"):
+            if hasattr(smartplug,"equipment"):
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, smartplug.id, )
                 )
@@ -120,8 +120,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserSmartplugPower(data, smartplug.id, sensor_type="Total Power"),                    
                 ]
                 )
-
-
+       
+    # Add a sensor temperature for smoke alarm sensor
+    if data.wiserhub.devices.smokealarms:
+        _LOGGER.debug("Setting up Smoke Alarm LTS Temperature sensors")
+        for smokealarm in data.wiserhub.devices.smokealarms.all:            
+            wiser_sensors.extend(
+                [
+                     WiserLTSTempSensor(data, smokealarm.id, sensor_type="SmokeAlarmDevice"),
+                ]  
+            )  
+       
     # Add power sensors for PTE (v2Hub)
     if data.wiserhub.devices.power_tags:
         for power_tag in data.wiserhub.devices.power_tags.all:
@@ -153,12 +162,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         power_tag.id,
                         sensor_type="Energy",
                         name="Equipment Total Energy"),
-
                 ]
             )
 
     # Add a sensor equipment for powertags         
-            if hasattr(device, "equipment"):
+            if hasattr(power_tag, "equipment"):
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, power_tag.id, )
                 )
@@ -186,7 +194,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
         # Add a sensor equipment for heating actuators
         # Hub V2 features
-            if hasattr(device, "equipment"):
+            if hasattr(heating_actuator, "equipment"):
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, heating_actuator.id, )
                 )
@@ -569,6 +577,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["alarm_sound_level"] = self._device.alarm_sound_level
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
+            attrs["current_temperature"] = self._device.current_temperature
+            attrs["report_count"] = self._device.report_count
 
         return attrs
 
@@ -902,6 +912,15 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 f"LTS Floor Temperature {sensor_name}",
             )
+
+        elif sensor_type == "SmokeAlarmDevice":
+            sensor_name = (data.wiserhub.devices.get_by_id(device_id).name ) 
+
+            super().__init__(
+                data,
+                device_id,
+                f"LTS Smoke Alarm Temperature {sensor_name}",
+            )
         else:
             super().__init__(
                 data,
@@ -917,10 +936,12 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.rooms.get_by_id(
                 self._device_id
             ).current_temperature
-        elif self._lts_sensor_type == "floor_current_temp":
+            
+        elif self._lts_sensor_type == "SmokeAlarmDevice":
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
-            ).floor_temperature_sensor.measured_temperature
+            ).current_temperature
+
         else:
             if (
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
@@ -945,6 +966,12 @@ class WiserLTSTempSensor(WiserSensor):
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
+        elif self._lts_sensor_type == "SmokeAlarmDevice":
+            return {
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }            
         return {
             "name": get_device_name(self._data, self._device_id, "room"),
             "identifiers": {
@@ -962,6 +989,8 @@ class WiserLTSTempSensor(WiserSensor):
         if self._lts_sensor_type == "hotwater":
             return "mdi:water-boiler"
         if self._lts_sensor_type == "current_temp":
+            return "mdi:home-thermometer"
+        if self._lts_sensor_type == "SmokeAlarmSeDevice":
             return "mdi:home-thermometer"
         return "mdi:home-thermometer-outline"
 

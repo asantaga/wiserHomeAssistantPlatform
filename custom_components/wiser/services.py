@@ -18,8 +18,8 @@ from .const import (
     DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
     WISER_SERVICES,
-    ATTR_LED_INDICATOR,
-)
+)  
+ 
 from .coordinator import WiserHubRESTError
 from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
 from homeassistant.const import (
@@ -75,13 +75,6 @@ async def async_setup_services(hass: HomeAssistant, data):
         {
             vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
             vol.Required(ATTR_MODE): vol.Coerce(str),
-        }
-    )
-
-    SET_LED_INDICATOR_SCHEMA = vol.Schema(
-        {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-            vol.Required(ATTR_LED_INDICATOR): vol.Coerce(str),
         }
     )
 
@@ -306,32 +299,6 @@ async def async_setup_services(hass: HomeAssistant, data):
                 )
 
     @callback
-    async def set_light_led_indicator(service_call):
-        """Handle the service call."""
-        entity_ids = service_call.data[ATTR_ENTITY_ID]
-        led_indicator = service_call.data[ATTR_LED_INDICATOR]
-
-        for entity_id in entity_ids:
-            entity = get_entity_from_entity_id(entity_id)
-            if entity:
-                if hasattr(entity, "async_set_led_indicator"):
-                    if led_indicator.lower() in [option.lower() for option in entity.options]:
-                        fn = getattr(entity, "async_set_led_indicator")
-                        await fn(led_indicator)
-                    else:
-                        _LOGGER.error(
-                            f"{led_indicator} is not a valid mode for this device.  Options are {entity.options}"
-                        )
-                else:
-                    _LOGGER.error(
-                        f"Cannot set mode for entity {entity_id}.  Please see wiki for entities to choose"
-                    )
-            else:
-                _LOGGER.error(
-                    f"Invalid entity. {entity_id} does not exist in this integration"
-                )
-
-    @callback
     async def async_boost_hotwater(service_call):
         time_period = service_call.data[ATTR_TIME_PERIOD]
         hub = service_call.data[ATTR_HUB]
@@ -451,11 +418,4 @@ async def async_setup_services(hass: HomeAssistant, data):
         WISER_SERVICES["SERVICE_SEND_OPENTHERM_COMMAND"],
         async_set_opentherm_parameter,
         schema=SEND_OPENTHERM_COMMAND_SCHEMA,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        WISER_SERVICES["SERVICE_SET_LED_INDICATOR"],
-        set_light_led_indicator,
-        schema=SET_LED_INDICATOR_SCHEMA,
     )

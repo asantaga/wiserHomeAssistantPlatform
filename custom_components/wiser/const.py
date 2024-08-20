@@ -10,6 +10,7 @@ DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 
+
 WISER_CARDS = [
     {
         "name": "Wiser Schedule Card",
@@ -25,6 +26,7 @@ WISER_CARDS = [
 
 WISER_PLATFORMS = [
     "climate",
+    "binary_sensor",
     "sensor",
     "switch",
     "select",
