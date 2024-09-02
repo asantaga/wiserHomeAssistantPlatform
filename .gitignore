@@ -110,3 +110,4 @@ venv.bak/
 *.DS_Store
 .vscode/settings.json
 custom_components/wiser/const1.py
+custom_components/wiser/bin_sensor.py

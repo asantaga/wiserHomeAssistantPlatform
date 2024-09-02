@@ -416,10 +416,11 @@ class WiserDeviceSignalSensor(WiserSensor):
     def name(self):
         """Return the name of the sensor."""
         if self._device_id == 0:
-            # HeatHub receive the system name of the hub to differentiate from another Hub
+            # Issue 461, HeatHub receive the system name of the hub to differentiate from another Hub
             HeatHub = self._data.wiserhub.system.name
+            HeatHub = HeatHub.replace("WiserHeat","HeatHub")
+            return f"{HeatHub} Signal"
 #            return f"{get_device_name(self._data, self._device_id, 'HeatHub')} Signal"            
-            return f"{get_device_name(self._data, self._device_id, HeatHub )} Signal"
         
         return f"{get_device_name(self._data, self._device_id)} Signal"
 

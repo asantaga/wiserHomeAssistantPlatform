@@ -20,9 +20,8 @@ from .helpers import (
     get_identifier,
     get_room_name,
     get_unique_id,
-    hub_error_handler,
 )
-from custom_components.wiser.schedules import WiserScheduleEntity
+#from custom_components.wiser.schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,7 +92,21 @@ WISER_BINARYSENSORS = [
         "type": "room",
         "device_class": "window",
     },
- 
+    {
+        "name": "Controllable",
+        "key": "controllable",
+        "icon": "mdi:window-open",
+        "type": "equipment",
+        "device_class": "power",
+    },
+    {
+        "name": "Monitored",
+        "key": "monitored",
+        "icon": "mdi:window-open",
+        "type": "equipment",
+        "device_class": "power",
+    },
+                
     
 
 ]
@@ -135,10 +148,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         data, binary_sensor["name"], binary_sensor["key"], binary_sensor["icon"], device.id, binary_sensor["device_class"]
                     )
                 )
+        elif binary_sensor["type"] == "equipment":
+            for device in [
+                device
+                for device in data.wiserhub.devices.all
+                if hasattr(device, "equipment")
+            ]:
+                wiser_binary_sensors.append(
+                    WiserEquipmentBinarySensor(
+                        data, binary_sensor["name"], binary_sensor["key"], binary_sensor["icon"], device.id, binary_sensor["device_class"]
+                    )
+                )
     async_add_entities(wiser_binary_sensors)
 
     return True
-
 
 class WiserBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """BinarySensors to set the status of the Wiser Operation Mode (Away/Normal)."""
@@ -151,9 +174,7 @@ class WiserBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._icon = icon
         self._name = name
         self.device_class= device_class
-#        self._is_on = False
         self._type = device_type
-#        self._away_temperature = None
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} init")
 
     async def async_force_update(self, delay: int = 0):
@@ -181,13 +202,6 @@ class WiserBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def unique_id(self):
         return get_unique_id(self._data, self._type, "binary_sensor", self.name)
 
-#    @property
-#    def is_on(self):   
-        """Return true if device is on."""
-#        return self._is_on
-
-
-
 class WiserSystemBinarySensor(WiserBinarySensor):
     """BinarySensors to set the status of a system binary_sensor"""
 
@@ -197,7 +211,6 @@ class WiserSystemBinarySensor(WiserBinarySensor):
         self._device_class = device_class
 
         super().__init__(data, name, key, "system", icon, device_class)
-#        self._state = getattr(self._device, self._key)
 
 
     @callback
@@ -236,9 +249,7 @@ class WiserSystemBinarySensor(WiserBinarySensor):
         if self._name == "Summer Discomfort Prevention":
             attrs["indoor_discomfort_temperature"] = self._data.wiserhub.system.indoor_discomfort_temperature
             attrs["outdoor_discomfort_temperature"] = self._data.wiserhub.system.outdoor_discomfort_temperature
-
         return attrs
-
 
 class WiserRoomBinarySensor(WiserBinarySensor):
     """BinarySensors to set the status of a system binary_sensor"""
@@ -288,7 +299,6 @@ class WiserRoomBinarySensor(WiserBinarySensor):
         attrs = {}
 
         return attrs
-
 
 class WiserDeviceBinarySensor(WiserBinarySensor):
     """BinarySensors to set the status of a binary_sensor"""
@@ -345,9 +355,8 @@ class WiserDeviceBinarySensor(WiserBinarySensor):
     @property
     def extra_state_attributes(self):
         """Return the device state attributes for the attribute card."""
-        attrs = {}        
+        attrs = {}       
         return attrs
-
 
 class WiserSmartPlugBinarySensor(WiserBinarySensor, WiserScheduleEntity):
     """Plug BinarySensorsEntity Class."""
@@ -400,21 +409,6 @@ class WiserSmartPlugBinarySensor(WiserBinarySensor, WiserScheduleEntity):
         attrs = {}
         return attrs
 
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """Turn the device on."""
-        await self._device.turn_on()
-        await self.async_force_update(2)
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Turn the device off."""
-        await self._device.turn_off()
-        await self.async_force_update(2)
-        return True
-
-
 class WiserSmartPlugAwayActionBinarySensor(WiserBinarySensor):
     """Plug BinarySensorsEntity Class."""
 
@@ -457,21 +451,6 @@ class WiserSmartPlugAwayActionBinarySensor(WiserBinarySensor):
             "sw_version": self._smartplug.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
-
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """Turn the device on."""
-        await self._smartplug.set_away_mode_action("Off")
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Turn the device off."""
-        await self._smartplug.set_away_mode_action("NoChange")
-        await self.async_force_update()
-        return True
-
 
 class WiserLightAwayActionBinarySensor(WiserBinarySensor):
     """Plug BinarySensorsEntity Class."""
@@ -516,21 +495,6 @@ class WiserLightAwayActionBinarySensor(WiserBinarySensor):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """Turn the device on."""
-        await self._light.set_away_mode_action("Off")
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Turn the device off."""
-        await self._light.set_away_mode_action("NoChange")
-        await self.async_force_update()
-        return True
-
-
 class WiserShutterAwayActionBinarySensor(WiserBinarySensor):
     """Plug BinarySensorsEntity Class."""
 
@@ -573,21 +537,6 @@ class WiserShutterAwayActionBinarySensor(WiserBinarySensor):
             "sw_version": self._shutter.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
-
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """Turn the device on."""
-        await self._shutter.set_away_mode_action("Close")
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Turn the device off."""
-        await self._shutter.set_away_mode_action("NoChange")
-        await self.async_force_update()
-        return True
-
 
 class WiserPassiveModeBinarySensor(WiserBinarySensor):
     """Room Passive Mode BinarySensorsEntity Class."""
@@ -640,23 +589,6 @@ class WiserPassiveModeBinarySensor(WiserBinarySensor):
         attrs = {}
         return attrs
 
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """Turn the device on."""
-        await self._data.wiserhub.rooms.get_by_id(self._room_id).set_passive_mode(True)
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Turn the device off."""
-        room = self._data.wiserhub.rooms.get_by_id(self._room_id)
-        await room.set_passive_mode(False)
-        await room.cancel_overrides()
-        await self.async_force_update()
-        return True
-
-
 class WiserShutterSummerComfortBinarySensor(WiserBinarySensor):
     """Shutter Respect Summer Comfort Class."""
 
@@ -707,5 +639,65 @@ class WiserShutterSummerComfortBinarySensor(WiserBinarySensor):
 
         attrs["summer_comfort_lift"] = self._shutter.summer_comfort_lift
         attrs["summer_comfort_tilt"] = self._shutter.summer_comfort_tilt
+        return attrs
+
+class WiserEquipmentBinarySensor(WiserBinarySensor):
+    """Equipment Binary sensor Class."""
+
+    def __init__(self, data, name, key, icon, device_id, device_class)-> None:
+        """Initialize the sensor."""
+        self._device_id = device_id
+        self._device_class = device_class
+
+        super().__init__(data, name, key, "equipment-binary_sensor", icon, device_class)
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = getattr(self._device.equipment, self._key)
+
+
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+       
+        self.async_write_ha_state()
+
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._device_id)} equipment {self._name}"
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, self._device.product_type, self._name, self._device.equipment.id
+        )
+    
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        _LOGGER.debug("%s device state requested", self.name)
+        return getattr(self._device.equipment, self._key)
+        
+    
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        attrs = {}
         return attrs
 
