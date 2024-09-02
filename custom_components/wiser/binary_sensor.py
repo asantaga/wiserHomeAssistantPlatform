@@ -58,6 +58,20 @@ WISER_BINARYSENSORS = [
         "device_class": "heat",
     },
     {
+        "name": "Is Dimmable",
+        "key": "is_dimmable",
+        "icon": "mdi:lightbulb-on-40",
+        "type": "device",
+        "device_class": "light"
+    },    
+    {
+        "name": "Is LED Indicator Supported",
+        "key": "is_led_indicator_supported",
+        "icon": "mdi:led-on",
+        "type": "device",
+        "device_class": "light",
+    },
+    {
         "name": "Summer Discomfort Prevention",
         "key": "summer_discomfort_prevention",
         "icon": "mdi:sofa",
@@ -74,14 +88,14 @@ WISER_BINARYSENSORS = [
     {
         "name": "PCM device limit reached",
         "key": "pcm_device_limit_reached",
-        "icon": "mdi:sofa",
+        "icon": "mdi:lighting-bolt",
         "type": "system",
         "device_class": "power",
     },
     {
         "name": "Can activate PCM",
         "key": "can_activate_pcm",
-        "icon": "mdi:sofa",
+        "icon": "mdi:lighting-bolt",
         "type": "system",
         "device_class": "power",
     },
@@ -95,7 +109,7 @@ WISER_BINARYSENSORS = [
     {
         "name": "Controllable",
         "key": "controllable",
-        "icon": "mdi:window-open",
+        "icon": "mdi:lighting-bolt",
         "type": "equipment",
         "device_class": "power",
     },
