@@ -36,8 +36,10 @@ from .const import (
     DATA,
     DOMAIN,
     MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
     SIGNAL_STRENGTH_ICONS,
     VERSION,
+    ENTITY_PREFIX,
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
 
@@ -96,13 +98,40 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.smartplugs:
         _LOGGER.debug("Setting up Smart Plug power sensors")
         for smartplug in data.wiserhub.devices.smartplugs.all:
-            wiser_sensors.extend(
+        # Add a sensor equipment for smartplugs 
+        # Hub V2 features   
+            if hasattr(smartplug,"equipment"):
+                wiser_sensors.append(
+                    WiserEquipmentSensor(data, smartplug.id, )
+                )
+                wiser_sensors.extend(
+                [
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Power", name="Equipment Power"),
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Energy Delivered"),
+                    WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Total Energy"),
+                    WiserCurrentVoltageSensor(data, smartplug.id, sensor_type="Current"),
+                    
+                ]
+                )
+            else:
+        # Hub V1 features
+                wiser_sensors.extend(
                 [
                     WiserSmartplugPower(data, smartplug.id, sensor_type="Power"),
-                    WiserSmartplugPower(data, smartplug.id, sensor_type="Total Power"),
+                    WiserSmartplugPower(data, smartplug.id, sensor_type="Total Power"),                    
                 ]
-            )
-
+                )
+       
+    # Add a sensor temperature for smoke alarm sensor
+    if data.wiserhub.devices.smokealarms:
+        _LOGGER.debug("Setting up Smoke Alarm LTS Temperature sensors")
+        for smokealarm in data.wiserhub.devices.smokealarms.all:            
+            wiser_sensors.extend(
+                [
+                     WiserLTSTempSensor(data, smokealarm.id, sensor_type="SmokeAlarmDevice"),
+                ]  
+            )  
+       
     # Add power sensors for PTE (v2Hub)
     if data.wiserhub.devices.power_tags:
         for power_tag in data.wiserhub.devices.power_tags.all:
@@ -129,8 +158,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserCurrentVoltageSensor(
                         data, power_tag.id, sensor_type="Current"
                     ),
+                    WiserLTSPowerSensor(
+                        data,
+                        power_tag.id,
+                        sensor_type="Energy",
+                        name="Equipment Total Energy"),
                 ]
             )
+
+    # Add a sensor equipment for powertags         
+            if hasattr(power_tag, "equipment"):
+                wiser_sensors.append(
+                    WiserEquipmentSensor(data, power_tag.id, )
+                )
 
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
@@ -153,14 +193,30 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.heating_actuators:
         _LOGGER.debug("Setting up Heating Actuator LTS sensors")
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
-            wiser_sensors.extend(
+        # Add a sensor equipment for heating actuators
+        # Hub V2 features
+            if hasattr(heating_actuator, "equipment"):
+                wiser_sensors.append(
+                    WiserEquipmentSensor(data, heating_actuator.id, )
+                )
+                wiser_sensors.extend(
+                [
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Power", name="Equipment Power"),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Energy Delivered"),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Total Energy"),
+                ]
+            )
+            else:
+        # Hub V1 features        
+                wiser_sensors.extend(
                 [
                     WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Power"),
                     WiserLTSPowerSensor(
                         data, heating_actuator.id, sensor_type="Energy"
                     ),
                 ]
-            )
+            )  
+        # Add a sensor floor temperature                             
             if (
                 heating_actuator.floor_temperature_sensor
                 and heating_actuator.floor_temperature_sensor.sensor_type
@@ -224,6 +280,7 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
     def name(self):
         """Return the name of the sensor."""
         return get_device_name(self._data, 0, self._sensor_type)
+#        return get_device_name(self._data, self._data.wiserhub.system.name, self._sensor_type)
 
     @property
     def state(self):
@@ -360,7 +417,12 @@ class WiserDeviceSignalSensor(WiserSensor):
     def name(self):
         """Return the name of the sensor."""
         if self._device_id == 0:
-            return f"{get_device_name(self._data, self._device_id, 'HeatHub')} Signal"
+            # Issue 461, HeatHub receive the system name of the hub to differentiate from another Hub
+            HeatHub = self._data.wiserhub.system.name
+            HeatHub = HeatHub.replace("WiserHeat","HeatHub")
+            return f"{HeatHub} Signal"
+#            return f"{get_device_name(self._data, self._device_id, 'HeatHub')} Signal"            
+        
         return f"{get_device_name(self._data, self._device_id)} Signal"
 
     @property
@@ -402,8 +464,15 @@ class WiserDeviceSignalSensor(WiserSensor):
             self._device.signal.displayed_signal_strength
         )
 
+        # Zigbee uuid
+        attrs["uuid"] = self._device.uuid
+        attrs["type"] = self._device.type_comm
+        #attrs["endpoint"] = self._device.endpoint
+
         # For non controller device
         if self._device_id != 0:
+            attrs["product_model"] = self._device.product_model
+            attrs["product_identifier"] = self._device.product_identifier
             attrs["serial_number"] = self._device.serial_number
             attrs["hub_route"] = "direct"
 
@@ -462,6 +531,24 @@ class WiserDeviceSignalSensor(WiserSensor):
                     self._data.wiserhub.status.last_reset_reason
                 )
 
+            attrs["hardware_generation"] = self._device.hardware_generation        
+
+            #Hub V2 features
+
+            # summer comfort 
+            if (self._device.hardware_generation == 2):           
+                attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
+                attrs["indoor_discomfort_temperature"] = self._device.indoor_discomfort_temperature
+                attrs["outdoor_discomfort_temperature"] = self._device.outdoor_discomfort_temperature
+                attrs["summer_comfort_available"] = self._device.summer_comfort_available
+                attrs["summer_discomfort_prevention"] = self._device.summer_discomfort_prevention
+                attrs["pcm_version"] = self._device.pcm_version
+                attrs["pcm_status"] = self._device.pcm_status
+                attrs["pcm_device_limit_reached"] = self._device.pcm_device_limit_reached
+                attrs["can_activate_pcm"] = self._device.can_activate_pcm
+
+
+
         # Other
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(
@@ -492,6 +579,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["alarm_sound_level"] = self._device.alarm_sound_level
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
+            attrs["current_temperature"] = self._device.current_temperature
+            attrs["report_count"] = self._device.report_count
 
         return attrs
 
@@ -825,6 +914,15 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 f"LTS Floor Temperature {sensor_name}",
             )
+
+        elif sensor_type == "SmokeAlarmDevice":
+            sensor_name = (data.wiserhub.devices.get_by_id(device_id).name ) 
+
+            super().__init__(
+                data,
+                device_id,
+                f"LTS Smoke Alarm Temperature {sensor_name}",
+            )
         else:
             super().__init__(
                 data,
@@ -840,10 +938,12 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.rooms.get_by_id(
                 self._device_id
             ).current_temperature
-        elif self._lts_sensor_type == "floor_current_temp":
+            
+        elif self._lts_sensor_type == "SmokeAlarmDevice":
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
-            ).floor_temperature_sensor.measured_temperature
+            ).current_temperature
+
         else:
             if (
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
@@ -868,6 +968,12 @@ class WiserLTSTempSensor(WiserSensor):
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
+        elif self._lts_sensor_type == "SmokeAlarmDevice":
+            return {
+                "name": get_device_name(self._data, self._device_id),
+                "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+                "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            }            
         return {
             "name": get_device_name(self._data, self._device_id, "room"),
             "identifiers": {
@@ -885,6 +991,8 @@ class WiserLTSTempSensor(WiserSensor):
         if self._lts_sensor_type == "hotwater":
             return "mdi:water-boiler"
         if self._lts_sensor_type == "current_temp":
+            return "mdi:home-thermometer"
+        if self._lts_sensor_type == "SmokeAlarmSeDevice":
             return "mdi:home-thermometer"
         return "mdi:home-thermometer-outline"
 
@@ -1321,3 +1429,136 @@ class WiserLTSPowerSensor(WiserSensor):
             return UnitOfPower.WATT
         else:
             return UnitOfEnergy.KILO_WATT_HOUR
+
+class WiserEquipmentSensor(WiserSensor):
+    """Definition of Wiser Equipment Sensor."""
+
+    def __init__(self, data, device_id=0, sensor_type="") -> None:
+        """Initialise the device sensor."""
+        super().__init__(data, device_id, sensor_type)
+        if self._device_id == 0:
+            self._device = self._data.wiserhub.system
+        else:
+            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        if self._device_id == 0:
+            self._device = self._data.wiserhub.system
+        else:
+            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.equipment.power.total_active_power
+        self.async_write_ha_state()
+
+    async def async_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} {self._sensor_type} Equipment"
+        
+    @property
+    def icon(self):
+        """Return icon."""
+        return "mdi:home-lightning-bolt"
+
+    @property
+    def state(self) -> float:
+        """Return the state of the entity."""
+        return self._device.equipment.power.total_active_power
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return UnitOfPower.WATT
+        
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+    @property
+    def extra_state_attributes(self):
+        """Return device state attributes."""
+        attrs = {} 
+        
+        # common attributes
+        attrs["product_identifier"] = self._device.product_identifier
+
+        attrs["name"] = self._device.equipment.equipment_name
+        attrs["device_type"] = self._device.equipment.device_type 
+        attrs["family"] = self._device.equipment.equipment_family
+        attrs["installation_type"] = self._device.equipment.installation_type
+
+        attrs["equipment_id"] = self._device.equipment.id
+        attrs["equipment_device_id"] = self._device.equipment.device_id
+        attrs["equipment_UUID"] = self._device.equipment.uuid
+        # more info 2024 06
+        attrs["controllable"] = self._device.equipment.controllable        
+        attrs["cloud_managed"] = self._device.equipment.cloud_managed        
+        attrs["monitored"] = self._device.equipment.monitored        
+        attrs["smart_compatible"] = self._device.equipment.smart_compatible
+        attrs["smart_supported"] = self._device.equipment.smart_supported
+        attrs["can_be_scheduled"] = self._device.equipment.can_be_scheduled        
+        attrs["onoff_green_schedule_supported"] = self._device.equipment.onoff_green_schedule_supported
+        attrs["onoff_cost_schedule_supported"] = self._device.equipment.onoff_cost_schedule_supported        
+        attrs["controllable"] = self._device.equipment.controllable        
+
+        attrs["functional_control_mode"] = self._device.equipment.functional_control_mode
+        attrs["current_control_mode"] = self._device.equipment.current_control_mode
+        #PCM
+        attrs["pcm_mode"] = self._device.equipment.pcm_mode
+        attrs["pcm_supported"] = self._device.equipment.pcm_supported
+        attrs["pcm_priority"] = self._device.equipment.pcm_priority
+
+        attrs["number_of_phases"] = self._device.equipment.number_of_phases        
+        attrs["direction"] = self._device.equipment.direction
+        attrs["operating_status"] = self._device.equipment.operating_status
+        attrs["fault_status"] = self._device.equipment.fault_status
+        #Load
+        attrs["load_state_status"] = self._device.equipment.load_state_status
+        attrs["load_state_command_optimized"] = self._device.equipment.load_state_command_optimized
+        attrs["load_shedding_status"] = self._device.equipment.load_shedding_status
+        attrs["load_state_command_prio"] = self._device.equipment.load_state_command_prio
+        attrs["load_setpoint_command_prio"] = self._device.equipment.load_setpoint_command_prio
+
+        attrs["active_power"] = self._device.equipment.power.active_power    
+        attrs["total_active_power"] = self._device.equipment.power.total_active_power    
+        attrs["energy"] = round(
+            self._device.equipment.power.current_summation_delivered / 1000,
+            2,
+        )
+
+        # PowerTagE attributes
+        if self._device.equipment.device_type in ["PTE","PowerTagE",]:
+            attrs["grid_limit"] = self._device.grid_limit
+            attrs["grid_limit_Uom"] = self._device.grid_limit_uom
+            attrs["energy_export"] = self._device.energy_export
+            attrs["self_consumption"] = self._device.self_consumption
+        
+            attrs["rms_current"] = self._device.equipment.power.rms_current    
+            attrs["rms_voltage"] = self._device.equipment.power.rms_voltage    
+            attrs["energy_received"] = self._device.equipment.power.current_summation_received  
+
+        #  SmartPlug attributes
+        if self._device.equipment.device_type in ["SmartPlug"]:
+            attrs["functional_control_mode"] = self._device.equipment.functional_control_mode      
+
+        # PowerTagE and SmartPlug attributes
+        if self._device.equipment.device_type in ["PTE","PowerTagE","SmartPlug"]:
+            attrs["energy_received"] = self._device.equipment.power.current_summation_received      
+            attrs["pcm_mode"] = self._device.equipment.pcm_mode
+
+
+        return attrs       
+            

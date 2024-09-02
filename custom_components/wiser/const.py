@@ -5,10 +5,11 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-VERSION = "3.4.7"
+VERSION = "3.5.1"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
+
 
 WISER_CARDS = [
     {
@@ -25,6 +26,7 @@ WISER_CARDS = [
 
 WISER_PLATFORMS = [
     "climate",
+    "binary_sensor",
     "sensor",
     "switch",
     "select",
@@ -91,6 +93,7 @@ ATTR_SCHEDULE_ID = "schedule_id"
 ATTR_SCHEDULE_NAME = "schedule_name"
 ATTR_SCHEDULE = "schedule"
 
+ATTR_LED_INDICATOR= "led_indicator"
 
 # Signal icons
 SIGNAL_STRENGTH_ICONS = {
@@ -112,6 +115,7 @@ WISER_SERVICES = {
     "SERVICE_SET_SCHEDULE_FROM_DATA": "set_schedule_from_string",
     "SERVICE_SET_DEVICE_MODE": "set_device_mode",
     "SERVICE_SEND_OPENTHERM_COMMAND": "set_opentherm_parameter",
+
 }
 
 WISER_BOOST_PRESETS = {

@@ -3,6 +3,9 @@ import logging
 import os
 
 from homeassistant.helpers.event import async_call_later
+# Added By LGO
+from homeassistant.components.http import StaticPathConfig
+# End Added by LGO
 
 from ..const import URL_BASE, WISER_CARDS
 
@@ -20,12 +23,14 @@ class WiserCardRegistration:
 
     # install card resources
     async def async_register_wiser_path(self):
-        # Register custom cards path if not already registered
-        self.hass.http.register_static_path(
-            URL_BASE,
-            self.hass.config.path("custom_components/wiser/frontend"),
-            cache_headers=False,
+# Added by LGO
+    # calls async_forward_register_wiser_path deprecated issue #485
+        await self.hass.http.async_register_static_paths(
+            [ StaticPathConfig("/wiser","/config/custom_components/wiser/frontend",
+            False)
+            ]
         )
+# End Added by LGO
 
     async def async_wait_for_lovelace_resources(self) -> None:
         async def check_lovelace_resources_loaded(now):

@@ -28,10 +28,12 @@ def hub_error_handler(func):
 
 def get_device_name(data, device_id, device_type="device"):
     if device_type == "device":
-        device = data.wiserhub.devices.get_by_id(device_id)
-
+        device = data.wiserhub.devices.get_by_id(device_id) 
         if device_id == 0:
-            return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+            HeatHub = data.wiserhub.system.name
+#            return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+        # issue 461,  Return  HeatHubxxxxx usefull if you have more than one Wiser Hub
+            return f"{ENTITY_PREFIX} {HeatHub.replace("WiserHeat","HeatHub")}" 
 
         if device.product_type == "iTRV":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)

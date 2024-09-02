@@ -125,8 +125,17 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         attrs["serial_number"] = self._device.serial_number
         attrs["firmware"] = self._device.firmware_version
 
+        # Zigbee uuid
+        attrs["type"] = self._device.type_comm
+        attrs["uuid"] = self._device.uuid
+        attrs["endpoint"] = self._device.endpoint
+
+        attrs["device_id"] = self._device_id
+
+
         # Settings
         attrs["is_dimmable"] = self._device.is_dimmable
+
         attrs["mode"] = self._device.mode
         attrs["away_mode_action"] = self._device.away_mode_action
 
@@ -136,6 +145,14 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         # Status
         attrs["current_state"] = self._device.current_state
         attrs["target_state"] = self._device.target_state
+        
+        #added by LGO
+        # Hub V2  new features
+
+        if self._device.is_output_mode_supported == True:
+            attrs["is_output_mode_supported"] = self._device.is_output_mode_supported
+            attrs["output_mode"] = self._device.output_mode            
+        #end added by LGO
 
         # Schedule
         attrs["schedule_id"] = self._device.schedule_id
@@ -194,6 +211,21 @@ class WiserDimmableLight(WiserLight):
     def extra_state_attributes(self):
         """Return state attributes."""
         attrs = super().extra_state_attributes
+
+        #added by LGO
+        # Hub V2  new features
+
+        if self._device.is_led_indicator_supported == True:
+            attrs["is_led_indicator_supported"] = self._device.is_led_indicator_supported
+            attrs["led_indicator"] = self._device.led_indicator            
+
+        if self._device.is_power_on_behaviour_supported == True:
+            attrs["is_power_on_behaviour_supported"] = self._device.is_power_on_behaviour_supported
+            attrs["power_on_behaviour"] = self._device.power_on_behaviour
+            attrs["power_on_level"] = self._device.power_on_level
+    
+        #end added by LGO
+
 
         # Settings
         attrs["output_range_min"] = self._device.output_range.minimum

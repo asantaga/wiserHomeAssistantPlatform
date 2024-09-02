@@ -24,6 +24,11 @@ For more information checkout the AMAZING community thread available on
 - Climate entity for controlling hot water with external tank temp sensor
 
 ## Change log
+- v3.5.0
+  - Bump api to v1.5.15 to add hub V2 features
+  - Add ability to select the Led_indicator and the power_on_behaviour of the dimmable switch
+  - Add ability to create equipment for smartplugs, heatactuators, powertags
+  - Add PCM features...
 
 - v3.4.7
   - Bump api to v1.5.14 to improve handling of hub connection errors
