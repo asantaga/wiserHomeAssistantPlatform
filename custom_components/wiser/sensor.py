@@ -39,6 +39,7 @@ from .const import (
     MANUFACTURER_SCHNEIDER,
     SIGNAL_STRENGTH_ICONS,
     VERSION,
+    ENTITY_PREFIX,
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
 

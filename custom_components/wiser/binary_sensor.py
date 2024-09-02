@@ -358,7 +358,7 @@ class WiserDeviceBinarySensor(WiserBinarySensor):
         attrs = {}       
         return attrs
 
-class WiserSmartPlugBinarySensor(WiserBinarySensor, WiserScheduleEntity):
+class WiserSmartPlugBinarySensor(WiserBinarySensor):
     """Plug BinarySensorsEntity Class."""
 
     def __init__(self, data, plugId, name) -> None:
