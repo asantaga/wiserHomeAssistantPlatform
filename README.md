@@ -33,6 +33,7 @@ For more information checkout the AMAZING community thread available on
   - Fix deprecation warning no waiting on setups - [#485](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/485)
   - Fix color mode issue - [#479](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/479)
   - Added smoke alarm sensors - [#457](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/457)
+  - Fixed missing save layout button in zigbee card - [#488](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/488)
 
 - v3.4.7
   - Bump api to v1.5.14 to improve handling of hub connection errors
