@@ -20,7 +20,7 @@ WISER_CARDS = [
     {
         "name": "Wiser Zigbee Card",
         "filename": "wiser-zigbee-card.js",
-        "version": "2.1.1",
+        "version": "2.1.2",
     },
 ]
 
