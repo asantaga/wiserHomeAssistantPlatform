@@ -23,6 +23,10 @@ For more information checkout the AMAZING community thread available on
 - Added PowerTagE support
 - Climate entity for controlling hot water with external tank temp sensor
 
+## Installing
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
+
 ## Change log
 
 - v3.4.7
