@@ -149,6 +149,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             if room.roomstat_id:
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
 
+    # Add temp sensors for smoke alarms
+    for device in data.wiserhub.devices.smokealarms.all:
+        wiser_sensors.append(
+            WiserLTSTempSensor(
+                data,
+                device.id,
+                sensor_type="smokealarm_temp",
+            )
+        )
+
     # Add LTS sensors - for room Power and Energy for heating actuators
     if data.wiserhub.devices.heating_actuators:
         _LOGGER.debug("Setting up Heating Actuator LTS sensors")
@@ -825,6 +835,12 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 f"LTS Floor Temperature {sensor_name}",
             )
+        elif sensor_type == "smokealarm_temp":
+            super().__init__(
+                data,
+                device_id,
+                f"{data.wiserhub.devices.get_by_id(device_id).name} Temperature",
+            )
         else:
             super().__init__(
                 data,
@@ -844,6 +860,10 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).floor_temperature_sensor.measured_temperature
+        elif self._lts_sensor_type == "smokealarm_temp":
+            self._state = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).current_temperature
         else:
             if (
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
@@ -862,7 +882,7 @@ class WiserLTSTempSensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        if self._lts_sensor_type == "floor_current_temp":
+        if self._lts_sensor_type in ["floor_current_temp", "smokealarm_temp"]:
             return {
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},

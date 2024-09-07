@@ -68,7 +68,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     @property
     def color_mode(self):
         """Return color mode."""
-        return {ColorMode.ONOFF}
+        return ColorMode.ONOFF
 
     @property
     def is_on(self):

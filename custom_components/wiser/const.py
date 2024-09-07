@@ -5,7 +5,8 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
-VERSION = "3.4.7"
+
+VERSION = "3.4.8"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
@@ -19,11 +20,12 @@ WISER_CARDS = [
     {
         "name": "Wiser Zigbee Card",
         "filename": "wiser-zigbee-card.js",
-        "version": "2.1.1",
+        "version": "2.1.2",
     },
 ]
 
 WISER_PLATFORMS = [
+    "binary_sensor",
     "climate",
     "sensor",
     "switch",
