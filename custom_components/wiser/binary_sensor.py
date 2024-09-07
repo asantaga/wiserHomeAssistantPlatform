@@ -32,12 +32,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserSmokeAlarm(data, device.id, "Smoke Alarm"),
                 WiserHeatAlarm(data, device.id, "Heat Alarm"),
                 WiserTamperAlarm(data, device.id, "Tamper Alarm"),
-                WiserFaultWarning(data, device.id, "Fault"),
+                WiserFaultWarning(data, device.id, "Fault Warning"),
                 WiserRemoteAlarm(data, device.id, "Remote Alarm"),
             ]
         )
 
-    async_add_entities(binary_sensors)
+    async_add_entities(binary_sensors, True)
 
 
 class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
@@ -51,15 +51,23 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._device_id = device_id
         self._device_name = None
         self._sensor_type = sensor_type
-        self._room = self._data.wiserhub.rooms.get_by_device_id(self._device_id)
+        self._state = getattr(self._device, self._sensor_type.replace(" ", "_").lower())
         _LOGGER.debug(
-            f"{self._data.wiserhub.system.name} {self.name} {'in room ' + self._room.name if self._room else ''} initalise"  # noqa: E501
+            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
         )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self.name} device update requested")
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = getattr(self._device, self._sensor_type.replace(" ", "_").lower())
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self):
+        """Return the state of the sensor."""
+        return self._state
 
     @property
     def name(self):
@@ -90,12 +98,6 @@ class WiserSmokeAlarm(BaseBinarySensor):
     _attr_device_class = BinarySensorDeviceClass.SMOKE
 
     @property
-    def state(self):
-        """Return the state of the sensor."""
-        _LOGGER.debug("%s device state requested", self.name)
-        return self._device.smoke_alarm
-
-    @property
     def extra_state_attributes(self):
         """Return the state attributes of the battery."""
         attrs = {}
@@ -112,23 +114,11 @@ class WiserHeatAlarm(BaseBinarySensor):
 
     _attr_device_class = BinarySensorDeviceClass.HEAT
 
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        _LOGGER.debug("%s device state requested", self.name)
-        return self._device.heat_alarm
-
 
 class WiserTamperAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.TAMPER
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        _LOGGER.debug("%s device state requested", self.name)
-        return self._device.tamper_alarm
 
 
 class WiserFaultWarning(BaseBinarySensor):
@@ -136,18 +126,6 @@ class WiserFaultWarning(BaseBinarySensor):
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        _LOGGER.debug("%s device state requested", self.name)
-        return self._device.fault_warning
-
 
 class WiserRemoteAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        _LOGGER.debug("%s device state requested", self.name)
-        return self._device.remote_alarm
