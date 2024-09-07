@@ -2,11 +2,6 @@
 
 import logging
 
-from config.custom_components.wiser.helpers import (
-    get_device_name,
-    get_identifier,
-    get_unique_id,
-)
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -15,6 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
+from .helpers import get_device_name, get_identifier, get_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
