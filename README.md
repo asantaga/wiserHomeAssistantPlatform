@@ -30,8 +30,9 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.8
-  - Fix deprecation warning no waiting on setups
-  - Added smoke alarm sensors
+  - Fix deprecation warning no waiting on setups - [#485](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/485)
+  - Fix color mode issue - [#479](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/479)
+  - Added smoke alarm sensors - [#457](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/457)
 
 - v3.4.7
   - Bump api to v1.5.14 to improve handling of hub connection errors
