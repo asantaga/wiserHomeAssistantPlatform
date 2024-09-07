@@ -1,8 +1,10 @@
 """Wiser Frontend"""
+
 import logging
 import os
 
 from homeassistant.helpers.event import async_call_later
+from homeassistant.components.http import StaticPathConfig
 
 from ..const import URL_BASE, WISER_CARDS
 
@@ -21,10 +23,8 @@ class WiserCardRegistration:
     # install card resources
     async def async_register_wiser_path(self):
         # Register custom cards path if not already registered
-        self.hass.http.register_static_path(
-            URL_BASE,
-            self.hass.config.path("custom_components/wiser/frontend"),
-            cache_headers=False,
+        await self.hass.http.async_register_static_paths(
+            [StaticPathConfig(URL_BASE, "custom_components/wiser/frontend", False)]
         )
 
     async def async_wait_for_lovelace_resources(self) -> None:
@@ -118,7 +118,11 @@ class WiserCardRegistration:
                     )
 
     async def async_remove_gzip_files(self):
+        await self.hass.async_add_executor_job(self.remove_gzip_files)
+
+    def remove_gzip_files(self):
         path = self.hass.config.path("custom_components/wiser/frontend")
+
         gzip_files = [
             filename for filename in os.listdir(path) if filename.endswith(".gz")
         ]
