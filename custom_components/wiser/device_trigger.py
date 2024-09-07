@@ -19,9 +19,9 @@ from .const import DOMAIN
 from .events import WISER_EVENTS, WISER_EVENT
 
 DEVICE = "device"
-SUPPORTED_DOMAINS = set(event[CONF_DOMAIN] for event in WISER_EVENTS)
+SUPPORTED_DOMAINS = {event[CONF_DOMAIN] for event in WISER_EVENTS}
 
-TRIGGER_TYPES = set(event[CONF_TYPE] for event in WISER_EVENTS)
+TRIGGER_TYPES = {event[CONF_TYPE] for event in WISER_EVENTS}
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
