@@ -5,6 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+
 VERSION = "3.4.7"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
@@ -24,6 +25,7 @@ WISER_CARDS = [
 ]
 
 WISER_PLATFORMS = [
+    "binary_sensor",
     "climate",
     "sensor",
     "switch",
