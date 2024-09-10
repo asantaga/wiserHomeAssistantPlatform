@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.7
+# Wiser Home Assistant Integration v3.5.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -24,6 +24,10 @@ For more information checkout the AMAZING community thread available on
 - Climate entity for controlling hot water with external tank temp sensor
 
 ## Change log
+- v3.5.1
+  - Add new binary_sensors for SmokeAlarmDevices, Heathub (summer discomfort prevention instead of a switch), lights...
+  - New name for Heathub : usefull if you have more than one in your HA
+  - 
 - v3.5.0
   - Bump api to v1.5.15 to add hub V2 features
   - Add ability to select the Led_indicator and the power_on_behaviour of the dimmable switch
