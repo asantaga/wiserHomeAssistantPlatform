@@ -57,6 +57,20 @@ WISER_BINARYSENSORS = [
         "type": "device",
         "device_class": "heat",
     },
+        {
+        "name": "Remote Alarm",
+        "key": "remote_alarm",
+        "icon": "mdi:fire-alert",
+        "type": "device",
+        "device_class": "heat",
+    },
+        {
+        "name": "Battery Defect",
+        "key": "battery_defect",
+        "icon": "mdi:battery-alert",
+        "type": "device",
+        "device_class": "problem",
+    },
     {
         "name": "Is Dimmable",
         "key": "is_dimmable",
@@ -70,6 +84,13 @@ WISER_BINARYSENSORS = [
         "icon": "mdi:led-on",
         "type": "device",
         "device_class": "light",
+    },
+    {
+        "name": "Active",
+        "key": "active",
+        "icon": "mdi:led-on",
+        "type": "device",
+        "device_class": "door",
     },
     {
         "name": "Summer Discomfort Prevention",
@@ -116,7 +137,7 @@ WISER_BINARYSENSORS = [
     {
         "name": "Monitored",
         "key": "monitored",
-        "icon": "mdi:window-open",
+        "icon": "mdi:home-automation",
         "type": "equipment",
         "device_class": "power",
     },
@@ -414,186 +435,6 @@ class WiserSmartPlugBinarySensor(WiserBinarySensor):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-    @property
-    def extra_state_attributes(self):
-        """Return set of device state attributes."""
-        attrs = {}
-        return attrs
-
-class WiserSmartPlugAwayActionBinarySensor(WiserBinarySensor):
-    """Plug BinarySensorsEntity Class."""
-
-    def __init__(self, data, plugId, name) -> None:
-        """Initialize the sensor."""
-        self._name = name
-        self._smart_plug_id = plugId
-        super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
-        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
-        self._is_on = True if self._smartplug.away_mode_action == "Off" else False
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Async Update to HA."""
-        super()._handle_coordinator_update()
-        self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
-        self._is_on = True if self._smartplug.away_mode_action == "Off" else False
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(
-            self._data, self._smartplug.product_type, self.name, self._smart_plug_id
-        )
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._smart_plug_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._smart_plug_id))},
-            "manufacturer": MANUFACTURER,
-            "model": self._smartplug.product_type,
-            "sw_version": self._smartplug.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-class WiserLightAwayActionBinarySensor(WiserBinarySensor):
-    """Plug BinarySensorsEntity Class."""
-
-    def __init__(self, data, LightId, name) -> None:
-        """Initialize the sensor."""
-        self._name = name
-        self._light_id = LightId
-        super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
-        self._is_on = True if self._light.away_mode_action == "Off" else False
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Async Update to HA."""
-        super()._handle_coordinator_update()
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
-        self._is_on = True if self._light.away_mode_action == "Off" else False
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(
-            self._data, self._light.product_type, self.name, self._light_id
-        )
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._light_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._light_id))},
-            "manufacturer": MANUFACTURER,
-            "model": self._light.product_type,
-            "sw_version": self._light.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-class WiserShutterAwayActionBinarySensor(WiserBinarySensor):
-    """Plug BinarySensorsEntity Class."""
-
-    def __init__(self, data, ShutterId, name) -> None:
-        """Initialize the sensor."""
-        self._name = name
-        self._shutter_id = ShutterId
-        super().__init__(data, name, "", "shutter", "mdi:window-shutter")
-        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
-        self._is_on = True if self._shutter.away_mode_action == "Close" else False
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Async Update to HA."""
-        super()._handle_coordinator_update()
-        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
-        self._is_on = True if self._shutter.away_mode_action == "Close" else False
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._shutter_id)} Away Mode Closes"
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(
-            self._data, self._shutter.product_type, self.name, self._shutter_id
-        )
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._shutter_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
-            "manufacturer": MANUFACTURER,
-            "model": self._shutter.product_type,
-            "sw_version": self._shutter.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-class WiserPassiveModeBinarySensor(WiserBinarySensor):
-    """Room Passive Mode BinarySensorsEntity Class."""
-
-    def __init__(self, hass: HomeAssistant, data, room_id, name) -> None:
-        """Initialize the sensor."""
-        self._name = name
-        self._room_id = room_id
-        self._hass = hass
-        super().__init__(data, name, "", "passive-mode", "mdi:thermostat-box")
-        self._is_on = self._data.wiserhub.rooms.get_by_id(
-            self._room_id
-        ).passive_mode_enabled
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Async Update to HA."""
-        super()._handle_coordinator_update()
-        self._is_on = self._data.wiserhub.rooms.get_by_id(
-            self._room_id
-        ).passive_mode_enabled
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(
-            self._data, "passive-mode-binary_sensor", self.name, self._room_id
-        )
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._room_id, "room"),
-            "identifiers": {
-                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
-            },
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 

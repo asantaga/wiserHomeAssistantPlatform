@@ -81,6 +81,13 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "SmokeAlarmDevice":
             return f"{ENTITY_PREFIX} {device.name}"
 
+        if device.product_type == "WindowDoorSensor":
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+            # If device not allocated to a room return type and id only
+            if device_room:
+                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name} {device.name}"
+            return f"{ENTITY_PREFIX} {device.name}"
+
         if device.product_type in ["Shutter", "OnOffLight", "DimmableLight"]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only

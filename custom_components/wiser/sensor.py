@@ -565,6 +565,17 @@ class WiserDeviceSignalSensor(WiserSensor):
                 self._device_id
             ).current_temperature
 
+        if self._sensor_type in [
+            "RoomStat",
+            "HeatingActuator",
+            "SmartPlug",
+            "PowerTagE",
+            "SmokeAlarmDevice"
+        ]:
+            attrs["device_id"] = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).id
+
         if self._sensor_type == "HeatingActuator":
             attrs["target_temperature"] = self._data.wiserhub.devices.get_by_id(
                 self._device_id
@@ -581,6 +592,9 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["hush_duration"] = self._device.hush_duration
             attrs["current_temperature"] = self._device.current_temperature
             attrs["report_count"] = self._device.report_count
+
+        if self._sensor_type == "WindowDoorSensor":
+            attrs["name"] = self._device.name
 
         return attrs
 
