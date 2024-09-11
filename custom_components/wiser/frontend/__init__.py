@@ -22,10 +22,14 @@ class WiserCardRegistration:
 
     # install card resources
     async def async_register_wiser_path(self):
-        # Register custom cards path if not already registered
-        await self.hass.http.async_register_static_paths(
-            [StaticPathConfig(URL_BASE, "custom_components/wiser/frontend", False)]
-        )
+        """Register custom cards path if not already registered."""
+        try:
+            await self.hass.http.async_register_static_paths(
+                [StaticPathConfig(URL_BASE, "custom_components/wiser/frontend", False)]
+            )
+        except RuntimeError:
+            # Runtime error is likley this is already registered.
+            _LOGGER.debug("Wiser static path already registered")
 
     async def async_wait_for_lovelace_resources(self) -> None:
         async def check_lovelace_resources_loaded(now):
