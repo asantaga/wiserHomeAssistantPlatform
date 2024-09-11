@@ -86,6 +86,27 @@ WISER_BINARYSENSORS = [
         "device_class": "light",
     },
     {
+        "name": "Is Tilt Supported",
+        "key": "is_tilt_supported",
+        "icon": "mdi:led-on",
+        "type": "device",
+        "device_class": "cover",
+    },
+    {
+        "name": "Is Open",
+        "key": "is_open",
+        "icon": "mdi:window-shutter-open",
+        "type": "device",
+        "device_class": "cover",
+    },
+    {
+        "name": "Is Closed",
+        "key": "is_closed",
+        "icon": "mdi:window-shutter",
+        "type": "device",
+        "device_class": "cover",
+    },
+    {
         "name": "Active",
         "key": "active",
         "icon": "mdi:led-on",
@@ -188,6 +209,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 device
                 for device in data.wiserhub.devices.all
                 if hasattr(device, "equipment")
+#                and device.equipment.device_id > 0
             ]:
                 wiser_binary_sensors.append(
                     WiserEquipmentBinarySensor(
@@ -481,7 +503,7 @@ class WiserShutterSummerComfortBinarySensor(WiserBinarySensor):
         return {
             "name": get_device_name(self._data, self._shutter_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
-            "manufacturer": MANUFACTURER,
+            "manufacturer": MANUFACTURER_SCHNEIDER,
             "model": self._shutter.product_type,
             "sw_version": self._shutter.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),

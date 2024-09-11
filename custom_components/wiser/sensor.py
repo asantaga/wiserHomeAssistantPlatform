@@ -100,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for smartplug in data.wiserhub.devices.smartplugs.all:
         # Add a sensor equipment for smartplugs 
         # Hub V2 features   
-            if hasattr(smartplug,"equipment"):
+            if smartplug.equipment_id > 0:
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, smartplug.id, )
                 )
@@ -167,7 +167,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
     # Add a sensor equipment for powertags         
-            if hasattr(power_tag, "equipment"):
+            if hasattr(power_tag,"equipment"):
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, power_tag.id, )
                 )
@@ -195,7 +195,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
         # Add a sensor equipment for heating actuators
         # Hub V2 features
-            if hasattr(heating_actuator, "equipment"):
+            if heating_actuator.equipment_id > 0:
                 wiser_sensors.append(
                     WiserEquipmentSensor(data, heating_actuator.id, )
                 )
@@ -570,7 +570,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             "HeatingActuator",
             "SmartPlug",
             "PowerTagE",
-            "SmokeAlarmDevice"
+            "SmokeAlarmDevice",
+            "WindowDoorSensor"
         ]:
             attrs["device_id"] = self._data.wiserhub.devices.get_by_id(
                 self._device_id
@@ -592,9 +593,16 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["hush_duration"] = self._device.hush_duration
             attrs["current_temperature"] = self._device.current_temperature
             attrs["report_count"] = self._device.report_count
+            attrs["notification_enable"] = self._device.notification
+
 
         if self._sensor_type == "WindowDoorSensor":
             attrs["name"] = self._device.name
+            attrs["active"] = self._device.active
+            attrs["type"] = self._device.type
+            attrs["enable_notification"] = self._device.enable_notification
+            attrs["interacts_with_room_climate"] = self._device.interacts_with_room_climate
+           
 
         return attrs
 
