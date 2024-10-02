@@ -594,7 +594,7 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["current_temperature"] = self._device.current_temperature
             attrs["report_count"] = self._device.report_count
             attrs["notification_enable"] = self._device.notification
-
+            
 
         if self._sensor_type == "WindowDoorSensor":
             attrs["name"] = self._device.name
