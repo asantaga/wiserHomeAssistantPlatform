@@ -30,6 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserTamperAlarm(data, device.id, "Tamper Alarm"),
                 WiserFaultWarning(data, device.id, "Fault Warning"),
                 WiserRemoteAlarm(data, device.id, "Remote Alarm"),
+                WiserBatteryDefect(data, device.id, "Battery Defect"),
             ]
         )
 
@@ -39,7 +40,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
 
-    def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
+    def __init__(
+        self, coordinator, device_id=0, sensor_type="", device_data_key: str = ""
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
@@ -47,17 +50,37 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._device_id = device_id
         self._device_name = None
         self._sensor_type = sensor_type
-        self._state = getattr(self._device, self._sensor_type.replace(" ", "_").lower())
-        _LOGGER.debug(
+        self._device_data_key = device_data_key
+
+        _LOGGER.info(
             f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
         )
+
+        if device_data_key and hasattr(self._device, device_data_key):
+            self._state = getattr(
+                getattr(self._device, device_data_key),
+                self._sensor_type.replace(" ", "_").lower(),
+            )
+        else:
+            self._state = getattr(
+                self._device, self._sensor_type.replace(" ", "_").lower()
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self.name} device update requested")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._state = getattr(self._device, self._sensor_type.replace(" ", "_").lower())
+        if self._device_data_key and hasattr(self._device, self._device_data_key):
+            self._state = getattr(
+                getattr(self._device, self._device_data_key),
+                self._sensor_type.replace(" ", "_").lower(),
+            )
+        else:
+            self._state = getattr(
+                self._device, self._sensor_type.replace(" ", "_").lower()
+            )
+
         self.async_write_ha_state()
 
     @property
@@ -82,8 +105,8 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -121,6 +144,13 @@ class WiserFaultWarning(BaseBinarySensor):
     """Smoke Alarm sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
+
+
+class WiserBatteryDefect(BaseBinarySensor):
+    """Smoke Alarm battery defect sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_icon = "mdi:battery-alert"
 
 
 class WiserRemoteAlarm(BaseBinarySensor):

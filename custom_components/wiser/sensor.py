@@ -150,14 +150,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
 
     # Add temp sensors for smoke alarms
-    for device in data.wiserhub.devices.smokealarms.all:
-        wiser_sensors.append(
-            WiserLTSTempSensor(
-                data,
-                device.id,
-                sensor_type="smokealarm_temp",
-            )
+    wiser_sensors.extend(
+        WiserLTSTempSensor(
+            data,
+            device.id,
+            sensor_type="smokealarm_temp",
         )
+        for device in data.wiserhub.devices.smokealarms.all
+    )
 
     # Add LTS sensors - for room Power and Energy for heating actuators
     if data.wiserhub.devices.heating_actuators:
@@ -836,10 +836,17 @@ class WiserLTSTempSensor(WiserSensor):
                 f"LTS Floor Temperature {sensor_name}",
             )
         elif sensor_type == "smokealarm_temp":
+            device = data.wiserhub.devices.get_by_id(device_id)
+            if device.room_id and (
+                room := data.wiserhub.rooms.get_by_id(device.room_id)
+            ):
+                name = f"{room.name} {device.name}  Temperature"
+            else:
+                name = f"{device.name} {device_id} Temperature"
             super().__init__(
                 data,
                 device_id,
-                f"{data.wiserhub.devices.get_by_id(device_id).name} Temperature",
+                name,
             )
         else:
             super().__init__(
