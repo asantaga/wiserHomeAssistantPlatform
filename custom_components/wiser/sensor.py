@@ -1068,6 +1068,11 @@ class WiserLTSHumiditySensor(WiserSensor):
         self._state = self._data.wiserhub.devices.get_by_id(
             self._device_id
         ).current_humidity
+
+        # Set humidity to unavailable if no value
+        if self._state == 0:
+            self._state = STATE_UNAVAILABLE
+
         self.async_write_ha_state()
 
     @property
