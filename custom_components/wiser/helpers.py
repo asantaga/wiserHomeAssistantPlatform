@@ -77,7 +77,10 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type == "SmokeAlarmDevice":
-            return f"{ENTITY_PREFIX} {device.name}"
+            device_room = data.wiserhub.rooms.get_by_id(device_id)
+            if device_room:
+                return f"{ENTITY_PREFIX} {device_room.name} {device.name}"
+            return f"{ENTITY_PREFIX} {device.name} {device.id}"
 
         if device.product_type in ["Shutter", "OnOffLight", "DimmableLight"]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
