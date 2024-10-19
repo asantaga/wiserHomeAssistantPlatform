@@ -56,7 +56,7 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "UnderFloorHeating":
             return f"{ENTITY_PREFIX} {device.name}"
 
-        if device.product_type == "HeatingActuator":
+        if device.product_type in ["HeatingActuator", "CFMT"]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
