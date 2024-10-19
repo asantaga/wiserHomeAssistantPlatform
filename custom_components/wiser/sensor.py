@@ -414,9 +414,13 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs["displayed_signal_strength"] = (
             self._device.signal.displayed_signal_strength
         )
+        attrs["uuid"] = self._device.uuid
+        attrs["type"] = self._device.type_comm
 
         # For non controller device
         if self._device_id != 0:
+            attrs["product_model"] = self._device.product_model
+            attrs["product_identifier"] = self._device.product_identifier
             attrs["serial_number"] = self._device.serial_number
             attrs["hub_route"] = "direct"
 
@@ -475,7 +479,37 @@ class WiserDeviceSignalSensor(WiserSensor):
                     self._data.wiserhub.status.last_reset_reason
                 )
 
+            attrs["hardware_generation"] = self._data.hub_version
+
+            # Hub V2 features
+
+            # summer comfort
+            if self._data.hub_version == 2:
+                attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
+                attrs["indoor_discomfort_temperature"] = (
+                    self._device.indoor_discomfort_temperature
+                )
+                attrs["outdoor_discomfort_temperature"] = (
+                    self._device.outdoor_discomfort_temperature
+                )
+                attrs["summer_comfort_available"] = (
+                    self._device.summer_comfort_available
+                )
+                attrs["summer_discomfort_prevention"] = (
+                    self._device.summer_discomfort_prevention
+                )
+                attrs["pcm_version"] = self._device.pcm_version
+                attrs["pcm_status"] = self._device.pcm_status
+                attrs["pcm_device_limit_reached"] = (
+                    self._device.pcm_device_limit_reached
+                )
+                attrs["can_activate_pcm"] = self._device.can_activate_pcm
+
         # Other
+        device_id = self._data.wiserhub.devices.get_by_id(self._device_id).id
+        if device_id != 0:
+            attrs["device_id"] = device_id
+
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(
                 self._device_id
@@ -505,6 +539,15 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["alarm_sound_level"] = self._device.alarm_sound_level
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
+
+        if self._sensor_type == "WindowDoorSensor":
+            attrs["name"] = self._device.name
+            attrs["active"] = self._device.active
+            attrs["type"] = self._device.type
+            attrs["enable_notification"] = self._device.enable_notification
+            attrs["interacts_with_room_climate"] = (
+                self._device.interacts_with_room_climate
+            )
 
         return attrs
 
