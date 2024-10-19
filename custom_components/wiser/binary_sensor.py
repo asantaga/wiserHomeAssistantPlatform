@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
-from .helpers import get_device_name, get_identifier, get_unique_id
+from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +31,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserFaultWarning(data, device.id, "Fault Warning"),
                 WiserRemoteAlarm(data, device.id, "Remote Alarm"),
                 WiserBatteryDefect(data, device.id, "Battery Defect"),
+            ]
+        )
+
+    # Equipments sensors
+    for device in data.wiserhub.devices.all:
+        if hasattr(device, "equipment") and device.equipment:
+            binary_sensors.extend(
+                [
+                    WiserEquipment(data, device.id, "Controllable", "equipment"),
+                    WiserEquipment(data, device.id, "PCM Mode", "equipment"),
+                ]
+            )
+
+    # Light sensors
+    for device in data.wiserhub.devices.lights.all:
+        binary_sensors.extend(
+            [
+                WiserStateIsDimmable(data, device.id, "Is Dimmable"),
+            ]
+        )
+
+    # Shutter binary sensors
+    for device in data.wiserhub.devices.shutters.all:
+        binary_sensors.extend(
+            [
+                WiserStateIsTiltSupported(data, device.id, "Is Tilt Supported"),
+                WiserStateIsOpen(data, device.id, "Is Open"),
+                WiserStateIsClosed(data, device.id, "Is Closed"),
             ]
         )
 
@@ -155,3 +183,30 @@ class WiserBatteryDefect(BaseBinarySensor):
 
 class WiserRemoteAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
+
+
+class WiserEquipment(BaseBinarySensor):
+    """Base binary sensor class."""
+
+
+class WiserStateIsDimmable(BaseBinarySensor):
+    """Light IsDimmable sensor."""
+
+    _attr_icon = "mdi:lightbulb-on-40"
+
+
+class WiserStateIsTiltSupported(BaseBinarySensor):
+    """Shutter Istilt supported  sensor."""
+
+
+class WiserStateIsOpen(BaseBinarySensor):
+    """Light IsDIs Open sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.OPENING
+
+
+class WiserStateIsClosed(BaseBinarySensor):
+    """Light IsDimmable sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.OPENING
+    _attr_icon = "mdi:window-shutter"
