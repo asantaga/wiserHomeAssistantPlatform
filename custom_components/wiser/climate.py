@@ -480,6 +480,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs = super().state_attributes
 
         # Settings
+        attrs["name"] = self._room.name
         attrs["window_state"] = self._room.window_state
         attrs["window_detection_active"] = self._room.window_detection_active
         attrs["away_mode_supressed"] = self._room.away_mode_suppressed
@@ -507,47 +508,54 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
 
         # Added by LGO
-        # Climate capabilities only with Hub Vé
-        if self._room.capabilities:
-            attrs["heating_supported"] = self._room.capabilities.heating_supported
-            attrs["cooling_supported"] = self._room.capabilities.cooling_supported
-            attrs["minimum_heat_set_point"] = (
-                self._room.capabilities.minimum_heat_set_point
-            )
-            attrs["maximum_heat_set_point"] = (
-                self._room.capabilities.maximum_heat_set_point
-            )
-            attrs["minimum_cool_set_point"] = (
-                self._room.capabilities.minimum_cool_set_point
-            )
-            attrs["maximum_cool_set_point"] = (
-                self._room.capabilities.maximum_cool_set_point
-            )
-            attrs["setpoint_step"] = self._room.capabilities.setpoint_step
-            attrs["ambient_temperature"] = self._room.capabilities.ambient_temperature
-            attrs["temperature_control"] = self._room.capabilities.temperature_control
-            attrs["open_window_detection"] = (
-                self._room.capabilities.open_window_detection
-            )
-            attrs["hydronic_channel_selection"] = (
-                self._room.capabilities.hydronic_channel_selection
-            )
-            attrs["on_off_supported"] = self._room.capabilities.on_off_supported
+        # Climate capabilities only with Hub V2
+        if self.data.hub_version >= 2:
+            if self._room.capabilities:
+                attrs["heating_supported"] = self._room.capabilities.heating_supported
+                attrs["cooling_supported"] = self._room.capabilities.cooling_supported
+                attrs["minimum_heat_set_point"] = (
+                    self._room.capabilities.minimum_heat_set_point
+                )
+                attrs["maximum_heat_set_point"] = (
+                    self._room.capabilities.maximum_heat_set_point
+                )
+                attrs["minimum_cool_set_point"] = (
+                    self._room.capabilities.minimum_cool_set_point
+                )
+                attrs["maximum_cool_set_point"] = (
+                    self._room.capabilities.maximum_cool_set_point
+                )
+                attrs["setpoint_step"] = self._room.capabilities.setpoint_step
+                attrs["ambient_temperature"] = (
+                    self._room.capabilities.ambient_temperature
+                )
+                attrs["temperature_control"] = (
+                    self._room.capabilities.temperature_control
+                )
+                attrs["open_window_detection"] = (
+                    self._room.capabilities.open_window_detection
+                )
+                attrs["hydronic_channel_selection"] = (
+                    self._room.capabilities.hydronic_channel_selection
+                )
+                attrs["on_off_supported"] = self._room.capabilities.on_off_supported
 
-        # Summer comfort
+            # Summer comfort
 
-        attrs["include_in_summer_comfort"] = self._room.include_in_summer_comfort
-        attrs["floor_sensor_state"] = self._room.floor_sensor_state
+            attrs["include_in_summer_comfort"] = self._room.include_in_summer_comfort
+            attrs["floor_sensor_state"] = self._room.floor_sensor_state
 
-        # occupancy
+            # occupancy
 
-        attrs["occupancy_capable"] = self._room.occupancy_capable
-        if self._room.occupancy_capable:
-            attrs["occupancy"] = self._room.occupancy
-            attrs["occupied_heating_set_point"] = self._room.occupied_heating_set_point
-            attrs["unoccupied_heating_set_point"] = (
-                self._room.unoccupied_heating_set_point
-            )
+            attrs["occupancy_capable"] = self._room.occupancy_capable
+            if self._room.occupancy_capable:
+                attrs["occupancy"] = self._room.occupancy
+                attrs["occupied_heating_set_point"] = (
+                    self._room.occupied_heating_set_point
+                )
+                attrs["unoccupied_heating_set_point"] = (
+                    self._room.unoccupied_heating_set_point
+                )
 
         # End Added by LGO
 

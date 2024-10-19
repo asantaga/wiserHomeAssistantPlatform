@@ -5,6 +5,7 @@ https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 
 """
+
 import asyncio
 import logging
 from typing import Any
@@ -144,6 +145,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         # Generic attributes
         attrs = super().state_attributes
         # Shutter Identification
+        attrs["vendor"] = MANUFACTURER_SCHNEIDER
         attrs["name"] = self._device.name
         attrs["model"] = self._device.model
         attrs["product_type"] = self._device.product_type
@@ -191,11 +193,18 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
         attrs["target_lift"] = self._device.target_lift
         attrs["scheduled_lift"] = self._device.scheduled_lift
 
+        # Zigbee uuid
+        attrs["type"] = self._device.type_comm
+        attrs["uuid"] = self._device.uuid
+        attrs["endpoint"] = self._device.endpoint
+        attrs["device_id"] = self._device_id
+
         if self._device.drive_config.tilt_enabled:
             # Tilt settings
             attrs["current_tilt"] = self._device.current_tilt
             attrs["manual_tilt"] = self._device.manual_tilt
             attrs["target_tilt"] = self._device.target_tilt
+            # tilt configuration
             attrs["tilt_time"] = self._device.drive_config.tilt_time
             attrs["tilt_angle_closed"] = self._device.drive_config.tilt_angle_closed
             attrs["tilt_angle_open"] = self._device.drive_config.tilt_angle_open
