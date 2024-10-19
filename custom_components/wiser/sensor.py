@@ -194,7 +194,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             wiser_sensors.append(WiserLTSDemandSensor(data, 0, "hotwater"))
 
         # Add opentherm flow & return temps
-        if data.wiserhub.system.opentherm.connection_status == "Connected":
+        if (
+            data.wiserhub.system.opentherm.connection_status == "Connected"
+            and data.wiserhub.system.opentherm.enabled
+        ):
             _LOGGER.debug("Setting up Opentherm sensors")
             wiser_sensors.extend(
                 [
@@ -547,7 +550,11 @@ class WiserSystemCircuitState(WiserSensor):
             self._device = self._data.wiserhub.heating_channels.get_by_id(
                 self._device_id
             )
-            self._state = self._device.heating_relay_status
+            self._state = (
+                self._device.heating_relay_status
+                if self._device.heating_relay_status != TEXT_UNKNOWN
+                else self._device.demand_on_off_output
+            )
         else:
             self._device = self._data.wiserhub.hotwater
             self._state = self._device.current_state
