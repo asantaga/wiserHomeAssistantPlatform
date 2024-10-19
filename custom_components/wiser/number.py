@@ -26,6 +26,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         [WiserAwayModeTempNumber(data, "Away Mode Target Temperature")]
     )
 
+    # add discomfort indoor and outdoor temperatures
+    _LOGGER.debug(" v2 hub Setting up Discomfort temperatures setter")
+    if data.wiserhub.system.hardware_generation == 2:
+        wiser_numbers.extend(
+            [
+                WiserDiscomfortIndoorTempNumber(data, "Indoor Discomfort Temperature"),
+                WiserDiscomfortOutdoorTempNumber(
+                    data, "Outdoor Discomfort Temperature"
+                ),
+            ]
+        )
+
     # Add min, max and offset for any heating actuator floor temp sensors
     for heating_actuator in [
         heating_actuator
@@ -224,4 +236,184 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         """Set new value."""
         _LOGGER.debug(f"Setting {self._name} to {value}C")
         await self._actuator.floor_temperature_sensor.set_temperature_offset(value)
+        await self.async_force_update()
+
+
+class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
+    def __init__(self, coordinator, name) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._name = name
+        self._value = self._data.wiserhub.system.indoor_discomfort_temperature
+
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if HA_VERSION_OBJ < "2022.7.0":
+            self._attr_min_value = self.native_min_value
+            self._attr_max_value = self.native_max_value
+            self._attr_value = self._data.wiserhub.system.indoor_discomfort_temperature
+            self.set_value = self.set_native_value
+
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
+        self._value = self._data.wiserhub.system.indoor_discomfort_temperature
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if hasattr(self, "_attr_value"):
+            self._attr_value = self._data.wiserhub.system.indoor_discomfort_temperature
+        self.async_write_ha_state()
+
+    @property
+    def native_min_value(self) -> float:
+        """Return the minimum value."""
+        return 20.0
+
+    @property
+    def native_max_value(self) -> float:
+        """Return the maximum value."""
+        return 30.0
+
+    @property
+    def native_step(self) -> float:
+        return 0.5
+
+    @property
+    def mode(self) -> NumberMode:
+        """Return the mode of the entity."""
+        return NumberMode.AUTO
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, 0, self._name)}"
+
+    @property
+    def icon(self):
+        """Icon for device"""
+        return "mdi:home-thermometer"
+
+    @property
+    def unique_id(self):
+        return get_unique_id(self._data, "system", "number", self.name)
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def native_value(self):
+        """Return device value"""
+        return self._value
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set new value."""
+        _LOGGER.debug(f"Setting {self._name} to {value}C")
+        await self._data.wiserhub.system.set_indoor_discomfort_temperature(value)
+        await self.async_force_update()
+
+
+class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
+    def __init__(self, coordinator, name) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._name = name
+        self._value = self._data.wiserhub.system.outdoor_discomfort_temperature
+
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if HA_VERSION_OBJ < "2022.7.0":
+            self._attr_min_value = self.native_min_value
+            self._attr_max_value = self.native_max_value
+            self._attr_value = self._data.wiserhub.system.outdoor_discomfort_temperature
+            self.set_value = self.set_native_value
+
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
+        self._value = self._data.wiserhub.system.outdoor_discomfort_temperature
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if hasattr(self, "_attr_value"):
+            self._attr_value = self._data.wiserhub.system.outdoor_discomfort_temperature
+        self.async_write_ha_state()
+
+    @property
+    def native_min_value(self) -> float:
+        """Return the minimum value."""
+        return 20.0
+
+    @property
+    def native_max_value(self) -> float:
+        """Return the maximum value."""
+        return 32.0
+
+    @property
+    def native_step(self) -> float:
+        return 0.5
+
+    @property
+    def mode(self) -> NumberMode:
+        """Return the mode of the entity."""
+        return NumberMode.AUTO
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, 0, self._name)}"
+
+    @property
+    def icon(self):
+        """Icon for device"""
+        return "mdi:home-thermometer"
+
+    @property
+    def unique_id(self):
+        return get_unique_id(self._data, "system", "number", self.name)
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def native_value(self):
+        """Return device value"""
+        return self._value
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set new value."""
+        _LOGGER.debug(f"Setting {self._name} to {value}C")
+        await self._data.wiserhub.system.set_outdoor_discomfort_temperature(value)
         await self.async_force_update()
