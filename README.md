@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.8
+# Wiser Home Assistant Integration v3.4.9
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,13 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.9
+  - Fixed smoke alarm naming issue - issue #496
+  - Set humidity to Unavailable if no value - issue #503
+  - Add support for BoilerInterface - issue #499
+  - Add support for WindowDoorSensor for v2 hub
+  - Add support for CFMT device for v2 hub - issue #507
 
 - v3.4.8
   - Fix deprecation warning no waiting on setups - [#485](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/485)

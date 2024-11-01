@@ -150,14 +150,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
 
     # Add temp sensors for smoke alarms
-    for device in data.wiserhub.devices.smokealarms.all:
-        wiser_sensors.append(
-            WiserLTSTempSensor(
-                data,
-                device.id,
-                sensor_type="smokealarm_temp",
-            )
+    wiser_sensors.extend(
+        WiserLTSTempSensor(
+            data,
+            device.id,
+            sensor_type="smokealarm_temp",
         )
+        for device in data.wiserhub.devices.smokealarms.all
+    )
 
     # Add LTS sensors - for room Power and Energy for heating actuators
     if data.wiserhub.devices.heating_actuators:
@@ -194,7 +194,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             wiser_sensors.append(WiserLTSDemandSensor(data, 0, "hotwater"))
 
         # Add opentherm flow & return temps
-        if data.wiserhub.system.opentherm.connection_status == "Connected":
+        if (
+            data.wiserhub.system.opentherm.connection_status == "Connected"
+            and data.wiserhub.system.opentherm.enabled
+        ):
             _LOGGER.debug("Setting up Opentherm sensors")
             wiser_sensors.extend(
                 [
@@ -411,9 +414,13 @@ class WiserDeviceSignalSensor(WiserSensor):
         attrs["displayed_signal_strength"] = (
             self._device.signal.displayed_signal_strength
         )
+        attrs["uuid"] = self._device.uuid
+        attrs["type"] = self._device.type_comm
 
         # For non controller device
         if self._device_id != 0:
+            attrs["product_model"] = self._device.product_model
+            attrs["product_identifier"] = self._device.product_identifier
             attrs["serial_number"] = self._device.serial_number
             attrs["hub_route"] = "direct"
 
@@ -472,7 +479,37 @@ class WiserDeviceSignalSensor(WiserSensor):
                     self._data.wiserhub.status.last_reset_reason
                 )
 
+            attrs["hardware_generation"] = self._data.hub_version
+
+            # Hub V2 features
+
+            # summer comfort
+            if self._data.hub_version == 2:
+                attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
+                attrs["indoor_discomfort_temperature"] = (
+                    self._device.indoor_discomfort_temperature
+                )
+                attrs["outdoor_discomfort_temperature"] = (
+                    self._device.outdoor_discomfort_temperature
+                )
+                attrs["summer_comfort_available"] = (
+                    self._device.summer_comfort_available
+                )
+                attrs["summer_discomfort_prevention"] = (
+                    self._device.summer_discomfort_prevention
+                )
+                attrs["pcm_version"] = self._device.pcm_version
+                attrs["pcm_status"] = self._device.pcm_status
+                attrs["pcm_device_limit_reached"] = (
+                    self._device.pcm_device_limit_reached
+                )
+                attrs["can_activate_pcm"] = self._device.can_activate_pcm
+
         # Other
+        device_id = self._data.wiserhub.devices.get_by_id(self._device_id).id
+        if device_id != 0:
+            attrs["device_id"] = device_id
+
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(
                 self._device_id
@@ -502,6 +539,15 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["alarm_sound_level"] = self._device.alarm_sound_level
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
+
+        if self._sensor_type == "WindowDoorSensor":
+            attrs["name"] = self._device.name
+            attrs["active"] = self._device.active
+            attrs["type"] = self._device.type
+            attrs["enable_notification"] = self._device.enable_notification
+            attrs["interacts_with_room_climate"] = (
+                self._device.interacts_with_room_climate
+            )
 
         return attrs
 
@@ -547,7 +593,11 @@ class WiserSystemCircuitState(WiserSensor):
             self._device = self._data.wiserhub.heating_channels.get_by_id(
                 self._device_id
             )
-            self._state = self._device.heating_relay_status
+            self._state = (
+                self._device.heating_relay_status
+                if self._device.heating_relay_status != TEXT_UNKNOWN
+                else self._device.demand_on_off_output
+            )
         else:
             self._device = self._data.wiserhub.hotwater
             self._state = self._device.current_state
@@ -836,10 +886,17 @@ class WiserLTSTempSensor(WiserSensor):
                 f"LTS Floor Temperature {sensor_name}",
             )
         elif sensor_type == "smokealarm_temp":
+            device = data.wiserhub.devices.get_by_id(device_id)
+            if device.room_id and (
+                room := data.wiserhub.rooms.get_by_id(device.room_id)
+            ):
+                name = f"{room.name} {device.name}  Temperature"
+            else:
+                name = f"{device.name} {device_id} Temperature"
             super().__init__(
                 data,
                 device_id,
-                f"{data.wiserhub.devices.get_by_id(device_id).name} Temperature",
+                name,
             )
         else:
             super().__init__(
@@ -1068,6 +1125,11 @@ class WiserLTSHumiditySensor(WiserSensor):
         self._state = self._data.wiserhub.devices.get_by_id(
             self._device_id
         ).current_humidity
+
+        # Set humidity to unavailable if no value
+        if self._state == 0:
+            self._state = STATE_UNAVAILABLE
+
         self.async_write_ha_state()
 
     @property
