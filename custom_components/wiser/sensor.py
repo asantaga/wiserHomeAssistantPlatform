@@ -506,9 +506,10 @@ class WiserDeviceSignalSensor(WiserSensor):
                 attrs["can_activate_pcm"] = self._device.can_activate_pcm
 
         # Other
-        device_id = self._data.wiserhub.devices.get_by_id(self._device_id).id
-        if device_id != 0:
-            attrs["device_id"] = device_id
+        device = self._data.wiserhub.devices.get_by_id(self._device_id)
+
+        if device and device.id != 0:
+            attrs["device_id"] = device.id
 
         if self._sensor_type == "RoomStat":
             attrs["humidity"] = self._data.wiserhub.devices.roomstats.get_by_id(
