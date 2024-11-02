@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.9
+# Wiser Home Assistant Integration v3.4.10
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -29,7 +29,10 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
-- v3.4.9
+- v3.4.10
+  - Fixed error loading sensors - issue #513
+
+- v3.4.9 (Pulled)
   - Fixed smoke alarm naming issue - issue #496
   - Set humidity to Unavailable if no value - issue #503
   - Add support for BoilerInterface - issue #499
