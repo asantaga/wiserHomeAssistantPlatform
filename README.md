@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.10
+# Wiser Home Assistant Integration v3.4.11
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,10 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.11
+  - Bump api to v1.5.18 to reduce Payload not completed errors
+  - Fix typo in dimable light color mode - issue #518
 
 - v3.4.10
   - Fixed error loading sensors - issue #513

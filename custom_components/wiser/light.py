@@ -198,7 +198,7 @@ class WiserDimmableLight(WiserLight):
     @property
     def color_mode(self):
         """Return color mode."""
-        return {ColorMode.BRIGHTNESS}
+        return ColorMode.BRIGHTNESS
 
     @property
     def brightness(self):

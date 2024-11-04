@@ -1,6 +1,6 @@
 {
   "name": "Drayton Wiser Integration for Home Assistant",
-  "homeassistant": "2024.2",
+  "homeassistant": "2024.9",
   "render_readme": true,
   "zip_release": true,
   "filename": "wiser.zip"
