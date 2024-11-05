@@ -66,59 +66,59 @@ WISER_COMMON_EVENT_DATA = {
 
 def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state: dict):
     for event in WISER_EVENTS:
-        if hasattr(old_state, event[CONF_ATTRIBUTE]):
-            if getattr(new_state, event[CONF_ATTRIBUTE]) and getattr(
-                old_state, event[CONF_ATTRIBUTE]
+        if (
+            hasattr(old_state, event[CONF_ATTRIBUTE])
+            and getattr(new_state, event[CONF_ATTRIBUTE])
+            and getattr(old_state, event[CONF_ATTRIBUTE])
+        ):
+            if (
+                (
+                    event[CONF_VALUE] == VALUE_DIFF
+                    and getattr(new_state, event[CONF_ATTRIBUTE])
+                    != getattr(old_state, event[CONF_ATTRIBUTE])
+                )
+                or (
+                    event[CONF_VALUE] == VALUE_INC
+                    and getattr(new_state, event[CONF_ATTRIBUTE])
+                    > getattr(old_state, event[CONF_ATTRIBUTE])
+                )
+                or (
+                    event[CONF_VALUE] == VALUE_DEC
+                    and getattr(new_state, event[CONF_ATTRIBUTE])
+                    < getattr(old_state, event[CONF_ATTRIBUTE])
+                )
+                or (
+                    getattr(old_state, event[CONF_ATTRIBUTE])
+                    != getattr(new_state, event[CONF_ATTRIBUTE])
+                    and getattr(new_state, event[CONF_ATTRIBUTE]) == event[CONF_VALUE]
+                )
             ):
-                if (
-                    (
-                        event[CONF_VALUE] == VALUE_DIFF
-                        and getattr(new_state, event[CONF_ATTRIBUTE])
-                        != getattr(old_state, event[CONF_ATTRIBUTE])
-                    )
-                    or (
-                        event[CONF_VALUE] == VALUE_INC
-                        and getattr(new_state, event[CONF_ATTRIBUTE])
-                        > getattr(old_state, event[CONF_ATTRIBUTE])
-                    )
-                    or (
-                        event[CONF_VALUE] == VALUE_DEC
-                        and getattr(new_state, event[CONF_ATTRIBUTE])
-                        < getattr(old_state, event[CONF_ATTRIBUTE])
-                    )
-                    or (
-                        getattr(old_state, event[CONF_ATTRIBUTE])
-                        != getattr(new_state, event[CONF_ATTRIBUTE])
-                        and getattr(new_state, event[CONF_ATTRIBUTE])
-                        == event[CONF_VALUE]
-                    )
-                ):
-                    message = {CONF_ENTITY_ID: entity_id, CONF_TYPE: event[CONF_TYPE]}
-                    old_state_attr = {}
-                    new_state_attr = {}
+                message = {CONF_ENTITY_ID: entity_id, CONF_TYPE: event[CONF_TYPE]}
+                old_state_attr = {}
+                new_state_attr = {}
 
-                    # Get common event data for domain and specific data for event type
-                    event_data = list(
-                        WISER_COMMON_EVENT_DATA.get(entity_id.split(".")[0], [])
-                    ) + list(event.get(CONF_EVENT_DATA, []))
+                # Get common event data for domain and specific data for event type
+                event_data = list(
+                    WISER_COMMON_EVENT_DATA.get(entity_id.split(".")[0], [])
+                ) + list(event.get(CONF_EVENT_DATA, []))
 
-                    if event_data:
-                        for attr in event_data:
-                            if hasattr(old_state, attr):
-                                old_state_attr[attr] = getattr(old_state, attr)
-                            if hasattr(new_state, attr):
-                                new_state_attr[attr] = getattr(new_state, attr)
+                if event_data:
+                    for attr in event_data:
+                        if hasattr(old_state, attr):
+                            old_state_attr[attr] = getattr(old_state, attr)
+                        if hasattr(new_state, attr):
+                            new_state_attr[attr] = getattr(new_state, attr)
 
-                        if old_state_attr:
-                            message["old_state"] = old_state_attr
+                    if old_state_attr:
+                        message["old_state"] = old_state_attr
 
-                        if new_state_attr:
-                            message["new_state"] = new_state_attr
+                    if new_state_attr:
+                        message["new_state"] = new_state_attr
 
-                    _LOGGER.debug(
-                        f"Firing wiser event with type {event[CONF_TYPE]} for {entity_id}"
-                    )
-                    hass.bus.fire(
-                        WISER_EVENT,
-                        message,
-                    )
+                _LOGGER.debug(
+                    f"Firing wiser event with type {event[CONF_TYPE]} for {entity_id}"
+                )
+                hass.bus.fire(
+                    WISER_EVENT,
+                    message,
+                )
