@@ -66,7 +66,11 @@ WISER_COMMON_EVENT_DATA = {
 
 def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state: dict):
     for event in WISER_EVENTS:
-        if hasattr(old_state, event[CONF_ATTRIBUTE]):
+        if (
+            hasattr(old_state, event[CONF_ATTRIBUTE])
+            and getattr(new_state, event[CONF_ATTRIBUTE])
+            and getattr(old_state, event[CONF_ATTRIBUTE])
+        ):
             if (
                 (
                     event[CONF_VALUE] == VALUE_DIFF

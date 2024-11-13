@@ -2,7 +2,9 @@
 
 import logging
 import os
+import pathlib
 
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 from homeassistant.components.http import StaticPathConfig
 
@@ -12,7 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class WiserCardRegistration:
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant):
         self.hass = hass
 
     async def async_register(self):
@@ -25,7 +27,10 @@ class WiserCardRegistration:
         """Register custom cards path if not already registered."""
         try:
             await self.hass.http.async_register_static_paths(
-                [StaticPathConfig(URL_BASE, "custom_components/wiser/frontend", False)]
+                [StaticPathConfig(URL_BASE, pathlib.Path(__file__).parent, False)]
+            )
+            _LOGGER.debug(
+                "Registered wiser path from %s", pathlib.Path(__file__).parent
             )
         except RuntimeError:
             # Runtime error is likley this is already registered.

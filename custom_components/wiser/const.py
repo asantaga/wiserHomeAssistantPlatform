@@ -6,7 +6,7 @@ Angelosantagata@gmail.com
 
 """
 
-VERSION = "3.4.11"
+VERSION = "3.4.12"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
