@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.11
+# Wiser Home Assistant Integration v3.4.12
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,15 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.12
+  - Fixed issue assigning schedules with non ascii characters in name - issue #509
+  - Fixed error when using HotWater climate automation - issue #517
+  - Fixed wiser http path not registering - issue #521
+  - Fixed issue causing integration to fail loading with BoilerInterface - issue #523
+  - Added support for ButtonPanel (Wiser Odace) - issue #524
+  - Bump api to v1.5.19 to resolve issues #509, #523, #524
+
 
 - v3.4.11
   - Bump api to v1.5.18 to reduce Payload not completed errors
