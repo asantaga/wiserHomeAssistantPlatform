@@ -68,8 +68,8 @@ def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state:
     for event in WISER_EVENTS:
         if (
             hasattr(old_state, event[CONF_ATTRIBUTE])
-            and getattr(new_state, event[CONF_ATTRIBUTE])
-            and getattr(old_state, event[CONF_ATTRIBUTE])
+            and getattr(new_state, event[CONF_ATTRIBUTE]) is not None
+            and getattr(old_state, event[CONF_ATTRIBUTE]) is not None
         ):
             if (
                 (
