@@ -59,6 +59,7 @@ WISER_COMMON_EVENT_DATA = {
         "current_temperature",
         "current_target_temperature",
         "is_boosted",
+        "is_heating",
         "boost_time_remaining",
     ],
 }
