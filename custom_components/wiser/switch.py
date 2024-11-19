@@ -80,12 +80,6 @@ WISER_SWITCHES = [
         "type": "system",
     },
     {
-        "name": "Summer Discomfort Prevention",
-        "key": "summer_discomfort_prevention",
-        "icon": "mdi:beach",
-        "type": "system",
-    },
-    {
         "name": "Window Detection",
         "key": "window_detection_active",
         "icon": "mdi:window-closed",
