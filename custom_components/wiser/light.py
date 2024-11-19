@@ -147,6 +147,10 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         # added by LGO
         # Hub V2  new features
 
+        if self._device.is_led_indicator_supported == True:
+            attrs["is_led_indicator_supported"] = self._device.is_led_indicator_supported
+            attrs["led_indicator"] = self._device.led_indicator            
+
         if self._device.is_output_mode_supported:
             attrs["is_output_mode_supported"] = self._device.is_output_mode_supported
             attrs["output_mode"] = self._device.output_mode
