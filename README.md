@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.12
+# Wiser Home Assistant Integration v3.4.13
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,13 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.13
+ - Added support for PowerTag C
+ - BREAKING CHANGE - refactored HW climate automation.  See wiki for how it now works
+ - Added illuminance, humidity and temp sensors to devices with threshold sensors
+ - Added support for 2 gang light switch
+ - Added interacts with room climate switch to supported devices
 
 - v3.4.12
   - Fixed issue assigning schedules with non ascii characters in name - issue #509
