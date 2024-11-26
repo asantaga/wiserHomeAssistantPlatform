@@ -73,7 +73,7 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "SmartPlug":
             return f"{ENTITY_PREFIX} {device.name}"
 
-        if device.product_type == "PowerTagE":
+        if device.product_type in ["PowerTagE", "LoadControl"]:
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["SmokeAlarmDevice", "ButtonPanel"]:
@@ -90,6 +90,8 @@ def get_device_name(data, device_id, device_type="device"):
             "OnOffLight",
             "DimmableLight",
             "WindowDoorSensor",
+            "WaterLeakageSensor",
+            "MotionLightSensor",
         ]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
