@@ -6,6 +6,9 @@ Angelosantagata@gmail.com
 
 """
 
+from enum import StrEnum
+
+
 VERSION = "3.4.12"
 DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
@@ -52,15 +55,25 @@ HOT_WATER = "Hot Water"
 NOTIFICATION_ID = "wiser_notification"
 NOTIFICATION_TITLE = "Wiser Component Setup"
 
+
+class HWCycleModes(StrEnum):
+    """HW cycle modes for HW climate automation."""
+
+    CONTINUOUS = "Continuous"
+    ONCE = "Once"
+
+
 # Default Values
 DEFAULT_BOOST_TEMP = 2
 DEFAULT_BOOST_TEMP_TIME = 60
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_SETPOINT_MODE = "normal"
 DEFAULT_PASSIVE_TEMP_INCREMENT = 0.5
-DEFAULT_HW_AUTO_MODE = "Normal"
-DEFAULT_HW_HEAT_MODE = "Normal"
-DEFAULT_HW_TARGET_TEMP = 60
+DEFAULT_HW_AUTO_MODE = HWCycleModes.CONTINUOUS
+DEFAULT_HW_HEAT_MODE = HWCycleModes.CONTINUOUS
+DEFAULT_HW_BOOST_MODE = HWCycleModes.CONTINUOUS
+HW_CLIMATE_MIN_TEMP = 40
+HW_CLIMATE_MAX_TEMP = 80
 
 # Setpoint Modes
 SETPOINT_MODE_BOOST = "boost"
@@ -75,11 +88,13 @@ CONF_HW_BOOST_TIME = "hotwater_boost_time"
 CONF_SETPOINT_MODE = "setpoint_mode"
 CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
-CONF_HW_AUTO_MODE = "hotwater_auto_mode"
-CONF_HW_CLIMATE = "hotwater_climate"
-CONF_HW_HEAT_MODE = "hotwater_heat_mode"
-CONF_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
-CONF_HW_TARGET_TEMP = "hotwater_target_temperature"
+CONF_AUTOMATIONS_HW_CLIMATE = "automations_hw_climate"
+CONF_AUTOMATIONS_HW_AUTO_MODE = "hotwater_auto_mode"
+CONF_AUTOMATIONS_HW_CLIMATE = "hotwater_climate"
+CONF_AUTOMATIONS_HW_HEAT_MODE = "hotwater_heat_mode"
+CONF_AUTOMATIONS_HW_BOOST_MODE = "hotwater_boost_mode"
+CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
+CONF_DEPRECATED_HW_TARGET_TEMP = "hotwater_target_temperature"
 
 # Custom Attributes
 ATTR_OPENTHERM_ENDPOINT = "endpoint"
@@ -121,16 +136,6 @@ WISER_BOOST_PRESETS = {
     "Boost 1h": 60,
     "Boost 2h": 120,
     "Boost 3h": 180,
-}
-
-WISER_HW_AUTO_MODES = {
-    "Normal": "Normal",
-    "Once": "Once",
-}
-
-WISER_HW_HEAT_MODES = {
-    "Normal": "Normal",
-    "Override": "Override",
 }
 
 WISER_SETPOINT_MODES = {

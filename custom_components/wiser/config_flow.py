@@ -1,68 +1,64 @@
-"""
-Config Flow for Wiser Rooms.
+"""Config Flow for Wiser Rooms.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 @msp1974
 
 """
+
+import logging
 from typing import Any
-import voluptuous as vol
-from aioWiserHeatAPI.wiserhub import WiserAPI
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from aioWiserHeatAPI.exceptions import (
-    WiserHubConnectionError,
     WiserHubAuthenticationError,
+    WiserHubConnectionError,
     WiserHubRESTError,
 )
+from aioWiserHeatAPI.wiserhub import WiserAPI
+import voluptuous as vol
 
 from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
 from homeassistant.const import (
     CONF_HOST,
-    CONF_PORT,
     CONF_NAME,
     CONF_PASSWORD,
+    CONF_PORT,
     CONF_SCAN_INTERVAL,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers.selector import (
-    selector,
     EntitySelector,
     EntitySelectorConfig,
     SelectSelectorMode,
+    selector,
 )
 
 from .const import (
+    CONF_AUTOMATIONS_HW_AUTO_MODE,
+    CONF_AUTOMATIONS_HW_BOOST_MODE,
+    CONF_AUTOMATIONS_HW_CLIMATE,
+    CONF_AUTOMATIONS_HW_HEAT_MODE,
+    CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
+    CONF_HOSTNAME,
+    CONF_HW_BOOST_TIME,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
-    CONF_HW_BOOST_TIME,
-    CONF_HOSTNAME,
-    CONF_HW_AUTO_MODE,
-    CONF_HW_CLIMATE,
-    CONF_HW_HEAT_MODE,
-    CONF_HW_SENSOR_ENTITY_ID,
-    CONF_HW_TARGET_TEMP,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
-    DEFAULT_HW_AUTO_MODE,
-    DEFAULT_HW_HEAT_MODE,
-    DEFAULT_HW_TARGET_TEMP,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    WISER_HW_AUTO_MODES,
-    WISER_HW_HEAT_MODES,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
+    HWCycleModes,
 )
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,13 +90,13 @@ async def validate_input(hass: HomeAssistant, data):
 
 
 def get_unique_id(wiser_id: str):
+    """Return unique id."""
     return str(f"{DOMAIN}-{wiser_id}")
 
 
 @config_entries.HANDLERS.register(DOMAIN)
 class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """
-    WiserFlowHandler configuration method.
+    """WiserFlowHandler configuration method.
 
     The schema version of the entries that it creates
     Home Assistant will call your migrate method if the version changes
@@ -108,6 +104,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
+    MINOR_VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self) -> None:
@@ -121,8 +118,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return WiserOptionsFlowHandler(config_entry)
 
     async def async_step_user(self, user_input=None):
-        """
-        Handle a Wiser Heat Hub config flow start.
+        """Handle a Wiser Heat Hub config flow start.
 
         Manage device specific parameters.
         """
@@ -185,7 +181,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_zeroconf_confirm()
 
     async def async_step_zeroconf_confirm(
-        self, user_input: dict[str, Any] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle a confirmation flow initiated by zeroconf."""
         errors = {}
@@ -243,94 +239,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_automation_params(self, user_input=None):
-        if user_input is not None:
-            options = self.config_entry.options | user_input
-            return self.async_create_entry(data=options)
-
-        data_schema = {
-            vol.Optional(
-                CONF_AUTOMATIONS_PASSIVE,
-                default=self.config_entry.options.get(CONF_AUTOMATIONS_PASSIVE, False),
-            ): bool,
-            vol.Optional(
-                CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-                default=self.config_entry.options.get(
-                    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-                    DEFAULT_PASSIVE_TEMP_INCREMENT,
-                ),
-            ): selector(
-                {
-                    "number": {
-                        "min": 0.5,
-                        "max": 20,
-                        "step": 0.5,
-                        "unit_of_measurement": "°C",
-                        "mode": "box",
-                    }
-                }
-            ),
-        }
-        return self.async_show_form(
-            step_id="automation_params", data_schema=vol.Schema(data_schema)
-        )
-
-    async def async_step_hw_climate_params(self, user_input=None):
-        if user_input is not None:
-            options = self.config_entry.options | user_input
-            return self.async_create_entry(data=options)
-
-        data_schema = {
-            vol.Optional(
-                CONF_HW_CLIMATE,
-                default=self.config_entry.options.get(CONF_HW_CLIMATE, False),
-            ): bool,
-            vol.Optional(
-                CONF_HW_SENSOR_ENTITY_ID,
-                default=self.config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID),
-            ): EntitySelector(
-                EntitySelectorConfig(
-                    domain=["sensor", "number", "input_number"],
-                    device_class="temperature",
-                    multiple=False,
-                )
-            ),
-            vol.Optional(
-                CONF_HW_AUTO_MODE,
-                default=self.config_entry.options.get(
-                    CONF_HW_AUTO_MODE, list(WISER_HW_AUTO_MODES.values())[0]
-                ),
-            ): selector(
-                {
-                    "select": {
-                        "options": list(WISER_HW_AUTO_MODES.values()),
-                        "mode": SelectSelectorMode.DROPDOWN,
-                    }
-                }
-            ),
-            vol.Optional(
-                CONF_HW_HEAT_MODE,
-                default=self.config_entry.options.get(
-                    CONF_HW_HEAT_MODE, list(WISER_HW_HEAT_MODES.values())[0]
-                ),
-            ): selector(
-                {
-                    "select": {
-                        "options": list(WISER_HW_HEAT_MODES.values()),
-                        "mode": SelectSelectorMode.DROPDOWN,
-                    }
-                }
-            ),
-            vol.Optional(
-                CONF_HW_TARGET_TEMP,
-                default=self.config_entry.options.get(
-                    CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
-                ),
-            ): int,
-        }
-
-        return self.async_show_form(
-            step_id="hw_climate_params", data_schema=vol.Schema(data_schema)
+    async def async_step_init(self, user_input=None):
+        """Handle options flow."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["main_params", "automation_params"],
         )
 
     async def async_step_main_params(self, user_input=None):
@@ -412,11 +325,115 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="main_params", data_schema=vol.Schema(data_schema)
         )
 
-    async def async_step_init(self, user_input=None):
-        """Handle options flow."""
-        return self.async_show_menu(
-            step_id="init",
-            menu_options=["main_params", "hw_climate_params", "automation_params"],
+    async def async_step_automation_params(self, user_input=None):
+        """Automation options."""
+        if user_input is not None:
+            options = self.config_entry.options | user_input
+            return self.async_create_entry(data=options)
+
+        options = self.config_entry.options
+
+        data_schema = {
+            vol.Required(CONF_AUTOMATIONS_PASSIVE): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_AUTOMATIONS_PASSIVE,
+                            default=options.get(CONF_AUTOMATIONS_PASSIVE, {}).get(
+                                CONF_AUTOMATIONS_PASSIVE
+                            ),
+                        ): bool,
+                        vol.Optional(
+                            CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                            default=options.get(CONF_AUTOMATIONS_PASSIVE, {}).get(
+                                CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                                DEFAULT_PASSIVE_TEMP_INCREMENT,
+                            ),
+                        ): selector(
+                            {
+                                "number": {
+                                    "min": 0.5,
+                                    "max": 20,
+                                    "step": 0.5,
+                                    "unit_of_measurement": UnitOfTemperature.CELSIUS,
+                                    "mode": "box",
+                                }
+                            }
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            ),
+            vol.Required(CONF_AUTOMATIONS_HW_CLIMATE): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_CLIMATE,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_CLIMATE, False
+                            ),
+                        ): bool,
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID
+                            ),
+                        ): EntitySelector(
+                            EntitySelectorConfig(
+                                domain=["sensor", "number", "input_number"],
+                                device_class="temperature",
+                                multiple=False,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_AUTO_MODE,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_AUTO_MODE,
+                                HWCycleModes.CONTINUOUS,
+                            ),
+                        ): selector(
+                            {
+                                "select": {
+                                    "options": list(HWCycleModes),
+                                    "mode": SelectSelectorMode.DROPDOWN,
+                                }
+                            }
+                        ),
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_HEAT_MODE,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_HEAT_MODE,
+                                HWCycleModes.CONTINUOUS,
+                            ),
+                        ): selector(
+                            {
+                                "select": {
+                                    "options": list(HWCycleModes),
+                                    "mode": SelectSelectorMode.DROPDOWN,
+                                }
+                            }
+                        ),
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_BOOST_MODE,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_BOOST_MODE,
+                                HWCycleModes.CONTINUOUS,
+                            ),
+                        ): selector(
+                            {
+                                "select": {
+                                    "options": list(HWCycleModes),
+                                    "mode": SelectSelectorMode.DROPDOWN,
+                                }
+                            }
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            ),
+        }
+        return self.async_show_form(
+            step_id="automation_params", data_schema=vol.Schema(data_schema)
         )
 
 
