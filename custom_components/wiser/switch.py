@@ -4,6 +4,7 @@ Switch  Platform Device for Wiser Rooms.
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 """
+
 import asyncio
 import logging
 import voluptuous as vol
@@ -173,6 +174,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             [
                 WiserSmartPlugSwitch(data, plug.id, f"Wiser {plug.name}"),
                 WiserSmartPlugAwayActionSwitch(data, plug.id, f"Wiser {plug.name}"),
+            ]
+        )
+
+    # Add PTCs
+    for ptc in data.wiserhub.devices.power_tags_c.all:
+        wiser_switches.extend(
+            [
+                WiserSmartPlugSwitch(data, ptc.id, f"Wiser {ptc.name}"),
+                WiserSmartPlugAwayActionSwitch(data, ptc.id, f"Wiser {ptc.name}"),
             ]
         )
 
