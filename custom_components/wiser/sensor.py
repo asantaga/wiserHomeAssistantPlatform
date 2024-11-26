@@ -18,6 +18,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
+    LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTemperature,
@@ -35,6 +36,7 @@ from aioWiserHeatAPI.wiserhub import TEMP_OFF
 from .const import (
     DATA,
     DOMAIN,
+    HOT_WATER,
     MANUFACTURER,
     SIGNAL_STRENGTH_ICONS,
     VERSION,
@@ -63,6 +65,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 wiser_sensors.append(
                     WiserBatterySensor(data, device.id, sensor_type="Battery")
                 )
+
+            # Add threshold temp sensors
+            if hasattr(device, "threshold_sensors"):
+                for threshold_sensor in getattr(device, "threshold_sensors"):
+                    if threshold_sensor.quantity == "Temperature":
+                        wiser_sensors.append(
+                            WiserThresholdTempSensor(
+                                data, device.id, "threshold_temp", threshold_sensor.id
+                            )
+                        )
+                    elif threshold_sensor.quantity == "Humidity":
+                        wiser_sensors.append(
+                            WiserThresholdHumiditySensor(
+                                data,
+                                device.id,
+                                "threshold_humidity",
+                                threshold_sensor.id,
+                            )
+                        )
+                    elif threshold_sensor.quantity == "LightLevel":
+                        wiser_sensors.append(
+                            WiserThresholdLightLevelSensor(
+                                data,
+                                device.id,
+                                "threshold_lightlevel",
+                                threshold_sensor.id,
+                            )
+                        )
 
     # Add cloud status sensor
     _LOGGER.debug("Setting up Cloud sensor")
@@ -214,12 +244,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 class WiserSensor(CoordinatorEntity, SensorEntity):
     """Definition of a Wiser sensor."""
 
-    def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
+    def __init__(
+        self, coordinator, device_id=0, sensor_type="", ancillary_sensor_id: int = 0
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
         self._device = None
         self._device_id = device_id
+        self._ancillary_sensor_id = ancillary_sensor_id
         self._device_name = None
         self._sensor_type = sensor_type
         self._state = None
@@ -582,6 +615,26 @@ class WiserSystemHotWaterPreset(WiserSensor):
         """Return icon."""
         return "mdi:water-boiler"
 
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(
+                self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+            ),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(
+                        self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                    ),
+                )
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
 
 class WiserSystemCircuitState(WiserSensor):
     """Definition of a Hotwater/Heating circuit state sensor."""
@@ -670,6 +723,28 @@ class WiserSystemCircuitState(WiserSensor):
                 attrs["next_schedule_datetime"] = str(hw.schedule.next.datetime)
                 attrs["next_schedule_state"] = hw.schedule.next.setting
         return attrs
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        if self._sensor_type == "Heating":
+            return super().device_info
+        return {
+            "name": get_device_name(
+                self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+            ),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(
+                        self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                    ),
+                )
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
 
 class WiserSystemCloudSensor(WiserSensor):
@@ -864,7 +939,9 @@ class WiserSmartplugPower(WiserSensor):
 class WiserLTSTempSensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
 
-    def __init__(self, data, device_id, sensor_type="") -> None:
+    def __init__(
+        self, data, device_id, sensor_type="", ancillary_sensor_id: int = 0
+    ) -> None:
         """Initialise the operation mode sensor."""
         self._lts_sensor_type = sensor_type
         if sensor_type == "current_temp":
@@ -899,6 +976,8 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 name,
             )
+        elif sensor_type == "threshold_temp":
+            super().__init__(data, device_id, "Temperature", ancillary_sensor_id)
         else:
             super().__init__(
                 data,
@@ -922,6 +1001,12 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).current_temperature
+        elif self._lts_sensor_type == "threshold_temp":
+            for th_sensor in self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).threshold_sensors:
+                if th_sensor.id == self._ancillary_sensor_id:
+                    self._state = th_sensor.current_value
         else:
             if (
                 self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
@@ -940,7 +1025,11 @@ class WiserLTSTempSensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        if self._lts_sensor_type in ["floor_current_temp", "smokealarm_temp"]:
+        if self._lts_sensor_type in [
+            "floor_current_temp",
+            "smokealarm_temp",
+            "threshold_temp",
+        ]:
             return {
                 "name": get_device_name(self._data, self._device_id),
                 "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
@@ -1111,7 +1200,9 @@ class WiserLTSOpenthermSensor(WiserSensor):
 class WiserLTSHumiditySensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
 
-    def __init__(self, data, device_id) -> None:
+    def __init__(
+        self, data, device_id, sensor_type="", ancillary_sensor_id: int = 0
+    ) -> None:
         """Initialise the LTS Humidity."""
         super().__init__(
             data,
@@ -1218,18 +1309,35 @@ class WiserLTSDemandSensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        if self._lts_sensor_type in ["heating", "hotwater"]:
+        if self._lts_sensor_type == "heating":
             return super().device_info
-        else:
+        if self._lts_sensor_type == "hotwater":
             return {
-                "name": get_device_name(self._data, self._device_id, "room"),
+                "name": get_device_name(
+                    self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+                ),
                 "identifiers": {
-                    (DOMAIN, get_identifier(self._data, self._device_id, "room"))
+                    (
+                        DOMAIN,
+                        get_identifier(
+                            self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                        ),
+                    )
                 },
                 "manufacturer": MANUFACTURER,
-                "model": "Room",
+                "model": HOT_WATER.title(),
                 "via_device": (DOMAIN, self._data.wiserhub.system.name),
             }
+
+        return {
+            "name": get_device_name(self._data, self._device_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._device_id, "room"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": "Room",
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
     @property
     def icon(self):
@@ -1404,3 +1512,98 @@ class WiserLTSPowerSensor(WiserSensor):
             return UnitOfPower.WATT
         else:
             return UnitOfEnergy.KILO_WATT_HOUR
+
+
+class WiserThresholdSensor(WiserSensor):
+    """Sensor for threshold devices"""
+
+    def __init__(
+        self, data, device_id, sensor_type="", ancillary_sensor_id: int = 0
+    ) -> None:
+        super().__init__(data, device_id, sensor_type, ancillary_sensor_id)
+        self._device = data.wiserhub.devices.get_by_id(device_id)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    @property
+    def state(self) -> float:
+        """Return the state of the entity."""
+        for th_sensor in self._data.wiserhub.devices.get_by_id(
+            self._device_id
+        ).threshold_sensors:
+            if th_sensor.id == self._ancillary_sensor_id:
+                return th_sensor.current_value
+        return TEXT_UNKNOWN
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+
+class WiserThresholdLightLevelSensor(WiserThresholdSensor):
+    """Sensor for light level of threshold devices"""
+
+    @property
+    def device_class(self):
+        """Return sensor device class"""
+        return SensorDeviceClass.ILLUMINANCE
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} Light Level"
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return LIGHT_LUX
+
+
+class WiserThresholdTempSensor(WiserThresholdSensor):
+    """Sensor for temp of threshold devices"""
+
+    @property
+    def device_class(self):
+        """Return sensor device class"""
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} Temperature"
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return UnitOfTemperature.CELSIUS
+
+
+class WiserThresholdHumiditySensor(WiserSensor):
+    """Sensor for humidity level of threshold devices"""
+
+    @property
+    def device_class(self):
+        """Return sensor device class"""
+        return SensorDeviceClass.HUMIDITY
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_device_name(self._data, self._device_id)} Humidity"
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return PERCENTAGE
