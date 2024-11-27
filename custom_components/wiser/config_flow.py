@@ -340,7 +340,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         vol.Optional(
                             CONF_AUTOMATIONS_PASSIVE,
                             default=options.get(CONF_AUTOMATIONS_PASSIVE, {}).get(
-                                CONF_AUTOMATIONS_PASSIVE
+                                CONF_AUTOMATIONS_PASSIVE, False
                             ),
                         ): bool,
                         vol.Optional(
