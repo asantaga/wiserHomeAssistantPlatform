@@ -744,7 +744,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._boost_keep_cycling: bool = True
         # Prevent hot water turning on if in heat mode at restart
         # requires manual turn on to start if not already on
-        if self.hvac_mode == HVACMode.HEAT and not self._hotwater.is_heating:
+        if self.hvac_mode == HVACMode.HEAT and not self._hotwater.manual_heat:
             self._keep_cycling = False
 
         _LOGGER.debug("%s %s initiliase", self._data.wiserhub.system.name, self.name)
@@ -799,10 +799,9 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             ):
                 # Reset in auto mode when schedule state is off
                 self._keep_cycling = True
-            elif (
-                self.hvac_mode == HVACMode.HEAT
-                and not previous_hotwater_values.is_heating
-                and self.hotwater.is_heating
+            elif self.hvac_mode == HVACMode.HEAT and (
+                (not previous_hotwater_values.is_heating and self.hotwater.is_heating)
+                or self.hotwater.manual_heat
             ):
                 # Reset in heat mode if turned on manually
                 self._keep_cycling = True
@@ -1025,19 +1024,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         return PASSIVE_MODE_SUPPORT_FLAGS
 
     async def run_automation(self) -> bool:
-        """Run HW climate automation."""
-
-        updated = False
-
-        def keep_cycling(mode: str):
-            """Return if keep cycling for mode."""
-            if mode == "boost":
-                return self._boost_keep_cycling
-            return self._keep_cycling
-
-        if self.hvac_mode == HVACMode.OFF:
-            return updated
-
+        """Run HW Climate automation."""
         _LOGGER.debug("---------------------------------------------")
         _LOGGER.debug("Running HW climate automation")
 
@@ -1047,85 +1034,84 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
         _LOGGER.debug("Running automation for %s mode", mode)
 
+        updated = False
+        should_heat = self.hotwater.is_heating
+
+        # Reasons it shoudl heat
+        if self.current_temperature <= self.target_temperature_low or (
+            self.current_temperature <= self.target_temperature_high
+            and self.hotwater.is_heating
+        ):
+            should_heat = True
+
+        # Now all reasons it should not heat
+        if self.hvac_mode == HVACMode.OFF:
+            # HW is off.  Just return here as if turned on by app or hub, will go
+            # into manual mode.
+            return False
+
+        if not self.hotwater.is_boosted:
+            # Boost overrides all other mode settings
+
+            if self.hvac_mode == HVACMode.HEAT:
+                # Manual mode heat is set to off
+                if not self.hotwater.manual_heat:
+                    should_heat = False
+            elif self.hvac_mode == HVACMode.AUTO:
+                # Schedule is set to off
+                if self.hotwater.schedule.current_setting == "Off":
+                    should_heat = False
+
+        # Cycle override - is set to once in heat mode
+        if not self._keep_cycling:
+            should_heat = False
+
+        # High temp override - has reached target high temp
+        if self.current_temperature >= self.target_temperature_high:
+            should_heat = False
+
         _LOGGER.debug(
-            "Status: is_heating: %s, is_boosted: %s, target_high: %s, target_low: %s, current: %s, schedule: %s",
+            "Status: is_heating: %s, is_boosted: %s, target_high: %s, target_low: %s, current: %s, schedule: %s, manual_heat: %s, keep_cycling: %s, should_heat: %s",
             self.hotwater.is_heating,
             self.hotwater.is_boosted,
             self.target_temperature_high,
             self.target_temperature_low,
             self.current_temperature,
             self.hotwater.schedule.current_setting,
+            self.hotwater.manual_heat,
+            self._keep_cycling,
+            should_heat,
         )
 
-        # If not current temp, do not run.  SHould we stop all heating??
-        if self.current_temperature in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
-            _LOGGER.debug("No current temp - exiting routine")
-            return updated
-
-        # In auto if schedule is off then ensure off
-        if mode == HVACMode.AUTO and self.hotwater.schedule.current_setting == "Off":
-            _LOGGER.debug("Schedule is set to off")
-            if self.hotwater.is_heating:
-                _LOGGER.debug("Turning hw heating off")
-                await self.hotwater.cancel_overrides()
-                updated = True
-            return updated
-
-        if self.current_temperature >= self.target_temperature_high:
-            if self.hotwater.is_heating:
-                _LOGGER.debug("Current temp is at or above high target - turning off")
-                if mode == "boost":
+        # Now turn on or off based on value of should heat
+        if self.hotwater.is_heating is True and should_heat is False:
+            if self.hotwater.is_boosted:
+                if getattr(self._data, "hw_boost_mode") == HWCycleModes.ONCE:
+                    self._keep_cycling = False
+                    await self.hotwater.cancel_boost()
+                else:
                     await self.hotwater.override_boost("Off")
-                else:
-                    await self.hotwater.override_state("Off")
-                updated = True
-
-                if getattr(self._data, f"hw_{mode}_mode") == HWCycleModes.ONCE:
-                    if mode == "boost":
-                        _LOGGER.debug("HW %s is in once mode - cancelling boost", mode)
-                        self._boost_keep_cycling = False
-                        await self.hotwater.cancel_boost()
-                        updated = True
-                    else:
-                        _LOGGER.debug("HW %s is in once mode - stopping cycle", mode)
-                        self._keep_cycling = False
-                elif mode == "boost":
-                    self._boost_keep_cycling = True
-                else:
-                    self._keep_cycling = True
             else:
-                _LOGGER.debug("Current temp is at or above high target - no action")
-
-        elif (
-            keep_cycling(mode)
-            and self.current_temperature <= self.target_temperature_low
-        ):
-            if not self.hotwater.is_heating:
-                _LOGGER.debug("Current temp is below low target - turning on")
-                if mode == "boost":
-                    await self.hotwater.override_boost("On")
-                elif (
-                    mode == HVACMode.AUTO
-                    and self.hotwater.schedule.current_setting == "On"
+                if (
+                    getattr(self._data, f"hw_{self.hvac_mode}_mode")
+                    == HWCycleModes.ONCE
                 ):
-                    await self.hotwater.cancel_overrides()
-                else:
-                    await self.hotwater.override_state("On")
-                updated = True
+                    # Auto and Heat mode
+                    self._keep_cycling = False
+
+                    # Heat mode - reset manual heat
+                    if self.hvac_mode == HVACMode.HEAT:
+                        await self.hotwater.set_manual_heat(False)
+
+                await self.hotwater.override_state("Off")
+            updated = True
+
+        if self.hotwater.is_heating is False and should_heat is True:
+            if self.hotwater.is_boosted:
+                await self.hotwater.override_boost("On")
             else:
-                _LOGGER.debug("Current temp is below low target - no action")
-        elif (
-            keep_cycling(mode) is False
-            and self.current_temperature <= self.target_temperature_low
-        ):
-            _LOGGER.debug(
-                "Current temp is below low target but cycle mode set to once and already ran - no action"
-            )
-        else:
-            _LOGGER.debug(
-                "Current temp is between target low and target high - no action"
-            )
-        _LOGGER.debug("---------------------------------------------")
+                await self.hotwater.override_state("On")
+            updated = True
 
         if updated:
             await self.async_force_update()
