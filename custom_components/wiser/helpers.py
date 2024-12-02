@@ -92,6 +92,7 @@ def get_device_name(data, device_id, device_type="device"):
             "WindowDoorSensor",
             "WaterLeakageSensor",
             "MotionLightSensor",
+            "TemperatureHumiditySensor",
         ]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
