@@ -1515,7 +1515,7 @@ class WiserLTSPowerSensor(WiserSensor):
 
 
 class WiserThresholdSensor(WiserSensor):
-    """Sensor for threshold devices"""
+    """Sensor for threshold devices."""
 
     def __init__(
         self, data, device_id, sensor_type="", ancillary_sensor_id: int = 0
@@ -1553,11 +1553,11 @@ class WiserThresholdSensor(WiserSensor):
 
 
 class WiserThresholdLightLevelSensor(WiserThresholdSensor):
-    """Sensor for light level of threshold devices"""
+    """Sensor for light level of threshold devices."""
 
     @property
     def device_class(self):
-        """Return sensor device class"""
+        """Return sensor device class."""
         return SensorDeviceClass.ILLUMINANCE
 
     @property
@@ -1572,11 +1572,11 @@ class WiserThresholdLightLevelSensor(WiserThresholdSensor):
 
 
 class WiserThresholdTempSensor(WiserThresholdSensor):
-    """Sensor for temp of threshold devices"""
+    """Sensor for temp of threshold devices."""
 
     @property
     def device_class(self):
-        """Return sensor device class"""
+        """Return sensor device class."""
         return SensorDeviceClass.TEMPERATURE
 
     @property
@@ -1590,12 +1590,12 @@ class WiserThresholdTempSensor(WiserThresholdSensor):
         return UnitOfTemperature.CELSIUS
 
 
-class WiserThresholdHumiditySensor(WiserSensor):
-    """Sensor for humidity level of threshold devices"""
+class WiserThresholdHumiditySensor(WiserThresholdSensor):
+    """Sensor for humidity level of threshold devices."""
 
     @property
     def device_class(self):
-        """Return sensor device class"""
+        """Return sensor device class."""
         return SensorDeviceClass.HUMIDITY
 
     @property
