@@ -30,9 +30,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             [
                 WiserBoostHotWaterButton(data),
                 WiserCancelHotWaterOverridesButton(data),
-                WiserOverrideHotWaterButton(data),
             ]
         )
+        if not data.enable_hw_climate:
+            wiser_buttons.append(WiserOverrideHotWaterButton(data))
 
     if data.wiserhub.moments:
         _LOGGER.debug("Setting up Moments buttons")
