@@ -209,6 +209,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                             f"Wiser {device.name}",
                             is_threshold=True,
                             ancillary_sensor_id=threshold_sensor.id,
+                            ancillary_sensor_type=threshold_sensor.quantity,
                         ),
                     ]
                 )
@@ -874,12 +875,14 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         name,
         is_threshold: bool = False,
         ancillary_sensor_id: int = 0,
+        ancillary_sensor_type: str | None = None,
     ) -> None:
         """Initialize the sensor."""
         self._name = name
         self._device_id = device_id
         self._is_threshold = is_threshold
         self._ancillary_sensor_id = ancillary_sensor_id
+        self._ancillary_sensor_type = ancillary_sensor_type
         super().__init__(data, name, "", "interactsroomclimate", "mdi:sofa")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
 
@@ -889,6 +892,16 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        uid = get_unique_id(
+            self._data, self._device.product_type, self.name, self._device_id
+        )
+        return (
+            f"{uid}_{self._ancillary_sensor_id}" if self._ancillary_sensor_id else uid
+        )
 
     @property
     def is_on(self) -> bool:
@@ -906,6 +919,8 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
+        if self._ancillary_sensor_type:
+            return f"{get_device_name(self._data, self._device_id)} {self._ancillary_sensor_type} Interacts With Room Climate"
         return f"{get_device_name(self._data, self._device_id)} Interacts With Room Climate"
 
     @property
