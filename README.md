@@ -38,7 +38,9 @@ For more information checkout the AMAZING community thread available on
  - Fixed support for Binary sensors with threshold sensors - issue #530
  - Fixed incompatibility with Python3.13 and HA2024.12 - issue #535
  - Fixed events not correctly firing for climate changes - issue #526
+ - Fixed error when saving schedule with an off slot - issue #536
  - Changed all hot water related sensors to now belong to a hot water device
+ - Bumped aiowiserheatapi to v1.6.3
 
 - v3.4.12
   - Fixed issue assigning schedules with non ascii characters in name - issue #509
