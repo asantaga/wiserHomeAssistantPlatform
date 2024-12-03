@@ -30,11 +30,14 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.13
- - Added support for PowerTag C
- - BREAKING CHANGE - refactored HW climate automation.  See wiki for how it now works
- - Added illuminance, humidity and temp sensors to devices with threshold sensors
- - Added support for 2 gang light switch
+ - Added support for PowerTag C - issue #528
+ - BREAKING CHANGE - refactored HW climate automation - issues #481, #490.  See wiki for updated instructions
+ - Added illuminance, humidity and temp sensors to devices with threshold sensors - issue #531
+ - Added support for 2 gang light switch - issue #529
  - Added interacts with room climate switch to supported devices
+ - Fixed support for Binary sensors with threshold sensors - issue #530
+ - Fixed incompatibility with Python3.13 and HA2024.12 - issue #535
+ - Fixed events not correctly firing for climate changes - issue #526
 
 - v3.4.12
   - Fixed issue assigning schedules with non ascii characters in name - issue #509
