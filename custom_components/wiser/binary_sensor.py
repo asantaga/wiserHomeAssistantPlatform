@@ -124,7 +124,7 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self._device_id)
+        return get_unique_id(self._data, "binary_sensor", self._sensor_type, self.name)
 
     @property
     def device_info(self):

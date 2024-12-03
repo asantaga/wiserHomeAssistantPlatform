@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.12
+# Wiser Home Assistant Integration v3.4.13
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,19 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.13
+ - Added support for PowerTag C - issue #528
+ - BREAKING CHANGE - refactored HW climate automation - issues #481, #490.  See wiki for updated instructions
+ - Added illuminance, humidity and temp sensors to devices with threshold sensors - issue #531
+ - Added support for 2 gang light switch - issue #529
+ - Added interacts with room climate switch to supported devices
+ - Fixed support for Binary sensors with threshold sensors - issue #530
+ - Fixed incompatibility with Python3.13 and HA2024.12 - issue #535
+ - Fixed events not correctly firing for climate changes - issue #526
+ - Fixed error when saving schedule with an off slot - issue #536
+ - Changed all hot water related sensors to now belong to a hot water device
+ - Bumped aiowiserheatapi to v1.6.3
 
 - v3.4.12
   - Fixed issue assigning schedules with non ascii characters in name - issue #509

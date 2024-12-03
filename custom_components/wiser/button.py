@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,15 +30,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             [
                 WiserBoostHotWaterButton(data),
                 WiserCancelHotWaterOverridesButton(data),
-                WiserOverrideHotWaterButton(data),
             ]
         )
+        if not data.enable_hw_climate:
+            wiser_buttons.append(WiserOverrideHotWaterButton(data))
 
     if data.wiserhub.moments:
         _LOGGER.debug("Setting up Moments buttons")
-        wiser_buttons.extend([
-            WiserMomentsButton(data, moment.id) for moment in data.wiserhub.moments.all
-        ])
+        wiser_buttons.extend(
+            [
+                WiserMomentsButton(data, moment.id)
+                for moment in data.wiserhub.moments.all
+            ]
+        )
 
     async_add_entities(wiser_buttons, True)
 
@@ -147,6 +151,26 @@ class WiserBoostHotWaterButton(WiserButton):
         """Return icon."""
         return "mdi:water-plus"
 
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(
+                self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+            ),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(
+                        self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                    ),
+                )
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
 
 class WiserCancelHotWaterOverridesButton(WiserButton):
     """Class to handle cancel hot water overrides button."""
@@ -165,6 +189,26 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
     def icon(self):
         """Return icon."""
         return "mdi:water-off"
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(
+                self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+            ),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(
+                        self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                    ),
+                )
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
 
 class WiserOverrideHotWaterButton(WiserButton):
@@ -186,6 +230,26 @@ class WiserOverrideHotWaterButton(WiserButton):
     def icon(self):
         """Return icon."""
         return "mdi:water-boiler"
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(
+                self._data, self._data.wiserhub.hotwater.id, "Hot Water"
+            ),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(
+                        self._data, self._data.wiserhub.hotwater.id, "hot_water"
+                    ),
+                )
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
 
 
 class WiserMomentsButton(WiserButton):

@@ -4,6 +4,7 @@ Switch  Platform Device for Wiser Rooms.
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
 """
+
 import asyncio
 import logging
 import voluptuous as vol
@@ -14,7 +15,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
 from .helpers import (
     get_device_name,
     get_identifier,
@@ -176,6 +177,43 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
 
+    # Add PTCs
+    for ptc in data.wiserhub.devices.power_tags_c.all:
+        wiser_switches.extend(
+            [
+                WiserSmartPlugSwitch(data, ptc.id, f"Wiser {ptc.name}"),
+                WiserSmartPlugAwayActionSwitch(data, ptc.id, f"Wiser {ptc.name}"),
+            ]
+        )
+
+    # Add threshold sensor interacts with room climate switch
+    for device in data.wiserhub.devices.all:
+        if hasattr(device, "interacts_with_room_climate"):
+            wiser_switches.extend(
+                [
+                    WiserInteractsRoomClimateSwitch(
+                        data,
+                        device.id,
+                        f"Wiser {device.name}",
+                        is_threshold=False,
+                    ),
+                ]
+            )
+        if hasattr(device, "threshold_sensors"):
+            for threshold_sensor in getattr(device, "threshold_sensors"):
+                wiser_switches.extend(
+                    [
+                        WiserInteractsRoomClimateSwitch(
+                            data,
+                            device.id,
+                            f"Wiser {device.name}",
+                            is_threshold=True,
+                            ancillary_sensor_id=threshold_sensor.id,
+                            ancillary_sensor_type=threshold_sensor.quantity,
+                        ),
+                    ]
+                )
+
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
         for room in data.wiserhub.rooms.all:
@@ -185,6 +223,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         hass, data, room.id, f"Wiser Passive Mode {room.name}"
                     )
                 )
+
+    # Add hw climate switches
+    if data.enable_hw_climate:
+        wiser_switches.append(WiserHWClimateManualHeatSwitch(data, 0, "Manual Heat"))
 
     async_add_entities(wiser_switches)
 
@@ -825,3 +867,162 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         await self._shutter.set_respect_summer_comfort("false")
         await self.async_force_update()
         return True
+
+
+class WiserInteractsRoomClimateSwitch(WiserSwitch):
+    """Shutter Respect Summer Comfort Class."""
+
+    def __init__(
+        self,
+        data,
+        device_id,
+        name,
+        is_threshold: bool = False,
+        ancillary_sensor_id: int = 0,
+        ancillary_sensor_type: str | None = None,
+    ) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._device_id = device_id
+        self._is_threshold = is_threshold
+        self._ancillary_sensor_id = ancillary_sensor_id
+        self._ancillary_sensor_type = ancillary_sensor_type
+        super().__init__(data, name, "", "interactsroomclimate", "mdi:sofa")
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        uid = get_unique_id(
+            self._data, self._device.product_type, self.name, self._device_id
+        )
+        return (
+            f"{uid}_{self._ancillary_sensor_id}" if self._ancillary_sensor_id else uid
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the entity."""
+        if self._is_threshold:
+            for th_sensor in self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).threshold_sensors:
+                if th_sensor.id == self._ancillary_sensor_id:
+                    return th_sensor.interacts_with_room_climate
+        else:
+            return self._device.interacts_with_room_climate
+        return False
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        if self._ancillary_sensor_type:
+            return f"{get_device_name(self._data, self._device_id)} {self._ancillary_sensor_type} Interacts With Room Climate"
+        return f"{get_device_name(self._data, self._device_id)} Interacts With Room Climate"
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the respect summer comfort on."""
+        if self._is_threshold:
+            for th_sensor in self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).threshold_sensors:
+                if th_sensor.id == self._ancillary_sensor_id:
+                    await th_sensor.set_interacts_with_room_climate(True)
+                    await self.async_force_update()
+                    return True
+        else:
+            await self._device.set_interacts_with_room_climate(True)
+        return False
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the respect summer comfort off."""
+        if self._is_threshold:
+            for th_sensor in self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).threshold_sensors:
+                if th_sensor.id == self._ancillary_sensor_id:
+                    await th_sensor.set_interacts_with_room_climate(False)
+                    await self.async_force_update()
+                    return True
+        else:
+            await self._device.set_interacts_with_room_climate(False)
+        return False
+
+
+class WiserHWClimateManualHeatSwitch(WiserSwitch):
+    """Class for HW Climate Manual Heating Switch."""
+
+    def __init__(
+        self,
+        data,
+        device_id,
+        name,
+    ) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._device_id = device_id
+        self._hotwater = data.wiserhub.hotwater
+        super().__init__(data, name, "", "hwclimatemanualheat", "mdi:sofa")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._hotwater = self._data.wiserhub.hotwater
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the entity."""
+        return self._hotwater.manual_heat
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return get_device_name(self._data, self._hotwater.id, "Manual Heat")
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._hotwater.id, "Hot Water"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._hotwater.id, "hot_water"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn on hw climate manual heat."""
+        await self._data.wiserhub.hotwater.set_manual_heat(True)
+        await self.async_force_update()
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn off hw climate manual heat."""
+        await self._data.wiserhub.hotwater.set_manual_heat(False)
+        await self.async_force_update()

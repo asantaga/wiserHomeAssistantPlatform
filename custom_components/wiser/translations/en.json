@@ -57,23 +57,30 @@
           "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature"
         }
       },
-      "hw_climate_params": {
-        "title": "Wiser Integration Options",
-        "description": "Hot Water Climate Parameters",
-        "data": {
-          "hotwater_climate": "Enable The Climate Entity",
-          "hotwater_auto_mode": "Hot Water Auto Mode",
-          "hotwater_heat_mode": "Hot Water Heat Mode",
-          "hotwater_sensor_entity_id": "Hot Water Temperature Sensor",
-          "hotwater_target_temperature": "Default Hot Water Target Temperature (°C)"
-        }
-      },
       "automation_params": {
         "title": "Wiser Integration Options",
         "description": "Enable in-built automations",
-        "data": {
-          "automations_passive_mode": "Passive Mode",
-          "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
+        "sections" : {
+          "automations_passive_mode": {
+            "name": "Passive Mode",
+            "description": "Enable passive TRV capability.  Each room needs to be enabled for it to function",
+            "data": {
+              "automations_passive_mode": "Passive Mode",
+              "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Hot Water Climate Control",
+            "description": "Enable Hot Water climate control.  See wiki for how it works",
+            "data": {
+              "hotwater_climate": "Enable The Climate Entity",
+              "hotwater_auto_mode": "Hot Water Auto Mode",
+              "hotwater_heat_mode": "Hot Water Heat Mode",
+              "hotwater_boost_mode": "Hot Water Boost Mode",
+              "hotwater_sensor_entity_id": "Hot Water Temperature Sensor",
+              "hotwater_target_temperature": "Default Hot Water Target Temperature (°C)"
+            }
+          }
         }
       }
     }

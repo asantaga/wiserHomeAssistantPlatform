@@ -24,27 +24,27 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    CONF_AUTOMATIONS_HW_AUTO_MODE,
+    CONF_AUTOMATIONS_HW_BOOST_MODE,
+    CONF_AUTOMATIONS_HW_CLIMATE,
+    CONF_AUTOMATIONS_HW_HEAT_MODE,
+    CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
-    CONF_HW_AUTO_MODE,
     CONF_HW_BOOST_TIME,
-    CONF_HW_CLIMATE,
-    CONF_HW_HEAT_MODE,
-    CONF_HW_SENSOR_ENTITY_ID,
-    CONF_HW_TARGET_TEMP,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_HW_AUTO_MODE,
+    DEFAULT_HW_BOOST_MODE,
     DEFAULT_HW_HEAT_MODE,
-    DEFAULT_HW_TARGET_TEMP,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETPOINT_MODE,
@@ -127,26 +127,32 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.previous_target_temp_option = config_entry.options.get(
             CONF_RESTORE_MANUAL_TEMP_OPTION, "Schedule"
         )
-        self.hw_sensor_entity_id = config_entry.options.get(CONF_HW_SENSOR_ENTITY_ID)
-        self.enable_hw_climate = config_entry.options.get(CONF_HW_CLIMATE, False)
-        self.hw_target_temperature = config_entry.options.get(
-            CONF_HW_TARGET_TEMP, DEFAULT_HW_TARGET_TEMP
-        )
-        self.hw_auto_mode = config_entry.options.get(
-            CONF_HW_AUTO_MODE, DEFAULT_HW_AUTO_MODE
-        )
-        self.hw_heat_mode = config_entry.options.get(
-            CONF_HW_HEAT_MODE, DEFAULT_HW_HEAT_MODE
-        )
 
-        # Automation option params
+        # Passive Mode Automation option params
         self.enable_automations_passive_mode = config_entry.options.get(
-            CONF_AUTOMATIONS_PASSIVE, False
-        )
+            CONF_AUTOMATIONS_PASSIVE, {}
+        ).get(CONF_AUTOMATIONS_PASSIVE, False)
 
         self.passive_temperature_increment = config_entry.options.get(
-            CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
-        )
+            CONF_AUTOMATIONS_PASSIVE, {}
+        ).get(CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT)
+
+        # HW Climate Automation
+        self.hw_sensor_entity_id = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID)
+        self.enable_hw_climate = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_CLIMATE, False)
+        self.hw_auto_mode = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_AUTO_MODE, DEFAULT_HW_AUTO_MODE)
+        self.hw_heat_mode = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_HEAT_MODE, DEFAULT_HW_HEAT_MODE)
+        self.hw_boost_mode = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_BOOST_MODE, DEFAULT_HW_BOOST_MODE)
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
@@ -166,6 +172,9 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
 
+        # HW climate mode
+        self.wiserhub.api_parameters.hw_climate_mode = self.enable_hw_climate
+
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""
         try:
@@ -181,7 +190,6 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             async_dispatcher_send(
                 self.hass, "wiser_update_received", self.wiserhub.system.name
             )
-            return True
         except (
             WiserHubConnectionError,
             WiserHubAuthenticationError,
@@ -194,9 +202,11 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             )
         except asyncio.CancelledError:
             _LOGGER.warning("Asyncio task cancelled during hub update!")
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception as ex:  # pylint: disable=broad-except  # noqa: BLE001
             _LOGGER.error(
                 "Unknown error fetching wiser (%s) data. %s.  Please report this error to the integration owner",
                 f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
                 ex,
             )
+        else:
+            return True
