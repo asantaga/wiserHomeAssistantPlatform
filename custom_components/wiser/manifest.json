@@ -18,7 +18,7 @@
   "requirements": [
     "aioWiserHeatAPI==1.6.4"
   ],
-  "version": "3.4.14",
+  "version": "3.4.14.1",
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
