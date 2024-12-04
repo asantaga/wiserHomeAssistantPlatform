@@ -37,9 +37,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for light in data.wiserhub.devices.lights.all:
             wiser_selects.extend([WiserLightModeSelect(data, light.id)])
 
+            if light.is_led_indicator_supported:
+                wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
             if light.is_dimmable:
-                if light.is_led_indicator_supported:
-                    wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
                 if light.is_power_on_behaviour_supported:
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.id)]
@@ -305,6 +305,10 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
 
+    async def async_set_power_on_behaviour(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} power_on_behaviour {option}")
+        await self._device.set_power_on_behaviour(option)
+
 
 class WiserLightLedIndicatorSelect(WiserSelectEntity):
     def __init__(self, data, light_id) -> None:
@@ -351,3 +355,7 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             _LOGGER.error(
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
+
+    async def async_set_led_indicator(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} led indicator {option}")
+        await self._device.set_led_indicator(option)
