@@ -1042,6 +1042,12 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             # into manual mode.
             return False
 
+        if not self.current_temperature:
+            # No current temp sensor providing value yet
+            # return
+            _LOGGER.debug("No value from current temperature sensor")
+            return False
+
         # Reasons it should heat
         if self.current_temperature <= self.target_temperature_low or (
             self.current_temperature <= self.target_temperature_high
