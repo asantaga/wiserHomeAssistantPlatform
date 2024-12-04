@@ -21,6 +21,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     binary_sensors = []
 
+    # System sensors
+    if data.wiserhub.system:
+        binary_sensors.extend(
+            [
+                WiserSummerDiscomfortPrevention(data, 0, "Summer Discomfort Prevention"),
+                WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
+                WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
+            ]
+        ) 
+
     # Smoke alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
         binary_sensors.extend(
@@ -44,11 +54,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 ]
             )
 
+    # Room binary sensors
+    for room in data.wiserhub.rooms.all:
+        binary_sensors.extend(
+            [
+                WiserRoomWindow(data, room.id, "Window Detection Active"),
+            ]
+        )
+
     # Light sensors
     for device in data.wiserhub.devices.lights.all:
         binary_sensors.extend(
             [
                 WiserStateIsDimmable(data, device.id, "Is Dimmable"),
+                WiserStateIsDimmable(data, device.id, "Is LED Indicator Supported"),
+                WiserStateIsDimmable(data, device.id, "Is Output Mode Supported"),
             ]
         )
 
@@ -62,9 +82,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
 
-    # Binary sensors active
+    # Window Door binary sensors
     for device in data.wiserhub.devices.binary_sensor.all:
-        binary_sensors.extend([BaseBinarySensor(data, device.id, "Active")])
+        binary_sensors.extend(
+            [
+                WiserStateActive(data, device.id, "Active"),
+            ]
+        )
 
     async_add_entities(binary_sensors, True)
 
@@ -143,6 +167,112 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         }
 
 
+class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
+    """Base binary sensor class."""
+
+    def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._device_name = None
+        self._sensor_type = sensor_type
+        self._state = getattr(self._data.wiserhub.system, self._sensor_type.replace(" ", "_").lower())
+        _LOGGER.debug(
+            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} device update requested")
+        HeatHub = self._data.wiserhub.system.name
+        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
+        return f"{HeatHub} {self._sensor_type}"
+        
+    @property
+    def is_on(self):
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+#        return f"{get_device_name(self._data, self._data.wiserhub.system)} {self._sensor_type}"
+        HeatHub = self._data.wiserhub.system.name
+        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
+        return f"{HeatHub} {self._sensor_type}"
+
+    @property
+    def unique_id(self):
+        """Return uniqueid."""
+        return get_unique_id(self._data, "sensor", self._sensor_type, self.name)
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+
+class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
+    """Base binary sensor class."""
+
+    def __init__(self, coordinator, room_id=0, sensor_type="") -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._room_id = room_id
+        self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        self._room_name = None
+        self._sensor_type = sensor_type
+        self._state = getattr(self._room, self._sensor_type.replace(" ", "_").lower())
+        _LOGGER.debug(
+            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} device update requested")
+        self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        self._state = getattr(self._room, self._sensor_type.replace(" ", "_").lower())
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self):
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{get_room_name(self._data, self._room_id)} {self._sensor_type}"
+        #return f"{get_device_name(self._data, self._room_id, "room")}  {self._sensor_type}",  
+    
+    @property
+    def unique_id(self):
+        """Return uniqueid."""
+        return get_unique_id(self._data, "sensor", self._sensor_type, self._room_id)
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_room_name(self._data, self._room_id ),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._room_id, "room"))},
+            "manufacturer": MANUFACTURER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+
 class WiserSmokeAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
 
@@ -192,6 +322,29 @@ class WiserRemoteAlarm(BaseBinarySensor):
 class WiserEquipment(BaseBinarySensor):
     """Base binary sensor class."""
 
+## binary sensor of System
+
+class WiserSummerDiscomfortPrevention(SystemBinarySensor):
+    """Summer Discomfort Prevention sensor."""    
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of Summer discomfort prevention."""
+        attrs = {}
+        attrs["indoor_discomfort_temperature"] = self._data.wiserhub.system.indoor_discomfort_temperature
+        attrs["outdoor_discomfort_temperature"] = self._data.wiserhub.system.outdoor_discomfort_temperature
+        return attrs
+
+class WiserSummerComfortAvailable(SystemBinarySensor):
+    """Summer Comfort Available sensor."""
+    _attr_icon = "mdi:sofa"
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+
+class WiserPCMDeviceLimitReached(SystemBinarySensor):
+    """Summer Comfort Available sensor."""
+    _attr_device_class = BinarySensorDeviceClass.POWER
+
 
 class WiserStateIsDimmable(BaseBinarySensor):
     """Light IsDimmable sensor."""
@@ -214,3 +367,26 @@ class WiserStateIsClosed(BaseBinarySensor):
 
     _attr_device_class = BinarySensorDeviceClass.OPENING
     _attr_icon = "mdi:window-shutter"
+
+## binary sensor of Room
+class WiserRoomWindow(RoomBinarySensor):
+    """Window of room sensor."""
+    _attr_device_class = BinarySensorDeviceClass.WINDOW
+
+#Windowdoor 
+class WiserStateActive(BaseBinarySensor):
+    """WindowDoor sensor."""
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of WindowDoor sensor."""
+        attrs = {}   
+        if self._data.wiserhub.devices.binary_sensor.get_by_id(
+                self._device_id
+            ).type == "Door"  :   
+            attrs["device_class"] = BinarySensorDeviceClass.DOOR
+        else:  attrs["device_class"] = BinarySensorDeviceClass.WINDOW 
+        attrs["type"] = self._data.wiserhub.devices.binary_sensor.get_by_id(
+                self._device_id
+            ).type 
+        return attrs
