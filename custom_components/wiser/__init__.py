@@ -50,7 +50,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         new_options = {**config_entry.options}
         if config_entry.minor_version < 2:
             # move passive mode options into new section
-            if new_options.get(CONF_AUTOMATIONS_PASSIVE):
+            if new_options.get(CONF_AUTOMATIONS_PASSIVE) is not None:
                 new_options[CONF_AUTOMATIONS_PASSIVE] = {
                     CONF_AUTOMATIONS_PASSIVE: new_options[CONF_AUTOMATIONS_PASSIVE]
                 }
@@ -62,7 +62,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                         del new_options[item]
 
             # hw climate
-            if new_options.get(CONF_AUTOMATIONS_HW_CLIMATE):
+            if new_options.get(CONF_AUTOMATIONS_HW_CLIMATE) is not None:
                 if new_options.get(CONF_DEPRECATED_HW_TARGET_TEMP):
                     del new_options[CONF_DEPRECATED_HW_TARGET_TEMP]
 
