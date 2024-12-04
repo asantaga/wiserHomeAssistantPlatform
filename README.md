@@ -31,6 +31,7 @@ For more information checkout the AMAZING community thread available on
 
 - v3.4.14
  - Fixed issue causing integration not to load in some circumstances due to failed config entry migration - issue #539
+ - Added binary sensor active state sensor
 
 - v3.4.13
  - Added support for PowerTag C - issue #528
