@@ -28,6 +28,10 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+- v3.4.14.1
+  - Add some binary_sensors , add extra attribute type for binary sensor
+  - Wiser Summer Discomfort Prevention suppress the switch replace it by a binary_sensor
+  - Create an equipment sensor and add equipment data for smarplug, powertags, heatingactuators with hub V2 
 
 - v3.4.14
   - Fixed issue causing integration not to load in some circumstances due to failed config entry migration - issue #539
