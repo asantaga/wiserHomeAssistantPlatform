@@ -376,7 +376,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         vol.Optional(
                             CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
                             default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
-                                CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID
+                                CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID, "sensor.no_sensor"
                             ),
                         ): EntitySelector(
                             EntitySelectorConfig(
