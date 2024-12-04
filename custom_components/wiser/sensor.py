@@ -151,7 +151,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 ]
                 )
 
-
     # Add power sensors for PTE (v2Hub)
     if data.wiserhub.devices.power_tags:
         for power_tag in data.wiserhub.devices.power_tags.all:
@@ -1597,6 +1596,24 @@ class WiserThresholdSensor(WiserSensor):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
+    @property
+    def extra_state_attributes(self):
+        """Return device threshold extra attributes."""
+        attrs = {} 
+
+        for th_sensor in self._data.wiserhub.devices.get_by_id(
+            self._device_id
+        ).threshold_sensors:
+            if th_sensor.id == self._ancillary_sensor_id:
+                attrs["uuid"] = th_sensor.UUID
+                attrs["quantity"] = th_sensor.quantity
+                attrs["current_level"] = th_sensor.current_level
+                attrs["high_threshold"] = th_sensor.high_threshold
+                attrs["medium_level"] = th_sensor.medium_threshold
+                attrs["low_level"] = th_sensor.low_threshold
+                attrs["interacts_with_room_climate"] = th_sensor.interacts_with_room_climate
+    
+        return attrs
 
 class WiserThresholdLightLevelSensor(WiserThresholdSensor):
     """Sensor for light level of threshold devices."""
