@@ -54,7 +54,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.binary_sensor.count > 0:
         _LOGGER.debug("Setting up binary sensors enable notification select")
         for binary_sensor in data.wiserhub.devices.binary_sensor.all:
-            wiser_selects.extend([WiserWindowNotificationEnableSelect(data, binary_sensor.id)])
+            wiser_selects.extend(
+                [WiserWindowNotificationEnableSelect(data, binary_sensor.id)]
+            )
 
     # Add PTCs
     if data.wiserhub.devices.power_tags_c.count > 0:
@@ -366,6 +368,7 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
         _LOGGER.debug(f"Setting {self.name} led indicator {option}")
         await self._device.set_led_indicator(option)
 
+
 class WiserNotificationSelectEntity(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator) -> None:
         """Initialize the sensor."""
@@ -416,7 +419,10 @@ class WiserNotificationSelectEntity(CoordinatorEntity, SelectEntity):
     def unique_id(self):
         """Return unique ID of device"""
         return get_unique_id(
-            self._data, self._device.product_type, "enable_notification_select", self._device_id
+            self._data,
+            self._device.product_type,
+            "enable_notification_select",
+            self._device_id,
         )
 
     @property
@@ -431,25 +437,32 @@ class WiserNotificationSelectEntity(CoordinatorEntity, SelectEntity):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-class WiserWindowNotificationEnableSelect(WiserNotificationSelectEntity, WiserScheduleEntity):
+
+class WiserWindowNotificationEnableSelect(
+    WiserNotificationSelectEntity, WiserScheduleEntity
+):
     def __init__(self, data, binary_sensor_id) -> None:
         """Initialize the sensor."""
         self._device_id = binary_sensor_id
         super().__init__(data)
-        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(
+            self._device_id
+        )
         self._options = self._device.available_enable_notification
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(
+            self._device_id
+        )
         self.async_write_ha_state()
 
     @property
     def current_option(self) -> str:
         return self._device.enable_notification
-    
+
     @hub_error_handler
     async def async_select_option(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} enable notification {option}")
@@ -464,4 +477,3 @@ class WiserWindowNotificationEnableSelect(WiserNotificationSelectEntity, WiserSc
     async def async_set_enable_notification(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} enable_notification {option}")
         await self._device.set_enable_notification(option)
-
