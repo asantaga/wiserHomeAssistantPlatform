@@ -62,6 +62,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
 
+    # Binary sensors active
+    for device in data.wiserhub.devices.binary_sensor.all:
+        binary_sensors.extend([BaseBinarySensor(data, device.id, "Active")])
+
     async_add_entities(binary_sensors, True)
 
 

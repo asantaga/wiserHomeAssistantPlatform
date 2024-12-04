@@ -48,44 +48,50 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     if config_entry.version == 1:
         new_options = {**config_entry.options}
-        if config_entry.minor_version < 2:
+        if config_entry.minor_version < 3:
             # move passive mode options into new section
-            if new_options.get(CONF_AUTOMATIONS_PASSIVE):
-                new_options[CONF_AUTOMATIONS_PASSIVE] = {
-                    CONF_AUTOMATIONS_PASSIVE: new_options[CONF_AUTOMATIONS_PASSIVE]
-                }
-                for item in [
-                    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-                ]:
-                    if new_options.get(item):
-                        new_options[CONF_AUTOMATIONS_PASSIVE][item] = new_options[item]
-                        del new_options[item]
+            if new_options.get(CONF_AUTOMATIONS_PASSIVE) is not None:
+                # detect if failed last upgrade to minor version 2
+                if isinstance(new_options.get(CONF_AUTOMATIONS_PASSIVE), bool):
+                    new_options[CONF_AUTOMATIONS_PASSIVE] = {
+                        CONF_AUTOMATIONS_PASSIVE: new_options[CONF_AUTOMATIONS_PASSIVE]
+                    }
+                    for item in [
+                        CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                    ]:
+                        if new_options.get(item):
+                            new_options[CONF_AUTOMATIONS_PASSIVE][item] = new_options[
+                                item
+                            ]
+                            del new_options[item]
 
             # hw climate
-            if new_options.get(CONF_AUTOMATIONS_HW_CLIMATE):
-                if new_options.get(CONF_DEPRECATED_HW_TARGET_TEMP):
-                    del new_options[CONF_DEPRECATED_HW_TARGET_TEMP]
+            if new_options.get(CONF_AUTOMATIONS_HW_CLIMATE) is not None:
+                # detect if failed last upgrade to minor version 2
+                if isinstance(new_options.get(CONF_AUTOMATIONS_HW_CLIMATE), bool):
+                    if new_options.get(CONF_DEPRECATED_HW_TARGET_TEMP):
+                        del new_options[CONF_DEPRECATED_HW_TARGET_TEMP]
 
-                new_options[CONF_AUTOMATIONS_HW_CLIMATE] = {
-                    CONF_AUTOMATIONS_HW_CLIMATE: new_options[
-                        CONF_AUTOMATIONS_HW_CLIMATE
-                    ]
-                }
-                for item in [
-                    CONF_AUTOMATIONS_HW_AUTO_MODE,
-                    CONF_AUTOMATIONS_HW_HEAT_MODE,
-                    CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
-                ]:
-                    if value := new_options.get(item):
-                        if value == "Normal":
-                            value = HWCycleModes.CONTINUOUS
-                        if value == "Override":
-                            value = HWCycleModes.ONCE
-                        new_options[CONF_AUTOMATIONS_HW_CLIMATE][item] = value
-                        del new_options[item]
+                    new_options[CONF_AUTOMATIONS_HW_CLIMATE] = {
+                        CONF_AUTOMATIONS_HW_CLIMATE: new_options[
+                            CONF_AUTOMATIONS_HW_CLIMATE
+                        ]
+                    }
+                    for item in [
+                        CONF_AUTOMATIONS_HW_AUTO_MODE,
+                        CONF_AUTOMATIONS_HW_HEAT_MODE,
+                        CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
+                    ]:
+                        if value := new_options.get(item):
+                            if value == "Normal":
+                                value = HWCycleModes.CONTINUOUS
+                            if value == "Override":
+                                value = HWCycleModes.ONCE
+                            new_options[CONF_AUTOMATIONS_HW_CLIMATE][item] = value
+                            del new_options[item]
 
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=2, version=1
+            config_entry, options=new_options, minor_version=3, version=1
         )
 
     _LOGGER.debug(

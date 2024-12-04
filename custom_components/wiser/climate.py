@@ -1037,7 +1037,12 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         updated = False
         should_heat = self.hotwater.is_heating
 
-        # Reasons it shoudl heat
+        if self.hvac_mode == HVACMode.OFF:
+            # HW is off.  Just return here as if turned on by app or hub, will go
+            # into manual mode.
+            return False
+
+        # Reasons it should heat
         if self.current_temperature <= self.target_temperature_low or (
             self.current_temperature <= self.target_temperature_high
             and self.hotwater.is_heating
@@ -1045,11 +1050,6 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             should_heat = True
 
         # Now all reasons it should not heat
-        if self.hvac_mode == HVACMode.OFF:
-            # HW is off.  Just return here as if turned on by app or hub, will go
-            # into manual mode.
-            return False
-
         if not self.hotwater.is_boosted:
             # Boost overrides all other mode settings
 
