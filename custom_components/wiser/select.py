@@ -5,6 +5,7 @@ from .const import (
     DOMAIN,
     HOT_WATER,
     MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
 )
 
 from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
@@ -49,6 +50,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Shutter mode select")
         for shutter in data.wiserhub.devices.shutters.all:
             wiser_selects.extend([WiserShutterModeSelect(data, shutter.id)])
+
+    if data.wiserhub.devices.binary_sensor.count > 0:
+        _LOGGER.debug("Setting up binary sensors enable notification select")
+        for binary_sensor in data.wiserhub.devices.binary_sensor.all:
+            wiser_selects.extend([WiserWindowNotificationEnableSelect(data, binary_sensor.id)])
 
     # Add PTCs
     if data.wiserhub.devices.power_tags_c.count > 0:
@@ -359,3 +365,103 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     async def async_set_led_indicator(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} led indicator {option}")
         await self._device.set_led_indicator(option)
+
+class WiserNotificationSelectEntity(CoordinatorEntity, SelectEntity):
+    def __init__(self, coordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        if delay:
+            asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self.name} updating")
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, self._device_id)} Enable Notification"
+
+    @property
+    def options(self) -> list[str]:
+        return self._options
+
+    @property
+    def current_option(self) -> str:
+        return self._device.enable_notification
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self.async_set_enable_notification(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+    async def async_set_mode(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} mode to {option}")
+        await self._device.set_enable_notification(option)
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "enable_notification_select", self._device_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+class WiserWindowNotificationEnableSelect(WiserNotificationSelectEntity, WiserScheduleEntity):
+    def __init__(self, data, binary_sensor_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = binary_sensor_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(self._device_id)
+        self._options = self._device.available_enable_notification
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.binary_sensor.get_by_id(self._device_id)
+        self.async_write_ha_state()
+
+    @property
+    def current_option(self) -> str:
+        return self._device.enable_notification
+    
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} enable notification {option}")
+        if option in self._options:
+            await self._device.set_enable_notification(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+    async def async_set_enable_notification(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} enable_notification {option}")
+        await self._device.set_enable_notification(option)
+
