@@ -39,6 +39,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
+    CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
     CONF_AUTOMATIONS_HW_HEAT_MODE,
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
@@ -371,6 +372,12 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_AUTOMATIONS_HW_CLIMATE,
                             default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
                                 CONF_AUTOMATIONS_HW_CLIMATE, False
+                            ),
+                        ): bool,
+                        vol.Optional(
+                            CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
+                            default=options.get(CONF_AUTOMATIONS_HW_CLIMATE, {}).get(
+                                CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL, False
                             ),
                         ): bool,
                         vol.Optional(

@@ -850,15 +850,13 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature_high(self):
         """Return target temp."""
-        if self.hvac_mode == HVACMode.OFF:
-            return None
+
         return self.hotwater.current_target_temperature_high
 
     @property
     def target_temperature_low(self):
         """Return target temp."""
-        if self.hvac_mode == HVACMode.OFF:
-            return None
+
         return self.hotwater.current_target_temperature_low
 
     async def async_set_temperature(self, **kwargs):
@@ -900,6 +898,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         _LOGGER.debug("Setting HVAC mode to %s for Hot Water", hvac_mode)
         try:
             await self.hotwater.set_mode(HVAC_MODE_HASS_TO_WISER[hvac_mode])
+            self._keep_cycling = True
             await self.async_force_update()
         except KeyError:
             _LOGGER.error("Invalid HVAC mode.  Options are %s", self.hvac_modes)
@@ -923,7 +922,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return [mode.value for mode in WiserPresetOptionsEnum]
+        return self.hotwater.available_presets
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
@@ -1061,7 +1060,10 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
             if self.hvac_mode == HVACMode.HEAT:
                 # Manual mode heat is set to off
-                if not self.hotwater.manual_heat:
+                if (
+                    self.data.hw_climate_experimental_mode is False
+                    and not self.hotwater.manual_heat
+                ):
                     should_heat = False
             elif self.hvac_mode == HVACMode.AUTO:
                 # Schedule is set to off
@@ -1107,7 +1109,13 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
                     # Heat mode - reset manual heat
                     if self.hvac_mode == HVACMode.HEAT:
-                        await self.hotwater.set_manual_heat(False)
+                        if self.data.hw_climate_experimental_mode:
+                            await self.hotwater.set_mode(
+                                HVAC_MODE_HASS_TO_WISER[HVACMode.OFF]
+                            )
+
+                        else:
+                            await self.hotwater.set_manual_heat(False)
 
                 await self.hotwater.override_state("Off")
             updated = True
