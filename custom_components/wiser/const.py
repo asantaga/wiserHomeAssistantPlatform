@@ -1,5 +1,4 @@
-"""
-Constants  for Wiser Platform.
+"""Constants  for Wiser Platform.
 
 https://github.com/asantaga/wiserHomeAssistantPlatform
 Angelosantagata@gmail.com
@@ -7,7 +6,6 @@ Angelosantagata@gmail.com
 """
 
 from enum import StrEnum
-
 
 VERSION = "3.4.14"
 DOMAIN = "wiser"
@@ -72,7 +70,7 @@ DEFAULT_PASSIVE_TEMP_INCREMENT = 0.5
 DEFAULT_HW_AUTO_MODE = HWCycleModes.CONTINUOUS
 DEFAULT_HW_HEAT_MODE = HWCycleModes.CONTINUOUS
 DEFAULT_HW_BOOST_MODE = HWCycleModes.CONTINUOUS
-HW_CLIMATE_MIN_TEMP = 40
+HW_CLIMATE_MIN_TEMP = 10
 HW_CLIMATE_MAX_TEMP = 80
 
 # Setpoint Modes
@@ -89,6 +87,7 @@ CONF_SETPOINT_MODE = "setpoint_mode"
 CONF_HOSTNAME = "hostname"
 CONF_RESTORE_MANUAL_TEMP_OPTION = "restore_manual_temp_option"
 CONF_AUTOMATIONS_HW_CLIMATE = "automations_hw_climate"
+CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL = "experimental_mode"
 CONF_AUTOMATIONS_HW_AUTO_MODE = "hotwater_auto_mode"
 CONF_AUTOMATIONS_HW_CLIMATE = "hotwater_climate"
 CONF_AUTOMATIONS_HW_HEAT_MODE = "hotwater_heat_mode"
