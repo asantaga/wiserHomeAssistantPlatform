@@ -722,6 +722,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserHotWater ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
+    _attr_translation_key = "wiser"
 
     def __init__(self, hass: HomeAssistant, coordinator) -> None:
         """Initialize the sensor."""
