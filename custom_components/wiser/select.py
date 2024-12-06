@@ -22,7 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     wiser_selects = []
 
-    if data.wiserhub.hotwater:
+    if data.wiserhub.hotwater and not data.enable_hw_climate:
         _LOGGER.debug("Setting up Hot Water mode select")
         wiser_selects.extend([WiserHotWaterModeSelect(data)])
 
