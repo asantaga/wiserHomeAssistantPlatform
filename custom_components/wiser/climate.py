@@ -787,7 +787,9 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         _LOGGER.debug("%s updating", self.name)
 
         previous_hotwater_values = self._hotwater
+        previous_hotwater_values._current_temperature = self.current_temperature
         self._hotwater = self._data.wiserhub.hotwater
+        self._hotwater._current_temperature = self.current_temperature
         self._schedule = self.hotwater.schedule
 
         if not self.hotwater.is_boosted:

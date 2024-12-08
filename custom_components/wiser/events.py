@@ -58,6 +58,8 @@ WISER_COMMON_EVENT_DATA = {
     DOMAIN_CLIMATE: [
         "current_temperature",
         "current_target_temperature",
+        "current_target_temperature_high",
+        "current_target_temperature_low",
         "is_boosted",
         "is_heating",
         "boost_time_remaining",
@@ -105,9 +107,15 @@ def fire_events(hass: HomeAssistant, entity_id: str, old_state: dict, new_state:
 
                 if event_data:
                     for attr in event_data:
-                        if hasattr(old_state, attr):
+                        if (
+                            hasattr(old_state, attr)
+                            and getattr(old_state, attr) is not None
+                        ):
                             old_state_attr[attr] = getattr(old_state, attr)
-                        if hasattr(new_state, attr):
+                        if (
+                            hasattr(new_state, attr)
+                            and getattr(old_state, attr) is not None
+                        ):
                             new_state_attr[attr] = getattr(new_state, attr)
 
                     if old_state_attr:
