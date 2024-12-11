@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.14
+# Wiser Home Assistant Integration v3.4.15
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -28,6 +28,13 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.15
+  - Added experimental hw climate mode to operate differently.  See wiki for details
+  - Changed min/max hw climate temp range from 40-80C to 10-80C - issue [#545](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/545)
+  - Fixed issue whereby hw climate errors if temp sensor not available after HA start - issue [#541](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/541)
+  - Fixed issue whereby hw climate config requires some entry in the temp sensor select option, even if not enabled - issue [#544](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/544)
+  - Fixed issue whereby hw min does not change when setting both via service call if temps are 1C or less different - issue [#547](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/547)
 
 - v3.4.14
   - Fixed issue causing integration not to load in some circumstances due to failed config entry migration - issue #539
