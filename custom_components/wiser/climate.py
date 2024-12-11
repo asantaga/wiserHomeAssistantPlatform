@@ -746,7 +746,11 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._boost_keep_cycling: bool = True
         # Prevent hot water turning on if in heat mode at restart
         # requires manual turn on to start if not already on
-        if self.hvac_mode == HVACMode.HEAT and not self._hotwater.manual_heat:
+        if (
+            self.hvac_mode == HVACMode.HEAT
+            and not self._hotwater.manual_heat
+            and not self._data.hw_climate_experimental_mode
+        ):
             self._keep_cycling = False
 
         _LOGGER.debug("%s %s initiliase", self._data.wiserhub.system.name, self.name)
