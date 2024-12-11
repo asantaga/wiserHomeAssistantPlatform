@@ -225,7 +225,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 )
 
     # Add hw climate switches
-    if data.enable_hw_climate:
+    if data.enable_hw_climate and not data.hw_climate_experimental_mode:
         wiser_switches.append(WiserHWClimateManualHeatSwitch(data, 0, "Manual Heat"))
 
     async_add_entities(wiser_switches)

@@ -34,6 +34,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
@@ -153,6 +154,9 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.hw_boost_mode = config_entry.options.get(
             CONF_AUTOMATIONS_HW_CLIMATE, {}
         ).get(CONF_AUTOMATIONS_HW_BOOST_MODE, DEFAULT_HW_BOOST_MODE)
+        self.hw_climate_experimental_mode = config_entry.options.get(
+            CONF_AUTOMATIONS_HW_CLIMATE, {}
+        ).get(CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL, False)
 
         self.wiserhub = WiserAPI(
             host=config_entry.data[CONF_HOST],
