@@ -733,7 +733,6 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         self._hvac_modes_list = list(HVAC_MODE_HASS_TO_WISER.keys())
         self._schedule = self.hotwater.schedule
         self._boosted_time = 0
-        self._boost_mode = ""
         self._keep_cycling: bool = True
         self._boost_keep_cycling: bool = True
 
@@ -916,10 +915,6 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def preset_mode(self):
         """Get current preset mode."""
-        if self.data.hw_climate_experimental_mode:
-            if self.hotwater.is_boosted and self._boost_mode:
-                return self._boost_mode
-
         try:
             if self.hotwater.is_boosted:
                 if int(self.hotwater.boost_time_remaining / 60) != 0:
@@ -948,7 +943,6 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                     await self.hotwater.schedule_advance()
                 elif preset_mode.lower().startswith(TEXT_BOOST.lower()):
                     # Lookup boost duration
-                    self._boost_mode = preset_mode
                     self._keep_cycling = True
 
                     duration = WISER_BOOST_DURATION[preset_mode]
