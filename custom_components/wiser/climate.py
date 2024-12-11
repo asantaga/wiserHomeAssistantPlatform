@@ -865,13 +865,13 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
+        if high_temp := kwargs.get("target_temp_high"):
+            await self.hotwater.set_target_temperature_high(high_temp)
         if low_temp := kwargs.get("target_temp_low"):
             # Low must be a minimum of 1C below high to prevent oscillating on/off
             if self.target_temperature_high - low_temp < 1:
                 low_temp = self.target_temperature_high - 1
             await self.hotwater.set_target_temperature_low(low_temp)
-        if high_temp := kwargs.get("target_temp_high"):
-            await self.hotwater.set_target_temperature_high(high_temp)
         _LOGGER.debug(
             "Setting temperature range for %s to between %s and %s",
             self.name,
