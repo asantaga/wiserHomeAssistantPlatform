@@ -20,7 +20,7 @@ For more information checkout the AMAZING community thread available on
 ## What's New in 3.4?
 
 - Added support for v2 hub
-- Added PowerTagE support
+- Added support for many new v2 hub devices
 - Climate entity for controlling hot water with external tank temp sensor
 
 ## Installing
