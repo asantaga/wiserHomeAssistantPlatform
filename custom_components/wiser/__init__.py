@@ -153,7 +153,7 @@ async def async_update_device_registry(hass: HomeAssistant, config_entry):
         connections={
             (CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address)
         },
-        identifiers={(DOMAIN, get_identifier(data, 0))},
+        identifiers={(DOMAIN, data.wiserhub.system.name)},
         manufacturer=MANUFACTURER,
         name=get_device_name(data, 0),
         model=data.wiserhub.system.model,
