@@ -178,8 +178,9 @@ async def async_remove_config_entry_device(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry):
+async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Unload a config entry."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
 
     if get_instance_count(hass) == 0:
         # Unload lovelace module resource if only instance
@@ -190,6 +191,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry):
         # Deregister services if only instance
         _LOGGER.debug("Unregister Wiser services")
         for service in WISER_SERVICES.values():
+            if not data.wiserhub.hotwater and service == "boost_hotwater":
+                continue
             hass.services.async_remove(DOMAIN, service)
 
     _LOGGER.debug("Unload Wiser integration platforms")
