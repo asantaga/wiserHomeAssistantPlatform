@@ -12,7 +12,7 @@ DOMAIN = "wiser"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 
-WISER_CARDS = [
+JSMODULES = [
     {
         "name": "Wiser Schedule Card",
         "filename": "wiser-schedule-card.js",

@@ -30,7 +30,7 @@ from .const import (
     HWCycleModes,
 )
 from .coordinator import WiserUpdateCoordinator
-from .frontend import WiserCardRegistration
+from .frontend import JSModuleRegistration
 from .helpers import get_device_name, get_identifier, get_instance_count
 from .services import async_setup_services
 from .websockets import async_register_websockets
@@ -135,8 +135,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     await async_update_device_registry(hass, config_entry)
 
     # Register custom cards
-    cards = WiserCardRegistration(hass)
-    await cards.async_register()
+    moodule_register = JSModuleRegistration(hass)
+    await moodule_register.async_register()
 
     _LOGGER.info(
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
@@ -184,8 +184,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry):
     if get_instance_count(hass) == 0:
         # Unload lovelace module resource if only instance
         _LOGGER.debug("Remove Wiser Lovelace cards")
-        cards = WiserCardRegistration(hass)
-        await cards.async_unregister()
+        module_register = JSModuleRegistration(hass)
+        await module_register.async_unregister()
 
         # Deregister services if only instance
         _LOGGER.debug("Unregister Wiser services")
