@@ -119,7 +119,7 @@ class JSModuleRegistration:
 
     async def async_unregister(self):
         """Unload lovelace module resource."""
-        if self.hass.data["lovelace"]["mode"] == "storage":
+        if self.lovelace.mode == "storage":
             for module in JSMODULES:
                 url = f"{URL_BASE}/{module.get('filename')}"
                 wiser_resources = [
