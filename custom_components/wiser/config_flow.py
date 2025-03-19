@@ -34,6 +34,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     selector,
 )
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_AUTOMATIONS_HW_AUTO_MODE,
@@ -156,7 +157,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_zeroconf(
-        self, discovery_info: zeroconf.ZeroconfServiceInfo
+        self, discovery_info: ZeroconfServiceInfo
     ) -> FlowResult:
         """Handle zeroconf discovery."""
         if not discovery_info.name.startswith("WiserHeat"):

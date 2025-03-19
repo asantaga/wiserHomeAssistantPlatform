@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.15
+# Wiser Home Assistant Integration v3.4.16
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -29,6 +29,12 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.4.16
+  - Fix incorrect identifer on hub device
+  - Fix deprecation warning for access to lovelace resource parameters
+  - Fix error on unloading services for hubs without hot water control
+  - Fix deprecation warning for ZeroconfServiceInfo
+  - Bump api to v1.6.6 to support SSL for future firmware
 - v3.4.15
   - Added experimental hw climate mode to operate differently.  See wiki for details
   - Changed min/max hw climate temp range from 40-80C to 10-80C - issue [#545](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/545)
