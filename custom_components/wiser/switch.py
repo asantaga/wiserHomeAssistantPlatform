@@ -6,6 +6,7 @@ Angelosantagata@gmail.com
 """
 
 import asyncio
+import datetime as dt
 import logging
 import voluptuous as vol
 
@@ -345,6 +346,9 @@ class WiserSystemSwitch(WiserSwitch):
 
         if self._name == "Away Mode":
             attrs["away_mode_temperature"] = self._away_temperature
+
+        if self._name == "Daylight Saving":
+            attrs["hub_time"] = self._data.wiserhub.system.hub_time
 
         return attrs
 
