@@ -321,8 +321,10 @@ class WiserBatterySensor(WiserSensor):
         # TODO: Move this into api
         if self._device.battery.percent:
             return self._device.battery.percent
-        if self._device.battery.level == "Normal":
-            return 100
+        if self._device.battery.voltage is None:
+            # This device does not provide battery voltage.  Calc % from level text
+            levels = {"normal": 100, "twothirds": 66, "onethird": 33, "low": 10}
+            return levels.get(self._device.battery.level.lower(), 0)
         return 0
 
     @property
@@ -597,7 +599,7 @@ class WiserSystemHotWaterPreset(WiserSensor):
         mode = "Manual" if self._device.mode != "Auto" else "Auto"
         state = ""
         if self._device.is_boosted:
-            state = f"Boost {int(self._device.boost_time_remaining/60)}m"
+            state = f"Boost {int(self._device.boost_time_remaining / 60)}m"
         elif self._device.is_override:
             state = "Override"
         elif self._device.is_away_mode:
