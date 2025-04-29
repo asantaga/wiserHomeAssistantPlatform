@@ -29,6 +29,11 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.4.16.1  LGO dev
+  - Added equipment and equipment data for Smartplugs, Heating actuators and PowertagE 
+  - Added some binary sensor
+  - Replaced switch 'Summer Discomfort Prevention' by a binary sensor
+  
 - v3.4.16
   - Fix incorrect identifer on hub device
   - Fix deprecation warning for access to lovelace resource parameters
