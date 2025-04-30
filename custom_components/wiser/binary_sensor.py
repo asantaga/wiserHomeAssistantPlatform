@@ -358,13 +358,14 @@ class WiserStateIsTiltSupported(BaseBinarySensor):
 
 
 class WiserStateIsOpen(BaseBinarySensor):
-    """Light IsDIs Open sensor."""
+    """Shutter Is Open sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.OPENING
+    _attr_icon = "mdi:window-shutter-open"
 
 
 class WiserStateIsClosed(BaseBinarySensor):
-    """Light IsDimmable sensor."""
+    """Shutter Is Closed sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.OPENING
     _attr_icon = "mdi:window-shutter"

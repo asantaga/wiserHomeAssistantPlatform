@@ -153,6 +153,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add power sensors for PTE (v2Hub)
     if data.wiserhub.devices.power_tags:
+        _LOGGER.debug("Setting up Power Tag power sensors")
         for power_tag in data.wiserhub.devices.power_tags.all:
             wiser_sensors.extend(
                 [
@@ -622,6 +623,10 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
 
+            attrs["device_type_id"] = self._device.device_type_id
+            attrs["id"] = self._device.id
+            attrs["report_count"] = self._device.report_count
+
         if self._sensor_type == "WindowDoorSensor":
             attrs["name"] = self._device.name
             attrs["active"] = self._device.active
@@ -630,6 +635,8 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["interacts_with_room_climate"] = (
                 self._device.interacts_with_room_climate
             )
+            attrs["device_type_id"] = self._device.device_type_id
+            attrs["id"] = self._device.id
 
         return attrs
 
@@ -1593,12 +1600,30 @@ class WiserThresholdSensor(WiserSensor):
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-            "manufacturer": MANUFACTURER,
+            "manufacturer": MANUFACTURER_SCHNEIDER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+    # added by LGO
+    @property
+    def extra_state_attributes(self):
+        """Return device threshold extra attributes."""
+        attrs = {} 
 
+        for th_sensor in self._data.wiserhub.devices.get_by_id(
+            self._device_id
+        ).threshold_sensors:
+            if th_sensor.id == self._ancillary_sensor_id:
+                attrs["uuid"] = th_sensor.UUID
+                attrs["quantity"] = th_sensor.quantity
+                attrs["current_level"] = th_sensor.current_level
+                attrs["high_threshold"] = th_sensor.high_threshold
+                attrs["medium_level"] = th_sensor.medium_threshold
+                attrs["low_level"] = th_sensor.low_threshold
+                attrs["interacts_with_room_climate"] = th_sensor.interacts_with_room_climate
+    
+        return attrs
 
 class WiserThresholdLightLevelSensor(WiserThresholdSensor):
     """Sensor for light level of threshold devices."""
