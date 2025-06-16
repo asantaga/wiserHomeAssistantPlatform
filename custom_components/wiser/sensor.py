@@ -567,6 +567,7 @@ class WiserDeviceSignalSensor(WiserSensor):
 
             # summer comfort
             if self._data.hub_version == 2:
+                attrs["seasonal_comfort_enabled"] = self._device.seasonal_comfort_enabled
                 attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
                 attrs["indoor_discomfort_temperature"] = (
                     self._device.indoor_discomfort_temperature
@@ -625,12 +626,14 @@ class WiserDeviceSignalSensor(WiserSensor):
 
             attrs["device_type_id"] = self._device.device_type_id
             attrs["id"] = self._device.id
+            attrs["smokealarm_id"] = self._device.id
             attrs["report_count"] = self._device.report_count
 
         if self._sensor_type == "WindowDoorSensor":
             attrs["name"] = self._device.name
             attrs["active"] = self._device.active
             attrs["type"] = self._device.type
+            attrs["sensorstatus"] = self._device.sensorstatus
             attrs["enable_notification"] = self._device.enable_notification
             attrs["interacts_with_room_climate"] = (
                 self._device.interacts_with_room_climate
