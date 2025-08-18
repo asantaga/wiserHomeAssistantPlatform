@@ -22,6 +22,9 @@ from .helpers import (
     get_identifier,
     get_room_name,
     get_unique_id,
+    get_equipment_name,
+    get_equipment_identifier,
+    
     hub_error_handler,
 )
 from custom_components.wiser.schedules import WiserScheduleEntity
@@ -113,24 +116,11 @@ WISER_SWITCHES = [
         "type": "device",
     },
     {
-        "name": "Enable Notification switch",
-        "key": "enablenotification",
+        "name": "Enable Notification",
+        "key": "enable_notification",
         "icon": "mdi:check-circle",
         "type": "device",
     },
-    {
-        "name": "Over Power Notification Enabled",
-        "key": "enabled",
-        "icon": "mdi:check-circle",
-        "type": "device",
-    },
-    {
-        "name": "Under Power Notification Enabled",
-        "key": "enabled",
-        "icon": "mdi:check-circle",
-        "type": "device",
-    },
-
 ]
 
 
@@ -163,14 +153,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             for device in [
                 device
                 for device in data.wiserhub.devices.all
-                if hasattr(device, switch["key"])
+                if hasattr(device, switch["key"] )                
             ]:
-                wiser_switches.append(
-                    WiserDeviceSwitch(
-                        data, switch["name"], switch["key"], switch["icon"], device.id
-                    )
-                )
-
+                if device.product_type not in ["WindowDoorSensor",]: 
+                            wiser_switches.append(
+                                WiserDeviceSwitch(
+                                    data, switch["name"], switch["key"], switch["icon"], device.id
+                                )
+                            )
+                else:
+                        if switch["key"] != "enable_notification":
+                            """ To enable notification for windowdoor sensor use a select"""    
+                            wiser_switches.append(
+                                WiserDeviceSwitch(
+                                    data, switch["name"], switch["key"], switch["icon"], device.id
+                                )
+                            )
+                    
     # Add Lights (if any)
     for light in data.wiserhub.devices.lights.all:
         wiser_switches.extend(
@@ -201,13 +200,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         )
 
     # Add smokealarm  (if any)
+    
     for smokealarm in data.wiserhub.devices.smokealarms.all:
         wiser_switches.extend(
             [
-                WiserDeviceEnableNotificationSwitch(data, smokealarm.id, f"Wiser {smokealarm.name}"),
             ]
         )
-
+    
     # Add PTCs
     for ptc in data.wiserhub.devices.power_tags_c.all:
         wiser_switches.extend(
@@ -245,31 +244,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ]
                 )
 
-    # Add Equipments (if any)
-    for device in data.wiserhub.devices.all:
-       if hasattr(device, "equipment"): 
+    
+    # Add Wiser Automation (if any)
+    for automation in data.wiserhub.automations.all:
+        wiser_switches.extend(
+            [
+                WiserAutomationSwitch(data,f"{automation.name}", "enabled", "mdi:check-circle",automation.id),
+                WiserAutomationSwitch(data,f"{automation.name}", "enable_notification", "mdi:notification-clear-all",automation.id),
+            ]
+        ) 
+
+    # Add Power Notification switch on Equipment
+    for equipment in data.wiserhub.equipments.all:
+        if hasattr(equipment, "over_power_notification") or hasattr(equipment, "under_power_notification"):
             
-            if hasattr(device.equipment.over_power_notification,"period_mins"):
+            if hasattr(equipment.over_power_notification,"period_mins"):
                 wiser_switches.append(
-
-#                    WiserEquipmentEnableNotificationSwitch1(
-#                        data,switch["name"], switch["key"],switch["icon"], device.id
-#                    ),
-                    WiserEquipmentEnableNotificationSwitch1(
-                        data,"Over Power Notification", "enabled","mdi:check-circle", device.id
+                    WiserEquipmentPowerNotificationSwitch(
+                        data,"Over Power Notification", "enabled","mdi:check-circle", equipment.id
                     ),
-                )
-           
+                )          
 
-            if hasattr(device.equipment.under_power_notification,"period_mins"):
+            if hasattr(equipment.under_power_notification,"period_mins"):
                 wiser_switches.append(
-                    WiserEquipmentEnableNotificationSwitch1(
-                        data,"Under Power Notification", switch["key"], "mdi:check-circle", device.id
+                    WiserEquipmentPowerNotificationSwitch(
+                        data,"Under Power Notification", "enabled", "mdi:check-circle", equipment.id
                     ),    
-#                    WiserEquipmentEnableNotificationSwitch1(
-#                        data,switch["name"], switch["key"], switch["icon"], device.id
-#                    )
                 )
+            
 
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
@@ -1022,7 +1024,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         self._is_threshold = is_threshold
         self._ancillary_sensor_id = ancillary_sensor_id
         self._ancillary_sensor_type = ancillary_sensor_type
-        super().__init__(data, name, "", "interactsroomclimate", "mdi:sofa")
+        super().__init__(data, name, "", "interactsroomclimate", "mdi:thermometer-check")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
 
     @callback
@@ -1083,7 +1085,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
             ).threshold_sensors:
                 if th_sensor.id == self._ancillary_sensor_id:
                     await th_sensor.set_interacts_with_room_climate(True)
-                    await self.async_force_update()
+                    await self.async_force_update(2)
                     return True
         else:
             await self._device.set_interacts_with_room_climate(True)
@@ -1098,7 +1100,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
             ).threshold_sensors:
                 if th_sensor.id == self._ancillary_sensor_id:
                     await th_sensor.set_interacts_with_room_climate(False)
-                    await self.async_force_update()
+                    await self.async_force_update(2)
                     return True
         else:
             await self._device.set_interacts_with_room_climate(False)
@@ -1163,133 +1165,127 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
         await self.async_force_update()
 
 
-class WiserDeviceEnableNotificationSwitch(WiserSwitch):
-    """Enable notification for a device Class."""
+class WiserAutomationSwitch(WiserSwitch):
+    """Switch to set the status of an automation switch"""
 
-    def __init__(self, data, DeviceId, name) -> None:
+    def __init__(self, data, name, key, icon,automation_id) -> None:
         """Initialize the sensor."""
         self._name = name
-        self._device_id = DeviceId
-#        self._device_id= data.id
-        super().__init__(data, name, "enable_notification", "", "mdi:check_circle")
-#        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._device = self._data.wiserhub.devices.smokealarms.get_by_id(self._device_id)
-
-        self._is_on = getattr(self._device, self._key)
+        self._automation_id= automation_id
+        self._key= key
+        self._icon = icon
+        super().__init__(data, name, key, "automation", icon)
+        self._automation = self._data.wiserhub.automations.get_by_automation_id(self._automation_id)
+        self._is_on = getattr(self._automation, self._key)
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.smokealarms.get_by_id(self._device_id)
-#        self._is_on = True if self._device.enable_notification == "true" else False
-        self._is_on = getattr(self._device, "enable_notification")
+        self._is_on = getattr(self._automation, self._key)        
+        self._automation = self._data.wiserhub.automations.get_by_automation_id(self._automation_id)
         self.async_write_ha_state()
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the automation on."""
+
+        if self._key == "enabled":
+            await self._automation.set_enabled(True)
+        elif self._key == "enable_notification":             
+            await self._automation.set_enable_notification(True)
+
+        await self.async_force_update(2)
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the automation off."""
+
+        if self._key == "enabled":
+            await self._automation.set_enabled(False)
+        elif self._key == "enable_notification":             
+            await self._automation.set_enable_notification(False)
+
+        await self.async_force_update(2)
+        return True
 
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device_id)} Enable Notification"
+        return f"Automation {self._name} {self._key}"
 
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        return get_unique_id(
-#            self._data, self._device_id.product_type, self.name, self._device_id
-            self._data,self._device.product_type , self.name, self._device_id
-
-        )
 
     @property
     def icon(self):
-        """Return the name of the Device."""
-        return "mdi:check-circle"
+        """Return the icon of the automation."""
+        return self._icon
 
     @property
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_device_name(self._data, self._device_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
             "manufacturer": MANUFACTURER_SCHNEIDER,
-            "model": self._device.product_type,
-            "sw_version": self._device.firmware_version,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
-
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """enable notification."""
-        _LOGGER.warning(f"**************************LGO Debug Enable Notification {self._device.device_type_id} fn {getattr(self._device, "set_" + self._key)} ********************************** "
-                )
-
-        await self._device.set_enable_notification("true")
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Disable notification."""
-        _LOGGER.warning(f"**************************LGO Debug Disable Notification {self._device.device_type_id} fn {getattr(self._device, "set_" + self._key)} ********************************** "
-                )
-        await self._device.set_enable_notification("false")
-        await self.async_force_update()
-        return True
 
     @property
     def extra_state_attributes(self):
         """Return the device state attributes for the attribute card."""
         attrs = {}
-        attrs["name"] = self._device.name
-        attrs["device_id"] = self._device.id
-        attrs["id"] = self._device.device_type_id
-        attrs["notification"] = self._device.enable_notification
+        attrs["automation_name"] = self._automation.name
+        attrs["automation_id"] = self._automation.id
+        attrs["automation_enabled"] = self._automation.enabled
+        attrs["automation_notification"] = self._automation.enable_notification
         return attrs
 
-
-class WiserEquipmentEnableNotificationSwitch(WiserSwitch):
+class WiserEquipmentPowerNotificationSwitch(WiserSwitch):
     """Plug SwitchEntity Class."""
-
-    def __init__(self, data, name, key, icon, device_id) -> None:
+            
+    def __init__(self, data, name, key, icon, equipment_id) -> None:
         """Initialize the sensor."""
         self._name = name
-        self._device_id = device_id
+        self._equipment_id = equipment_id
         self._key = key
         self._data = data
         super().__init__(data, name, key, "equip-switch", icon)
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._equipment = self._data.wiserhub.equipments.get_equip_by_id(self._equipment_id)
         if (self._name.replace(" ", "_").lower()== "under_power_notification"):     
-            self._is_on = self._device.equipment.under_power_notification
+            self._is_on = self._equipment.under_power_notification_enabled
 
         if (self._name.replace(" ", "_").lower()== "over_power_notification"):     
-            self._is_on = self._device.equipment.over_power_notification
+            self._is_on = self._equipment.over_power_notification_enabled
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._equipment = self._data.wiserhub.equipments.get_equip_by_id(self._equipment_id)
    
-        if (self._name.replace(" ", "_").lower()== "under_power_notification_enabled"):  
-            self._is_on = self._device.equipment.under_power_notification.enabled
-
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):  
+            self._is_on = self._equipment.under_power_notification_enabled 
+           
         if (self._name.replace(" ", "_").lower()== "over_power_notification"):        
-            self._is_on = self._device.equipment.over_power_notification
+            self._is_on = self._equipment.over_power_notification_enabled
 
         self.async_write_ha_state()
 
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device_id)} {self._name}"
-
+        return f" {self._name} "
+ 
     @property
     def unique_id(self):
         """Return unique Id."""
         return get_unique_id(
-            self._data,self._device.product_type , self._name, self._device_id
+            self._data,self._equipment.equipment.equipment_name , self._equipment_id,self._name
+            ) 
 
-        )
     @property
     def icon(self):
         """Return the icon of the Device."""
@@ -1299,159 +1295,35 @@ class WiserEquipmentEnableNotificationSwitch(WiserSwitch):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_device_name(self._data, self._device_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-            "manufacturer": MANUFACTURER,
-            "model": self._device.product_type,
-            "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
-
-    @hub_error_handler
-    async def async_turn_on(self, **kwargs):
-        """enable notification."""
-        if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
-            await self._device.equipment.over_power_notification.set_enabled ("true")
-#            await self._device.set_enabled ("true")
-
-        if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
-            await self._device.equipment.under_power_notification.set_enabled ("true")
-
-        await self.async_force_update()
-        return True
-
-    @hub_error_handler
-    async def async_turn_off(self, **kwargs):
-        """Disable notification."""
-        if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
-#            await self._device.equipment.over_power_notification.set_enabled ("false")
-            await self._device.set_enabled ("false")
-
-        if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
-            await self._device.equipment.over_power_notification.set_enabled ("false")
-
-        await self.async_force_update()
-        return True
-    
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes of Power Notification."""
-        attrs = {} 
-        _LOGGER.debug(f"add attribute power notification {get_device_name(self._data,self._device_id,"device")}")
-        if (self._name.replace(" ", "_").lower()== "over_power_notification"): 
-            attrs["over_power_period_mins"] = self._device.equipment.over_power_notification.period_mins
-            attrs["over_power_limit"] = self._device.equipment.over_power_notification.limit
-            attrs["enabled"] = self._device.equipment.over_power_notification.enabled
-            attrs["name"] = self._device.equipment.equipment_name if self._device.equipment.equipment_name != "Unknown" else self._device.equipment.equipment_family
-
-        if (self._name.replace(" ", "_").lower()== "under_power_notification_enabled"): 
-            attrs["under_power_period_mins"] = self._device.equipment.under_power_notification.period_mins
-            attrs["under_power_limit"] = self._device.equipment.under_power_notification.limit
-            attrs["enabled"] = self._device.equipment.under_power_notification.enabled
-            attrs["name"] = self._device.equipment.equipment_name if self._device.equipment.equipment_name != "Unknown" else self._device.equipment.equipment_family
-        return attrs
-
-class WiserEquipmentEnableNotificationSwitch1(WiserSwitch):
-    """Plug SwitchEntity Class."""
-
-    def __init__(self, data, name, key, icon, device_id) -> None:
-        """Initialize the sensor."""
-        self._name = name
-        self._device_id = device_id
-        self._key = key
-        self._data = data
-        super().__init__(data, name, key, "equip-switch", icon)
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        if (self._name.replace(" ", "_").lower()== "under_power_notification"):     
-            self._is_on = self._device.equipment.under_power_notification
-
-        if (self._name.replace(" ", "_").lower()== "over_power_notification"):     
-            self._is_on = self._device.equipment.over_power_notification
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Async Update to HA."""
-        super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-   
-        if (self._name.replace(" ", "_").lower()== "under_power_notification_enabled"):  
-            self._is_on = self._device.equipment.under_power_notification.enabled
-
-        if (self._name.replace(" ", "_").lower()== "over_power_notification"):        
-            self._is_on = self._device.equipment.over_power_notification
-
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device_id)} {self._name}"
-
-    @property
-    def unique_id(self):
-        """Return unique Id."""
-        _LOGGER.debug(
-            f"LGO Debug UNIQUE ID {get_unique_id(
-            self._data,self._device.product_type , self._name,self._device_id)} over power on") # {self._equipment.over_power_notification.enabled}" )
-        return get_unique_id(
-            self._data,self._device.product_type , self._name,'enable-notification' #, self._device_id
-        )
-    @property
-    def icon(self):
-        """Return the icon of the Device."""
-        return self._icon
-
-    @property
-    def device_info(self):
-        """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, self._device_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "name": get_device_name(self._data, self._equipment.equipment.device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._equipment.equipment.device_id))},
             "manufacturer": MANUFACTURER_SCHNEIDER,
-            "model": self._device.product_type,
-            "sw_version": self._device.firmware_version,
+            #"model": self._device.product_type,
+            #"sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+
 
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """enable notification."""
-        _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} over power on") # {self._equipment.over_power_notification.enabled}" )
 
         if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
-            _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} ENABLED ON") # {self._equipment.over_power_notification.enabled}" )
+            await self._equipment.set_over_power_notification_enabled (True)
 
-            await self._device.equipment.over_power_notification.set_enabled ("true")
-#            await self._device.set_enabled ("true")
-
-        if (self._name.replace(" ", "_").lower()== "under_power_notification_enabled"):       
-            _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} ENABLED ON") # {self._equipment.over_power_notification.enabled}" )
-            await self._device.equipment.under_power_notification.set_enabled ("true")
-
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
+            await self._equipment.set_under_power_notification_enabled (True)
         await self.async_force_update()
         return True
 
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Disable notification."""
-        _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} over power off" )
 
         if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
-            _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} ENABLED OFF") # {self._equipment.over_power_notification.enabled}" )
-
-            await self._device.equipment.over_power_notification.set_enabled ("false")
-#            await self._device.equipment.set_enabled ("false")
-
+            await self._equipment.set_over_power_notification_enabled  (False)
         if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
-            _LOGGER.debug(
-            f"LGO Debug {self._name.replace(" ", "_").lower()} ENABLED OFF") # {self._equipment.over_power_notification.enabled}" )
-
-            await self._device.equipment.under_power_notification.set_enabled ("false")
+            await self._equipment.set_under_power_notification_enabled  (False)
 
         await self.async_force_update()
         return True
@@ -1460,19 +1332,14 @@ class WiserEquipmentEnableNotificationSwitch1(WiserSwitch):
     def extra_state_attributes(self):
         """Return the state attributes of Power Notification."""
         attrs = {} 
-        _LOGGER.debug(f"add attribute power notification {get_device_name(self._data,self._device_id,"device")}")
         if (self._name.replace(" ", "_").lower()== "over_power_notification"): 
-            attrs["over_power_period_mins"] = self._device.equipment.over_power_notification.period_mins
-            attrs["over_power_limit"] = self._device.equipment.over_power_notification.limit
-            attrs["enabled"] = self._device.equipment.over_power_notification.enabled
-            attrs["name"] = self._device.equipment.equipment_name if self._device.equipment.equipment_name != "Unknown" else self._device.equipment.equipment_family
-            attrs["uniq_id"]= self.unique_id
+        
+            attrs["over_power_notification_period_mins"] = self._equipment.over_power_notification_period_mins  
+            attrs["over_power_notification_limit"] = self._equipment.over_power_notification_limit  
+            attrs["over_power_notification_enabled"] = self._equipment.over_power_notification_enabled  
+
         if (self._name.replace(" ", "_").lower()== "under_power_notification"): 
-            attrs["under_power_period_mins"] = self._device.equipment.under_power_notification.period_mins
-            attrs["under_power_limit"] = self._device.equipment.under_power_notification.limit
-            attrs["enabled"] = self._device.equipment.under_power_notification.enabled            
-            attrs["name"] = self._device.equipment.equipment_name if self._device.equipment.equipment_name != "Unknown" else self._device.equipment.equipment_family
-            attrs["uniq_id"]= self.unique_id
+            attrs["under_power_notification_period_mins"] = self._equipment.under_power_notification_period_mins  
+            attrs["under_power_notification_limit"] = self._equipment.under_power_notification_limit  
+            attrs["under_power_notification_enabled"] = self._equipment.under_power_notification_enabled  
         return attrs
-
-
