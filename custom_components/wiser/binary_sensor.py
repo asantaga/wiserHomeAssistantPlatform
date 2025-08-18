@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     for device in data.wiserhub.devices.binary_sensor.all:
         binary_sensors.extend(
             [
-                BaseBinarySensor(data, device.id, "Active")
+                WiserStateActive(data, device.id, "Active"),
             ]
         )
 
@@ -108,7 +108,13 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._device_name = None
         self._sensor_type = sensor_type
         self._device_data_key = device_data_key
-
+        self._icon = "mdi:window-shutter"
+        if self._sensor_type == "Door":
+            self._icon = "mdi:door"
+            BinarySensorDeviceClass.DOOR
+        if self._sensor_type == "Window":
+            self._icon = "mdi:window-closed"
+            BinarySensorDeviceClass.WINDOW
         _LOGGER.info(
             f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
         )
@@ -151,6 +157,15 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
 
     @property
+    def icon(self):
+        """Return an icon of the sensor."""
+        if self._sensor_type == "Door":
+            return "mdi:door"
+        if self._sensor_type == "Window":
+            return "mdi:window-closed"
+        
+
+    @property
     def unique_id(self):
         """Return uniqueid."""
         return get_unique_id(self._data, "binary_sensor", self._sensor_type, self.name)
@@ -161,7 +176,7 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
-            "manufacturer": MANUFACTURER,
+            "manufacturer": MANUFACTURER_SCHNEIDER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
@@ -254,7 +269,6 @@ class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def name(self):
         """Return the name of the sensor."""
         return f"{get_room_name(self._data, self._room_id)} {self._sensor_type}"
-        #return f"{get_device_name(self._data, self._room_id, "room")}  {self._sensor_type}",  
     
     @property
     def unique_id(self):
@@ -391,5 +405,11 @@ class WiserStateActive(BaseBinarySensor):
         attrs["type"] = self._data.wiserhub.devices.binary_sensor.get_by_id(
                 self._device_id
             ).type 
+
         return attrs
     
+#WindowDoor sensor        
+class WiserWindowDoorSensor(BaseBinarySensor):
+    """Shutter Is Open sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.OPENING
