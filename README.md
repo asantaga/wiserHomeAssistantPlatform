@@ -29,10 +29,15 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
-- v3.4.16.1  LGO dev
-  - Added equipment and equipment data for Smartplugs, Heating actuators and PowertagE 
+- v3.4.17  LGO dev
+  - Added equipment and enable over and under power notification  
   - Added some binary sensor
   - Replaced switch 'Summer Discomfort Prevention' by a binary sensor
+  - Added seasonnal comfort for shutters
+  - Added weather (used by seasonnal comfort)
+  - Added Wiser Automation  and command enable and notification enabled 
+  - Added notification for devices
+  - Bump api to v1.6.7
   
 - v3.4.16
   - Fix incorrect identifer on hub device
