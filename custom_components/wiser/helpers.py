@@ -30,7 +30,9 @@ def get_device_name(data, device_id, device_type="device"):
     if device_type == "device":
         device = data.wiserhub.devices.get_by_id(device_id)
 
-        if device_id == 0:
+        if device_id == 0 :
+#        if device.product_type == "Controller":
+ 
             return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
 
         if device.product_type == "iTRV":
@@ -109,7 +111,6 @@ def get_device_name(data, device_id, device_type="device"):
     else:
         return f"{ENTITY_PREFIX} {device_type}"
 
-
 def get_identifier(data, device_id, device_type="device"):
     return (
         f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
@@ -153,3 +154,17 @@ def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str or None:
     if entry:
         return entry[0].entry_id
     return None
+
+# added by LGO for equipment management
+def get_equipment_name(data, equipment_id):       
+    """Get the name of the equipment based on its ID."""
+    equipment = data.wiserhub.equipments.get_equip_by_id(equipment_id)
+    if equipment:
+        return f"{ENTITY_PREFIX} {equipment.name}"
+    return f"{ENTITY_PREFIX} Equipment {equipment_id}"  # Fallback if no name found
+
+def get_equipment_identifier(data, equipment_id, device_type):
+    return (
+        f"{data.wiserhub.system.name} {get_device_name(data, equipment_id, device_type)}"
+    )
+  

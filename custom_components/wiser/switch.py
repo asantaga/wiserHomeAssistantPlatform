@@ -16,12 +16,15 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
+from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER, MANUFACTURER_SCHNEIDER
 from .helpers import (
     get_device_name,
     get_identifier,
     get_room_name,
     get_unique_id,
+    get_equipment_name,
+    get_equipment_identifier,
+    
     hub_error_handler,
 )
 from custom_components.wiser.schedules import WiserScheduleEntity
@@ -82,12 +85,6 @@ WISER_SWITCHES = [
         "type": "system",
     },
     {
-        "name": "Summer Discomfort Prevention",
-        "key": "summer_discomfort_prevention",
-        "icon": "mdi:beach",
-        "type": "system",
-    },
-    {
         "name": "Window Detection",
         "key": "window_detection_active",
         "icon": "mdi:window-closed",
@@ -99,6 +96,13 @@ WISER_SWITCHES = [
         "icon": "mdi:sofa",
         "type": "room",
     },
+    # added by LGO , App V7
+    {
+        "name": "Seasonal Comfort Enabled",
+        "key": "seasonal_comfort_enabled",
+        "icon": "mdi:sofa",
+        "type": "system",
+    },    
     {
         "name": "Device Lock",
         "key": "device_lock_enabled",
@@ -109,6 +113,12 @@ WISER_SWITCHES = [
         "name": "Identify",
         "key": "identify",
         "icon": "mdi:alarm-light",
+        "type": "device",
+    },
+    {
+        "name": "Enable Notification",
+        "key": "enable_notification",
+        "icon": "mdi:check-circle",
         "type": "device",
     },
 ]
@@ -143,14 +153,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             for device in [
                 device
                 for device in data.wiserhub.devices.all
-                if hasattr(device, switch["key"])
+                if hasattr(device, switch["key"] )                
             ]:
-                wiser_switches.append(
-                    WiserDeviceSwitch(
-                        data, switch["name"], switch["key"], switch["icon"], device.id
-                    )
-                )
-
+                if device.product_type not in ["WindowDoorSensor",]: 
+                            wiser_switches.append(
+                                WiserDeviceSwitch(
+                                    data, switch["name"], switch["key"], switch["icon"], device.id
+                                )
+                            )
+                else:
+                        if switch["key"] != "enable_notification":
+                            """ To enable notification for windowdoor sensor use a select"""    
+                            wiser_switches.append(
+                                WiserDeviceSwitch(
+                                    data, switch["name"], switch["key"], switch["icon"], device.id
+                                )
+                            )
+                    
     # Add Lights (if any)
     for light in data.wiserhub.devices.lights.all:
         wiser_switches.extend(
@@ -163,10 +182,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             [WiserShutterAwayActionSwitch(data, shutter.id, f"Wiser {shutter.name}")]
         )
         if data.hub_version == 2:
-            wiser_switches.append(
-                WiserShutterSummerComfortSwitch(
-                    data, shutter.id, f"Wiser {shutter.name}"
-                )
+#            wiser_switches.append(
+            wiser_switches.extend(                
+                [
+                WiserShutterSummerComfortSwitch(data, shutter.id, f"Wiser {shutter.name}"),
+                WiserShutterSeasonalComfortSwitch(data, shutter.id, f"Wiser {shutter.name}"),
+                ]
             )
 
     # Add SmartPlugs (if any)
@@ -178,6 +199,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
 
+    # Add smokealarm  (if any)
+    
+    for smokealarm in data.wiserhub.devices.smokealarms.all:
+        wiser_switches.extend(
+            [
+            ]
+        )
+    
     # Add PTCs
     for ptc in data.wiserhub.devices.power_tags_c.all:
         wiser_switches.extend(
@@ -214,6 +243,35 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         ),
                     ]
                 )
+
+    
+    # Add Wiser Automation (if any)
+    for automation in data.wiserhub.automations.all:
+        wiser_switches.extend(
+            [
+                WiserAutomationSwitch(data,f"{automation.name}", "enabled", "mdi:check-circle",automation.id),
+                WiserAutomationSwitch(data,f"{automation.name}", "enable_notification", "mdi:notification-clear-all",automation.id),
+            ]
+        ) 
+
+    # Add Power Notification switch on Equipment
+    for equipment in data.wiserhub.equipments.all:
+        if hasattr(equipment, "over_power_notification") or hasattr(equipment, "under_power_notification"):
+            
+            if hasattr(equipment.over_power_notification,"period_mins"):
+                wiser_switches.append(
+                    WiserEquipmentPowerNotificationSwitch(
+                        data,"Over Power Notification", "enabled","mdi:check-circle", equipment.id
+                    ),
+                )          
+
+            if hasattr(equipment.under_power_notification,"period_mins"):
+                wiser_switches.append(
+                    WiserEquipmentPowerNotificationSwitch(
+                        data,"Under Power Notification", "enabled", "mdi:check-circle", equipment.id
+                    ),    
+                )
+            
 
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
@@ -872,6 +930,81 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         await self.async_force_update()
         return True
 
+class WiserShutterSeasonalComfortSwitch(WiserSwitch):
+    """Shutter Respect Seasonal Comfort Class."""
+
+    def __init__(self, data, ShutterId, name) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._shutter_id = ShutterId
+        super().__init__(data, name, "", "shutter", "mdi:sofa")
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.respect_seasonal_comfort == False else False
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.respect_seasonal_comfort == True else False
+        self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"{get_device_name(self._data, self._shutter_id)} Respect Seasonal Comfort"
+
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data, self._shutter.product_type, self.name, self._shutter_id
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._shutter_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._shutter.product_type,
+            "sw_version": self._shutter.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        attrs = {}
+
+        attrs["summer_comfort_lift"] = self._shutter.summer_comfort_lift
+        attrs["summer_comfort_tilt"] = self._shutter.summer_comfort_tilt
+        # Seasonal comfort Added LGO
+        attrs["respect_seasonal_comfort"] = self._shutter.respect_seasonal_comfort
+        attrs["room_with_temperature_sensor"] = self._shutter.room_with_temperature_sensor
+        attrs["use_average_temperature"] = self._shutter.use_average_temperature
+        if self._shutter.covering_type == "Door":
+            attrs["covering_type"] = self._shutter.covering_type
+       
+        attrs["seasonal_target_lift"] = self._shutter.seasonal_target_lift
+        attrs["facade"] = self._shutter.facade
+        attrs["seasonal_derogation_utc_timestamp"] = self._shutter.seasonal_derogation_utc_timestamp
+        return attrs
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the respect seasonal comfort on."""
+        await self._shutter.set_respect_seasonal_comfort("true")
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the respect seasonal comfort off."""
+        await self._shutter.set_respect_seasonal_comfort("false")
+        await self.async_force_update()
+        return True
 
 class WiserInteractsRoomClimateSwitch(WiserSwitch):
     """Shutter Respect Summer Comfort Class."""
@@ -891,7 +1024,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         self._is_threshold = is_threshold
         self._ancillary_sensor_id = ancillary_sensor_id
         self._ancillary_sensor_type = ancillary_sensor_type
-        super().__init__(data, name, "", "interactsroomclimate", "mdi:sofa")
+        super().__init__(data, name, "", "interactsroomclimate", "mdi:thermometer-check")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
 
     @callback
@@ -952,7 +1085,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
             ).threshold_sensors:
                 if th_sensor.id == self._ancillary_sensor_id:
                     await th_sensor.set_interacts_with_room_climate(True)
-                    await self.async_force_update()
+                    await self.async_force_update(2)
                     return True
         else:
             await self._device.set_interacts_with_room_climate(True)
@@ -967,7 +1100,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
             ).threshold_sensors:
                 if th_sensor.id == self._ancillary_sensor_id:
                     await th_sensor.set_interacts_with_room_climate(False)
-                    await self.async_force_update()
+                    await self.async_force_update(2)
                     return True
         else:
             await self._device.set_interacts_with_room_climate(False)
@@ -1030,3 +1163,183 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
         """Turn off hw climate manual heat."""
         await self._data.wiserhub.hotwater.set_manual_heat(False)
         await self.async_force_update()
+
+
+class WiserAutomationSwitch(WiserSwitch):
+    """Switch to set the status of an automation switch"""
+
+    def __init__(self, data, name, key, icon,automation_id) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._automation_id= automation_id
+        self._key= key
+        self._icon = icon
+        super().__init__(data, name, key, "automation", icon)
+        self._automation = self._data.wiserhub.automations.get_by_automation_id(self._automation_id)
+        self._is_on = getattr(self._automation, self._key)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._is_on = getattr(self._automation, self._key)        
+        self._automation = self._data.wiserhub.automations.get_by_automation_id(self._automation_id)
+        self.async_write_ha_state()
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the automation on."""
+
+        if self._key == "enabled":
+            await self._automation.set_enabled(True)
+        elif self._key == "enable_notification":             
+            await self._automation.set_enable_notification(True)
+
+        await self.async_force_update(2)
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the automation off."""
+
+        if self._key == "enabled":
+            await self._automation.set_enabled(False)
+        elif self._key == "enable_notification":             
+            await self._automation.set_enable_notification(False)
+
+        await self.async_force_update(2)
+        return True
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f"Automation {self._name} {self._key}"
+
+
+    @property
+    def icon(self):
+        """Return the icon of the automation."""
+        return self._icon
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, 0),
+            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._data.wiserhub.system.product_type,
+            "sw_version": self._data.wiserhub.system.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        attrs = {}
+        attrs["automation_name"] = self._automation.name
+        attrs["automation_id"] = self._automation.id
+        attrs["automation_enabled"] = self._automation.enabled
+        attrs["automation_notification"] = self._automation.enable_notification
+        return attrs
+
+class WiserEquipmentPowerNotificationSwitch(WiserSwitch):
+    """Plug SwitchEntity Class."""
+            
+    def __init__(self, data, name, key, icon, equipment_id) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._equipment_id = equipment_id
+        self._key = key
+        self._data = data
+        super().__init__(data, name, key, "equip-switch", icon)
+        self._equipment = self._data.wiserhub.equipments.get_equip_by_id(self._equipment_id)
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):     
+            self._is_on = self._equipment.under_power_notification_enabled
+
+        if (self._name.replace(" ", "_").lower()== "over_power_notification"):     
+            self._is_on = self._equipment.over_power_notification_enabled
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._equipment = self._data.wiserhub.equipments.get_equip_by_id(self._equipment_id)
+   
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):  
+            self._is_on = self._equipment.under_power_notification_enabled 
+           
+        if (self._name.replace(" ", "_").lower()== "over_power_notification"):        
+            self._is_on = self._equipment.over_power_notification_enabled
+
+        self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        return f" {get_equipment_name(self._data, self._equipment_id)} {self._name} "
+ 
+    @property
+    def unique_id(self):
+        """Return unique Id."""
+        return get_unique_id(
+            self._data,self._equipment.equipment.equipment_name , self._equipment_id,self._name
+            ) 
+
+    @property
+    def icon(self):
+        """Return the icon of the Device."""
+        return self._icon
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._equipment.equipment.device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._equipment.equipment.device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            #"model": self._device.product_type,
+            #"sw_version": self._device.firmware_version,
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """enable notification."""
+
+        if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
+            await self._equipment.set_over_power_notification_enabled (True)
+
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
+            await self._equipment.set_under_power_notification_enabled (True)
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Disable notification."""
+
+        if (self._name.replace(" ", "_").lower()== "over_power_notification"):       
+            await self._equipment.set_over_power_notification_enabled  (False)
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"):       
+            await self._equipment.set_under_power_notification_enabled  (False)
+
+        await self.async_force_update()
+        return True
+    
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of Power Notification."""
+        attrs = {} 
+        if (self._name.replace(" ", "_").lower()== "over_power_notification"): 
+        
+            attrs["over_power_notification_period_mins"] = self._equipment.over_power_notification_period_mins  
+            attrs["over_power_notification_limit"] = self._equipment.over_power_notification_limit  
+            attrs["over_power_notification_enabled"] = self._equipment.over_power_notification_enabled  
+
+        if (self._name.replace(" ", "_").lower()== "under_power_notification"): 
+            attrs["under_power_notification_period_mins"] = self._equipment.under_power_notification_period_mins  
+            attrs["under_power_notification_limit"] = self._equipment.under_power_notification_limit  
+            attrs["under_power_notification_enabled"] = self._equipment.under_power_notification_enabled  
+        return attrs
