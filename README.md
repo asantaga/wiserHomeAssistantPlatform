@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.16
+# Wiser Home Assistant Integration v3.4.17
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -30,6 +30,12 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.17
+
+  - Fixed hot water climate does not respect away mode - issue [#579](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/579)
+  - Fixed deprecation error sets option flow config_entry explicitly - issue [#595](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/595)
+  - Fixed schedule card unable to edit - issue [#607](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/607)
 
 - v3.4.16
   - Fix incorrect identifer on hub device
