@@ -38,11 +38,13 @@ For more information checkout the AMAZING community thread available on
   - Fixed schedule card unable to edit - issue [#607](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/607)
 
 - v3.4.16
-  - Fix incorrect identifer on hub device
+
+- Fix incorrect identifer on hub device
   - Fix deprecation warning for access to lovelace resource parameters
   - Fix error on unloading services for hubs without hot water control
   - Fix deprecation warning for ZeroconfServiceInfo
   - Bump api to v1.6.6 to support SSL for future firmware
+
 - v3.4.15
 
   - Added experimental hw climate mode to operate differently. See wiki for details
