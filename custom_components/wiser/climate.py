@@ -440,7 +440,9 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
                 return TEXT_PASSIVE
             if self._room.preset_mode == "Boost":
                 if int(self._room.boost_time_remaining / 60) != 0:
-                    return f"{STATUS_BOOST} {int(self._room.boost_time_remaining/60)}m"
+                    return (
+                        f"{STATUS_BOOST} {int(self._room.boost_time_remaining / 60)}m"
+                    )
                 return STATUS_BOOST
             return WISER_PRESET_TO_HASS[self._room.target_temperature_origin]
         except KeyError:
@@ -918,9 +920,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         try:
             if self.hotwater.is_boosted:
                 if int(self.hotwater.boost_time_remaining / 60) != 0:
-                    return (
-                        f"{STATUS_BOOST} {int(self.hotwater.boost_time_remaining/60)}m"
-                    )
+                    return f"{STATUS_BOOST} {int(self.hotwater.boost_time_remaining / 60)}m"
                 return STATUS_BOOST
             return WISER_PRESET_TO_HASS[self.hotwater.current_control_source]
         except KeyError:
@@ -1087,8 +1087,13 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         if self.current_temperature >= self.target_temperature_high:
             should_heat = False
 
+        # If in away mode, should not heat
+        if self.hotwater.is_away_mode:
+            should_heat = False
+
         _LOGGER.debug(
-            "Status: is_heating: %s, is_boosted: %s, target_high: %s, target_low: %s, current: %s, schedule: %s, manual_heat: %s, keep_cycling: %s, should_heat: %s",
+            "Status: is_away: %s, is_heating: %s, is_boosted: %s, target_high: %s, target_low: %s, current: %s, schedule: %s, manual_heat: %s, keep_cycling: %s, should_heat: %s",
+            self.hotwater.is_away_mode,
             self.hotwater.is_heating,
             self.hotwater.is_boosted,
             self.target_temperature_high,
