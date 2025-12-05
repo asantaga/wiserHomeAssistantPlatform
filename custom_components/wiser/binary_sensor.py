@@ -216,7 +216,8 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
 #        return f"{get_device_name(self._data, self._data.wiserhub.system)} {self._sensor_type}"
         HeatHub = self._data.wiserhub.system.name
         HeatHub = HeatHub.replace("WiserHeat","HeatHub")
-        return f"{HeatHub} {self._sensor_type}"
+        #return f"{HeatHub} {self._sensor_type}"
+        return f"{get_device_name(self._data, 0,self._sensor_type)}" 
 
     @property
     def unique_id(self):
@@ -354,7 +355,7 @@ class WiserSummerDiscomfortPrevention(SystemBinarySensor):
 class WiserSummerComfortAvailable(SystemBinarySensor):
     """Summer Comfort Available sensor."""
     _attr_icon = "mdi:sofa"
-    _attr_device_class = BinarySensorDeviceClass.HEAT
+    #_attr_device_class = BinarySensorDeviceClass.HEAT
 
 class WiserPCMDeviceLimitReached(SystemBinarySensor):
     """Summer Comfort Available sensor."""
