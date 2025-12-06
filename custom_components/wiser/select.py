@@ -37,10 +37,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
             wiser_selects.extend([WiserLightModeSelect(data, light.id)])
+            if light.is_led_indicator_supported:
+                wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
 
             if light.is_dimmable:
-                if light.is_led_indicator_supported:
-                    wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
                 if light.is_power_on_behaviour_supported:
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.id)]
