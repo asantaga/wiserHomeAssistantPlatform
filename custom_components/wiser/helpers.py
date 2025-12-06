@@ -153,3 +153,17 @@ def get_config_entry_id_by_name(hass: HomeAssistant, name) -> str or None:
     if entry:
         return entry[0].entry_id
     return None
+
+# added by LGO for equipment management
+def get_equipment_name(data, equipment_id):       
+    """Get the name of the equipment based on its ID."""
+    equipment = data.wiserhub.equipments.get_equip_by_id(equipment_id)
+    if equipment:
+        return f"{ENTITY_PREFIX} {equipment.name}"
+    return f"{ENTITY_PREFIX} Equipment {equipment_id}"  # Fallback if no name found
+
+def get_equipment_identifier(data, equipment_id, device_type):
+    return (
+        f"{data.wiserhub.system.name} {get_device_name(data, equipment_id, device_type)}"
+    )
+  
