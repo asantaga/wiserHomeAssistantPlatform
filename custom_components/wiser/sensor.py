@@ -99,6 +99,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     _LOGGER.debug("Setting up Cloud sensor")
     wiser_sensors.append(WiserSystemCloudSensor(data, sensor_type="Cloud"))
 
+    # Add pairing status sensor LGO
+    _LOGGER.debug("Setting up pairing sensor")
+    wiser_sensors.append(WiserSystemPairingSensor(data, sensor_type="Pairing Status"))
+
     # Add operation sensor
     _LOGGER.debug("Setting up Heating Operation Mode sensor")
     wiser_sensors.append(
@@ -814,6 +818,33 @@ class WiserSystemCloudSensor(WiserSensor):
             return "mdi:cloud-check"
         return "mdi:cloud-alert"
 
+#add LGO 
+class WiserSystemPairingSensor(WiserSensor):
+    """Sensor to display the pairing status of the Wiser Hub."""
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._state = self._data.wiserhub.system.pairing_status
+        self.async_write_ha_state()
+
+    @property
+    def icon(self):
+        """Return icon."""
+        if self._state == "Paired":
+            return "mdi:cloud-check"
+        return "mdi:cloud-alert"
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes."""
+        attrs = {}
+        attrs["latitude"] = self._data.wiserhub.system.geo_position.latitude
+        attrs["longitude"] = self._data.wiserhub.system.geo_position.longitude
+        return attrs
+   
+# end add LGO
 
 class WiserSystemOperationModeSensor(WiserSensor):
     """Sensor for the Wiser Operation Mode (Away/Normal etc)."""
