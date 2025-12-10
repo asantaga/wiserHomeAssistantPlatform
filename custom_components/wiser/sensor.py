@@ -116,6 +116,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             wiser_sensors.append(
                 WiserSystemCircuitState(data, heating_channel.id, sensor_type="Heating")
             )
+        # Add heating channels demand
+        for channel in data.wiserhub.heating_channels.all:
+            _LOGGER.debug("Setting up Heating Demand LTS sensors")
+            wiser_sensors.append(WiserLTSDemandSensor(data, channel.id, "heating"))
+
 
     # Add hot water sensors if supported on hub
     if data.wiserhub.hotwater:
@@ -126,6 +131,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserSystemHotWaterPreset(data, sensor_type="Hot Water Operation Mode"),
             ]
         )
+    # Add hotwater demand
+    if data.wiserhub.hotwater:
+        _LOGGER.debug("Setting up HW sensorr")
+        wiser_sensors.append(WiserLTSDemandSensor(data, 0, "hotwater"))
+
 
     # Add power sensors for smartplugs
     if data.wiserhub.devices.smartplugs:
@@ -157,6 +167,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add power sensors for PTE (v2Hub)
     if data.wiserhub.devices.power_tags:
+        _LOGGER.debug("Setting up Power Tag power sensors")
         for power_tag in data.wiserhub.devices.power_tags.all:
             wiser_sensors.extend(
                 [
@@ -207,6 +218,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
 
     # Add temp sensors for smoke alarms
+    _LOGGER.debug("Setting up smoke alarms sensors")
     wiser_sensors.extend(
         WiserLTSTempSensor(
             data,
@@ -215,6 +227,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         )
         for device in data.wiserhub.devices.smokealarms.all
     )
+
+    # Add temp sensors for ITRVs
+    _LOGGER.debug("Setting up smartvalve temperature sensors")
+    wiser_sensors.extend(
+        WiserLTSTempSensor(
+            data,
+            device.id,
+            sensor_type="smartvalve_temp",
+        )
+        for device in data.wiserhub.devices.smartvalves.all
+    )
+
 
     # Add LTS sensors - for Power and Energy for heating actuators
     if data.wiserhub.devices.heating_actuators:
@@ -257,38 +281,35 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
                 )
 
-
-        # Add heating channels demand
-        for channel in data.wiserhub.heating_channels.all:
-            _LOGGER.debug("Setting up Heating Demand LTS sensors")
-            wiser_sensors.append(WiserLTSDemandSensor(data, channel.id, "heating"))
-
-        # Add hotwater demand
-        if data.wiserhub.hotwater:
-            _LOGGER.debug("Setting up HW sensorr")
-            wiser_sensors.append(WiserLTSDemandSensor(data, 0, "hotwater"))
-
-        # Add opentherm flow & return temps
-        if (
-            data.wiserhub.system.opentherm.connection_status == "Connected"
-            and data.wiserhub.system.opentherm.enabled
+    # Add opentherm flow & return temps
+    if (
+        data.wiserhub.system.opentherm.connection_status == "Connected"
+        and data.wiserhub.system.opentherm.enabled 
         ):
-            _LOGGER.debug("Setting up Opentherm sensors")
-            wiser_sensors.extend(
+        _LOGGER.debug("Setting up Opentherm sensors")
+        wiser_sensors.extend(
                 [
                     WiserLTSOpenthermSensor(data, 0, sensor_type="opentherm_flow_temp"),
-                    WiserLTSOpenthermSensor(
-                        data, 0, sensor_type="opentherm_return_temp"
-                    ),
+                    WiserLTSOpenthermSensor(data, 0, sensor_type="opentherm_return_temp"),
                 ]
             )
+
+    # Add LTS Weather sensors
+    if data.wiserhub.system.weather.temperature is not None:
+        _LOGGER.debug("Setting up Weather sensors")
+        wiser_sensors.extend(
+                [
+                    WiserLTSWeatherSensor(data, 0,sensor_type="temperature"),
+                #    WiserLTSWeatherSensor(data, 0,  sensor_type="next_day_2pm_temperature"),   
+                ]
+            )
+       
     # Add Equipment sensors
     if data.wiserhub.equipments:
         _LOGGER.debug(f"Wiserhub Equipment Collection NB {data.wiserhub.equipments.count} ")
         for equipment in data.wiserhub.equipments.all:
             if equipment.name :
                 wiser_sensors.append( WiserEquipmentSensor(data, equipment.id,equipment.name) )                           
-
 
     async_add_entities(wiser_sensors, True)
 
@@ -572,6 +593,7 @@ class WiserDeviceSignalSensor(WiserSensor):
 
             # summer comfort
             if self._data.hub_version == 2:
+                attrs["seasonal_comfort_enabled"] = self._device.seasonal_comfort_enabled
                 attrs["summer_comfort_enabled"] = self._device.summer_comfort_enabled
                 attrs["indoor_discomfort_temperature"] = (
                     self._device.indoor_discomfort_temperature
@@ -592,6 +614,10 @@ class WiserDeviceSignalSensor(WiserSensor):
                 )
                 attrs["can_activate_pcm"] = self._device.can_activate_pcm
 
+                attrs["weather_temperature"] = self._data.wiserhub.system.weather.temperature
+                attrs["next_day_2pm_temperature"] = self._data.wiserhub.system.weather.next_day_2pm_temperature
+
+    
         # Other
         device = self._data.wiserhub.devices.get_by_id(self._device_id)
 
@@ -628,14 +654,31 @@ class WiserDeviceSignalSensor(WiserSensor):
             attrs["life_time"] = self._device.life_time
             attrs["hush_duration"] = self._device.hush_duration
 
+            attrs["device_type_id"] = self._device.device_type_id
+            attrs["id"] = self._device.id
+            attrs["smokealarm_id"] = self._device.id
+            attrs["report_count"] = self._device.report_count
+
         if self._sensor_type == "WindowDoorSensor":
             attrs["name"] = self._device.name
             attrs["active"] = self._device.active
             attrs["type"] = self._device.type
+            attrs["sensorstatus"] = self._device.sensorstatus
             attrs["enable_notification"] = self._device.enable_notification
             attrs["interacts_with_room_climate"] = (
                 self._device.interacts_with_room_climate
             )
+            attrs["device_type_id"] = self._device.device_type_id
+            attrs["id"] = self._device.id
+
+        #Added by LGO44 202510
+        if self._sensor_type =="iTRV":       
+            attrs["window_state"] = self._device.window_state
+            attrs["external_roomstat_temperature"] = self._device.external_roomstat_temperature
+            attrs["room_id"] = self._device.room_id
+            attrs["room"] =     self._data.wiserhub.rooms.get_by_id(self._device.room_id).name
+
+        #Added by LGO44 202510        
 
         return attrs
 
@@ -1057,6 +1100,21 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 name,
             )
+        # Added LTS Temperature sensor by LGO44 202512    
+        elif sensor_type == "smartvalve_temp":
+            sensor_name = (
+                data.wiserhub.rooms.get_by_id(
+                    data.wiserhub.devices.get_by_id(device_id).room_id
+                ).name
+                if data.wiserhub.devices.get_by_id(device_id).room_id
+                else data.wiserhub.devices.get_by_id(device_id).product_model
+            )
+            super().__init__(
+                data,
+                device_id,
+                f"LTS Temperature iTRV {sensor_name}",
+            )
+
         elif sensor_type == "threshold_temp":
             super().__init__(data, device_id, "Temperature", ancillary_sensor_id)
         else:
@@ -1082,6 +1140,10 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).current_temperature
+        elif self._lts_sensor_type == "smartvalve_temp":
+            self._state = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).current_temperature    
         elif self._lts_sensor_type == "threshold_temp":
             for th_sensor in self._data.wiserhub.devices.get_by_id(
                 self._device_id
@@ -1110,6 +1172,7 @@ class WiserLTSTempSensor(WiserSensor):
             "floor_current_temp",
             "smokealarm_temp",
             "threshold_temp",
+            "smartvalve_temp",
         ]:
             return {
                 "name": get_device_name(self._data, self._device_id),
@@ -1631,7 +1694,25 @@ class WiserThresholdSensor(WiserSensor):
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+    # added by LGO
+    @property
+    def extra_state_attributes(self):
+        """Return device threshold extra attributes."""
+        attrs = {} 
 
+        for th_sensor in self._data.wiserhub.devices.get_by_id(
+            self._device_id
+        ).threshold_sensors:
+            if th_sensor.id == self._ancillary_sensor_id:
+                attrs["uuid"] = th_sensor.UUID
+                attrs["quantity"] = th_sensor.quantity
+                attrs["current_level"] = th_sensor.current_level
+                attrs["high_threshold"] = th_sensor.high_threshold
+                attrs["medium_level"] = th_sensor.medium_threshold
+                attrs["low_level"] = th_sensor.low_threshold
+                attrs["interacts_with_room_climate"] = th_sensor.interacts_with_room_climate
+    
+        return attrs
 
 class WiserThresholdLightLevelSensor(WiserThresholdSensor):
     """Sensor for light level of threshold devices."""
@@ -1697,6 +1778,73 @@ class WiserThresholdHumiditySensor(WiserThresholdSensor):
         """Return the unit this state is expressed in."""
         return PERCENTAGE
 
+
+class WiserLTSWeatherSensor(WiserSensor):
+    """Sensor for long term stats for weather temperature and Next days 2PM temperature"""
+
+    def __init__(self, data, device_id, sensor_type="") -> None:
+        """Initialise the operation mode sensor."""
+        self._lts_sensor_type = sensor_type
+        if sensor_type == "temperature":
+            super().__init__(data, device_id, "LTS Weather Temperature")
+        elif sensor_type == "next_day_2pm_temperature":
+            super().__init__(data, device_id, "LTS Weather Next Day 2PM Temperature")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        if self._lts_sensor_type == "temperature":
+            self._state = self._data.wiserhub.system.weather.temperature
+        elif self._lts_sensor_type == "next_day_2pm_temperature":
+            self._state = self._data.wiserhub.system.weather.next_day_2pm_temperature
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {
+                (
+                    DOMAIN,
+                    get_identifier(self._data, self._device_id),
+                )
+            },
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional info."""
+        attrs = {}
+        if self._lts_sensor_type == "weather":
+            weather = self._data.wiserhub.system.weather
+            attrs["next_day_2PM_temperature"] = (
+                self._data.wiserhub.system.weather.next_day_2pm_temperature
+            )
+
+        return attrs
+
+    @property
+    def icon(self):
+        """Return icon for sensor"""
+        return "mdi:thermometer-water"
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
+        if self._state == "Off":
+            return None
+        return UnitOfTemperature.CELSIUS
 
 class WiserEquipmentSensor(WiserSensor):
     """Definition of Wiser Equipment Sensor."""
