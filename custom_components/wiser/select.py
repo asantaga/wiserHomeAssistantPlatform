@@ -53,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.id)]
                     )
+               
 
     # Add Shutters
     if data.wiserhub.devices.shutters.count > 0:
@@ -346,7 +347,7 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
         return get_unique_id(
             self._data,
             self._device.product_type,
-            "led-indicator",
+            "led_indicator",
             self._device_id,
         )
 
@@ -363,12 +364,13 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     async def async_select_option(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} to {option}")
         if option in self._options:
-            await self.async_set_led_indicator(option)
+            await self._device.set_led_indicator(option)
             await self.async_force_update()
         else:
             _LOGGER.error(
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
+
 
 class WiserSmartplugLedIndicatorSelect(WiserSelectEntity):
     def __init__(self, data, smartplug_id) -> None:
