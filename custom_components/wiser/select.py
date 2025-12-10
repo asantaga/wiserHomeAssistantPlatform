@@ -53,7 +53,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.id)]
                     )
-               
+                """  """  
+                if light.is_output_mode_supported:
+                    wiser_selects.extend(
+                        [WiserLightOutputModeSelect(data, light.id)]
+                    )
+                
 
     # Add Shutters
     if data.wiserhub.devices.shutters.count > 0:
@@ -371,6 +376,52 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
 
+
+class WiserLightOutputModeSelect(WiserSelectEntity):
+    def __init__(self, data, light_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = light_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._options = self._device.available_output_mode
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._options = self._device.available_output_mode
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device."""
+        return get_unique_id(
+            self._data,
+            self._device.product_type,
+            "ouput_mode",
+            self._device_id,
+        )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{get_device_name(self._data, self._device_id)} Output Mode"
+
+    @property
+    def current_option(self) -> str:
+        return self._device.output_mode
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self._device.set_output_mode(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
 
 class WiserSmartplugLedIndicatorSelect(WiserSelectEntity):
     def __init__(self, data, smartplug_id) -> None:
