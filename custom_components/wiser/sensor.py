@@ -62,6 +62,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             wiser_sensors.append(
                 WiserDeviceSignalSensor(data, device.id, device.product_type)
             )
+            if device.product_type == "UnderFloorHeating":
+                wiser_sensors.append(
+                    WiserLTSTempSensor(
+                        data, device.id, sensor_type="ufh_measured_temp"
+                    )
+                )
             if hasattr(device, "battery"):
                 wiser_sensors.append(
                     WiserBatterySensor(data, device.id, sensor_type="Battery")
@@ -1053,6 +1059,13 @@ class WiserLTSTempSensor(WiserSensor):
                 device_id,
                 f"LTS Temperature iTRV {sensor_name}",
             )
+        elif sensor_type == "ufh_measured_temp":
+            super().__init__(
+                data,
+                device_id,
+                f"{data.wiserhub.devices.get_by_id(device_id).name} "
+                "Measured Temperature",
+            )
         elif sensor_type == "threshold_temp":
             super().__init__(data, device_id, "Temperature", ancillary_sensor_id)
         else:
@@ -1082,6 +1095,10 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).current_temperature    
+        elif self._lts_sensor_type == "ufh_measured_temp":
+            self._state = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).current_temperature
         elif self._lts_sensor_type == "threshold_temp":
             for th_sensor in self._data.wiserhub.devices.get_by_id(
                 self._device_id
@@ -1111,6 +1128,7 @@ class WiserLTSTempSensor(WiserSensor):
             "smokealarm_temp",
             "threshold_temp",
             "smartvalve_temp",
+            "ufh_measured_temp",
         ]:
             return {
                 "name": get_device_name(self._data, self._device_id),
