@@ -388,7 +388,8 @@ class WiserBatterySensor(WiserSensor):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._device.battery.level != TEXT_UNKNOWN
+        battery = self._device.battery
+        return battery.level != TEXT_UNKNOWN or battery.voltage is not None
 
     @property
     def device_class(self):
