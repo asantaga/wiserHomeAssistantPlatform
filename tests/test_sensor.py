@@ -117,3 +117,33 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
 
         self.assertEqual(sensor.name, "Wiser iTRV Kitchen Signal")
+
+
+class WiserBatterySensorAvailabilityTest(unittest.TestCase):
+    """Regression tests for battery availability when level text is absent."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def _sensor(self, *, level: str, voltage: float | None):
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device = SimpleNamespace(
+            battery=SimpleNamespace(level=level, voltage=voltage)
+        )
+        return sensor
+
+    def test_voltage_keeps_battery_available_when_level_is_unknown(self) -> None:
+        sensor = self._sensor(level="Unknown", voltage=3.0)
+
+        self.assertTrue(sensor.available)
+
+    def test_unknown_level_and_voltage_keeps_battery_unavailable(self) -> None:
+        sensor = self._sensor(level="Unknown", voltage=None)
+
+        self.assertFalse(sensor.available)
+
+    def test_known_level_keeps_battery_available_without_voltage(self) -> None:
+        sensor = self._sensor(level="Normal", voltage=None)
+
+        self.assertTrue(sensor.available)
