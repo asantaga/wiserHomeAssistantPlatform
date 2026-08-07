@@ -11,7 +11,7 @@ from homeassistant.components.light import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
+from .const import DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER_SCHNEIDER
 from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
 from .schedules import WiserScheduleEntity
 
@@ -28,10 +28,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.lights:
         _LOGGER.debug("Setting up light entities")
         for light in data.wiserhub.devices.lights.all:
+            # Key entities by the unique per-channel light_id, not light.id:
+            # multi-gang dimmers (2GANG/DIMMER/2) share one device id across
+            # their channels, and get_by_id() then returns a list, crashing setup.
             if light.is_dimmable:
-                wiser_lights.append(WiserDimmableLight(data, light.id))
+                wiser_lights.append(WiserDimmableLight(data, light.light_id))
             else:
-                wiser_lights.append(WiserLight(data, light.id))
+                wiser_lights.append(WiserLight(data, light.light_id))
         async_add_entities(wiser_lights, True)
 
 
@@ -42,8 +45,14 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
-        self._device_id = light_id
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        # light_id is the unique per-channel id; resolve the light through it and
+        # derive the (possibly shared) physical device id from the light object,
+        # so device grouping still works for multi-gang dimmers.
+        self._light_id = light_id
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
+        self._device_id = self._device.id
         self._schedule = self._device.schedule
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
@@ -56,7 +65,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._schedule = self._device.schedule
         self.async_write_ha_state()
 
@@ -78,7 +89,10 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device.id)} Light"
+        # Use the per-channel light name directly. It already carries room and
+        # channel (e.g. "Badezimmer Badewanne") and is distinct per channel, so
+        # the two channels of a multi-gang dimmer no longer collide.
+        return f"{ENTITY_PREFIX} {self._device.name} Light"
 
     @property
     def icon(self):
@@ -90,7 +104,9 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "device", "light", self.name)
+        # Base the unique_id on the unique light_id (not the name) so the
+        # channels of a multi-gang dimmer never collide.
+        return get_unique_id(self._data, "device", "light", self._light_id)
 
     @property
     def device_info(self):
