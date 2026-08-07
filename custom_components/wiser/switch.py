@@ -223,6 +223,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.enable_hw_climate and not data.hw_climate_experimental_mode:
         wiser_switches.append(WiserHWClimateManualHeatSwitch(data, 0, "Manual Heat"))
 
+    # Add hot water on/off switch (non hw-climate mode only)
+    if data.wiserhub.hotwater and not data.enable_hw_climate:
+        wiser_switches.append(WiserHotWaterSwitch(data, 0, "Hot Water"))
+
     async_add_entities(wiser_switches)
 
     return True
@@ -1023,5 +1027,63 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
     async def async_turn_off(self, **kwargs):
         """Turn off hw climate manual heat."""
         await self._data.wiserhub.hotwater.set_manual_heat(False)
+        await self.async_force_update()
+
+
+class WiserHotWaterSwitch(WiserSwitch):
+    """Class for Hot Water on/off switch, reflecting the true on/off state."""
+
+    def __init__(
+        self,
+        data,
+        device_id,
+        name,
+    ) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._device_id = device_id
+        self._hotwater = data.wiserhub.hotwater
+        super().__init__(data, name, "", "hotwater", "mdi:water-boiler")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._hotwater = self._data.wiserhub.hotwater
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the entity."""
+        return self._hotwater.current_state == "On"
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return get_device_name(self._data, self._hotwater.id, "Hot Water")
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._hotwater.id, "Hot Water"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._hotwater.id, "hot_water"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn hot water on."""
+        await self._data.wiserhub.hotwater.override_state("On")
+        await self.async_force_update()
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn hot water off."""
+        await self._data.wiserhub.hotwater.override_state("Off")
         await self.async_force_update()
 
