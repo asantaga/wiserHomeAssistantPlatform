@@ -9,7 +9,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
 from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,12 +65,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Light sensors
     for device in data.wiserhub.devices.lights.all:
+        # Key by the unique per-channel light_id, not device.id: multi-gang
+        # dimmers (2GANG/DIMMER/2) share one device id across their channels,
+        # so the second channel's sensors would collide on unique_id and be
+        # dropped.
         binary_sensors.extend(
             [
-                WiserStateIsDimmable(data, device.id, "Is Dimmable"),
-                WiserStateIsDimmable(data, device.id, "Is LED Indicator Supported"),
-                WiserStateIsDimmable(data, device.id, "Is Output Mode Supported"),
-                WiserStateIsDimmable(data, device.id, "Is Power On Behaviour Supported"),
+                WiserStateIsDimmable(data, device.light_id, "Is Dimmable"),
+                WiserStateIsDimmable(
+                    data, device.light_id, "Is LED Indicator Supported"
+                ),
+                WiserStateIsDimmable(
+                    data, device.light_id, "Is Output Mode Supported"
+                ),
+                WiserStateIsDimmable(
+                    data, device.light_id, "Is Power On Behaviour Supported"
+                ),
             ]
         )
 
@@ -349,6 +359,21 @@ class WiserStateIsDimmable(BaseBinarySensor):
     """Light IsDimmable sensor."""
 
     _attr_icon = "mdi:lightbulb-on-40"
+
+    def __init__(self, coordinator, light_id, sensor_type=""):
+        """Initialize the sensor."""
+        # Resolve by the unique per-channel light_id and take the (possibly
+        # shared) physical device id from the light, so multi-gang dimmer
+        # channels get distinct names/unique_ids while still grouping under one
+        # device. BaseBinarySensor keys name/unique_id on the shared device id.
+        self._light = coordinator.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._light_id = light_id
+        super().__init__(coordinator, self._light.id, sensor_type)
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{ENTITY_PREFIX} {self._light.name} {self._sensor_type}"
 
 
 class WiserStateIsTiltSupported(BaseBinarySensor):

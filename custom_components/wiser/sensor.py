@@ -58,10 +58,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     # Add hub wifi signal sensor
     wiser_sensors.append(WiserDeviceSignalSensor(data, 0, "Controller"))
     if data.wiserhub.devices:
+        # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per channel
+        # but share a single physical device id. Signal strength is a property of
+        # that physical device, so emit one signal sensor per device id — two
+        # channels would otherwise collide on unique_id and the second be dropped.
+        signal_sensor_device_ids = set()
         for device in data.wiserhub.devices.all:
-            wiser_sensors.append(
-                WiserDeviceSignalSensor(data, device.id, device.product_type)
-            )
+            if device.id not in signal_sensor_device_ids:
+                signal_sensor_device_ids.add(device.id)
+                wiser_sensors.append(
+                    WiserDeviceSignalSensor(data, device.id, device.product_type)
+                )
             if hasattr(device, "battery"):
                 wiser_sensors.append(
                     WiserBatterySensor(data, device.id, sensor_type="Battery")

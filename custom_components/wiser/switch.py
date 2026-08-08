@@ -16,7 +16,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
+from .const import DATA, DOMAIN, ENTITY_PREFIX, HOT_WATER, MANUFACTURER
 from .helpers import (
     get_device_name,
     get_identifier,
@@ -134,11 +134,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
         elif switch["type"] == "device":
+            # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per
+            # channel but share a single physical device id. Device Lock and
+            # Identify act on that physical device, so emit one switch per device
+            # id — the second channel would otherwise collide on unique_id.
+            seen_device_ids = set()
             for device in [
                 device
                 for device in data.wiserhub.devices.all
                 if hasattr(device, switch["key"])
             ]:
+                if device.id in seen_device_ids:
+                    continue
+                seen_device_ids.add(device.id)
                 wiser_switches.append(
                     WiserDeviceSwitch(
                         data, switch["name"], switch["key"], switch["icon"], device.id
@@ -147,8 +155,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add Lights (if any)
     for light in data.wiserhub.devices.lights.all:
+        # Key by the unique per-channel light_id, not light.id: multi-gang
+        # dimmers (2GANG/DIMMER/2) share one device id across their channels,
+        # so the second channel's switch would collide on unique_id.
         wiser_switches.extend(
-            [WiserLightAwayActionSwitch(data, light.id, f"Wiser {light.name}")]
+            [WiserLightAwayActionSwitch(data, light.light_id, f"Wiser {light.name}")]
         )
 
     # Add Shutters (if any)
@@ -625,24 +636,32 @@ class WiserLightAwayActionSwitch(WiserSwitch):
 
     def __init__(self, data, LightId, name) -> None:
         """Initialize the sensor."""
+        # LightId is the unique per-channel light_id; resolve the light through
+        # it and take the (possibly shared) physical device id for grouping, so
+        # the two channels of a multi-gang dimmer get distinct names/unique_ids.
         self._name = name
         self._light_id = LightId
+        self._light = data.wiserhub.devices.lights.get_by_light_id(LightId)
+        self._device_id = self._light.id
         super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._light = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._is_on = True if self._light.away_mode_action == "Off" else False
         self.async_write_ha_state()
 
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
+        # Per-channel light name so the two channels of a multi-gang dimmer do
+        # not collide.
+        return f"{ENTITY_PREFIX} {self._light.name} Away Mode Turns Off"
 
     @property
     def unique_id(self):
@@ -655,8 +674,8 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_device_name(self._data, self._light_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._light_id))},
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
             "model": self._light.product_type,
             "sw_version": self._light.firmware_version,
