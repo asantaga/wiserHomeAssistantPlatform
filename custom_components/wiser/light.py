@@ -50,6 +50,10 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         # None means "no command pending, use the device's own state".
         self._optimistic_is_on = None
         self._optimistic_percentage = None
+        # Bumped on every command. A command's delayed cleanup only clears the
+        # optimistic state if it is still the latest, so rapid toggles don't let
+        # an earlier command wipe a newer command's value.
+        self._optimistic_gen = 0
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
     async def async_force_update(self, delay: int = 0):
@@ -63,6 +67,15 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         _LOGGER.debug(f"{self.name} updating")
         self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._schedule = self._device.schedule
+        # Once the hub confirms the on/off command, drop the optimistic override
+        # so the real state takes over seamlessly. Clearing on a match never
+        # changes what is shown, so a slow hub can't revert the UI to the
+        # pre-command value between the command and its confirmation.
+        if (
+            self._optimistic_is_on is not None
+            and self._device.is_on == self._optimistic_is_on
+        ):
+            self._optimistic_is_on = None
         self.async_write_ha_state()
 
     @property
@@ -183,12 +196,17 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             await self._device.turn_on()
         # Reflect the command in the UI immediately (the hub only reports the new
         # state a few seconds later); the refresh below then confirms it.
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
         self._optimistic_is_on = True
         self.async_write_ha_state()
         try:
             await self.async_force_update(2)
         finally:
-            self._clear_optimistic_state()
+            # Only the latest command clears the optimistic state; a superseded
+            # command must leave the newer command's value untouched.
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
         return True
 
     @hub_error_handler
@@ -196,12 +214,15 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
         """Turn light off."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self._device.turn_off()
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
         self._optimistic_is_on = False
         self.async_write_ha_state()
         try:
             await self.async_force_update(2)
         finally:
-            self._clear_optimistic_state()
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
         return True
 
     @callback
