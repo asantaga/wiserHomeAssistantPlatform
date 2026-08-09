@@ -51,6 +51,7 @@ def _load_switch_module() -> ModuleType:
         "wiser.const",
         DATA="data",
         DOMAIN="wiser",
+        ENTITY_PREFIX="Wiser",
         HOT_WATER="hot_water",
         MANUFACTURER="Drayton",
     )
