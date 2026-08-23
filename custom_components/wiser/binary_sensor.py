@@ -9,7 +9,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import DATA, DOMAIN, MANUFACTURER, ENTITY_PREFIX
 from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -200,7 +200,8 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f" {DOMAIN} {self._sensor_type}"
+        #return f" {DOMAIN} {self._sensor_type}"
+        return f" {ENTITY_PREFIX} {self._sensor_type}"
     
     @property
     def unique_id(self):
