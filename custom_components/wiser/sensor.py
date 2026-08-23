@@ -162,6 +162,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Energy Delivered"),
                     WiserLTSPowerSensor(data, smartplug.id, sensor_type="Energy", name="Equipment Total Energy"),
                     WiserCurrentVoltageSensor(data, smartplug.id, sensor_type="Current"),
+                    # to ensure backward compatibility
+                    WiserSmartplugPower(data, smartplug.id, sensor_type="Power"),
+                    WiserSmartplugPower(data, smartplug.id, sensor_type="Total Power"),                    
                     
                 ]
                 )
@@ -269,6 +272,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Power", name="Equipment Power"),
                     WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Energy Delivered"),
                     WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy", name="Equipment Total Energy"),
+                    # to ensure backward compatibility
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Power"),
+                    WiserLTSPowerSensor(data, heating_actuator.id, sensor_type="Energy"),
                 ]
             )
             else:
@@ -475,6 +481,7 @@ class WiserDeviceSignalSensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
+               
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
