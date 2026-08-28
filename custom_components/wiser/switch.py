@@ -243,6 +243,20 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
         self._key = key
         self._icon = icon
         self._name = name
+        self._attr_translation_key = {
+            "Valve Protection": "valve_protection",
+            "Eco Mode": "eco_mode",
+            "Away Mode Affects Hot Water": "away_mode_affects_hot_water",
+            "Comfort Mode": "comfort_mode",
+            "Away Mode": "away_mode",
+            "Daylight Saving": "daylight_saving",
+            "Summer Comfort Enabled": "summer_comfort_enabled",
+            "Window Detection": "window_detection",
+            "Include In Summer Comfort": "include_in_summer_comfort",
+            "Device Lock": "device_lock",
+            "Identify": "identify",
+            "Manual Heat": "manual_heat",
+        }.get(name)
         self._is_on = False
         self._type = device_type
         self._away_temperature = None
@@ -258,11 +272,6 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self.name} switch update requested")
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return self._name
 
     @property
     def icon(self):
@@ -369,11 +378,6 @@ class WiserRoomSwitch(WiserSwitch):
         self._is_on = getattr(self._room, self._key)
         self.async_write_ha_state()
 
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return self._name
-
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
@@ -429,11 +433,6 @@ class WiserDeviceSwitch(WiserSwitch):
         self._is_on = getattr(self._device, self._key)
         self.async_write_ha_state()
 
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return self._name
-
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
@@ -486,6 +485,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._name = name
         self._device_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
+        self._attr_translation_key = "outlet"
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
@@ -498,11 +498,6 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Outlet"
 
     @property
     def unique_id(self):
@@ -574,6 +569,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
         self._name = name
         self._smart_plug_id = plugId
         super().__init__(data, name, "", "smartplug", "mdi:power-socket-uk")
+        self._attr_translation_key = "away_mode_turns_off"
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = True if self._smartplug.away_mode_action == "Off" else False
 
@@ -584,11 +580,6 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
         self._smartplug = self._data.wiserhub.devices.get_by_id(self._smart_plug_id)
         self._is_on = True if self._smartplug.away_mode_action == "Off" else False
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Away Mode Turns Off"
 
     @property
     def unique_id(self):
@@ -638,6 +629,7 @@ class WiserLightAwayActionSwitch(WiserSwitch):
         self._name = name
         self._light_id = LightId
         super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
+        self._attr_translation_key = "away_mode_turns_off"
         self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
 
@@ -648,11 +640,6 @@ class WiserLightAwayActionSwitch(WiserSwitch):
         self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Away Mode Turns Off"
 
     @property
     def unique_id(self):
@@ -699,6 +686,7 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
         self._name = name
         self._shutter_id = ShutterId
         super().__init__(data, name, "", "shutter", "mdi:window-shutter")
+        self._attr_translation_key = "away_mode_closes"
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.away_mode_action == "Close" else False
 
@@ -709,11 +697,6 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.away_mode_action == "Close" else False
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Away Mode Closes"
 
     @property
     def unique_id(self):
@@ -761,6 +744,7 @@ class WiserPassiveModeSwitch(WiserSwitch):
         self._room_id = room_id
         self._hass = hass
         super().__init__(data, name, "", "passive-mode", "mdi:thermostat-box")
+        self._attr_translation_key = "passive_mode"
         self._is_on = self._data.wiserhub.rooms.get_by_id(
             self._room_id
         ).passive_mode_enabled
@@ -773,11 +757,6 @@ class WiserPassiveModeSwitch(WiserSwitch):
             self._room_id
         ).passive_mode_enabled
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Passive Mode"
 
     @property
     def unique_id(self):
@@ -834,6 +813,7 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         self._name = name
         self._shutter_id = ShutterId
         super().__init__(data, name, "", "shutter", "mdi:sofa")
+        self._attr_translation_key = "respect_summer_comfort"
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.respect_summer_comfort == False else False
 
@@ -844,11 +824,6 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
         self._is_on = True if self._shutter.respect_summer_comfort == True else False
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        return "Respect Summer Comfort"
 
     @property
     def unique_id(self):
@@ -915,6 +890,18 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         self._ancillary_sensor_id = ancillary_sensor_id
         self._ancillary_sensor_type = ancillary_sensor_type
         super().__init__(data, name, "", "interactsroomclimate", "mdi:sofa")
+        if ancillary_sensor_type:
+            self._attr_translation_key = {
+                "Humidity": "humidity_interacts_with_room_climate",
+                "Temperature": "temperature_interacts_with_room_climate",
+                "LightLevel": "illuminance_interacts_with_room_climate",
+            }.get(ancillary_sensor_type, "sensor_interacts_with_room_climate")
+            if self._attr_translation_key == "sensor_interacts_with_room_climate":
+                self._attr_translation_placeholders = {
+                    "sensor": ancillary_sensor_type.capitalize()
+                }
+        else:
+            self._attr_translation_key = "interacts_with_room_climate"
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
 
     @callback
@@ -952,13 +939,6 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         else:
             return self._device.interacts_with_room_climate
         return False
-
-    @property
-    def name(self):
-        """Return the name of the Device."""
-        if self._ancillary_sensor_type:
-            return f"{self._ancillary_sensor_type} Interacts With Room Climate"
-        return "Interacts With Room Climate"
 
     @property
     def device_info(self):
@@ -1029,11 +1009,6 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
     def is_on(self) -> bool:
         """Return the state of the entity."""
         return self._hotwater.manual_heat
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return self._name
 
     @property
     def device_info(self):

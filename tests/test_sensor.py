@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 import sys
@@ -121,7 +122,7 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat045XXX"))
         )
 
-        self.assertEqual(sensor.name, "Signal")
+        self.assertEqual(sensor._attr_translation_key, "signal")
 
     def test_device_signal_uses_entity_only_name(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
@@ -130,24 +131,31 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat045XXX"))
         )
 
-        self.assertEqual(sensor.name, "Signal")
+        self.assertEqual(sensor._attr_translation_key, "signal")
 
     def test_sensor_uses_modern_home_assistant_naming(self) -> None:
         self.assertTrue(self.sensor_module.WiserSensor._attr_has_entity_name)
 
     def test_room_measurements_do_not_expose_lts_implementation_detail(self) -> None:
-        temperature = object.__new__(self.sensor_module.WiserLTSTempSensor)
-        temperature._lts_sensor_type = "current_temp"
-        target = object.__new__(self.sensor_module.WiserLTSTempSensor)
-        target._lts_sensor_type = "current_target_temp"
-        humidity = object.__new__(self.sensor_module.WiserLTSHumiditySensor)
-        demand = object.__new__(self.sensor_module.WiserLTSDemandSensor)
-        demand._lts_sensor_type = "room"
+        source = SOURCE_PATH.read_text()
+        self.assertIn('"current_target_temp": "target_temperature"', source)
+        self.assertIn('"current_temp"', source)
+        self.assertIn('"target_temperature"', source)
+        self.assertIn('"threshold_humidity"', source)
+        self.assertIn('self._attr_translation_key = "heating_demand"', source)
 
-        self.assertEqual(temperature.name, "Temperature")
-        self.assertEqual(target.name, "Target Temperature")
-        self.assertEqual(humidity.name, "Humidity")
-        self.assertEqual(demand.name, "Heating Demand")
+    def test_heating_demand_is_not_classified_as_power_factor(self) -> None:
+        """A percentage heating demand is not an electrical power factor."""
+        demand_class = next(
+            node
+            for node in ast.parse(SOURCE_PATH.read_text()).body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserLTSDemandSensor"
+        )
+        self.assertNotIn(
+            "POWER_FACTOR",
+            ast.unparse(demand_class),
+        )
 
     def test_controller_signal_belongs_to_physical_hub(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
@@ -183,7 +191,8 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             legacy_name="Equipment Power",
         )
 
-        self.assertEqual(sensor.name, "Power")
+        self.assertNotIn("_attr_name", sensor.__dict__)
+        self.assertIsNone(sensor._attr_translation_key)
         self.assertEqual(sensor._sensor_type, "Equipment Power ")
 
         energy = self.sensor_module.WiserLTSPowerSensor(
@@ -193,7 +202,7 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             name="Total Energy",
             legacy_name="Equipment Total Energy",
         )
-        self.assertEqual(energy.name, "Total Energy")
+        self.assertEqual(energy._attr_translation_key, "total_energy")
         self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
 
 

@@ -76,6 +76,99 @@
       }
     }
   },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Chauffage"
+      },
+      "floor_temperature": { "name": "Température du sol" }
+    },
+    "number": {
+      "away_mode_target_temperature": { "name": "Température cible du mode absence" },
+      "floor_temperature_offset": { "name": "Décalage de température du sol" },
+      "indoor_discomfort_temperature": { "name": "Température d’inconfort intérieure" },
+      "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" }
+    },
+    "select": {
+      "mode": { "name": "Mode" },
+      "power_on_behavior": { "name": "Comportement à la mise sous tension" },
+      "led_indicator": { "name": "Voyant LED" }
+    },
+    "button": {
+      "boost_all_heating": { "name": "Booster tout le chauffage" },
+      "cancel_all_heating_overrides": { "name": "Annuler toutes les dérogations de chauffage" },
+      "boost_hot_water": { "name": "Booster l’eau chaude" },
+      "cancel_hot_water_overrides": { "name": "Annuler les dérogations d’eau chaude" },
+      "toggle_hot_water": { "name": "Basculer l’eau chaude" },
+      "moment": { "name": "Moment : {name}" }
+    },
+    "switch": {
+      "valve_protection": { "name": "Protection des vannes" },
+      "eco_mode": { "name": "Mode éco" },
+      "away_mode_affects_hot_water": { "name": "Le mode absence affecte l’eau chaude" },
+      "comfort_mode": { "name": "Mode confort" },
+      "away_mode": { "name": "Mode absence" },
+      "daylight_saving": { "name": "Heure d’été" },
+      "summer_comfort_enabled": { "name": "Confort d’été activé" },
+      "window_detection": { "name": "Détection de fenêtre" },
+      "include_in_summer_comfort": { "name": "Inclure dans le confort d’été" },
+      "device_lock": { "name": "Verrouillage de l’appareil" },
+      "identify": { "name": "Identifier" },
+      "outlet": { "name": "Prise" },
+      "away_mode_turns_off": { "name": "Le mode absence éteint" },
+      "away_mode_closes": { "name": "Le mode absence ferme" },
+      "passive_mode": { "name": "Mode passif" },
+      "respect_summer_comfort": { "name": "Respecter le confort d’été" },
+      "interacts_with_room_climate": { "name": "Interagit avec le climat de la pièce" },
+      "humidity_interacts_with_room_climate": { "name": "L’humidité interagit avec le climat de la pièce" },
+      "temperature_interacts_with_room_climate": { "name": "La température interagit avec le climat de la pièce" },
+      "illuminance_interacts_with_room_climate": { "name": "L’éclairement interagit avec le climat de la pièce" },
+      "sensor_interacts_with_room_climate": { "name": "{sensor} interagit avec le climat de la pièce" },
+      "manual_heat": { "name": "Chauffage manuel" }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": { "name": "Prévention de l’inconfort estival" },
+      "summer_comfort_available": { "name": "Confort d’été disponible" },
+      "pcm_device_limit_reached": { "name": "Limite d’appareils PCM atteinte" },
+      "smoke_alarm": { "name": "Alarme de fumée" },
+      "heat_alarm": { "name": "Alarme de chaleur" },
+      "tamper_alarm": { "name": "Alarme anti-sabotage" },
+      "fault_warning": { "name": "Avertissement de défaut" },
+      "remote_alarm": { "name": "Alarme distante" },
+      "battery_defect": { "name": "Défaut de batterie" },
+      "controllable": { "name": "Contrôlable" },
+      "pcm_mode": { "name": "Mode PCM" },
+      "window_detection_active": { "name": "Détection de fenêtre active" },
+      "is_dimmable": { "name": "Variable" },
+      "is_led_indicator_supported": { "name": "Voyant LED pris en charge" },
+      "is_output_mode_supported": { "name": "Mode de sortie pris en charge" },
+      "is_power_on_behaviour_supported": { "name": "Comportement à la mise sous tension pris en charge" },
+      "is_tilt_supported": { "name": "Inclinaison prise en charge" },
+      "is_open": { "name": "Ouvert" },
+      "is_closed": { "name": "Fermé" },
+      "active": { "name": "Actif" }
+    },
+    "sensor": {
+      "signal": { "name": "Signal" },
+      "cloud": { "name": "Cloud" },
+      "heating_operation_mode": { "name": "Mode de fonctionnement du chauffage" },
+      "heating": { "name": "Chauffage" },
+      "heating_channel": { "name": "Canal de chauffage {channel}" },
+      "hot_water": { "name": "Eau chaude" },
+      "hot_water_operation_mode": { "name": "Mode de fonctionnement de l’eau chaude" },
+      "target_temperature": { "name": "Température cible" },
+      "floor_temperature": { "name": "Température du sol" },
+      "boiler_flow_temperature": { "name": "Température de départ de la chaudière" },
+      "boiler_return_temperature": { "name": "Température de retour de la chaudière" },
+      "heating_demand": { "name": "Demande de chauffage" },
+      "heating_demand_channel": { "name": "Demande de chauffage canal {channel}" },
+      "hot_water_demand": { "name": "Demande d’eau chaude" },
+      "total_energy": { "name": "Énergie totale" },
+      "energy_delivered": { "name": "Énergie fournie" },
+      "energy_received": { "name": "Énergie reçue" },
+      "equipment_power": { "name": "Puissance de l’équipement" }
+    }
+  },
   "device_automation": {
     "trigger_type": {
       "started_heating": "{entity_name} chauffe démarrée",

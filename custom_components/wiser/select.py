@@ -68,6 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
 class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
     _attr_has_entity_name = True
+    _attr_translation_key = "mode"
 
     def __init__(self, coordinator) -> None:
         """Initialize the sensor."""
@@ -85,11 +86,6 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self.name} updating")
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return "Mode"
 
     @property
     def options(self) -> list[str]:
@@ -151,11 +147,6 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self._hotwater = self._data.wiserhub.hotwater
         self._schedule = self._hotwater.schedule
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return "Mode"
 
     @property
     def current_option(self) -> str:
@@ -270,6 +261,7 @@ class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
 
 class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
+    _attr_translation_key = "power_on_behavior"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         self._device_id = light_id
@@ -296,11 +288,6 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
         )
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return "Power On Behaviour"
-
-    @property
     def current_option(self) -> str:
         return self._device.power_on_behaviour
 
@@ -317,6 +304,7 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
 
 
 class WiserLightLedIndicatorSelect(WiserSelectEntity):
+    _attr_translation_key = "led_indicator"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         self._device_id = light_id
@@ -341,11 +329,6 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             "led-indicator",
             self._device_id,
         )
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return "LED Indicator"
 
     @property
     def current_option(self) -> str:

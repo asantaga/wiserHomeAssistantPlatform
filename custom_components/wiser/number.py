@@ -64,6 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
 class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
+    _attr_translation_key = "away_mode_target_temperature"
 
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
@@ -118,11 +119,6 @@ class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return self._name
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:thermometer-low"
@@ -152,6 +148,7 @@ class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
 
 class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
+    _attr_translation_key = "floor_temperature_offset"
 
     def __init__(self, coordinator, actuator, device_type) -> None:
         """Initialize the sensor."""
@@ -209,11 +206,6 @@ class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEnti
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return "Floor Temp Offset"
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:thermometer-low"
@@ -251,6 +243,7 @@ class WiserDiscomfortIndoorTempNumber(
     WiserEntityMixin, CoordinatorEntity, NumberEntity
 ):
     _attr_has_entity_name = True
+    _attr_translation_key = "indoor_discomfort_temperature"
 
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
@@ -304,11 +297,6 @@ class WiserDiscomfortIndoorTempNumber(
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return self._name
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:home-thermometer"
@@ -339,6 +327,7 @@ class WiserDiscomfortOutdoorTempNumber(
     WiserEntityMixin, CoordinatorEntity, NumberEntity
 ):
     _attr_has_entity_name = True
+    _attr_translation_key = "outdoor_discomfort_temperature"
 
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
@@ -390,11 +379,6 @@ class WiserDiscomfortOutdoorTempNumber(
     def mode(self) -> NumberMode:
         """Return the mode of the entity."""
         return NumberMode.AUTO
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return self._name
 
     @property
     def icon(self):
