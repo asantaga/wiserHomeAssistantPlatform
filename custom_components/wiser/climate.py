@@ -51,6 +51,7 @@ from .const import (
 from .events import fire_events
 from .helpers import get_device_name, get_identifier, hub_error_handler
 from .schedules import WiserScheduleEntity
+from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -612,13 +613,11 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature(self):
         """Return target temp."""
-        if (
-            self._room.mode == "Off"
-            or self._room.current_target_temperature == TEMP_OFF
-        ):
-            return None
-
-        return self._room.current_target_temperature
+        return room_target_temperature(
+            self._room,
+            TEMP_MINIMUM,
+            TEMP_OFF,
+        )
 
     @property
     def target_temperature_step(self) -> float | None:

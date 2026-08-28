@@ -24,7 +24,7 @@ def _load_sensor_module() -> ModuleType:
     """Load the sensor module with only the imports needed by this test."""
     _module("aioWiserHeatAPI")
     _module("aioWiserHeatAPI.const", TEXT_UNKNOWN="Unknown")
-    _module("aioWiserHeatAPI.wiserhub", TEMP_OFF="Off")
+    _module("aioWiserHeatAPI.wiserhub", TEMP_MINIMUM=5, TEMP_OFF="Off")
 
     _module("homeassistant")
     _module("homeassistant.components")
@@ -83,6 +83,14 @@ def _load_sensor_module() -> ModuleType:
         ),
         get_identifier=lambda *_args: "identifier",
         get_unique_id=lambda *_args: "unique-id",
+    )
+    _module(
+        "wiser.temperature",
+        room_target_temperature=lambda room, frost_temp, off_temp: (
+            frost_temp
+            if room.mode == "Off" or room.current_target_temperature == off_temp
+            else room.current_target_temperature
+        ),
     )
 
     spec = importlib.util.spec_from_file_location("wiser.sensor", SOURCE_PATH)

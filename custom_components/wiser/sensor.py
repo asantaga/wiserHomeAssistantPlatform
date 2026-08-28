@@ -31,7 +31,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from aioWiserHeatAPI.wiserhub import TEMP_OFF
+from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
 from .const import (
     DATA,
@@ -43,6 +43,7 @@ from .const import (
     VERSION,
 )
 from .helpers import get_device_name, get_unique_id, get_identifier
+from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1089,18 +1090,11 @@ class WiserLTSTempSensor(WiserSensor):
                 if th_sensor.id == self._ancillary_sensor_id:
                     self._state = th_sensor.current_value
         else:
-            if (
-                self._data.wiserhub.rooms.get_by_id(self._device_id).mode == "Off"
-                or self._data.wiserhub.rooms.get_by_id(
-                    self._device_id
-                ).current_target_temperature
-                == TEMP_OFF
-            ):
-                self._state = STATE_UNAVAILABLE
-            else:
-                self._state = self._data.wiserhub.rooms.get_by_id(
-                    self._device_id
-                ).current_target_temperature
+            self._state = room_target_temperature(
+                self._data.wiserhub.rooms.get_by_id(self._device_id),
+                TEMP_MINIMUM,
+                TEMP_OFF,
+            )
         self.async_write_ha_state()
 
     @property
