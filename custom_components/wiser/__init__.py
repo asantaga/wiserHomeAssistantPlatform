@@ -8,9 +8,11 @@ import asyncio
 import logging
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import (
@@ -30,6 +32,7 @@ from .const import (
     HWCycleModes,
 )
 from .coordinator import WiserUpdateCoordinator
+from .device import merge_legacy_hub_device, register_hub_device
 from .frontend import JSModuleRegistration
 from .helpers import get_device_name, get_identifier, get_instance_count
 from .services import async_setup_services
@@ -122,6 +125,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         UPDATE_LISTENER: update_listener,
     }
 
+    # Register the physical hub before its entities and connected devices.
+    await async_update_device_registry(hass, config_entry)
+
+    # Move existing hub entities off the old virtual Controller record.
+    merge_legacy_hub_device_registry(hass, config_entry)
+
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(config_entry, WISER_PLATFORMS)
 
@@ -130,9 +139,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Setup services
     await async_setup_services(hass, coordinator)
-
-    # Add hub as device
-    await async_update_device_registry(hass, config_entry)
 
     # Register custom cards
     moodule_register = JSModuleRegistration(hass)
@@ -148,16 +154,28 @@ async def async_update_device_registry(hass: HomeAssistant, config_entry):
     """Update device registry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
-        config_entry_id=config_entry.entry_id,
-        connections={
-            (CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address)
-        },
-        identifiers={(DOMAIN, data.wiserhub.system.name)},
+    return register_hub_device(
+        device_registry,
+        config_entry.entry_id,
+        (DOMAIN, data.wiserhub.system.name),
+        (DOMAIN, get_identifier(data, 0)),
+        (CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address),
         manufacturer=MANUFACTURER,
         name=get_device_name(data, 0),
         model=data.wiserhub.system.model,
         sw_version=data.wiserhub.system.firmware_version,
+    )
+
+
+def merge_legacy_hub_device_registry(hass: HomeAssistant, config_entry):
+    """Merge the legacy virtual Controller into the physical HeatHub."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    return merge_legacy_hub_device(
+        dr.async_get(hass),
+        er.async_get(hass),
+        config_entry.entry_id,
+        (DOMAIN, data.wiserhub.system.name),
+        (DOMAIN, get_identifier(data, 0)),
     )
 
 
@@ -170,9 +188,12 @@ async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry, device_entry
 ) -> bool:
     """Delete device if not entities."""
-    if device_entry.model == "Controller":
+    if device_entry.model == "Controller" or (
+        DOMAIN,
+        config_entry.data.get(CONF_NAME),
+    ) in device_entry.identifiers:
         _LOGGER.error(
-            "You cannot delete the Wiser Controller using device delete.  Please remove the integration instead"
+            "You cannot delete the Wiser HeatHub using device delete.  Please remove the integration instead"
         )
         return False
     return True

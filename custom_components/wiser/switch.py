@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
 from .helpers import (
     get_device_name,
+    get_hub_device_info,
     get_identifier,
     get_room_name,
     get_unique_id,
@@ -324,14 +325,7 @@ class WiserSystemSwitch(WiserSwitch):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def extra_state_attributes(self):
@@ -1024,4 +1018,3 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
         """Turn off hw climate manual heat."""
         await self._data.wiserhub.hotwater.set_manual_heat(False)
         await self.async_force_update()
-

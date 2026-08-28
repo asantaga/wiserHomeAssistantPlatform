@@ -4,7 +4,7 @@ from aioWiserHeatAPI.wiserhub import (
     WiserHubRESTError,
 )
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ENTITY_PREFIX
+from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +114,17 @@ def get_identifier(data, device_id, device_type="device"):
     return (
         f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
     )
+
+
+def get_hub_device_info(data):
+    """Return device registry information for the physical HeatHub."""
+    return {
+        "name": get_device_name(data, 0),
+        "identifiers": {(DOMAIN, data.wiserhub.system.name)},
+        "manufacturer": MANUFACTURER,
+        "model": data.wiserhub.system.model,
+        "sw_version": data.wiserhub.system.firmware_version,
+    }
 
 
 def get_unique_id(data, device_type, entity_type, device_id):

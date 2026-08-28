@@ -1,8 +1,14 @@
 import asyncio
 import logging
 
-from .const import DATA, DOMAIN, MANUFACTURER
-from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
+from .const import DATA, DOMAIN
+from .helpers import (
+    get_device_name,
+    get_hub_device_info,
+    get_identifier,
+    get_unique_id,
+    hub_error_handler,
+)
 
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM
 
@@ -125,14 +131,7 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -308,14 +307,7 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -398,14 +390,7 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -417,4 +402,3 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
         _LOGGER.debug(f"Setting {self._name} to {value}C")
         await self._data.wiserhub.system.set_outdoor_discomfort_temperature(value)
         await self.async_force_update()
-

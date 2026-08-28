@@ -31,6 +31,7 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.20
+  - Merge the virtual Wiser Controller into the physical HeatHub device in Home Assistant.
   - Display the built-in Wiser frost-protection target for room climate entities and target-temperature sensors while heating is off.
   - Added equipment data to smart plugs, heating actuators, and PowerTag E devices.
   - Added LED-indicator support for on/off and dimmable lights.

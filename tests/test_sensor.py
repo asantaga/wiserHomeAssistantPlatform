@@ -82,6 +82,7 @@ def _load_sensor_module() -> ModuleType:
             else "Wiser iTRV Kitchen" if device_id else "Wiser HeatHub"
         ),
         get_identifier=lambda *_args: "identifier",
+        get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_unique_id=lambda *_args: "unique-id",
     )
     _module(
@@ -125,3 +126,24 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
 
         self.assertEqual(sensor.name, "Wiser iTRV Kitchen Signal")
+
+    def test_controller_signal_belongs_to_physical_hub(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
+        sensor._device_id = 0
+        sensor._data = object()
+
+        self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+
+class WiserLTSOpenthermSensorDeviceTest(unittest.TestCase):
+    """Tests for OpenTherm LTS sensor device assignment."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def test_opentherm_sensor_belongs_to_physical_hub(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserLTSOpenthermSensor)
+        sensor._data = object()
+
+        self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
