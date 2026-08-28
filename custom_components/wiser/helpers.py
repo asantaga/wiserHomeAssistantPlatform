@@ -26,12 +26,12 @@ def get_hub_device_name(data):
 
 
 def get_hub_entity_object_id(data, entity_name):
-    """Return a stable MAC-derived object ID for a new hub entity."""
+    """Return the MAC-derived entity portion of a new hub object ID."""
     entity_slug = re.sub(r"[^a-z0-9]+", "_", str(entity_name).lower()).strip("_")
-    return (
-        f"{ENTITY_PREFIX.lower()}_heathub_"
-        f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
-    )
+    # Home Assistant adds the area and device portions. Supplying them here too
+    # would produce IDs such as ``wiser_heathub_wiser_heathub_...`` when users
+    # recreate entity IDs from the device page.
+    return f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
 
 
 def hub_error_handler(func):

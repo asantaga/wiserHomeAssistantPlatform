@@ -87,7 +87,7 @@ class HubNamingTest(unittest.TestCase):
     def test_hub_entity_object_id_uses_mac_suffix(self) -> None:
         self.assertEqual(
             self.helpers.get_hub_entity_object_id(self.data, "Away Mode"),
-            "wiser_heathub_058a52_away_mode",
+            "058a52_away_mode",
         )
 
     def test_hub_entity_mixin_suggests_mac_derived_object_id(self) -> None:
@@ -112,8 +112,12 @@ class HubNamingTest(unittest.TestCase):
 
         self.assertEqual(
             HubEntity(self.data).suggested_object_id,
-            "wiser_heathub_058a52_away_mode",
+            "058a52_away_mode",
         )
+
+    def test_hub_entity_object_id_does_not_repeat_device_name(self) -> None:
+        object_id = self.helpers.get_hub_entity_object_id(self.data, "Away Mode")
+        self.assertNotIn("wiser_heathub", object_id)
 
     def test_legacy_identifier_remains_stable(self) -> None:
         self.assertEqual(

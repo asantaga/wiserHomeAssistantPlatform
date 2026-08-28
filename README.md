@@ -32,7 +32,7 @@ For more information checkout the AMAZING community thread available on
 
 - v3.4.20
   - Adopt Home Assistant's modern entity naming so device and room prefixes are supplied contextually by Home Assistant.
-  - Use concise HeatHub device names, adding a physical MAC suffix only when multiple hubs are loaded, and use that suffix in IDs suggested for new hub entities.
+  - Use concise HeatHub device names, adding a physical MAC suffix only when multiple hubs are loaded, and include that suffix in IDs suggested for new hub entities without duplicating Home Assistant's device prefix.
   - Merge the virtual Wiser Controller into the physical HeatHub device in Home Assistant.
   - Display the built-in Wiser frost-protection target for room climate entities and target-temperature sensors while heating is off.
   - Added equipment data to smart plugs, heating actuators, and PowerTag E devices.
