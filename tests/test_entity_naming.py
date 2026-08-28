@@ -93,3 +93,34 @@ class EntityNamingTest(unittest.TestCase):
                     [],
                     f"{filename}:{node.lineno} unique ID depends on entity name",
                 )
+
+    def test_smart_plug_control_is_presented_as_an_outlet(self) -> None:
+        tree = ast.parse((COMPONENT_PATH / "switch.py").read_text())
+        smart_plug = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserSmartPlugSwitch"
+        )
+        device_class = next(
+            statement.value
+            for statement in smart_plug.body
+            if isinstance(statement, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "_attr_device_class"
+                for target in statement.targets
+            )
+        )
+        self.assertIsInstance(device_class, ast.Attribute)
+        self.assertEqual(device_class.attr, "OUTLET")
+
+        name_method = next(
+            node
+            for node in smart_plug.body
+            if isinstance(node, ast.FunctionDef) and node.name == "name"
+        )
+        returned = next(
+            node.value for node in name_method.body if isinstance(node, ast.Return)
+        )
+        self.assertEqual(returned.value, "Outlet")

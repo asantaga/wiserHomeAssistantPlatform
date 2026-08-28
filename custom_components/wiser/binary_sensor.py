@@ -15,7 +15,6 @@ from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_identifier,
-    get_room_name,
     get_unique_id,
 )
 
@@ -266,7 +265,6 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     def name(self):
         """Return the name of the sensor."""
         return self._sensor_type
-        #return f"{get_device_name(self._data, self._room_id, "room")}  {self._sensor_type}",  
     
     @property
     def unique_id(self):
@@ -277,10 +275,11 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_room_name(self._data, self._room_id ),
+            "name": get_device_name(self._data, self._room_id, "room"),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._room_id, "room"))},
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.system.product_type,
+            "suggested_area": self._room.name,
             "sw_version": self._data.wiserhub.system.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }

@@ -10,7 +10,7 @@ import datetime as dt
 import logging
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
@@ -22,6 +22,7 @@ from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_identifier,
+    get_legacy_device_name,
     get_room_name,
     get_unique_id,
     hub_error_handler,
@@ -399,6 +400,7 @@ class WiserRoomSwitch(WiserSwitch):
             },
             "manufacturer": MANUFACTURER,
             "model": "Room",
+            "suggested_area": self._room.name,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -477,6 +479,8 @@ class WiserDeviceSwitch(WiserSwitch):
 class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     """Plug SwitchEntity Class."""
 
+    _attr_device_class = SwitchDeviceClass.OUTLET
+
     def __init__(self, data, plugId, name) -> None:
         """Initialize the sensor."""
         self._name = name
@@ -498,7 +502,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @property
     def name(self):
         """Return the name of the Device."""
-        return "Switch"
+        return "Outlet"
 
     @property
     def unique_id(self):
@@ -779,7 +783,7 @@ class WiserPassiveModeSwitch(WiserSwitch):
     def unique_id(self):
         """Return unique Id."""
         legacy_name = (
-            f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
+            f"{get_room_name(self._data, self._room_id)} Passive Mode"
         )
         return get_unique_id(
             self._data, "passive-mode-switch", legacy_name, self._room_id
@@ -793,6 +797,9 @@ class WiserPassiveModeSwitch(WiserSwitch):
             "identifiers": {
                 (DOMAIN, get_identifier(self._data, self._room_id, "room"))
             },
+            "suggested_area": self._data.wiserhub.rooms.get_by_id(
+                self._room_id
+            ).name,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -923,7 +930,9 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
         suffix = "Interacts With Room Climate"
         if self._ancillary_sensor_type:
             suffix = f"{self._ancillary_sensor_type} {suffix}"
-        legacy_name = f"{get_device_name(self._data, self._device_id)} {suffix}"
+        legacy_name = (
+            f"{get_legacy_device_name(self._data, self._device_id)} {suffix}"
+        )
         uid = get_unique_id(
             self._data, self._device.product_type, legacy_name, self._device_id
         )

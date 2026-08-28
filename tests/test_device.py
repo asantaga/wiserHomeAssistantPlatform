@@ -160,6 +160,7 @@ class RegisterHubDeviceTest(unittest.TestCase):
         self.assertEqual(registry.created[0]["identifiers"], {self.identifier})
         self.assertEqual(registry.created[0]["connections"], {self.connection})
 
+
     def test_moves_legacy_entities_then_removes_controller(self) -> None:
         registry = DeviceRegistry(
             {
@@ -215,3 +216,98 @@ class RegisterHubDeviceTest(unittest.TestCase):
         self.assertFalse(merged)
         self.assertEqual(entity_registry.updated, [])
         self.assertEqual(registry.removed, [])
+
+
+class RegisterRoomAssignedDeviceTest(unittest.TestCase):
+    """Test creation-time area assignment for physical Wiser devices."""
+
+    def test_registers_device_with_area_and_physical_hub_parent(self) -> None:
+        registry = DeviceRegistry()
+
+        DEVICE.register_room_assigned_device(
+            registry,
+            "entry-id",
+            ("wiser", "WiserHeat123456 Wiser Thermostat"),
+            "physical-hub-id",
+            "Andys Bedroom",
+            manufacturer="Drayton Wiser",
+            name="Wiser Thermostat",
+            model="RoomStat",
+            sw_version="4.48.2",
+        )
+
+        created = registry.created[0]
+        self.assertEqual(created["suggested_area"], "Andys Bedroom")
+        self.assertEqual(created["via_device_id"], "physical-hub-id")
+        self.assertEqual(
+            created["identifiers"],
+            {("wiser", "WiserHeat123456 Wiser Thermostat")},
+        )
+
+
+class MigrateRoomDeviceTest(unittest.TestCase):
+    """Test migration of logical Wiser room devices."""
+
+    identifier = ("wiser", "WiserHeat123456 room 7")
+    legacy_identifier = ("wiser", "WiserHeat123456 Wiser Andys Bedroom")
+    config_entry_id = "entry-id"
+
+    def test_migrates_legacy_room_identifier_and_name(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.legacy_identifier, self.config_entry_id): DeviceEntry(
+                    "room-device", area_id="andys_bedroom"
+                )
+            }
+        )
+
+        result = DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Heating",
+        )
+
+        self.assertEqual(result.id, "room-device")
+        self.assertEqual(registry.updated[0][0], "room-device")
+        self.assertEqual(
+            registry.updated[0][1]["new_identifiers"], {self.identifier}
+        )
+        self.assertEqual(registry.updated[0][1]["name"], "Wiser Heating")
+        self.assertNotIn("area_id", registry.updated[0][1])
+        self.assertEqual(registry.removed, [])
+
+    def test_merges_duplicate_legacy_room_into_stable_room(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.identifier, self.config_entry_id): DeviceEntry("stable-room"),
+                (self.legacy_identifier, self.config_entry_id): DeviceEntry(
+                    "legacy-room"
+                ),
+            }
+        )
+        entity_registry = EntityRegistry(
+            {
+                "sensor.temperature": EntityEntry(
+                    "sensor.temperature", "legacy-room"
+                )
+            }
+        )
+
+        result = DEVICE.migrate_room_device(
+            registry,
+            entity_registry,
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Heating",
+        )
+
+        self.assertEqual(result.id, "stable-room")
+        self.assertEqual(
+            entity_registry.updated,
+            [("sensor.temperature", {"device_id": "stable-room"})],
+        )
+        self.assertEqual(registry.removed, ["legacy-room"])

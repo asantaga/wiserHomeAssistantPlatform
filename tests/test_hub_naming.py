@@ -73,7 +73,21 @@ class HubNamingTest(unittest.TestCase):
             model="CCTFR6311G2",
             firmware_version="4.48.2",
         )
-        self.data = SimpleNamespace(wiserhub=SimpleNamespace(system=system))
+        room = SimpleNamespace(id=7, name="Andys Bedroom")
+        rooms = SimpleNamespace(
+            get_by_id=lambda room_id: SimpleNamespace(
+                id=room_id, name="Andys Bedroom"
+            ),
+            get_by_device_id=lambda _device_id: room,
+        )
+        devices = SimpleNamespace(
+            get_by_id=lambda device_id: SimpleNamespace(
+                id=device_id, product_type="RoomStat"
+            )
+        )
+        self.data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=system, rooms=rooms, devices=devices)
+        )
 
     def test_single_hub_has_concise_device_name(self) -> None:
         self.assertEqual(self.helpers.get_hub_device_name(self.data), "Wiser HeatHub")
@@ -123,6 +137,64 @@ class HubNamingTest(unittest.TestCase):
         self.assertEqual(
             self.helpers.get_identifier(self.data, 0),
             "WiserHeatNOTUSED Wiser HeatHub (WiserHeatNOTUSED)",
+        )
+
+    def test_room_device_name_uses_area_for_room_context(self) -> None:
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 7, "room"),
+            "Wiser Heating",
+        )
+
+    def test_room_identifier_uses_stable_room_id(self) -> None:
+        self.assertEqual(
+            self.helpers.get_identifier(self.data, 7, "room"),
+            "WiserHeatNOTUSED room 7",
+        )
+        self.assertEqual(
+            self.helpers.get_legacy_room_identifier(self.data, 7),
+            "WiserHeatNOTUSED Wiser Andys Bedroom",
+        )
+
+    def test_roomstat_name_uses_area_for_room_context(self) -> None:
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 21),
+            "Wiser Thermostat",
+        )
+        self.assertEqual(
+            self.helpers.get_identifier(self.data, 21),
+            "WiserHeatNOTUSED Wiser RoomStat Andys Bedroom",
+        )
+
+    def test_physical_device_suggests_its_wiser_room_as_area(self) -> None:
+        self.assertEqual(
+            self.helpers.get_device_area_info(self.data, 21),
+            {"suggested_area": "Andys Bedroom"},
+        )
+
+    def test_unassigned_physical_device_does_not_suggest_an_area(self) -> None:
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: None
+        self.assertEqual(self.helpers.get_device_area_info(self.data, 21), {})
+
+    def test_temperature_sensor_has_concise_name_and_stable_identifier(self) -> None:
+        self.data.wiserhub.devices.get_by_id = lambda device_id: SimpleNamespace(
+            id=device_id,
+            name="Kitchen Temperature Sensor",
+            product_type="TemperatureHumiditySensor",
+        )
+
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser Temperature/Humidity Sensor",
+        )
+        self.assertEqual(
+            self.helpers.get_identifier(self.data, 31),
+            "WiserHeatNOTUSED Wiser TemperatureHumiditySensor "
+            "Andys Bedroom Kitchen Temperature Sensor",
+        )
+        self.assertEqual(
+            self.helpers.get_legacy_device_name(self.data, 31),
+            "Wiser TemperatureHumiditySensor "
+            "Andys Bedroom Kitchen Temperature Sensor",
         )
 
 

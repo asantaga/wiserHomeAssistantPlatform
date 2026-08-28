@@ -76,6 +76,7 @@ def _load_sensor_module() -> ModuleType:
     )
     _module(
         "wiser.helpers",
+        get_device_area_info=lambda _data, _device_id: {},
         get_device_name=lambda _data, device_id, device_type="device": (
             "Wiser HeatHub"
             if device_type == "HeatHub"
@@ -134,12 +135,66 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
     def test_sensor_uses_modern_home_assistant_naming(self) -> None:
         self.assertTrue(self.sensor_module.WiserSensor._attr_has_entity_name)
 
+    def test_room_measurements_do_not_expose_lts_implementation_detail(self) -> None:
+        temperature = object.__new__(self.sensor_module.WiserLTSTempSensor)
+        temperature._lts_sensor_type = "current_temp"
+        target = object.__new__(self.sensor_module.WiserLTSTempSensor)
+        target._lts_sensor_type = "current_target_temp"
+        humidity = object.__new__(self.sensor_module.WiserLTSHumiditySensor)
+        demand = object.__new__(self.sensor_module.WiserLTSDemandSensor)
+        demand._lts_sensor_type = "room"
+
+        self.assertEqual(temperature.name, "Temperature")
+        self.assertEqual(target.name, "Target Temperature")
+        self.assertEqual(humidity.name, "Humidity")
+        self.assertEqual(demand.name, "Heating Demand")
+
     def test_controller_signal_belongs_to_physical_hub(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
         sensor._device_id = 0
         sensor._data = object()
 
         self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+    def test_hub_v2_setup_does_not_create_duplicate_equipment_readings(self) -> None:
+        setup_source = SOURCE_PATH.read_text().split("class WiserSensor", 1)[0]
+        self.assertNotIn("WiserEquipmentSensor(", setup_source)
+        self.assertNotIn('legacy_name="Equipment Energy Delivered"', setup_source)
+
+    def test_power_display_name_does_not_change_historical_unique_id_input(
+        self,
+    ) -> None:
+        device = SimpleNamespace(id=9, room_id=0, product_type="SmartPlug")
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(
+                    get_by_device_id=lambda _device_id: None,
+                ),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserLTSPowerSensor(
+            data,
+            9,
+            sensor_type="Power",
+            name="Power",
+            legacy_name="Equipment Power",
+        )
+
+        self.assertEqual(sensor.name, "Power")
+        self.assertEqual(sensor._sensor_type, "Equipment Power ")
+
+        energy = self.sensor_module.WiserLTSPowerSensor(
+            data,
+            9,
+            sensor_type="Energy",
+            name="Total Energy",
+            legacy_name="Equipment Total Energy",
+        )
+        self.assertEqual(energy.name, "Total Energy")
+        self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
 
 
 class WiserLTSOpenthermSensorDeviceTest(unittest.TestCase):

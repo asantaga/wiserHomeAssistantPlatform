@@ -50,7 +50,7 @@ from .const import (
 )
 from .events import fire_events
 from .entity import WiserEntityMixin
-from .helpers import get_device_name, get_identifier, hub_error_handler
+from .helpers import get_device_name, get_identifier, get_room_name, hub_error_handler
 from .schedules import WiserScheduleEntity
 from .temperature import room_target_temperature
 
@@ -381,6 +381,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             },
             "manufacturer": MANUFACTURER,
             "model": ROOM.title(),
+            "suggested_area": self._room.name,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
@@ -687,7 +688,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def unique_id(self):
         """Return unique Id."""
-        legacy_name = get_device_name(self._data, self._room_id, "room")
+        legacy_name = get_room_name(self._data, self._room_id)
         return (
             f"{self._data.wiserhub.system.name}-WiserRoom-"
             f"{self._room_id}-{legacy_name}"
