@@ -192,6 +192,7 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
 
     _enable_turn_on_off_backwards_compatibility = False
     _attr_has_entity_name = True
+    _attr_translation_key = "floor_temperature"
 
     def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
@@ -203,16 +204,18 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
             self._actuator_id
         )
 
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
+        _LOGGER.debug(
+            "%s Floor temperature initialise", self._data.wiserhub.system.name
+        )
 
     async def async_force_update(self):
         """Force update from hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
+        _LOGGER.debug("Hub update initiated by floor temperature")
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("%s updating", self.name)
+        _LOGGER.debug("Floor temperature updating")
         self._actuator = self._data.wiserhub.devices.heating_actuators.get_by_id(
             self._actuator_id
         )
@@ -255,11 +258,6 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
     def min_temp(self):
         """Return min temp from data."""
         return TEMP_MINIMUM
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return "Floor temperature"
 
     @hub_error_handler
     async def async_set_temperature(self, **kwargs) -> None:
@@ -328,6 +326,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
     _enable_turn_on_off_backwards_compatibility = False
     _attr_has_entity_name = True
+    _attr_translation_key = "heating"
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
@@ -343,16 +342,18 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
         self.passive_temperature_increment = self._data.passive_temperature_increment
 
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
+        _LOGGER.debug(
+            "%s Heating initialise", self._data.wiserhub.system.name
+        )
 
     async def async_force_update(self):
         """Force update form hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
+        _LOGGER.debug("Hub update initiated by heating")
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("%s updating", self.name)
+        _LOGGER.debug("Heating updating")
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
@@ -440,11 +441,6 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     def min_temp(self):
         """Return min temp from data."""
         return TEMP_MINIMUM
-
-    @property
-    def name(self):
-        """Return the room climate control name."""
-        return "Heating"
 
     @property
     def preset_mode(self):

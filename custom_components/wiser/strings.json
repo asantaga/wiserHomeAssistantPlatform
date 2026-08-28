@@ -72,6 +72,101 @@
       }
     }
   },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Heating"
+      },
+      "floor_temperature": {
+        "name": "Floor temperature"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": { "name": "Away mode target temperature" },
+      "floor_temperature_offset": { "name": "Floor temperature offset" },
+      "indoor_discomfort_temperature": { "name": "Indoor discomfort temperature" },
+      "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" }
+    },
+    "select": {
+      "mode": { "name": "Mode" },
+      "power_on_behavior": { "name": "Power-on behavior" },
+      "led_indicator": { "name": "LED indicator" }
+    },
+    "button": {
+      "boost_all_heating": { "name": "Boost all heating" },
+      "cancel_all_heating_overrides": { "name": "Cancel all heating overrides" },
+      "boost_hot_water": { "name": "Boost hot water" },
+      "cancel_hot_water_overrides": { "name": "Cancel hot water overrides" },
+      "toggle_hot_water": { "name": "Toggle hot water" },
+      "moment": { "name": "Moment: {name}" }
+    },
+    "switch": {
+      "valve_protection": { "name": "Valve protection" },
+      "eco_mode": { "name": "Eco mode" },
+      "away_mode_affects_hot_water": { "name": "Away mode affects hot water" },
+      "comfort_mode": { "name": "Comfort mode" },
+      "away_mode": { "name": "Away mode" },
+      "daylight_saving": { "name": "Daylight saving" },
+      "summer_comfort_enabled": { "name": "Summer comfort enabled" },
+      "window_detection": { "name": "Window detection" },
+      "include_in_summer_comfort": { "name": "Include in summer comfort" },
+      "device_lock": { "name": "Device lock" },
+      "identify": { "name": "Identify" },
+      "outlet": { "name": "Outlet" },
+      "away_mode_turns_off": { "name": "Away mode turns off" },
+      "away_mode_closes": { "name": "Away mode closes" },
+      "passive_mode": { "name": "Passive mode" },
+      "respect_summer_comfort": { "name": "Respect summer comfort" },
+      "interacts_with_room_climate": { "name": "Interacts with room climate" },
+      "humidity_interacts_with_room_climate": { "name": "Humidity interacts with room climate" },
+      "temperature_interacts_with_room_climate": { "name": "Temperature interacts with room climate" },
+      "illuminance_interacts_with_room_climate": { "name": "Illuminance interacts with room climate" },
+      "sensor_interacts_with_room_climate": { "name": "{sensor} interacts with room climate" },
+      "manual_heat": { "name": "Manual heat" }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": { "name": "Summer discomfort prevention" },
+      "summer_comfort_available": { "name": "Summer comfort available" },
+      "pcm_device_limit_reached": { "name": "PCM device limit reached" },
+      "smoke_alarm": { "name": "Smoke alarm" },
+      "heat_alarm": { "name": "Heat alarm" },
+      "tamper_alarm": { "name": "Tamper alarm" },
+      "fault_warning": { "name": "Fault warning" },
+      "remote_alarm": { "name": "Remote alarm" },
+      "battery_defect": { "name": "Battery defect" },
+      "controllable": { "name": "Controllable" },
+      "pcm_mode": { "name": "PCM mode" },
+      "window_detection_active": { "name": "Window detection active" },
+      "is_dimmable": { "name": "Dimmable" },
+      "is_led_indicator_supported": { "name": "LED indicator supported" },
+      "is_output_mode_supported": { "name": "Output mode supported" },
+      "is_power_on_behaviour_supported": { "name": "Power-on behavior supported" },
+      "is_tilt_supported": { "name": "Tilt supported" },
+      "is_open": { "name": "Open" },
+      "is_closed": { "name": "Closed" },
+      "active": { "name": "Active" }
+    },
+    "sensor": {
+      "signal": { "name": "Signal" },
+      "cloud": { "name": "Cloud" },
+      "heating_operation_mode": { "name": "Heating operation mode" },
+      "heating": { "name": "Heating" },
+      "heating_channel": { "name": "Heating channel {channel}" },
+      "hot_water": { "name": "Hot water" },
+      "hot_water_operation_mode": { "name": "Hot water operation mode" },
+      "target_temperature": { "name": "Target temperature" },
+      "floor_temperature": { "name": "Floor temperature" },
+      "boiler_flow_temperature": { "name": "Boiler flow temperature" },
+      "boiler_return_temperature": { "name": "Boiler return temperature" },
+      "heating_demand": { "name": "Heating demand" },
+      "heating_demand_channel": { "name": "Heating demand channel {channel}" },
+      "hot_water_demand": { "name": "Hot water demand" },
+      "total_energy": { "name": "Total energy" },
+      "energy_delivered": { "name": "Energy delivered" },
+      "energy_received": { "name": "Energy received" },
+      "equipment_power": { "name": "Equipment power" }
+    }
+  },
   "device_automation": {
     "trigger_type": {
       "started_heating": "{entity_name} starts heating",
