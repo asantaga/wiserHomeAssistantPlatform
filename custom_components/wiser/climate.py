@@ -433,8 +433,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
     @property
     def name(self):
-        """Return Name of device."""
-        return None
+        """Return the room climate control name."""
+        return "Heating"
 
     @property
     def preset_mode(self):

@@ -94,6 +94,24 @@ class EntityNamingTest(unittest.TestCase):
                     f"{filename}:{node.lineno} unique ID depends on entity name",
                 )
 
+    def test_room_climate_has_a_concise_control_name(self) -> None:
+        tree = ast.parse((COMPONENT_PATH / "climate.py").read_text())
+        wiser_room = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "WiserRoom"
+        )
+        name_method = next(
+            node
+            for node in wiser_room.body
+            if isinstance(node, ast.FunctionDef) and node.name == "name"
+        )
+        return_statement = next(
+            node for node in name_method.body if isinstance(node, ast.Return)
+        )
+        self.assertIsInstance(return_statement.value, ast.Constant)
+        self.assertEqual(return_statement.value.value, "Heating")
+
     def test_smart_plug_control_is_presented_as_an_outlet(self) -> None:
         tree = ast.parse((COMPONENT_PATH / "switch.py").read_text())
         smart_plug = next(

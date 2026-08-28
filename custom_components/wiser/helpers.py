@@ -129,7 +129,7 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif device_type == "room":
-        return f"{ENTITY_PREFIX} Heating"
+        return f"{ENTITY_PREFIX} Room"
 
     else:
         return f"{ENTITY_PREFIX} {device_type}"

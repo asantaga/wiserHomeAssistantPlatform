@@ -267,7 +267,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.config_entry_id,
             self.identifier,
             self.legacy_identifier,
-            "Wiser Heating",
+            "Wiser Room",
         )
 
         self.assertEqual(result.id, "room-device")
@@ -275,7 +275,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
         self.assertEqual(
             registry.updated[0][1]["new_identifiers"], {self.identifier}
         )
-        self.assertEqual(registry.updated[0][1]["name"], "Wiser Heating")
+        self.assertEqual(registry.updated[0][1]["name"], "Wiser Room")
         self.assertNotIn("area_id", registry.updated[0][1])
         self.assertEqual(registry.removed, [])
 
@@ -302,7 +302,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.config_entry_id,
             self.identifier,
             self.legacy_identifier,
-            "Wiser Heating",
+            "Wiser Room",
         )
 
         self.assertEqual(result.id, "stable-room")

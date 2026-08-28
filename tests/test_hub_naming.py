@@ -142,7 +142,7 @@ class HubNamingTest(unittest.TestCase):
     def test_room_device_name_uses_area_for_room_context(self) -> None:
         self.assertEqual(
             self.helpers.get_device_name(self.data, 7, "room"),
-            "Wiser Heating",
+            "Wiser Room",
         )
 
     def test_room_identifier_uses_stable_room_id(self) -> None:
