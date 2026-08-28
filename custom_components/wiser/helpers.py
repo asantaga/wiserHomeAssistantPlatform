@@ -7,8 +7,13 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
 import re
+from uuid import UUID, uuid5
 
 _LOGGER = logging.getLogger(__name__)
+
+# This namespace is part of the entity registry identity contract and must never
+# be changed after release.
+ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
 
 
 def get_hub_mac_suffix(data):
@@ -203,8 +208,21 @@ def get_hub_device_info(data):
     }
 
 
-def get_unique_id(data, device_type, entity_type, device_id):
+def get_legacy_unique_id(data, device_type, entity_type, device_id):
+    """Return the entity unique ID used before deterministic UUIDs."""
     return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+
+
+def get_uuid_unique_id(legacy_unique_id: str) -> str:
+    """Return the deterministic UUIDv5 replacement for a legacy unique ID."""
+    return str(uuid5(ENTITY_UNIQUE_ID_NAMESPACE, legacy_unique_id))
+
+
+def get_unique_id(data, device_type, entity_type, device_id):
+    """Return a deterministic UUIDv5 entity unique ID."""
+    return get_uuid_unique_id(
+        get_legacy_unique_id(data, device_type, entity_type, device_id)
+    )
 
 
 def get_room_name(data, room_id):

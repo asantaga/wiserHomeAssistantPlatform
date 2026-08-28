@@ -21,11 +21,6 @@ from .helpers import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def _entity_translation_key(name: str) -> str:
-    """Return the stable translation key for a fixed Wiser entity label."""
-    return name.lower().replace(" ", "_")
-
-
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
@@ -117,7 +112,6 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
         self._device_id = device_id
         self._device_name = None
         self._sensor_type = sensor_type
-        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._device_data_key = device_data_key
 
         _LOGGER.info(
@@ -157,6 +151,11 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
         return self._state
 
     @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._sensor_type
+
+    @property
     def unique_id(self):
         """Return uniqueid."""
         legacy_name = (
@@ -190,7 +189,6 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
         self._data = coordinator
         self._device_name = None
         self._sensor_type = sensor_type
-        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._state = getattr(self._data.wiserhub.system, self._sensor_type.replace(" ", "_").lower())
         _LOGGER.debug(
             f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
@@ -208,6 +206,11 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
     def is_on(self):
         """Return the state of the sensor."""
         return self._state
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._sensor_type
 
     @property
     def unique_id(self):
@@ -240,7 +243,6 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._room_name = None
         self._sensor_type = sensor_type
-        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._state = getattr(self._room, self._sensor_type.replace(" ", "_").lower())
         _LOGGER.debug(
             f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
@@ -258,6 +260,11 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     def is_on(self):
         """Return the state of the sensor."""
         return self._state
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._sensor_type
 
     @property
     def unique_id(self):

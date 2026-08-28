@@ -50,7 +50,13 @@ from .const import (
 )
 from .events import fire_events
 from .entity import WiserEntityMixin
-from .helpers import get_device_name, get_identifier, get_room_name, hub_error_handler
+from .helpers import (
+    get_device_name,
+    get_identifier,
+    get_room_name,
+    get_uuid_unique_id,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
 from .temperature import room_target_temperature
 
@@ -186,7 +192,6 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
 
     _enable_turn_on_off_backwards_compatibility = False
     _attr_has_entity_name = True
-    _attr_translation_key = "floor_temperature"
 
     def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
@@ -251,6 +256,11 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
         """Return min temp from data."""
         return TEMP_MINIMUM
 
+    @property
+    def name(self):
+        """Return Name of device."""
+        return "Floor temperature"
+
     @hub_error_handler
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -306,7 +316,11 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-WiserHeatingActuatorTempSensor-{self._actuator_id}"
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-"
+            f"WiserHeatingActuatorTempSensor-{self._actuator_id}"
+        )
+        return get_uuid_unique_id(legacy_unique_id)
 
 
 class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
@@ -314,7 +328,6 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
     _enable_turn_on_off_backwards_compatibility = False
     _attr_has_entity_name = True
-    _attr_translation_key = "heating"
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
@@ -427,6 +440,11 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     def min_temp(self):
         """Return min temp from data."""
         return TEMP_MINIMUM
+
+    @property
+    def name(self):
+        """Return the room climate control name."""
+        return "Heating"
 
     @property
     def preset_mode(self):
@@ -681,10 +699,11 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     def unique_id(self):
         """Return unique Id."""
         legacy_name = get_room_name(self._data, self._room_id)
-        return (
+        legacy_unique_id = (
             f"{self._data.wiserhub.system.name}-WiserRoom-"
             f"{self._room_id}-{legacy_name}"
         )
+        return get_uuid_unique_id(legacy_unique_id)
 
     @hub_error_handler
     async def async_boost_heating(
@@ -1152,10 +1171,11 @@ class WiserHotWater(
     def unique_id(self):
         """Return unique Id."""
         legacy_name = get_device_name(self._data, self.hotwater.id, "Hot Water")
-        return (
+        legacy_unique_id = (
             f"{self._data.wiserhub.system.name}-WiserHotWater-"
             f"{self.hotwater.id}-{legacy_name}"
         )
+        return get_uuid_unique_id(legacy_unique_id)
 
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""

@@ -38,6 +38,7 @@ from .device import (
     register_hub_device,
     register_room_assigned_device,
 )
+from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
 from .helpers import (
     get_device_name,
@@ -104,8 +105,15 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                             new_options[CONF_AUTOMATIONS_HW_CLIMATE][item] = value
                             del new_options[item]
 
+        if config_entry.minor_version < 4:
+            migrated_count = migrate_entity_unique_ids(hass, config_entry.entry_id)
+            _LOGGER.info(
+                "Migrated %s Wiser entity unique IDs to UUIDv5",
+                migrated_count,
+            )
+
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=3, version=1
+            config_entry, options=new_options, minor_version=4, version=1
         )
 
     _LOGGER.debug(

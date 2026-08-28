@@ -24,6 +24,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_identifier,
+    get_uuid_unique_id,
     hub_error_handler,
 )
 from .schedules import WiserScheduleEntity
@@ -147,7 +148,11 @@ class WiserShutter(
     def unique_id(self):
         """Return unique Id."""
         legacy_name = f"{get_device_name(self._data, self._device_id)} Control"
-        return f"{self._data.wiserhub.system.name}-Wisershutter-{self._device_id}-{legacy_name}"
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-Wisershutter-"
+            f"{self._device_id}-{legacy_name}"
+        )
+        return get_uuid_unique_id(legacy_unique_id)
 
     @property
     def extra_state_attributes(self):

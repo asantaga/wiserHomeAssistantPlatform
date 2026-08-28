@@ -59,24 +59,11 @@ class WiserButton(WiserEntityMixin, CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(
-        self,
-        coordinator,
-        name="Button",
-        translation_key=None,
-        translation_placeholders=None,
-    ) -> None:
+    def __init__(self, coordinator, name="Button") -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
         self._name = name
-        if translation_key:
-            self._attr_translation_key = translation_key
-            if translation_placeholders:
-                self._attr_translation_placeholders = translation_placeholders
-        else:
-            # Moment names are supplied by the user and therefore are not translated.
-            self._attr_name = name
         _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
 
     async def async_force_update(self, delay: int = 0):
@@ -97,6 +84,11 @@ class WiserButton(WiserEntityMixin, CoordinatorEntity, ButtonEntity):
         return get_unique_id(self._data, "button", self._name, 0)
 
     @property
+    def name(self):
+        """Return entity name."""
+        return self._name
+
+    @property
     def device_info(self):
         """Return device specific attributes."""
         return get_hub_device_info(self._data)
@@ -107,7 +99,7 @@ class WiserBoostAllHeatingButton(WiserButton):
 
     def __init__(self, data) -> None:
         """Init."""
-        super().__init__(data, "Boost All Heating", "boost_all_heating")
+        super().__init__(data, "Boost All Heating")
 
     @hub_error_handler
     async def async_press(self):
@@ -128,9 +120,7 @@ class WiserCancelHeatingOverridesButton(WiserButton):
 
     def __init__(self, data) -> None:
         """Init."""
-        super().__init__(
-            data, "Cancel All Heating Overrides", "cancel_all_heating_overrides"
-        )
+        super().__init__(data, "Cancel All Heating Overrides")
 
     @hub_error_handler
     async def async_press(self):
@@ -149,7 +139,7 @@ class WiserBoostHotWaterButton(WiserButton):
 
     def __init__(self, data) -> None:
         """Init."""
-        super().__init__(data, "Boost Hot Water", "boost_hot_water")
+        super().__init__(data, "Boost Hot Water")
 
     @hub_error_handler
     async def async_press(self):
@@ -189,9 +179,7 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
 
     def __init__(self, data) -> None:
         """Init."""
-        super().__init__(
-            data, "Cancel Hot Water Overrides", "cancel_hot_water_overrides"
-        )
+        super().__init__(data, "Cancel Hot Water Overrides")
 
     @hub_error_handler
     async def async_press(self):
@@ -230,7 +218,7 @@ class WiserOverrideHotWaterButton(WiserButton):
 
     def __init__(self, data) -> None:
         """Init."""
-        super().__init__(data, "Toggle Hot Water", "toggle_hot_water")
+        super().__init__(data, "Toggle Hot Water")
 
     @hub_error_handler
     async def async_press(self):
@@ -273,10 +261,7 @@ class WiserMomentsButton(WiserButton):
         """Init."""
         self._moment_id = moment_id
         super().__init__(
-            data,
-            f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}",
-            "moment",
-            {"name": data.wiserhub.moments.get_by_id(moment_id).name},
+            data, f"Moments {data.wiserhub.moments.get_by_id(moment_id).name}"
         )
 
     @hub_error_handler

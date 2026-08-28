@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
+from uuid import UUID
 
 
 SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/helpers.py"
@@ -153,6 +154,34 @@ class HubNamingTest(unittest.TestCase):
         self.assertEqual(
             self.helpers.get_legacy_room_identifier(self.data, 7),
             "WiserHeatNOTUSED Wiser Andys Bedroom",
+        )
+
+    def test_entity_unique_id_is_a_deterministic_uuid5(self) -> None:
+        first = self.helpers.get_unique_id(
+            self.data, "sensor", "Temperature", 7
+        )
+        second = self.helpers.get_unique_id(
+            self.data, "sensor", "Temperature", 7
+        )
+
+        self.assertEqual(first, second)
+        self.assertEqual(UUID(first).version, 5)
+        self.assertNotEqual(
+            first,
+            self.helpers.get_unique_id(
+                self.data, "sensor", "Target Temperature", 7
+            ),
+        )
+
+    def test_uuid_matches_the_legacy_unique_id_migration(self) -> None:
+        legacy_unique_id = self.helpers.get_legacy_unique_id(
+            self.data, "sensor", "Temperature", 7
+        )
+        self.assertEqual(
+            self.helpers.get_unique_id(
+                self.data, "sensor", "Temperature", 7
+            ),
+            self.helpers.get_uuid_unique_id(legacy_unique_id),
         )
 
     def test_roomstat_name_uses_area_for_room_context(self) -> None:
