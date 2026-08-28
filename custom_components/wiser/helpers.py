@@ -6,8 +6,32 @@ from aioWiserHeatAPI.wiserhub import (
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
+import re
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_hub_mac_suffix(data):
+    """Return the last three octets of the physical hub MAC address."""
+    mac_address = data.wiserhub.system.network.mac_address
+    compact_mac = re.sub(r"[^0-9A-Fa-f]", "", str(mac_address))
+    return compact_mac[-6:].upper()
+
+
+def get_hub_device_name(data):
+    """Return the context-aware display name for the physical HeatHub."""
+    if getattr(data, "_wiser_show_hub_suffix", False):
+        return f"{ENTITY_PREFIX} HeatHub ({get_hub_mac_suffix(data)})"
+    return f"{ENTITY_PREFIX} HeatHub"
+
+
+def get_hub_entity_object_id(data, entity_name):
+    """Return a stable MAC-derived object ID for a new hub entity."""
+    entity_slug = re.sub(r"[^a-z0-9]+", "_", str(entity_name).lower()).strip("_")
+    return (
+        f"{ENTITY_PREFIX.lower()}_heathub_"
+        f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
+    )
 
 
 def hub_error_handler(func):
@@ -31,7 +55,7 @@ def get_device_name(data, device_id, device_type="device"):
         device = data.wiserhub.devices.get_by_id(device_id)
 
         if device_id == 0:
-            return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+            return get_hub_device_name(data)
 
         if device.product_type == "iTRV":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
@@ -111,15 +135,18 @@ def get_device_name(data, device_id, device_type="device"):
 
 
 def get_identifier(data, device_id, device_type="device"):
-    return (
-        f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
-    )
+    if device_id == 0 and device_type == "device":
+        # Preserve the historical Controller identifier for registry migration.
+        device_name = f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+    else:
+        device_name = get_device_name(data, device_id, device_type)
+    return f"{data.wiserhub.system.name} {device_name}"
 
 
 def get_hub_device_info(data):
     """Return device registry information for the physical HeatHub."""
     return {
-        "name": get_device_name(data, 0),
+        "name": get_hub_device_name(data),
         "identifiers": {(DOMAIN, data.wiserhub.system.name)},
         "manufacturer": MANUFACTURER,
         "model": data.wiserhub.system.model,

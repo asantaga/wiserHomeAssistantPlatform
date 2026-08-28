@@ -49,6 +49,7 @@ from .const import (
     HWCycleModes,
 )
 from .events import fire_events
+from .entity import WiserEntityMixin
 from .helpers import get_device_name, get_identifier, hub_error_handler
 from .schedules import WiserScheduleEntity
 from .temperature import room_target_temperature
@@ -180,10 +181,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         async_add_entities([wiser_hotwater], True)
 
 
-class WiserTempProbe(CoordinatorEntity, ClimateEntity):
+class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
     """Wiser temp probe climate entity object."""
 
     _enable_turn_on_off_backwards_compatibility = False
+    _attr_has_entity_name = True
 
     def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
@@ -251,7 +253,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, self._actuator_id)} Floor Temp"
+        return "Floor temperature"
 
     @hub_error_handler
     async def async_set_temperature(self, **kwargs) -> None:
@@ -311,11 +313,11 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
         return f"{self._data.wiserhub.system.name}-WiserHeatingActuatorTempSensor-{self._actuator_id}"
 
 
-class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
+class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
-    _attr_translation_key = "wiser"
+    _attr_has_entity_name = True
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
@@ -431,7 +433,7 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return get_device_name(self._data, self._room_id, "room")
+        return None
 
     @property
     def preset_mode(self):
@@ -685,8 +687,10 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = get_device_name(self._data, self._room_id, "room")
         return (
-            f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
+            f"{self._data.wiserhub.system.name}-WiserRoom-"
+            f"{self._room_id}-{legacy_name}"
         )
 
     @hub_error_handler
@@ -719,11 +723,13 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         await self.async_force_update()
 
 
-class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
+class WiserHotWater(
+    WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserScheduleEntity
+):
     """WiserHotWater ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
-    _attr_translation_key = "wiser"
+    _attr_has_entity_name = True
 
     def __init__(self, hass: HomeAssistant, coordinator) -> None:
         """Initialize the sensor."""
@@ -967,7 +973,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return get_device_name(self._data, self.hotwater.id, "Hot Water")
+        return None
 
     @property
     def device_info(self):
@@ -1152,7 +1158,11 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-WiserHotWater-{self.hotwater.id}-{self.name}"
+        legacy_name = get_device_name(self._data, self.hotwater.id, "Hot Water")
+        return (
+            f"{self._data.wiserhub.system.name}-WiserHotWater-"
+            f"{self.hotwater.id}-{legacy_name}"
+        )
 
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""

@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from .const import DATA, DOMAIN
+from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
@@ -61,7 +62,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(wiser_numbers)
 
 
-class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
+class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -117,7 +120,7 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
+        return self._name
 
     @property
     def icon(self):
@@ -126,7 +129,8 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
@@ -146,7 +150,9 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
+class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, actuator, device_type) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -205,7 +211,7 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, self._actuator.id)} Floor Temp Offset"
+        return "Floor Temp Offset"
 
     @property
     def icon(self):
@@ -214,7 +220,10 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = (
+            f"{get_device_name(self._data, self._actuator.id)} Floor Temp Offset"
+        )
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
@@ -238,7 +247,11 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
+class WiserDiscomfortIndoorTempNumber(
+    WiserEntityMixin, CoordinatorEntity, NumberEntity
+):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -293,7 +306,7 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
+        return self._name
 
     @property
     def icon(self):
@@ -302,7 +315,8 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
@@ -321,7 +335,11 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
+class WiserDiscomfortOutdoorTempNumber(
+    WiserEntityMixin, CoordinatorEntity, NumberEntity
+):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -376,7 +394,7 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
+        return self._name
 
     @property
     def icon(self):
@@ -385,7 +403,8 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):

@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
+from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
@@ -229,8 +230,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     return True
 
 
-class WiserSwitch(CoordinatorEntity, SwitchEntity):
+class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
     """Switch to set the status of the Wiser Operation Mode (Away/Normal)."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, name, key, device_type, icon) -> None:
         """Initialize the sensor."""
@@ -258,7 +261,7 @@ class WiserSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
+        return self._name
 
     @property
     def icon(self):
@@ -267,7 +270,13 @@ class WiserSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, self._type, "switch", self.name)
+        if self._type == "room":
+            legacy_name = (
+                f"{get_room_name(self._data, self._room_id)} {self._name}"
+            )
+        else:
+            legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, self._type, "switch", legacy_name)
 
     @property
     def is_on(self):
@@ -362,7 +371,7 @@ class WiserRoomSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_room_name(self._data, self._room_id)} {self._name}"
+        return self._name
 
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
@@ -421,7 +430,7 @@ class WiserDeviceSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device_id)} {self._name}"
+        return self._name
 
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
@@ -489,13 +498,14 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device_id)} Switch"
+        return "Switch"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = f"{get_device_name(self._data, self._device_id)} Switch"
         return get_unique_id(
-            self._data, self._device.product_type, self.name, self._device_id
+            self._data, self._device.product_type, legacy_name, self._device_id
         )
 
     @property
@@ -574,13 +584,19 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
+        return "Away Mode Turns Off"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = (
+            f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
+        )
         return get_unique_id(
-            self._data, self._smartplug.product_type, self.name, self._smart_plug_id
+            self._data,
+            self._smartplug.product_type,
+            legacy_name,
+            self._smart_plug_id,
         )
 
     @property
@@ -632,13 +648,16 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
+        return "Away Mode Turns Off"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = (
+            f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
+        )
         return get_unique_id(
-            self._data, self._light.product_type, self.name, self._light_id
+            self._data, self._light.product_type, legacy_name, self._light_id
         )
 
     @property
@@ -690,13 +709,16 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._shutter_id)} Away Mode Closes"
+        return "Away Mode Closes"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = (
+            f"{get_device_name(self._data, self._shutter_id)} Away Mode Closes"
+        )
         return get_unique_id(
-            self._data, self._shutter.product_type, self.name, self._shutter_id
+            self._data, self._shutter.product_type, legacy_name, self._shutter_id
         )
 
     @property
@@ -751,13 +773,16 @@ class WiserPassiveModeSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
+        return "Passive Mode"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = (
+            f"{get_device_name(self._data, self._room_id, 'room')} Passive Mode"
+        )
         return get_unique_id(
-            self._data, "passive-mode-switch", self.name, self._room_id
+            self._data, "passive-mode-switch", legacy_name, self._room_id
         )
 
     @property
@@ -816,13 +841,16 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._shutter_id)} Respect Summer Comfort"
+        return "Respect Summer Comfort"
 
     @property
     def unique_id(self):
         """Return unique Id."""
+        legacy_name = (
+            f"{get_device_name(self._data, self._shutter_id)} Respect Summer Comfort"
+        )
         return get_unique_id(
-            self._data, self._shutter.product_type, self.name, self._shutter_id
+            self._data, self._shutter.product_type, legacy_name, self._shutter_id
         )
 
     @property
@@ -892,8 +920,12 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
     @property
     def unique_id(self):
         """Return unique Id."""
+        suffix = "Interacts With Room Climate"
+        if self._ancillary_sensor_type:
+            suffix = f"{self._ancillary_sensor_type} {suffix}"
+        legacy_name = f"{get_device_name(self._data, self._device_id)} {suffix}"
         uid = get_unique_id(
-            self._data, self._device.product_type, self.name, self._device_id
+            self._data, self._device.product_type, legacy_name, self._device_id
         )
         return (
             f"{uid}_{self._ancillary_sensor_id}" if self._ancillary_sensor_id else uid
@@ -916,8 +948,8 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
     def name(self):
         """Return the name of the Device."""
         if self._ancillary_sensor_type:
-            return f"{get_device_name(self._data, self._device_id)} {self._ancillary_sensor_type} Interacts With Room Climate"
-        return f"{get_device_name(self._data, self._device_id)} Interacts With Room Climate"
+            return f"{self._ancillary_sensor_type} Interacts With Room Climate"
+        return "Interacts With Room Climate"
 
     @property
     def device_info(self):
@@ -992,7 +1024,7 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
     @property
     def name(self):
         """Return Name of device."""
-        return get_device_name(self._data, self._hotwater.id, "Manual Heat")
+        return self._name
 
     @property
     def device_info(self):

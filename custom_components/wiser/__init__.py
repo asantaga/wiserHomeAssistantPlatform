@@ -34,7 +34,11 @@ from .const import (
 from .coordinator import WiserUpdateCoordinator
 from .device import merge_legacy_hub_device, register_hub_device
 from .frontend import JSModuleRegistration
-from .helpers import get_device_name, get_identifier, get_instance_count
+from .helpers import (
+    get_hub_device_name,
+    get_identifier,
+    get_instance_count,
+)
 from .services import async_setup_services
 from .websockets import async_register_websockets
 
@@ -125,6 +129,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         UPDATE_LISTENER: update_listener,
     }
 
+    update_hub_device_names(hass)
+
     # Register the physical hub before its entities and connected devices.
     await async_update_device_registry(hass, config_entry)
 
@@ -161,7 +167,7 @@ async def async_update_device_registry(hass: HomeAssistant, config_entry):
         (DOMAIN, get_identifier(data, 0)),
         (CONNECTION_NETWORK_MAC, data.wiserhub.system.network.mac_address),
         manufacturer=MANUFACTURER,
-        name=get_device_name(data, 0),
+        name=get_hub_device_name(data),
         model=data.wiserhub.system.model,
         sw_version=data.wiserhub.system.firmware_version,
     )
@@ -177,6 +183,24 @@ def merge_legacy_hub_device_registry(hass: HomeAssistant, config_entry):
         (DOMAIN, data.wiserhub.system.name),
         (DOMAIN, get_identifier(data, 0)),
     )
+
+
+def update_hub_device_names(hass: HomeAssistant):
+    """Keep physical hub names concise while distinguishing multiple hubs."""
+    loaded_entries = hass.data.get(DOMAIN, {})
+    show_suffix = len(loaded_entries) > 1
+    device_registry = dr.async_get(hass)
+
+    for entry_data in loaded_entries.values():
+        data = entry_data[DATA]
+        data._wiser_show_hub_suffix = show_suffix
+        device = device_registry.async_get_device(
+            identifiers={(DOMAIN, data.wiserhub.system.name)}
+        )
+        if device is not None:
+            device_registry.async_update_device(
+                device.id, name=get_hub_device_name(data)
+            )
 
 
 async def _async_update_listener(hass: HomeAssistant, config_entry):
@@ -233,5 +257,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     _LOGGER.debug("Unload integration")
     if unload_ok:
         hass.data[DOMAIN].pop(config_entry.entry_id)
+        update_hub_device_names(hass)
 
     return unload_ok

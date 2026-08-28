@@ -9,6 +9,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
+from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
@@ -53,8 +54,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(wiser_buttons, True)
 
 
-class WiserButton(CoordinatorEntity, ButtonEntity):
+class WiserButton(WiserEntityMixin, CoordinatorEntity, ButtonEntity):
     """Class to handle a button entity."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, name="Button") -> None:
         """Initialize the sensor."""
@@ -83,7 +86,7 @@ class WiserButton(CoordinatorEntity, ButtonEntity):
     @property
     def name(self):
         """Return entity name."""
-        return get_device_name(self._data, 0, self._name)
+        return self._name
 
     @property
     def device_info(self):

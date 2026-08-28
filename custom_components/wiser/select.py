@@ -6,8 +6,14 @@ from .const import (
     HOT_WATER,
     MANUFACTURER,
 )
+from .entity import WiserEntityMixin
 
-from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
+from .helpers import (
+    get_device_name,
+    get_unique_id,
+    get_identifier,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
 
 from homeassistant.components.select import SelectEntity
@@ -60,7 +66,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(wiser_selects)
 
 
-class WiserSelectEntity(CoordinatorEntity, SelectEntity):
+class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -81,7 +89,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Mode"
+        return "Mode"
 
     @property
     def options(self) -> list[str]:
@@ -147,7 +155,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, 0, 'Hot Water')} Mode"
+        return "Mode"
 
     @property
     def current_option(self) -> str:
@@ -290,7 +298,7 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Power On Behaviour"
+        return "Power On Behaviour"
 
     @property
     def current_option(self) -> str:
@@ -337,7 +345,7 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Led Indicator"
+        return "LED Indicator"
 
     @property
     def current_option(self) -> str:

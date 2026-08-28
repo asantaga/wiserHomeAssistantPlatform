@@ -85,6 +85,10 @@ def _load_sensor_module() -> ModuleType:
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_unique_id=lambda *_args: "unique-id",
     )
+    class WiserEntityMixin:
+        pass
+
+    _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
     _module(
         "wiser.temperature",
         room_target_temperature=lambda room, frost_temp, off_temp: (
@@ -109,23 +113,26 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.sensor_module = _load_sensor_module()
 
-    def test_controller_signal_name_includes_hub_name(self) -> None:
+    def test_hub_signal_uses_entity_only_name(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
         sensor._device_id = 0
         sensor._data = SimpleNamespace(
             wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat045XXX"))
         )
 
-        self.assertEqual(sensor.name, "Wiser HeatHub WiserHeat045XXX Signal")
+        self.assertEqual(sensor.name, "Signal")
 
-    def test_device_signal_name_is_unchanged(self) -> None:
+    def test_device_signal_uses_entity_only_name(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)
         sensor._device_id = 1
         sensor._data = SimpleNamespace(
             wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat045XXX"))
         )
 
-        self.assertEqual(sensor.name, "Wiser iTRV Kitchen Signal")
+        self.assertEqual(sensor.name, "Signal")
+
+    def test_sensor_uses_modern_home_assistant_naming(self) -> None:
+        self.assertTrue(self.sensor_module.WiserSensor._attr_has_entity_name)
 
     def test_controller_signal_belongs_to_physical_hub(self) -> None:
         sensor = object.__new__(self.sensor_module.WiserDeviceSignalSensor)

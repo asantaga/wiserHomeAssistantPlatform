@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
+from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
@@ -97,8 +98,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(binary_sensors, True)
 
 
-class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(
         self, coordinator, device_id=0, sensor_type="", device_data_key: str = ""
@@ -151,12 +154,17 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
+        return self._sensor_type
 
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "binary_sensor", self._sensor_type, self.name)
+        legacy_name = (
+            f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
+        )
+        return get_unique_id(
+            self._data, "binary_sensor", self._sensor_type, legacy_name
+        )
 
     @property
     def device_info(self):
@@ -171,8 +179,10 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         }
 
 
-class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
@@ -201,15 +211,19 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-#        return f"{get_device_name(self._data, self._data.wiserhub.system)} {self._sensor_type}"
-        HeatHub = self._data.wiserhub.system.name
-        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
-        return f"{HeatHub} {self._sensor_type}"
+        return self._sensor_type
 
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self.name)
+        # Preserve the historical unique ID when changing the friendly name.
+        legacy_hub_name = self._data.wiserhub.system.name.replace(
+            "WiserHeat", "HeatHub"
+        )
+        legacy_name = f"{legacy_hub_name} {self._sensor_type}"
+        return get_unique_id(
+            self._data, "sensor", self._sensor_type, legacy_name
+        )
 
     @property
     def device_info(self):
@@ -217,8 +231,10 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return get_hub_device_info(self._data)
 
 
-class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, room_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
@@ -249,7 +265,7 @@ class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{get_room_name(self._data, self._room_id)} {self._sensor_type}"
+        return self._sensor_type
         #return f"{get_device_name(self._data, self._room_id, "room")}  {self._sensor_type}",  
     
     @property
