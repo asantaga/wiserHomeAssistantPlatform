@@ -57,6 +57,18 @@ from .temperature import room_target_temperature
 _LOGGER = logging.getLogger(__name__)
 
 
+def _relative_modulation_level(opentherm):
+    """Read modulation as percent, preserving zero and fractional readings."""
+    # aioWiserHeatAPI 1.7.3's convenience property returns None for zero and
+    # truncates fractions. The raw OpenTherm value is in tenths of a percent.
+    raw = opentherm.operational_data.json_data.get("RelativeModulationLevel")
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return None
+    if not 0 <= raw <= 1000:
+        return None
+    return raw / 10
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Initialize the entry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
@@ -127,7 +139,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             _LOGGER.debug("Setting up Heating Demand LTS sensors")
             wiser_sensors.append(WiserLTSDemandSensor(data, channel.id, "heating"))
 
-    # Add opentherm flow & return temps
+    # Add OpenTherm temperatures and boiler modulation
     if (
         data.wiserhub.system.opentherm.connection_status == "Connected"
         and data.wiserhub.system.opentherm.enabled
@@ -139,6 +151,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserLTSOpenthermSensor(
                     data, 0, sensor_type="opentherm_return_temp"
                 ),
+                WiserOpenThermModulationSensor(data),
             ]
         )
             
@@ -790,7 +803,9 @@ class WiserSystemCircuitState(WiserSensor):
                 attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
                 attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
                 attrs["ch_return_temperature"] = opentherm.ch_return_temperature
-                attrs["relative_modulation_level"] = opentherm.relative_modulation_level
+                attrs["relative_modulation_level"] = _relative_modulation_level(
+                    self._data.wiserhub.system.opentherm
+                )
                 attrs["hw_temperature"] = opentherm.hw_temperature
         else:
             hw = self._data.wiserhub.hotwater
@@ -1181,6 +1196,45 @@ class WiserLTSTempSensor(WiserSensor):
         return UnitOfTemperature.CELSIUS
 
 
+class WiserOpenThermModulationSensor(WiserSensor):
+    """Boiler relative modulation reported over OpenTherm."""
+
+    def __init__(self, data) -> None:
+        super().__init__(
+            data,
+            0,
+            "relative_modulation_level",
+            translation_key="relative_modulation_level",
+        )
+
+    @property
+    def available(self):
+        opentherm = self._data.wiserhub.system.opentherm
+        return (
+            super().available
+            and opentherm.enabled
+            and opentherm.connection_status == "Connected"
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        super()._handle_coordinator_update()
+        self._state = _relative_modulation_level(self._data.wiserhub.system.opentherm)
+        self.async_write_ha_state()
+
+    @property
+    def native_unit_of_measurement(self):
+        return PERCENTAGE
+
+    @property
+    def state_class(self):
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+        return "mdi:fire"
+
+
 class WiserLTSOpenthermSensor(WiserSensor):
     """Sensor for long term stats for room temp and target temp"""
 
@@ -1246,7 +1300,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
             attrs["ch_pressure_bar"] = operational_data.ch_pressure_bar
             attrs["ch_return_temperature"] = operational_data.ch_return_temperature
             attrs["relative_modulation_level"] = (
-                operational_data.relative_modulation_level
+                _relative_modulation_level(opentherm)
             )
             attrs["hw_temperature"] = operational_data.hw_temperature
             attrs["hw_flow_rate"] = operational_data.hw_flow_rate

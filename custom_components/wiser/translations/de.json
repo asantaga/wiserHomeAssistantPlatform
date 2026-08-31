@@ -158,6 +158,7 @@
       "target_temperature": { "name": "Zieltemperatur" },
       "floor_temperature": { "name": "Fußbodentemperatur" },
       "boiler_flow_temperature": { "name": "Kesselvorlauftemperatur" },
+      "relative_modulation_level": { "name": "Relativer Modulationsgrad" },
       "boiler_return_temperature": { "name": "Kesselrücklauftemperatur" },
       "heating_demand": { "name": "Heizbedarf" },
       "heating_demand_channel": { "name": "Heizbedarf Kanal {channel}" },

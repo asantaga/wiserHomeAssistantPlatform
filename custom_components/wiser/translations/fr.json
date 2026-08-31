@@ -159,6 +159,7 @@
       "target_temperature": { "name": "Température cible" },
       "floor_temperature": { "name": "Température du sol" },
       "boiler_flow_temperature": { "name": "Température de départ de la chaudière" },
+      "relative_modulation_level": { "name": "Niveau de modulation relatif" },
       "boiler_return_temperature": { "name": "Température de retour de la chaudière" },
       "heating_demand": { "name": "Demande de chauffage" },
       "heating_demand_channel": { "name": "Demande de chauffage canal {channel}" },

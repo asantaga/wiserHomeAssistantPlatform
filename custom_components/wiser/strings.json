@@ -157,6 +157,7 @@
       "target_temperature": { "name": "Target temperature" },
       "floor_temperature": { "name": "Floor temperature" },
       "boiler_flow_temperature": { "name": "Boiler flow temperature" },
+      "relative_modulation_level": { "name": "Relative modulation level" },
       "boiler_return_temperature": { "name": "Boiler return temperature" },
       "heating_demand": { "name": "Heating demand" },
       "heating_demand_channel": { "name": "Heating demand channel {channel}" },

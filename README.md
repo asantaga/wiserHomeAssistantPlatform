@@ -31,6 +31,7 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.20
+  - Add an OpenTherm relative modulation level sensor on the HeatHub, preserving zero and fractional percentage readings in both the sensor and existing attributes.
   - Fix OpenTherm parameter writes on generation-2 hubs by selecting the firmware-appropriate endpoint. Preserve numeric and boolean parameter types, refresh the selected hub, and surface API failures as action errors.
   - Adopt Home Assistant's modern entity naming so device and room prefixes are supplied contextually by Home Assistant.
   - Use concise HeatHub device names, adding a physical MAC suffix only when multiple hubs are loaded, and include that suffix in IDs suggested for new hub entities without duplicating Home Assistant's device prefix.

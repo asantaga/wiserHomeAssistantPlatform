@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
+from unittest.mock import Mock
 
 
 SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/sensor.py"
@@ -36,7 +38,7 @@ def _load_sensor_module() -> ModuleType:
     _module(
         "homeassistant.components.sensor",
         SensorDeviceClass=SimpleNamespace(),
-        SensorStateClass=SimpleNamespace(),
+        SensorStateClass=SimpleNamespace(MEASUREMENT="measurement"),
         SensorEntity=SensorEntity,
     )
     _module(
@@ -56,8 +58,12 @@ def _load_sensor_module() -> ModuleType:
     _module("homeassistant.helpers")
 
     class CoordinatorEntity:
-        def __init__(self, *args: object) -> None:
-            pass
+        def __init__(self, coordinator, *args: object) -> None:
+            self.coordinator = coordinator
+
+        @property
+        def available(self):
+            return self.coordinator.last_update_success
 
     _module(
         "homeassistant.helpers.update_coordinator", CoordinatorEntity=CoordinatorEntity
@@ -241,3 +247,98 @@ class WiserLTSOpenthermSensorDeviceTest(unittest.TestCase):
         sensor._data = object()
 
         self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+
+class WiserOpenThermModulationTest(unittest.TestCase):
+    """Regression tests for the OpenTherm percentage sensor."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    def setUp(self):
+        self.raw = {}
+        self.opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(json_data=self.raw),
+            enabled=True,
+            connection_status="Connected",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat058A52", opentherm=self.opentherm),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+            ),
+        )
+        self.sensor = self.sensor_module.WiserOpenThermModulationSensor(self.data)
+        self.sensor.async_write_ha_state = Mock()
+
+    def test_reads_zero_and_fractional_percentages(self):
+        for raw, expected in ((0, 0), (1, 0.1), (333, 33.3), (1000, 100)):
+            with self.subTest(raw=raw):
+                self.raw["RelativeModulationLevel"] = raw
+                self.sensor._handle_coordinator_update()
+                self.assertEqual(self.sensor.native_value, expected)
+                self.assertEqual(self.sensor.state, expected)
+        self.assertEqual(self.sensor.async_write_ha_state.call_count, 4)
+
+    def test_absent_or_invalid_readings_are_unknown_not_zero(self):
+        self.sensor._handle_coordinator_update()
+        self.assertIsNone(self.sensor.native_value)
+        for raw in (None, True, "0", -1, 1001, float("nan"), float("inf")):
+            with self.subTest(raw=raw):
+                self.raw["RelativeModulationLevel"] = raw
+                self.sensor._handle_coordinator_update()
+                self.assertIsNone(self.sensor.native_value)
+
+    def test_sensor_metadata_and_hub_assignment(self):
+        self.assertEqual(self.sensor.native_unit_of_measurement, "%")
+        self.assertEqual(self.sensor.state_class, "measurement")
+        self.assertEqual(self.sensor.icon, "mdi:fire")
+        self.assertIsNone(getattr(self.sensor, "device_class", None))
+        self.assertEqual(self.sensor._attr_translation_key, "relative_modulation_level")
+        self.assertEqual(self.sensor._sensor_type, "relative_modulation_level")
+        self.assertNotIn("_attr_name", self.sensor.__dict__)
+        self.assertEqual(self.sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+    def test_unavailable_when_disconnected_disabled_or_coordinator_fails(self):
+        self.assertTrue(self.sensor.available)
+        self.opentherm.connection_status = "Disconnected"
+        self.assertFalse(self.sensor.available)
+        self.opentherm.connection_status = "Connected"
+        self.opentherm.enabled = False
+        self.assertFalse(self.sensor.available)
+        self.opentherm.enabled = True
+        self.data.last_update_success = False
+        self.assertFalse(self.sensor.available)
+
+    def test_setup_only_adds_sensor_for_enabled_connected_opentherm(self):
+        tree = ast.parse(SOURCE_PATH.read_text())
+        setup = next(node for node in tree.body
+                     if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_setup_entry")
+        block = next(node for node in setup.body
+                     if isinstance(node, ast.If)
+                     and any(isinstance(child, ast.Call)
+                             and isinstance(child.func, ast.Name)
+                             and child.func.id == "WiserOpenThermModulationSensor"
+                             for child in ast.walk(node)))
+        for connected, enabled, expected in (
+            ("Connected", True, 1), ("Disconnected", True, 0), ("Connected", False, 0)
+        ):
+            with self.subTest(connected=connected, enabled=enabled):
+                self.opentherm.connection_status = connected
+                self.opentherm.enabled = enabled
+                sensors = []
+                env = {**self.sensor_module.__dict__, "data": self.data, "wiser_sensors": sensors}
+                exec(compile(ast.Module(body=[block], type_ignores=[]), "sensor.py", "exec"), env)
+                self.assertEqual(sum(isinstance(sensor, self.sensor_module.WiserOpenThermModulationSensor)
+                                     for sensor in sensors), expected)
+
+    def test_translations_include_modulation_name(self):
+        paths = [SOURCE_PATH.parent / "strings.json"]
+        paths.extend(SOURCE_PATH.parent / "translations" / f"{language}.json"
+                     for language in ("en", "de", "fr"))
+        for path in paths:
+            with self.subTest(path=path):
+                translations = json.loads(path.read_text())
+                self.assertTrue(translations["entity"]["sensor"]["relative_modulation_level"]["name"])
