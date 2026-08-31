@@ -3,6 +3,11 @@ import os
 import aiofiles
 import voluptuous as vol
 import logging
+from aioWiserHeatAPI.exceptions import (
+    WiserHubAuthenticationError,
+    WiserHubConnectionError,
+    WiserHubResponseError,
+)
 from .const import (
     ATTR_FILENAME,
     ATTR_HUB,
@@ -21,6 +26,7 @@ from .const import (
 )
 from .coordinator import WiserHubRESTError
 from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
+from .opentherm import async_set_parameter
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
@@ -90,7 +96,7 @@ async def async_setup_services(hass: HomeAssistant, data):
         {
             vol.Optional(ATTR_OPENTHERM_ENDPOINT, default=""): vol.Coerce(str),
             vol.Required(ATTR_OPENTHERM_PARAM): vol.Coerce(str),
-            vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Coerce(str),
+            vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Any(str, bool, int, float),
             vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
         }
     )
@@ -328,7 +334,6 @@ async def async_setup_services(hass: HomeAssistant, data):
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
 
-    @callback
     async def async_set_opentherm_parameter(service_call):
         endpoint = service_call.data[ATTR_OPENTHERM_ENDPOINT]
         param = service_call.data[ATTR_OPENTHERM_PARAM]
@@ -336,31 +341,36 @@ async def async_setup_services(hass: HomeAssistant, data):
         hub = service_call.data[ATTR_HUB]
         instance = data
 
-        if get_instance_count(hass) > 1:
-            if not hub:
-                raise HomeAssistantError("Please specify a hub config entry id or name")
-            else:
-                # Find hub from config_entry_id or hub name
-                if is_wiser_config_id(hass, hub):
-                    instance = hass.data[DOMAIN][hub][DATA]
-                else:
-                    # Find hub by name
-                    config_entry_id = get_config_entry_id_by_name(hass, hub)
-                    if config_entry_id:
-                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+        if hub:
+            config_entry_id = (
+                hub
+                if is_wiser_config_id(hass, hub)
+                else get_config_entry_id_by_name(hass, hub)
+            )
+            if not config_entry_id:
+                raise HomeAssistantError("The specified Wiser hub was not found")
+            instance = hass.data[DOMAIN].get(config_entry_id, {}).get(DATA)
+            if instance is None:
+                raise HomeAssistantError("The specified Wiser hub is not loaded")
+        elif get_instance_count(hass) > 1:
+            raise HomeAssistantError("Please specify a hub config entry id or name")
 
-        # If hub has opentherm
-        if instance.wiserhub.system.opentherm:
-            command = {param: value}
-            try:
-                await instance.wiserhub.system.opentherm.set_opentherm_parameter(
-                    endpoint, command
-                )
-            except WiserHubRESTError:
-                raise HomeAssistantError(
-                    "Error setting parameter.  Invalid parameter/endpoint or maybe a parameter that cannot be set"
-                )
-            await data.async_refresh()
+        if not instance.wiserhub.system.opentherm:
+            raise HomeAssistantError("This hub does not have OpenTherm functionality")
+        try:
+            await async_set_parameter(instance.wiserhub.system, endpoint, param, value)
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+        except (
+            WiserHubRESTError,
+            WiserHubConnectionError,
+            WiserHubResponseError,
+            WiserHubAuthenticationError,
+        ) as err:
+            raise HomeAssistantError(
+                f"Unable to set OpenTherm parameter {param}: {err}"
+            ) from err
+        await instance.async_refresh()
 
     hass.services.async_register(
         DOMAIN,

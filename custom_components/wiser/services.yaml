@@ -228,7 +228,7 @@ set_device_mode:
             - "Manual"
 
 set_opentherm_parameter:
-  name: "Set Opentherm Parameter"
+  name: "Set OpenTherm Parameter"
   description: Allows changing of opentherm parameters on the Wiser Hub
   fields:
     endpoint:
@@ -245,7 +245,7 @@ set_opentherm_parameter:
         text:
     parameter_value:
       name: Value
-      description: Parameter value to set
+      description: "Raw parameter value. Numbers and true/false are sent as JSON values. Temperature setpoints use tenths of a degree Celsius (for example, 400 means 40°C); use a value supported by your boiler."
       required: true
       selector:
         text:
