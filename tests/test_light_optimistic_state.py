@@ -55,7 +55,13 @@ def _load_light_module() -> ModuleType:
 
     package = _module("wiser")
     package.__path__ = []
-    _module("wiser.const", DATA="data", DOMAIN="wiser", MANUFACTURER_SCHNEIDER="Schneider")
+    _module(
+        "wiser.const",
+        DATA="data",
+        DOMAIN="wiser",
+        ENTITY_PREFIX="Wiser",
+        MANUFACTURER_SCHNEIDER="Schneider",
+    )
 
     def hub_error_handler(func):
         return func  # identity: let exceptions surface in tests
@@ -84,6 +90,7 @@ def _load_light_module() -> ModuleType:
 class _FakeDevice:
     def __init__(self, *, is_on=False, current_percentage=0):
         self.id = 1
+        self.name = "Test Light"
         self.is_on = is_on
         self.current_percentage = current_percentage
         self.schedule = None
@@ -112,7 +119,7 @@ class LightOptimisticStateTest(unittest.TestCase):
             wiserhub=SimpleNamespace(
                 system=SimpleNamespace(name="WiserTEST"),
                 devices=SimpleNamespace(
-                    lights=SimpleNamespace(get_by_id=lambda _id: device)
+                    lights=SimpleNamespace(get_by_light_id=lambda _id: device)
                 ),
             ),
             async_refresh=self._noop_async,
