@@ -147,3 +147,31 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         sensor = self._sensor(level="Normal", voltage=None)
 
         self.assertTrue(sensor.available)
+
+
+class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
+    """Tests for the UFH controller measured-temperature sensor."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def test_measured_temperature_uses_ufh_device_value(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserLTSTempSensor)
+        sensor._lts_sensor_type = "ufh_measured_temp"
+        sensor._sensor_type = "UFH Measured Temperature"
+        sensor._device_id = 42
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    get_by_id=lambda device_id: SimpleNamespace(
+                        current_temperature=21.5
+                    )
+                )
+            )
+        )
+        sensor.async_write_ha_state = lambda: None
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, 21.5)
