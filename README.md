@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.21Dev
+# Wiser Home Assistant Integration v3.4.21
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -30,7 +30,7 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
-- v3.4.21Dev
+- v3.4.21
   - Added a Hot Water on/off switch entity - issue [#626](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/626).
   - Added a UFH controller measured-temperature sensor - issue [#628](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/628).
   - Fixed multi-gang dimmer lights breaking select, binary_sensor, switch, and sensor entities - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681).
