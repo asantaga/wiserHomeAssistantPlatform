@@ -624,7 +624,11 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         """Return target temp."""
         return room_target_temperature(
             self._room,
-            self._data.wiserhub.system.away_mode_target_temperature,
+            (
+                self._data.wiserhub.system.away_mode_target_temperature
+                if self._data.wiserhub.system.is_away_mode_enabled
+                else TEMP_MINIMUM
+            ),
             TEMP_OFF,
         )
 
