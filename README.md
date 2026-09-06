@@ -30,6 +30,15 @@ For more information checkout the AMAZING community thread available on
 
 ## Change log
 
+- v3.4.21Dev
+  - Added a Hot Water on/off switch entity - issue [#626](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/626).
+  - Added a UFH controller measured-temperature sensor - issue [#628](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/628).
+  - Fixed multi-gang dimmer lights breaking select, binary_sensor, switch, and sensor entities - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681).
+  - Preserved light entities across the multi-gang unique_id migration - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681).
+  - Added optimistic light state for instant UI feedback on toggles, kept stable across rapid repeated toggles.
+  - Fixed the device signal sensor to emit once per physical device instead of once per light channel on multi-gang dimmers.
+  - Fix for issue [#662](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/662).
+
 - v3.4.20
   - Added equipment data to smart plugs, heating actuators, and PowerTag E devices.
   - Added LED-indicator support for on/off and dimmable lights.
