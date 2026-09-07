@@ -93,8 +93,12 @@
           "ch_pressure_bar": "Pression du chauffage central",
           "ch_return_temperature": "Température de retour de la chaudière",
           "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Température des fumées de la chaudière",
+          "estimated_boiler_output": "Puissance estimée de la chaudière",
           "hw_flow_rate": "Débit d’eau chaude",
           "hw_temperature": "Température de l’eau chaude",
+          "maximum_capacity_kw": "Puissance maximale de la chaudière",
+          "minimum_modulation_level": "Niveau minimal de modulation",
           "relative_modulation_level": "Niveau de modulation relatif",
           "room_temperature": "Température ambiante"
         }
@@ -138,6 +142,8 @@
           "central_heating_active": "Chauffage central actif",
           "central_heating_2_active": "Chauffage central 2 actif",
           "connection_status": "État de la connexion",
+          "coprocessor_update_status": "État de mise à jour du coprocesseur OpenTherm",
+          "coprocessor_version": "Version du coprocesseur OpenTherm",
           "cooling_active": "Refroidissement actif",
           "diagnostic_event": "Événement de diagnostic",
           "flame_active": "Flamme active",

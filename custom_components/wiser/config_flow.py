@@ -65,6 +65,7 @@ from .const import (
 )
 from .opentherm import (
     OPENTHERM_SENSOR_CATEGORIES,
+    OPENTHERM_SENSOR_DEPENDENCIES,
     OPENTHERM_SENSOR_NAMES,
     detected_opentherm_sensor_keys,
     opentherm_sensor_is_enabled,
@@ -294,15 +295,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 for key in OPENTHERM_SENSOR_NAMES
             }
             configured.update(user_input)
-            # Rolling flame runtime is calculated from Flame active's recorded
-            # state history, so keep its source entity enabled as well.
-            if configured.get("flame_statistics"):
-                configured["flame_active"] = True
-            if configured.get("delta_t") and not (
-                configured.get("ch_flow_temperature")
-                and configured.get("ch_return_temperature")
-            ):
-                configured["delta_t"] = False
+            # Derived readings automatically enable their source entities, so
+            # selecting one always produces a usable entity.
+            for derived_key, dependencies in OPENTHERM_SENSOR_DEPENDENCIES.items():
+                if configured.get(derived_key):
+                    configured.update(dict.fromkeys(dependencies, True))
             options = self.config_entry.options | {
                 CONF_OPENTHERM_SENSORS: configured
             }

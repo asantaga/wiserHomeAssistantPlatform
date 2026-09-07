@@ -102,8 +102,12 @@
           "ch_pressure_bar": "CH pressure",
           "ch_return_temperature": "Boiler return temperature",
           "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Boiler exhaust temperature",
+          "estimated_boiler_output": "Estimated boiler output",
           "hw_flow_rate": "Hot water flow rate",
           "hw_temperature": "Hot water temperature",
+          "maximum_capacity_kw": "Maximum boiler capacity",
+          "minimum_modulation_level": "Minimum modulation level",
           "relative_modulation_level": "Relative modulation level",
           "room_temperature": "Room temperature"
         }
@@ -147,6 +151,8 @@
           "central_heating_active": "Central heating active",
           "central_heating_2_active": "Central heating 2 active",
           "connection_status": "Connection status",
+          "coprocessor_update_status": "OpenTherm coprocessor update status",
+          "coprocessor_version": "OpenTherm coprocessor version",
           "cooling_active": "Cooling active",
           "diagnostic_event": "Diagnostic event",
           "flame_active": "Flame active",

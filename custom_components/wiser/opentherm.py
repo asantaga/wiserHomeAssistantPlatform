@@ -60,6 +60,10 @@ OPENTHERM_SENSOR_PATHS = {
     # discovery check below explicitly requires both source attributes.
     "delta_t": ("operational_data", "ch_flow_temperature"),
     "relative_modulation_level": ("operational_data", "relative_modulation_level"),
+    "minimum_modulation_level": ("operational_data", "json_data"),
+    "maximum_capacity_kw": ("operational_data", "json_data"),
+    "estimated_boiler_output": ("operational_data", "json_data"),
+    "boiler_exhaust_temperature": ("operational_data", "json_data"),
     "hw_temperature": ("operational_data", "hw_temperature"),
     "hw_flow_rate": ("operational_data", "hw_flow_rate"),
     "slave_status": ("operational_data", "slave_status"),
@@ -71,6 +75,8 @@ OPENTHERM_SENSOR_PATHS = {
     "cooling_active": ("operational_data", "slave_status"),
     "central_heating_2_active": ("operational_data", "slave_status"),
     "diagnostic_event": ("operational_data", "slave_status"),
+    "coprocessor_version": ("json_data",),
+    "coprocessor_update_status": ("json_data",),
     "boiler_ch_max_setpoint_read_write": (
         "boiler_parameters",
         "ch_max_setpoint_read_write",
@@ -107,6 +113,17 @@ OPENTHERM_SENSOR_PATHS = {
     ),
 }
 
+OPENTHERM_RAW_SENSOR_FIELDS = {
+    "minimum_modulation_level": "MinimumModulationLevel",
+    "maximum_capacity_kw": "MaximumCapacityKw",
+    "boiler_exhaust_temperature": "BoilerExhaustTemperature",
+}
+
+OPENTHERM_ROOT_RAW_SENSOR_FIELDS = {
+    "coprocessor_version": "CoprocessorVersion",
+    "coprocessor_update_status": "CoprocessorUpdateStatus",
+}
+
 # These are the two OpenTherm entities that existed before the configurable
 # attribute sensors.  All additional entities are opt-in.
 DEFAULT_OPENTHERM_SENSOR_KEYS = frozenset(
@@ -134,7 +151,16 @@ OPENTHERM_BINARY_SENSOR_KEYS = frozenset(
 
 # These selectable sensors are calculated from another OpenTherm entity rather
 # than exposing the current value of an API attribute directly.
-OPENTHERM_DERIVED_SENSOR_KEYS = frozenset({"delta_t", "flame_statistics"})
+OPENTHERM_DERIVED_SENSOR_KEYS = frozenset(
+    {"delta_t", "estimated_boiler_output", "flame_statistics"}
+)
+OPENTHERM_SENSOR_DEPENDENCIES = {
+    "delta_t": frozenset({"ch_flow_temperature", "ch_return_temperature"}),
+    "estimated_boiler_output": frozenset(
+        {"maximum_capacity_kw", "relative_modulation_level"}
+    ),
+    "flame_statistics": frozenset({"flame_active"}),
+}
 
 # OpenTherm Data-ID 0, low-byte (slave status) flags. Bit 7 is reserved.
 OPENTHERM_SLAVE_STATUS_BITS = {
@@ -153,8 +179,12 @@ OPENTHERM_SENSOR_CATEGORIES = {
         "ch_pressure_bar",
         "ch_return_temperature",
         "delta_t",
+        "boiler_exhaust_temperature",
         "hw_flow_rate",
         "hw_temperature",
+        "maximum_capacity_kw",
+        "estimated_boiler_output",
+        "minimum_modulation_level",
         "relative_modulation_level",
         "room_temperature",
     ),
@@ -186,6 +216,8 @@ OPENTHERM_SENSOR_CATEGORIES = {
         "central_heating_active",
         "central_heating_2_active",
         "connection_status",
+        "coprocessor_update_status",
+        "coprocessor_version",
         "cooling_active",
         "diagnostic_event",
         "flame_active",
@@ -215,6 +247,10 @@ OPENTHERM_SENSOR_NAMES = {
     "ch_pressure_bar": "CH pressure",
     "ch_return_temperature": "Boiler return temperature",
     "delta_t": "Delta-T",
+    "boiler_exhaust_temperature": "Boiler exhaust temperature",
+    "maximum_capacity_kw": "Maximum boiler capacity",
+    "estimated_boiler_output": "Estimated boiler output",
+    "minimum_modulation_level": "Minimum modulation level",
     "relative_modulation_level": "Relative modulation level",
     "hw_temperature": "Hot water temperature",
     "hw_flow_rate": "Hot water flow rate",
@@ -227,6 +263,8 @@ OPENTHERM_SENSOR_NAMES = {
     "cooling_active": "Cooling active",
     "central_heating_2_active": "Central heating 2 active",
     "diagnostic_event": "Diagnostic event",
+    "coprocessor_version": "OpenTherm coprocessor version",
+    "coprocessor_update_status": "OpenTherm coprocessor update status",
     "boiler_ch_max_setpoint_read_write": "Boiler CH maximum setpoint read/write",
     "boiler_ch_max_setpoint_transfer_enable": (
         "Boiler CH maximum setpoint transfer enabled"
@@ -276,6 +314,31 @@ def opentherm_sensor_value(opentherm, key):
         ):
             return None
         return round(flow - return_temperature, 1)
+    if key == "estimated_boiler_output":
+        capacity = opentherm.operational_data.json_data.get("MaximumCapacityKw")
+        modulation = relative_modulation_level(opentherm)
+        if (
+            isinstance(capacity, bool)
+            or not isinstance(capacity, (int, float))
+            or not math.isfinite(capacity)
+            or capacity < 0
+            or modulation is None
+        ):
+            return None
+        return round(capacity * modulation / 100, 2)
+    if key in OPENTHERM_RAW_SENSOR_FIELDS:
+        value = opentherm.operational_data.json_data.get(
+            OPENTHERM_RAW_SENSOR_FIELDS[key]
+        )
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            return None
+        return value
+    if key in OPENTHERM_ROOT_RAW_SENSOR_FIELDS:
+        return opentherm.json_data.get(OPENTHERM_ROOT_RAW_SENSOR_FIELDS[key])
     if key == "relative_modulation_level":
         return relative_modulation_level(opentherm)
     if key in OPENTHERM_SLAVE_STATUS_BITS:
@@ -299,7 +362,7 @@ def detected_opentherm_sensor_keys(opentherm):
     """Return selectable attributes supported by this OpenTherm response."""
     detected = []
     for key, path in OPENTHERM_SENSOR_PATHS.items():
-        if key == "delta_t":
+        if key in {"delta_t", "estimated_boiler_output"}:
             continue
         try:
             # Detection is based on field availability, not its current value.
@@ -307,12 +370,27 @@ def detected_opentherm_sensor_keys(opentherm):
             _path_value(opentherm, path)
         except (AttributeError, TypeError):
             continue
+        if key in OPENTHERM_RAW_SENSOR_FIELDS and (
+            OPENTHERM_RAW_SENSOR_FIELDS[key]
+            not in opentherm.operational_data.json_data
+        ):
+            continue
+        if key in OPENTHERM_ROOT_RAW_SENSOR_FIELDS and (
+            OPENTHERM_ROOT_RAW_SENSOR_FIELDS[key] not in opentherm.json_data
+        ):
+            continue
         detected.append(key)
     if {
         "ch_flow_temperature",
         "ch_return_temperature",
     }.issubset(detected):
         detected.append("delta_t")
+    raw_operational_data = getattr(opentherm.operational_data, "json_data", {})
+    if {
+        "MaximumCapacityKw",
+        "RelativeModulationLevel",
+    }.issubset(raw_operational_data):
+        detected.append("estimated_boiler_output")
     return detected
 
 

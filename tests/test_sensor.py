@@ -43,6 +43,7 @@ def _load_sensor_module() -> ModuleType:
         SensorDeviceClass=SimpleNamespace(
             TEMPERATURE="temperature",
             PRESSURE="pressure",
+            POWER="power",
             VOLUME_FLOW_RATE="volume_flow_rate",
             DURATION="duration",
         ),
@@ -56,12 +57,13 @@ def _load_sensor_module() -> ModuleType:
         STATE_UNAVAILABLE="unavailable",
         STATE_UNKNOWN="unknown",
         STATE_ON="on",
+        EntityCategory=SimpleNamespace(DIAGNOSTIC="diagnostic"),
         UnitOfTemperature=SimpleNamespace(CELSIUS="°C"),
         UnitOfTime=SimpleNamespace(HOURS="h"),
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
         PERCENTAGE="%",
-        UnitOfPower=SimpleNamespace(),
+        UnitOfPower=SimpleNamespace(KILO_WATT="kW"),
         UnitOfEnergy=SimpleNamespace(),
         UnitOfPressure=SimpleNamespace(BAR="bar"),
         UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
@@ -128,6 +130,13 @@ def _load_sensor_module() -> ModuleType:
             )
         if key == "relative_modulation_level":
             return relative_modulation_level(opentherm)
+        if key == "estimated_boiler_output":
+            capacity = opentherm.operational_data.json_data["MaximumCapacityKw"]
+            return round(capacity * relative_modulation_level(opentherm) / 100, 2)
+        if key == "coprocessor_version":
+            return opentherm.json_data.get("CoprocessorVersion")
+        if key == "coprocessor_update_status":
+            return opentherm.json_data.get("CoprocessorUpdateStatus")
         if hasattr(opentherm, key):
             return getattr(opentherm, key)
         return getattr(opentherm.operational_data, key)
@@ -148,13 +157,21 @@ def _load_sensor_module() -> ModuleType:
                 "boiler_hw_setpoint_transfer_enable",
             }
         ),
-        OPENTHERM_DERIVED_SENSOR_KEYS=frozenset({"delta_t", "flame_statistics"}),
+        OPENTHERM_DERIVED_SENSOR_KEYS=frozenset(
+            {"delta_t", "estimated_boiler_output", "flame_statistics"}
+        ),
         OPENTHERM_SENSOR_NAMES={
             "ch1_flow_enabled": "CH1 flow enabled",
             "ch_pressure_bar": "CH pressure",
             "connection_status": "Connection status",
             "delta_t": "Delta-T",
+            "estimated_boiler_output": "Estimated boiler output",
+            "boiler_exhaust_temperature": "Boiler exhaust temperature",
+            "maximum_capacity_kw": "Maximum boiler capacity",
+            "minimum_modulation_level": "Minimum modulation level",
             "relative_modulation_level": "Relative modulation level",
+            "coprocessor_version": "OpenTherm coprocessor version",
+            "coprocessor_update_status": "OpenTherm coprocessor update status",
         },
         OPENTHERM_SENSOR_PATHS={
             "ch1_flow_enabled": ("ch1_flow_enabled",),
@@ -453,6 +470,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
     def setUp(self):
         self.opentherm = SimpleNamespace(
             operational_data=SimpleNamespace(ch_pressure_bar=1.2, json_data={}),
+            json_data={},
             enabled=True,
             connection_status="Connected",
         )
@@ -513,6 +531,71 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
         self.assertEqual(delta_t.state_class, "measurement")
         self.assertEqual(delta_t.icon, "mdi:delta")
         self.assertEqual(delta_t._sensor_type, "opentherm_delta_t")
+
+    def test_additional_boiler_readings_have_native_metadata(self):
+        readings = {
+            "boiler_exhaust_temperature": (28, "°C", "temperature", "mdi:smoke"),
+            "maximum_capacity_kw": (30, "kW", "power", "mdi:flash"),
+            "minimum_modulation_level": (27, "%", None, "mdi:percent"),
+        }
+        for key, (value, unit, device_class, icon) in readings.items():
+            with self.subTest(key=key):
+                setattr(self.opentherm.operational_data, key, value)
+                sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+                    self.data, key
+                )
+                sensor.async_write_ha_state = Mock()
+
+                sensor._handle_coordinator_update()
+
+                self.assertEqual(sensor.native_value, value)
+                self.assertEqual(sensor.native_unit_of_measurement, unit)
+                self.assertEqual(sensor.device_class, device_class)
+                self.assertEqual(sensor.state_class, "measurement")
+                self.assertEqual(sensor.icon, icon)
+
+    def test_estimated_boiler_output_uses_capacity_and_modulation(self):
+        self.opentherm.operational_data.json_data = {
+            "MaximumCapacityKw": 30,
+            "RelativeModulationLevel": 425,
+        }
+        sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "estimated_boiler_output"
+        )
+        sensor.async_write_ha_state = Mock()
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, 12.75)
+        self.assertEqual(sensor.native_unit_of_measurement, "kW")
+        self.assertEqual(sensor.device_class, "power")
+        self.assertEqual(sensor.state_class, "measurement")
+        self.assertEqual(sensor.icon, "mdi:flash")
+
+    def test_coprocessor_fields_are_diagnostic_sensors(self):
+        self.opentherm.json_data = {
+            "CoprocessorVersion": "2.0.31",
+            "CoprocessorUpdateStatus": "Success",
+        }
+        for key, expected, icon in (
+            ("coprocessor_version", "2.0.31", "mdi:chip"),
+            ("coprocessor_update_status", "Success", "mdi:update"),
+        ):
+            with self.subTest(key=key):
+                sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+                    self.data, key
+                )
+                sensor.async_write_ha_state = Mock()
+                sensor._handle_coordinator_update()
+
+                self.assertEqual(sensor.native_value, expected)
+                self.assertEqual(sensor._attr_entity_category, "diagnostic")
+                self.assertIsNone(sensor.state_class)
+                self.assertEqual(sensor.icon, icon)
+
+                self.opentherm.connection_status = "Disconnected"
+                self.assertTrue(sensor.available)
+                self.opentherm.connection_status = "Connected"
 
 
 class WiserOpenThermFlameStatisticsSensorTest(unittest.TestCase):

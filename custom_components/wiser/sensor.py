@@ -20,6 +20,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
+    EntityCategory,
     LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
@@ -85,6 +86,7 @@ OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
         "ch_flow_temperature",
         "ch_return_temperature",
         "delta_t",
+        "boiler_exhaust_temperature",
         "hw_temperature",
         "boiler_ch_setpoint",
         "boiler_ch_setpoint_lower_bound",
@@ -96,6 +98,9 @@ OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
 )
 OPENTHERM_MEASUREMENT_SENSOR_KEYS = OPENTHERM_TEMPERATURE_SENSOR_KEYS | {
     "ch_pressure_bar",
+    "maximum_capacity_kw",
+    "estimated_boiler_output",
+    "minimum_modulation_level",
     "relative_modulation_level",
     "hw_flow_rate",
 }
@@ -207,6 +212,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         ):
             wiser_sensors.append(WiserOpenThermAttributeSensor(data, "delta_t"))
+        if (
+            opentherm_sensor_is_enabled(
+                configured_sensors, "estimated_boiler_output"
+            )
+            and opentherm_sensor_is_enabled(
+                configured_sensors, "maximum_capacity_kw"
+            )
+            and opentherm_sensor_is_enabled(
+                configured_sensors, "relative_modulation_level"
+            )
+        ):
+            wiser_sensors.append(
+                WiserOpenThermAttributeSensor(data, "estimated_boiler_output")
+            )
         wiser_sensors.extend(
             WiserOpenThermAttributeSensor(data, key)
             for key in detected_opentherm_sensor_keys(opentherm)
@@ -1275,6 +1294,11 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             translation_key="opentherm_attribute",
             translation_placeholders={"name": OPENTHERM_SENSOR_NAMES[sensor_key]},
         )
+        if sensor_key in {
+            "coprocessor_update_status",
+            "coprocessor_version",
+        }:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def available(self):
@@ -1284,7 +1308,12 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             and opentherm is not None
             and opentherm.enabled
             and (
-                self._sensor_key == "connection_status"
+                self._sensor_key
+                in {
+                    "connection_status",
+                    "coprocessor_update_status",
+                    "coprocessor_version",
+                }
                 or opentherm.connection_status == "Connected"
             )
         )
@@ -1306,8 +1335,13 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             return UnitOfTemperature.CELSIUS
         if self._sensor_key == "ch_pressure_bar":
             return UnitOfPressure.BAR
-        if self._sensor_key == "relative_modulation_level":
+        if self._sensor_key in {
+            "minimum_modulation_level",
+            "relative_modulation_level",
+        }:
             return PERCENTAGE
+        if self._sensor_key in {"estimated_boiler_output", "maximum_capacity_kw"}:
+            return UnitOfPower.KILO_WATT
         if self._sensor_key == "hw_flow_rate":
             return UnitOfVolumeFlowRate.LITERS_PER_MINUTE
         return None
@@ -1320,6 +1354,8 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             return SensorDeviceClass.PRESSURE
         if self._sensor_key == "hw_flow_rate":
             return SensorDeviceClass.VOLUME_FLOW_RATE
+        if self._sensor_key in {"estimated_boiler_output", "maximum_capacity_kw"}:
+            return SensorDeviceClass.POWER
         return None
 
     @property
@@ -1332,6 +1368,16 @@ class WiserOpenThermAttributeSensor(WiserSensor):
     def icon(self):
         if self._sensor_key == "delta_t":
             return "mdi:delta"
+        if self._sensor_key == "boiler_exhaust_temperature":
+            return "mdi:smoke"
+        if self._sensor_key in {"estimated_boiler_output", "maximum_capacity_kw"}:
+            return "mdi:flash"
+        if self._sensor_key == "coprocessor_version":
+            return "mdi:chip"
+        if self._sensor_key == "coprocessor_update_status":
+            return "mdi:update"
+        if self._sensor_key == "minimum_modulation_level":
+            return "mdi:percent"
         if self._sensor_key == "relative_modulation_level":
             return "mdi:fire"
         if self._sensor_key == "ch_pressure_bar":

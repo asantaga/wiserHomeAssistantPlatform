@@ -135,6 +135,9 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
         )
         self.assertNotIn("flame_statistics", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS)
         self.assertNotIn("delta_t", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS)
+        self.assertNotIn(
+            "estimated_boiler_output", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS
+        )
 
     def test_detects_supported_fields_even_when_the_value_is_none(self):
         opentherm = SimpleNamespace(
@@ -169,6 +172,76 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
 
         opentherm.operational_data.ch_return_temperature = None
         self.assertIsNone(HELPER.opentherm_sensor_value(opentherm, "delta_t"))
+
+    def test_detects_and_reads_additional_boiler_telemetry(self):
+        opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(
+                json_data={
+                    "MinimumModulationLevel": 27,
+                    "MaximumCapacityKw": 30,
+                    "BoilerExhaustTemperature": 28,
+                }
+            )
+        )
+
+        detected = HELPER.detected_opentherm_sensor_keys(opentherm)
+        expected = {
+            "minimum_modulation_level": 27,
+            "maximum_capacity_kw": 30,
+            "boiler_exhaust_temperature": 28,
+        }
+        self.assertTrue(set(expected).issubset(detected))
+        for key, value in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(HELPER.opentherm_sensor_value(opentherm, key), value)
+
+    def test_estimated_output_requires_capacity_and_modulation(self):
+        opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(
+                json_data={
+                    "MaximumCapacityKw": 30,
+                    "RelativeModulationLevel": 425,
+                }
+            )
+        )
+
+        self.assertIn(
+            "estimated_boiler_output",
+            HELPER.detected_opentherm_sensor_keys(opentherm),
+        )
+        self.assertEqual(
+            HELPER.opentherm_sensor_value(opentherm, "estimated_boiler_output"),
+            12.75,
+        )
+
+        del opentherm.operational_data.json_data["RelativeModulationLevel"]
+        self.assertNotIn(
+            "estimated_boiler_output",
+            HELPER.detected_opentherm_sensor_keys(opentherm),
+        )
+
+    def test_detects_and_reads_coprocessor_diagnostics(self):
+        opentherm = SimpleNamespace(
+            json_data={
+                "CoprocessorVersion": "2.0.31",
+                "CoprocessorUpdateStatus": "Success",
+            },
+            operational_data=SimpleNamespace(json_data={}),
+        )
+
+        detected = HELPER.detected_opentherm_sensor_keys(opentherm)
+        self.assertIn("coprocessor_version", detected)
+        self.assertIn("coprocessor_update_status", detected)
+        self.assertEqual(
+            HELPER.opentherm_sensor_value(opentherm, "coprocessor_version"),
+            "2.0.31",
+        )
+        self.assertEqual(
+            HELPER.opentherm_sensor_value(
+                opentherm, "coprocessor_update_status"
+            ),
+            "Success",
+        )
 
     def test_decodes_all_non_reserved_slave_status_bits(self):
         opentherm = SimpleNamespace(
@@ -245,6 +318,16 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
             HELPER.opentherm_sensor_is_enabled(
                 {"ch_flow_temperature": False}, "ch_flow_temperature"
             )
+        )
+
+    def test_derived_sensor_dependencies_are_declared(self):
+        self.assertEqual(
+            HELPER.OPENTHERM_SENSOR_DEPENDENCIES["delta_t"],
+            {"ch_flow_temperature", "ch_return_temperature"},
+        )
+        self.assertEqual(
+            HELPER.OPENTHERM_SENSOR_DEPENDENCIES["estimated_boiler_output"],
+            {"maximum_capacity_kw", "relative_modulation_level"},
         )
 
 

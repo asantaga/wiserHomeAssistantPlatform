@@ -92,8 +92,12 @@
           "ch_pressure_bar": "Heizungsdruck",
           "ch_return_temperature": "Kessel-Rücklauftemperatur",
           "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Kessel-Abgastemperatur",
+          "estimated_boiler_output": "Geschätzte Kesselleistung",
           "hw_flow_rate": "Warmwasser-Durchfluss",
           "hw_temperature": "Warmwassertemperatur",
+          "maximum_capacity_kw": "Maximale Kesselleistung",
+          "minimum_modulation_level": "Minimale Modulationsstufe",
           "relative_modulation_level": "Relativer Modulationsgrad",
           "room_temperature": "Raumtemperatur"
         }
@@ -137,6 +141,8 @@
           "central_heating_active": "Zentralheizung aktiv",
           "central_heating_2_active": "Zentralheizung 2 aktiv",
           "connection_status": "Verbindungsstatus",
+          "coprocessor_update_status": "OpenTherm-Coprozessor-Aktualisierungsstatus",
+          "coprocessor_version": "OpenTherm-Coprozessor-Version",
           "cooling_active": "Kühlung aktiv",
           "diagnostic_event": "Diagnoseereignis",
           "flame_active": "Flamme aktiv",
