@@ -1,8 +1,15 @@
 import asyncio
 import logging
 
-from .const import DATA, DOMAIN, MANUFACTURER
-from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
+from .const import DATA, DOMAIN
+from .entity import WiserEntityMixin
+from .helpers import (
+    get_device_name,
+    get_hub_device_info,
+    get_identifier,
+    get_unique_id,
+    hub_error_handler,
+)
 
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_MAXIMUM
 
@@ -55,7 +62,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(wiser_numbers)
 
 
-class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
+class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "away_mode_target_temperature"
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -70,10 +80,10 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
             self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
             self.set_value = self.set_native_value
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self._name} initialise")
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
             asyncio.sleep(delay)
         await self._data.async_refresh()
@@ -81,7 +91,7 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug(f"{self._name} updating")
         self._value = self._data.wiserhub.system.away_mode_target_temperature
         # Support prior to 2022.7.0 Versions without deprecation warning
         if hasattr(self, "_attr_value"):
@@ -109,30 +119,19 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:thermometer-low"
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -147,7 +146,10 @@ class WiserAwayModeTempNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
+class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "floor_temperature_offset"
+
     def __init__(self, coordinator, actuator, device_type) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -163,10 +165,10 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
             self._attr_value = self._data.wiserhub.system.away_mode_target_temperature
             self.set_value = self.set_native_value
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self._name} initialise")
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
             asyncio.sleep(delay)
         await self._data.async_refresh()
@@ -174,7 +176,7 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug(f"{self._name} updating")
         self._value = getattr(self._actuator.floor_temperature_sensor, self._name)
         # Support prior to 2022.7.0 Versions without deprecation warning
         if hasattr(self, "_attr_value"):
@@ -204,18 +206,16 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._actuator.id)} Floor Temp Offset"
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:thermometer-low"
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = (
+            f"{get_device_name(self._data, self._actuator.id)} Floor Temp Offset"
+        )
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
@@ -239,7 +239,12 @@ class WiserFloorTempSensorNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
+class WiserDiscomfortIndoorTempNumber(
+    WiserEntityMixin, CoordinatorEntity, NumberEntity
+):
+    _attr_has_entity_name = True
+    _attr_translation_key = "indoor_discomfort_temperature"
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -254,10 +259,10 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
             self._attr_value = self._data.wiserhub.system.indoor_discomfort_temperature
             self.set_value = self.set_native_value
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self._name} initialise")
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
             asyncio.sleep(delay)
         await self._data.async_refresh()
@@ -265,7 +270,7 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug(f"{self._name} updating")
         self._value = self._data.wiserhub.system.indoor_discomfort_temperature
         # Support prior to 2022.7.0 Versions without deprecation warning
         if hasattr(self, "_attr_value"):
@@ -292,30 +297,19 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:home-thermometer"
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -329,7 +323,12 @@ class WiserDiscomfortIndoorTempNumber(CoordinatorEntity, NumberEntity):
         await self.async_force_update()
 
 
-class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
+class WiserDiscomfortOutdoorTempNumber(
+    WiserEntityMixin, CoordinatorEntity, NumberEntity
+):
+    _attr_has_entity_name = True
+    _attr_translation_key = "outdoor_discomfort_temperature"
+
     def __init__(self, coordinator, name) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -344,10 +343,10 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
             self._attr_value = self._data.wiserhub.system.outdoor_discomfort_temperature
             self.set_value = self.set_native_value
 
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
+        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self._name} initialise")
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
             asyncio.sleep(delay)
         await self._data.async_refresh()
@@ -355,7 +354,7 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} updating")
+        _LOGGER.debug(f"{self._name} updating")
         self._value = self._data.wiserhub.system.outdoor_discomfort_temperature
         # Support prior to 2022.7.0 Versions without deprecation warning
         if hasattr(self, "_attr_value"):
@@ -382,30 +381,19 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
         return NumberMode.AUTO
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, 0, self._name)}"
-
-    @property
     def icon(self):
         """Icon for device"""
         return "mdi:home-thermometer"
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "system", "number", self.name)
+        legacy_name = get_device_name(self._data, 0, self._name)
+        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
     @property
     def native_value(self):
@@ -417,4 +405,3 @@ class WiserDiscomfortOutdoorTempNumber(CoordinatorEntity, NumberEntity):
         _LOGGER.debug(f"Setting {self._name} to {value}C")
         await self._data.wiserhub.system.set_outdoor_discomfort_temperature(value)
         await self.async_force_update()
-

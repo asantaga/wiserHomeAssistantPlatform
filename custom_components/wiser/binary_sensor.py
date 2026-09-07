@@ -10,9 +10,20 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER
-from .helpers import get_device_name, get_identifier, get_room_name, get_unique_id
+from .entity import WiserEntityMixin
+from .helpers import (
+    get_device_name,
+    get_hub_device_info,
+    get_identifier,
+    get_unique_id,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _entity_translation_key(name: str) -> str:
+    """Return the stable translation key for a fixed Wiser entity label."""
+    return name.lower().replace(" ", "_")
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -91,8 +102,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(binary_sensors, True)
 
 
-class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(
         self, coordinator, device_id=0, sensor_type="", device_data_key: str = ""
@@ -104,10 +117,11 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._device_id = device_id
         self._device_name = None
         self._sensor_type = sensor_type
+        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._device_data_key = device_data_key
 
         _LOGGER.info(
-            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
+            f"{self._data.wiserhub.system.name} {self._sensor_type} initialise"
         )
 
         if device_data_key and hasattr(self._device, device_data_key):
@@ -123,7 +137,7 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} device update requested")
+        _LOGGER.debug(f"{self._sensor_type} device update requested")
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         if self._device_data_key and hasattr(self._device, self._device_data_key):
             self._state = getattr(
@@ -143,14 +157,14 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return self._state
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
-
-    @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "binary_sensor", self._sensor_type, self.name)
+        legacy_name = (
+            f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
+        )
+        return get_unique_id(
+            self._data, "binary_sensor", self._sensor_type, legacy_name
+        )
 
     @property
     def device_info(self):
@@ -165,8 +179,10 @@ class BaseBinarySensor(CoordinatorEntity, BinarySensorEntity):
         }
 
 
-class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, device_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
@@ -174,15 +190,16 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._data = coordinator
         self._device_name = None
         self._sensor_type = sensor_type
+        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._state = getattr(self._data.wiserhub.system, self._sensor_type.replace(" ", "_").lower())
         _LOGGER.debug(
-            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
+            f"{self._data.wiserhub.system.name} {self._sensor_type} initialise"
         )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} device update requested")
+        _LOGGER.debug(f"{self._sensor_type} device update requested")
         HeatHub = self._data.wiserhub.system.name
         HeatHub = HeatHub.replace("WiserHeat","HeatHub")
         return f"{HeatHub} {self._sensor_type}"
@@ -193,33 +210,27 @@ class SystemBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return self._state
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-#        return f"{get_device_name(self._data, self._data.wiserhub.system)} {self._sensor_type}"
-        HeatHub = self._data.wiserhub.system.name
-        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
-        return f"{HeatHub} {self._sensor_type}"
-
-    @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self.name)
+        # Preserve the historical unique ID when changing the friendly name.
+        legacy_hub_name = self._data.wiserhub.system.name.replace(
+            "WiserHeat", "HeatHub"
+        )
+        legacy_name = f"{legacy_hub_name} {self._sensor_type}"
+        return get_unique_id(
+            self._data, "sensor", self._sensor_type, legacy_name
+        )
 
     @property
     def device_info(self):
         """Return device specific attributes."""
-        return {
-            "name": get_device_name(self._data, 0),
-            "identifiers": {(DOMAIN, get_identifier(self._data, 0))},
-            "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
-            "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
-        }
+        return get_hub_device_info(self._data)
 
 
-class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     """Base binary sensor class."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, room_id=0, sensor_type="") -> None:
         """Initialize the sensor."""
@@ -229,15 +240,16 @@ class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._room_name = None
         self._sensor_type = sensor_type
+        self._attr_translation_key = _entity_translation_key(sensor_type)
         self._state = getattr(self._room, self._sensor_type.replace(" ", "_").lower())
         _LOGGER.debug(
-            f"{self._data.wiserhub.system.name} {self.name} initalise"  # noqa: E501
+            f"{self._data.wiserhub.system.name} {self._sensor_type} initialise"
         )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} device update requested")
+        _LOGGER.debug(f"{self._sensor_type} device update requested")
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._state = getattr(self._room, self._sensor_type.replace(" ", "_").lower())
         self.async_write_ha_state()
@@ -248,12 +260,6 @@ class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return self._state
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return f"{get_room_name(self._data, self._room_id)} {self._sensor_type}"
-        #return f"{get_device_name(self._data, self._room_id, "room")}  {self._sensor_type}",  
-    
-    @property
     def unique_id(self):
         """Return uniqueid."""
         return get_unique_id(self._data, "sensor", self._sensor_type, self._room_id)
@@ -262,10 +268,11 @@ class RoomBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_room_name(self._data, self._room_id ),
+            "name": get_device_name(self._data, self._room_id, "room"),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._room_id, "room"))},
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.system.product_type,
+            "suggested_area": self._room.name,
             "sw_version": self._data.wiserhub.system.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
