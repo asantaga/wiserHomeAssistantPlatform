@@ -56,7 +56,7 @@ def _load_sensor_module() -> ModuleType:
         STATE_UNAVAILABLE="unavailable",
         STATE_UNKNOWN="unknown",
         STATE_ON="on",
-        UnitOfTemperature=SimpleNamespace(),
+        UnitOfTemperature=SimpleNamespace(CELSIUS="°C"),
         UnitOfTime=SimpleNamespace(HOURS="h"),
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
@@ -119,6 +119,19 @@ def _load_sensor_module() -> ModuleType:
             return None
         return raw / 10
 
+    def opentherm_sensor_value(opentherm, key):
+        if key == "delta_t":
+            return round(
+                opentherm.operational_data.ch_flow_temperature
+                - opentherm.operational_data.ch_return_temperature,
+                1,
+            )
+        if key == "relative_modulation_level":
+            return relative_modulation_level(opentherm)
+        if hasattr(opentherm, key):
+            return getattr(opentherm, key)
+        return getattr(opentherm.operational_data, key)
+
     _module(
         "wiser.opentherm",
         DEFAULT_OPENTHERM_SENSOR_KEYS=frozenset(
@@ -135,11 +148,12 @@ def _load_sensor_module() -> ModuleType:
                 "boiler_hw_setpoint_transfer_enable",
             }
         ),
-        OPENTHERM_DERIVED_SENSOR_KEYS=frozenset({"flame_statistics"}),
+        OPENTHERM_DERIVED_SENSOR_KEYS=frozenset({"delta_t", "flame_statistics"}),
         OPENTHERM_SENSOR_NAMES={
             "ch1_flow_enabled": "CH1 flow enabled",
             "ch_pressure_bar": "CH pressure",
             "connection_status": "Connection status",
+            "delta_t": "Delta-T",
             "relative_modulation_level": "Relative modulation level",
         },
         OPENTHERM_SENSOR_PATHS={
@@ -161,15 +175,7 @@ def _load_sensor_module() -> ModuleType:
             "diagnostic_event": 6,
         },
         detected_opentherm_sensor_keys=lambda _opentherm: [],
-        opentherm_sensor_value=lambda opentherm, key: (
-            relative_modulation_level(opentherm)
-            if key == "relative_modulation_level"
-            else (
-                getattr(opentherm, key)
-                if hasattr(opentherm, key)
-                else getattr(opentherm.operational_data, key)
-            )
-        ),
+        opentherm_sensor_value=opentherm_sensor_value,
         opentherm_sensor_is_enabled=lambda configured, key: (
             key in {"ch_flow_temperature", "ch_return_temperature"}
             if configured is None
@@ -490,6 +496,23 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
             self.data, "connection_status"
         )
         self.assertTrue(connection.available)
+
+    def test_delta_t_has_temperature_measurement_metadata(self):
+        self.opentherm.operational_data.ch_flow_temperature = 42.4
+        self.opentherm.operational_data.ch_return_temperature = 35.1
+        delta_t = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "delta_t"
+        )
+        delta_t.async_write_ha_state = Mock()
+
+        delta_t._handle_coordinator_update()
+
+        self.assertEqual(delta_t.native_value, 7.3)
+        self.assertEqual(delta_t.native_unit_of_measurement, "°C")
+        self.assertEqual(delta_t.device_class, "temperature")
+        self.assertEqual(delta_t.state_class, "measurement")
+        self.assertEqual(delta_t.icon, "mdi:delta")
+        self.assertEqual(delta_t._sensor_type, "opentherm_delta_t")
 
 
 class WiserOpenThermFlameStatisticsSensorTest(unittest.TestCase):

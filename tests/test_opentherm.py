@@ -134,6 +134,7 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
             "relative_modulation_level", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS
         )
         self.assertNotIn("flame_statistics", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS)
+        self.assertNotIn("delta_t", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS)
 
     def test_detects_supported_fields_even_when_the_value_is_none(self):
         opentherm = SimpleNamespace(
@@ -152,6 +153,22 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
                 "relative_modulation_level",
             ],
         )
+
+    def test_delta_t_is_detected_and_calculated_from_flow_and_return(self):
+        opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(
+                ch_flow_temperature=42.4,
+                ch_return_temperature=35.1,
+            )
+        )
+
+        self.assertIn(
+            "delta_t", HELPER.detected_opentherm_sensor_keys(opentherm)
+        )
+        self.assertEqual(HELPER.opentherm_sensor_value(opentherm, "delta_t"), 7.3)
+
+        opentherm.operational_data.ch_return_temperature = None
+        self.assertIsNone(HELPER.opentherm_sensor_value(opentherm, "delta_t"))
 
     def test_decodes_all_non_reserved_slave_status_bits(self):
         opentherm = SimpleNamespace(

@@ -56,6 +56,9 @@ OPENTHERM_SENSOR_PATHS = {
     "ch_flow_temperature": ("operational_data", "ch_flow_temperature"),
     "ch_pressure_bar": ("operational_data", "ch_pressure_bar"),
     "ch_return_temperature": ("operational_data", "ch_return_temperature"),
+    # Delta-T is derived from this flow reading and the return reading. Its
+    # discovery check below explicitly requires both source attributes.
+    "delta_t": ("operational_data", "ch_flow_temperature"),
     "relative_modulation_level": ("operational_data", "relative_modulation_level"),
     "hw_temperature": ("operational_data", "hw_temperature"),
     "hw_flow_rate": ("operational_data", "hw_flow_rate"),
@@ -131,7 +134,7 @@ OPENTHERM_BINARY_SENSOR_KEYS = frozenset(
 
 # These selectable sensors are calculated from another OpenTherm entity rather
 # than exposing the current value of an API attribute directly.
-OPENTHERM_DERIVED_SENSOR_KEYS = frozenset({"flame_statistics"})
+OPENTHERM_DERIVED_SENSOR_KEYS = frozenset({"delta_t", "flame_statistics"})
 
 # OpenTherm Data-ID 0, low-byte (slave status) flags. Bit 7 is reserved.
 OPENTHERM_SLAVE_STATUS_BITS = {
@@ -149,6 +152,7 @@ OPENTHERM_SENSOR_CATEGORIES = {
         "ch_flow_temperature",
         "ch_pressure_bar",
         "ch_return_temperature",
+        "delta_t",
         "hw_flow_rate",
         "hw_temperature",
         "relative_modulation_level",
@@ -210,6 +214,7 @@ OPENTHERM_SENSOR_NAMES = {
     "ch_flow_temperature": "Boiler flow temperature",
     "ch_pressure_bar": "CH pressure",
     "ch_return_temperature": "Boiler return temperature",
+    "delta_t": "Delta-T",
     "relative_modulation_level": "Relative modulation level",
     "hw_temperature": "Hot water temperature",
     "hw_flow_rate": "Hot water flow rate",
@@ -260,6 +265,17 @@ def relative_modulation_level(opentherm):
 
 def opentherm_sensor_value(opentherm, key):
     """Return the current value for a selectable OpenTherm sensor."""
+    if key == "delta_t":
+        flow = opentherm.operational_data.ch_flow_temperature
+        return_temperature = opentherm.operational_data.ch_return_temperature
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in (flow, return_temperature)
+        ):
+            return None
+        return round(flow - return_temperature, 1)
     if key == "relative_modulation_level":
         return relative_modulation_level(opentherm)
     if key in OPENTHERM_SLAVE_STATUS_BITS:
@@ -283,6 +299,8 @@ def detected_opentherm_sensor_keys(opentherm):
     """Return selectable attributes supported by this OpenTherm response."""
     detected = []
     for key, path in OPENTHERM_SENSOR_PATHS.items():
+        if key == "delta_t":
+            continue
         try:
             # Detection is based on field availability, not its current value.
             # A valid sensor may report None while the boiler is idle.
@@ -290,6 +308,11 @@ def detected_opentherm_sensor_keys(opentherm):
         except (AttributeError, TypeError):
             continue
         detected.append(key)
+    if {
+        "ch_flow_temperature",
+        "ch_return_temperature",
+    }.issubset(detected):
+        detected.append("delta_t")
     return detected
 
 

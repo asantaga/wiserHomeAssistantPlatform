@@ -298,6 +298,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             # state history, so keep its source entity enabled as well.
             if configured.get("flame_statistics"):
                 configured["flame_active"] = True
+            if configured.get("delta_t") and not (
+                configured.get("ch_flow_temperature")
+                and configured.get("ch_return_temperature")
+            ):
+                configured["delta_t"] = False
             options = self.config_entry.options | {
                 CONF_OPENTHERM_SENSORS: configured
             }

@@ -91,6 +91,7 @@
           "ch_flow_temperature": "Kessel-Vorlauftemperatur",
           "ch_pressure_bar": "Heizungsdruck",
           "ch_return_temperature": "Kessel-Rücklauftemperatur",
+          "delta_t": "Delta-T",
           "hw_flow_rate": "Warmwasser-Durchfluss",
           "hw_temperature": "Warmwassertemperatur",
           "relative_modulation_level": "Relativer Modulationsgrad",

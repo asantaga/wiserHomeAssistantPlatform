@@ -84,6 +84,7 @@ OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
         "room_temperature",
         "ch_flow_temperature",
         "ch_return_temperature",
+        "delta_t",
         "hw_temperature",
         "boiler_ch_setpoint",
         "boiler_ch_setpoint_lower_bound",
@@ -196,6 +197,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         }
         if opentherm_sensor_is_enabled(configured_sensors, "flame_statistics"):
             wiser_sensors.append(WiserOpenThermFlameStatisticsSensor(data))
+        if (
+            opentherm_sensor_is_enabled(configured_sensors, "delta_t")
+            and opentherm_sensor_is_enabled(
+                configured_sensors, "ch_flow_temperature"
+            )
+            and opentherm_sensor_is_enabled(
+                configured_sensors, "ch_return_temperature"
+            )
+        ):
+            wiser_sensors.append(WiserOpenThermAttributeSensor(data, "delta_t"))
         wiser_sensors.extend(
             WiserOpenThermAttributeSensor(data, key)
             for key in detected_opentherm_sensor_keys(opentherm)
@@ -1319,6 +1330,8 @@ class WiserOpenThermAttributeSensor(WiserSensor):
 
     @property
     def icon(self):
+        if self._sensor_key == "delta_t":
+            return "mdi:delta"
         if self._sensor_key == "relative_modulation_level":
             return "mdi:fire"
         if self._sensor_key == "ch_pressure_bar":

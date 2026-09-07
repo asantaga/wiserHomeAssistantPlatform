@@ -92,6 +92,7 @@
           "ch_flow_temperature": "Température de départ de la chaudière",
           "ch_pressure_bar": "Pression du chauffage central",
           "ch_return_temperature": "Température de retour de la chaudière",
+          "delta_t": "Delta-T",
           "hw_flow_rate": "Débit d’eau chaude",
           "hw_temperature": "Température de l’eau chaude",
           "relative_modulation_level": "Niveau de modulation relatif",

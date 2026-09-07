@@ -92,6 +92,7 @@
           "ch_flow_temperature": "Boiler flow temperature",
           "ch_pressure_bar": "CH pressure",
           "ch_return_temperature": "Boiler return temperature",
+          "delta_t": "Delta-T",
           "hw_flow_rate": "Hot water flow rate",
           "hw_temperature": "Hot water temperature",
           "relative_modulation_level": "Relative modulation level",
