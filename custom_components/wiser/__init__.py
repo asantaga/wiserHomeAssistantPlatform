@@ -148,6 +148,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Register the physical hub before its entities and connected devices.
     hub_device = await async_update_device_registry(hass, config_entry)
+    coordinator.hub_device_id = hub_device.id
 
     # Create physical devices with their Wiser room as Home Assistant's initial
     # area. The registry keeps any area the user chooses later.
@@ -254,11 +255,11 @@ def update_hub_device_names(hass: HomeAssistant):
     show_suffix = len(loaded_entries) > 1
     device_registry = dr.async_get(hass)
 
-    for entry_data in loaded_entries.values():
+    for config_entry_id, entry_data in loaded_entries.items():
         data = entry_data[DATA]
         data._wiser_show_hub_suffix = show_suffix
-        device = device_registry.async_get_device(
-            identifiers={(DOMAIN, data.wiserhub.system.name)}
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, data.wiserhub.system.name), config_entry_id
         )
         if device is not None:
             device_registry.async_update_device(

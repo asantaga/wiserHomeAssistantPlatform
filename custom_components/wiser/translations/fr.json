@@ -38,7 +38,8 @@
         "menu_options": {
           "main_params": "Paramètres principaux",
           "hw_climate_params": "Paramètres climatiques de l'eau chaude",
-          "automation_params": "Paramètres d'automatisation"
+          "automation_params": "Paramètres d'automatisation",
+          "opentherm_sensors": "Capteurs OpenTherm"
         }
       },
       "main_params": {
@@ -73,7 +74,82 @@
           "automations_passive_mode": "Mode passif",
           "passive_mode_temperature_increments": "Incréments de température en mode passif"
         }
+      },
+      "opentherm_sensors": {
+        "title": "Capteurs OpenTherm",
+        "description": "Choisissez une catégorie d’attributs OpenTherm détectés.",
+        "menu_options": {
+          "opentherm_readings": "Mesures",
+          "opentherm_central_heating": "Chauffage central",
+          "opentherm_hot_water": "Eau chaude",
+          "opentherm_status": "État et diagnostics"
+        }
+      },
+      "opentherm_readings": {
+        "title": "Mesures OpenTherm",
+        "description": "Choisissez les mesures OpenTherm détectées à exposer en tant qu’entités de capteur.",
+        "data": {
+          "ch_flow_temperature": "Température de départ de la chaudière",
+          "ch_pressure_bar": "Pression du chauffage central",
+          "ch_return_temperature": "Température de retour de la chaudière",
+          "hw_flow_rate": "Débit d’eau chaude",
+          "hw_temperature": "Température de l’eau chaude",
+          "relative_modulation_level": "Niveau de modulation relatif",
+          "room_temperature": "Température ambiante"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "Chauffage central OpenTherm",
+        "description": "Choisissez les attributs de chauffage central détectés à exposer en tant qu’entités.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Consigne maximale de chauffage de la chaudière en lecture/écriture",
+          "boiler_ch_max_setpoint_transfer_enable": "Transfert de la consigne maximale de chauffage activé",
+          "boiler_ch_setpoint": "Consigne de chauffage de la chaudière",
+          "boiler_ch_setpoint_lower_bound": "Limite inférieure de la consigne de chauffage",
+          "boiler_ch_setpoint_upper_bound": "Limite supérieure de la consigne de chauffage",
+          "ch_flow_active_lower_setpoint": "Limite inférieure active du départ chauffage",
+          "ch_flow_active_upper_setpoint": "Limite supérieure active du départ chauffage",
+          "ch1_flow_enabled": "Départ chauffage 1 activé",
+          "ch1_flow_setpoint": "Consigne du départ chauffage 1",
+          "ch2_flow_enabled": "Départ chauffage 2 activé",
+          "ch2_flow_setpoint": "Consigne du départ chauffage 2",
+          "room_setpoint": "Consigne ambiante"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "Eau chaude OpenTherm",
+        "description": "Choisissez les attributs d’eau chaude détectés à exposer en tant qu’entités.",
+        "data": {
+          "boiler_hw_setpoint": "Consigne d’eau chaude de la chaudière",
+          "boiler_hw_setpoint_lower_bound": "Limite inférieure de la consigne d’eau chaude",
+          "boiler_hw_setpoint_read_write": "Consigne d’eau chaude en lecture/écriture",
+          "boiler_hw_setpoint_transfer_enable": "Transfert de la consigne d’eau chaude activé",
+          "boiler_hw_setpoint_upper_bound": "Limite supérieure de la consigne d’eau chaude",
+          "hw_enabled": "Eau chaude activée",
+          "hw_flow_setpoint": "Consigne de débit d’eau chaude"
+        }
+      },
+      "opentherm_status": {
+        "title": "État et diagnostics OpenTherm",
+        "description": "Choisissez les attributs d’état et de diagnostic détectés à exposer en tant qu’entités de capteur.",
+        "data": {
+          "boiler_fault": "Défaut de la chaudière",
+          "central_heating_active": "Chauffage central actif",
+          "central_heating_2_active": "Chauffage central 2 actif",
+          "connection_status": "État de la connexion",
+          "cooling_active": "Refroidissement actif",
+          "diagnostic_event": "Événement de diagnostic",
+          "flame_active": "Flamme active",
+          "flame_statistics": "Statistiques de flamme",
+          "hot_water_active": "Eau chaude active",
+          "operating_mode": "Mode de fonctionnement",
+          "slave_status": "État de l’esclave OpenTherm",
+          "tracked_room_id": "Identifiant de la pièce suivie"
+        }
       }
+    },
+    "abort": {
+      "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser."
     }
   },
   "entity": {
@@ -146,7 +222,8 @@
       "is_tilt_supported": { "name": "Inclinaison prise en charge" },
       "is_open": { "name": "Ouvert" },
       "is_closed": { "name": "Fermé" },
-      "active": { "name": "Actif" }
+      "active": { "name": "Actif" },
+      "opentherm_attribute": { "name": "{name}" }
     },
     "sensor": {
       "signal": { "name": "Signal" },
@@ -159,8 +236,9 @@
       "target_temperature": { "name": "Température cible" },
       "floor_temperature": { "name": "Température du sol" },
       "boiler_flow_temperature": { "name": "Température de départ de la chaudière" },
-      "relative_modulation_level": { "name": "Niveau de modulation relatif" },
       "boiler_return_temperature": { "name": "Température de retour de la chaudière" },
+      "flame_statistics": { "name": "Statistiques de flamme" },
+      "opentherm_attribute": { "name": "{name}" },
       "heating_demand": { "name": "Demande de chauffage" },
       "heating_demand_channel": { "name": "Demande de chauffage canal {channel}" },
       "hot_water_demand": { "name": "Demande d’eau chaude" },

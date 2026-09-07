@@ -52,6 +52,7 @@ from .events import fire_events
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
+    get_hub_via_device_info,
     get_identifier,
     get_room_name,
     get_uuid_unique_id,
@@ -231,7 +232,7 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
         return {
             "name": get_device_name(self._data, self._actuator_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._actuator_id))},
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -393,7 +394,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             "manufacturer": MANUFACTURER,
             "model": ROOM.title(),
             "suggested_area": self._room.name,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -997,7 +998,7 @@ class WiserHotWater(
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property

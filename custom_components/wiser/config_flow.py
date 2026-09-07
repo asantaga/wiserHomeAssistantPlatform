@@ -28,6 +28,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     SelectSelectorMode,
@@ -48,6 +49,7 @@ from .const import (
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
     CONF_HW_BOOST_TIME,
+    CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CUSTOM_DATA_STORE,
@@ -55,10 +57,17 @@ from .const import (
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
     DEFAULT_SCAN_INTERVAL,
+    DATA,
     DOMAIN,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
     HWCycleModes,
+)
+from .opentherm import (
+    OPENTHERM_SENSOR_CATEGORIES,
+    OPENTHERM_SENSOR_NAMES,
+    detected_opentherm_sensor_keys,
+    opentherm_sensor_is_enabled,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -236,12 +245,98 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 class WiserOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for wiser hub."""
 
+    def _opentherm(self):
+        """Return the loaded entry's OpenTherm model, if available."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return None
+        return getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
+
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
+        menu_options = ["main_params", "automation_params"]
+        if self._opentherm() is not None:
+            menu_options.append("opentherm_sensors")
         return self.async_show_menu(
             step_id="init",
-            menu_options=["main_params", "automation_params"],
+            menu_options=menu_options,
         )
+
+    async def async_step_opentherm_sensors(self, user_input=None):
+        """Choose an OpenTherm sensor category."""
+        opentherm = self._opentherm()
+        if opentherm is None:
+            return self.async_abort(reason="opentherm_not_available")
+
+        detected_keys = set(detected_opentherm_sensor_keys(opentherm))
+        menu_options = [
+            category
+            for category, keys in OPENTHERM_SENSOR_CATEGORIES.items()
+            if detected_keys.intersection(keys)
+        ]
+        return self.async_show_menu(
+            step_id="opentherm_sensors",
+            menu_options=menu_options,
+        )
+
+    def _opentherm_sensor_form(self, step_id, user_input):
+        """Build and save a category of OpenTherm sensor toggles."""
+        opentherm = self._opentherm()
+        if opentherm is None:
+            return self.async_abort(reason="opentherm_not_available")
+
+        detected_keys = detected_opentherm_sensor_keys(opentherm)
+        category_keys = set(OPENTHERM_SENSOR_CATEGORIES[step_id])
+        if user_input is not None:
+            existing = self.config_entry.options.get(CONF_OPENTHERM_SENSORS)
+            configured = {
+                key: opentherm_sensor_is_enabled(existing, key)
+                for key in OPENTHERM_SENSOR_NAMES
+            }
+            configured.update(user_input)
+            # Rolling flame runtime is calculated from Flame active's recorded
+            # state history, so keep its source entity enabled as well.
+            if configured.get("flame_statistics"):
+                configured["flame_active"] = True
+            options = self.config_entry.options | {
+                CONF_OPENTHERM_SENSORS: configured
+            }
+            return self.async_create_entry(data=options)
+
+        configured = self.config_entry.options.get(CONF_OPENTHERM_SENSORS)
+        sorted_keys = sorted(
+            category_keys.intersection(detected_keys),
+            key=OPENTHERM_SENSOR_NAMES.__getitem__,
+        )
+        data_schema = {
+            vol.Optional(
+                key,
+                default=opentherm_sensor_is_enabled(configured, key),
+            ): BooleanSelector()
+            for key in sorted_keys
+        }
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=vol.Schema(data_schema),
+        )
+
+    async def async_step_opentherm_readings(self, user_input=None):
+        """Configure OpenTherm reading sensors."""
+        return self._opentherm_sensor_form("opentherm_readings", user_input)
+
+    async def async_step_opentherm_central_heating(self, user_input=None):
+        """Configure OpenTherm central-heating sensors."""
+        return self._opentherm_sensor_form(
+            "opentherm_central_heating", user_input
+        )
+
+    async def async_step_opentherm_hot_water(self, user_input=None):
+        """Configure OpenTherm hot-water sensors."""
+        return self._opentherm_sensor_form("opentherm_hot_water", user_input)
+
+    async def async_step_opentherm_status(self, user_input=None):
+        """Configure OpenTherm status sensors."""
+        return self._opentherm_sensor_form("opentherm_status", user_input)
 
     async def async_step_main_params(self, user_input=None):
         """Handle options flow."""

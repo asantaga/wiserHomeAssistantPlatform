@@ -229,29 +229,40 @@ set_device_mode:
 
 set_opentherm_parameter:
   name: "Set OpenTherm Parameter"
-  description: Allows changing of opentherm parameters on the Wiser Hub
+  description: Allows changing supported OpenTherm temperature parameters on the Wiser Hub.
   fields:
-    endpoint:
-      name: Endpoint
-      description: Endpoint if not at opentherm root.  Ie. preDefinedRemoteBoilerParameters
-      required: false
-      selector:
-        text:
     parameter:
       name: Parameter
-      description: Parameter to change
+      description: OpenTherm temperature parameter to change. The required API endpoint is selected automatically.
       required: true
       selector:
-        text:
-    parameter_value:
-      name: Value
-      description: "Raw parameter value. Numbers and true/false are sent as JSON values. Temperature setpoints use tenths of a degree Celsius (for example, 400 means 40°C); use a value supported by your boiler."
+        select:
+          mode: dropdown
+          options:
+            - label: "Active central-heating lower setpoint"
+              value: chFlowActiveLowerSetpoint
+            - label: "Active central-heating upper setpoint"
+              value: chFlowActiveUpperSetpoint
+            - label: "Hub hot-water flow setpoint"
+              value: dhwFlowSetpoint
+            - label: "Boiler hot-water setpoint"
+              value: dhwSetpoint
+            - label: "Boiler maximum central-heating setpoint"
+              value: maxChSetpoint
+    temperature:
+      name: Temperature
+      description: Use a temperature within the limits reported by your boiler.
       required: true
       selector:
-        text:
+        number:
+          min: 0
+          max: 100
+          step: 0.1
+          mode: box
+          unit_of_measurement: °C
     hub:
-      name: Hub
-      description: Only needs to be set if you have multiple Wiser hubs
+      name: Wiser hub
+      description: Only select a hub when you have multiple Wiser hubs.
       required: false
       selector:
         config_entry:

@@ -15,6 +15,7 @@ from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
+    get_hub_via_device_info,
     get_identifier,
     get_unique_id,
     hub_error_handler,
@@ -110,7 +111,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property

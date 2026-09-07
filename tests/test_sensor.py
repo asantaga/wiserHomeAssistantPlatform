@@ -13,6 +13,9 @@ from unittest.mock import Mock
 
 
 SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/sensor.py"
+BINARY_SENSOR_SOURCE_PATH = (
+    Path(__file__).parents[1] / "custom_components/wiser/binary_sensor.py"
+)
 
 
 def _module(name: str, **attributes: object) -> ModuleType:
@@ -37,7 +40,12 @@ def _load_sensor_module() -> ModuleType:
 
     _module(
         "homeassistant.components.sensor",
-        SensorDeviceClass=SimpleNamespace(),
+        SensorDeviceClass=SimpleNamespace(
+            TEMPERATURE="temperature",
+            PRESSURE="pressure",
+            VOLUME_FLOW_RATE="volume_flow_rate",
+            DURATION="duration",
+        ),
         SensorStateClass=SimpleNamespace(MEASUREMENT="measurement"),
         SensorEntity=SensorEntity,
     )
@@ -47,12 +55,16 @@ def _load_sensor_module() -> ModuleType:
         LIGHT_LUX="lx",
         STATE_UNAVAILABLE="unavailable",
         STATE_UNKNOWN="unknown",
+        STATE_ON="on",
         UnitOfTemperature=SimpleNamespace(),
+        UnitOfTime=SimpleNamespace(HOURS="h"),
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
         PERCENTAGE="%",
         UnitOfPower=SimpleNamespace(),
         UnitOfEnergy=SimpleNamespace(),
+        UnitOfPressure=SimpleNamespace(BAR="bar"),
+        UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
     )
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
     _module("homeassistant.helpers")
@@ -74,6 +86,7 @@ def _load_sensor_module() -> ModuleType:
     _module(
         "wiser.const",
         DATA="data",
+        CONF_OPENTHERM_SENSORS="opentherm_sensors",
         DOMAIN="wiser",
         HOT_WATER="hot_water",
         MANUFACTURER="Drayton",
@@ -91,12 +104,85 @@ def _load_sensor_module() -> ModuleType:
         ),
         get_identifier=lambda *_args: "identifier",
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
+        get_hub_via_device_info=lambda _data: {},
         get_unique_id=lambda *_args: "unique-id",
     )
     class WiserEntityMixin:
         pass
 
     _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
+    def relative_modulation_level(opentherm):
+        raw = opentherm.operational_data.json_data.get("RelativeModulationLevel")
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            return None
+        if not 0 <= raw <= 1000:
+            return None
+        return raw / 10
+
+    _module(
+        "wiser.opentherm",
+        DEFAULT_OPENTHERM_SENSOR_KEYS=frozenset(
+            {"ch_flow_temperature", "ch_return_temperature"}
+        ),
+        OPENTHERM_BINARY_SENSOR_KEYS=frozenset(
+            {
+                "ch1_flow_enabled",
+                "ch2_flow_enabled",
+                "hw_enabled",
+                "boiler_ch_max_setpoint_read_write",
+                "boiler_ch_max_setpoint_transfer_enable",
+                "boiler_hw_setpoint_read_write",
+                "boiler_hw_setpoint_transfer_enable",
+            }
+        ),
+        OPENTHERM_DERIVED_SENSOR_KEYS=frozenset({"flame_statistics"}),
+        OPENTHERM_SENSOR_NAMES={
+            "ch1_flow_enabled": "CH1 flow enabled",
+            "ch_pressure_bar": "CH pressure",
+            "connection_status": "Connection status",
+            "relative_modulation_level": "Relative modulation level",
+        },
+        OPENTHERM_SENSOR_PATHS={
+            "ch1_flow_enabled": ("ch1_flow_enabled",),
+            "ch_pressure_bar": ("operational_data", "ch_pressure_bar"),
+            "connection_status": ("connection_status",),
+            "relative_modulation_level": (
+                "operational_data",
+                "relative_modulation_level",
+            ),
+        },
+        OPENTHERM_SLAVE_STATUS_BITS={
+            "boiler_fault": 0,
+            "central_heating_active": 1,
+            "hot_water_active": 2,
+            "flame_active": 3,
+            "cooling_active": 4,
+            "central_heating_2_active": 5,
+            "diagnostic_event": 6,
+        },
+        detected_opentherm_sensor_keys=lambda _opentherm: [],
+        opentherm_sensor_value=lambda opentherm, key: (
+            relative_modulation_level(opentherm)
+            if key == "relative_modulation_level"
+            else (
+                getattr(opentherm, key)
+                if hasattr(opentherm, key)
+                else getattr(opentherm.operational_data, key)
+            )
+        ),
+        opentherm_sensor_is_enabled=lambda configured, key: (
+            key in {"ch_flow_temperature", "ch_return_temperature"}
+            if configured is None
+            else (
+                configured.get(
+                    key, key in {"ch_flow_temperature", "ch_return_temperature"}
+                )
+                if isinstance(configured, dict)
+                else key in configured
+            )
+        ),
+        relative_modulation_level=relative_modulation_level,
+    )
     _module(
         "wiser.temperature",
         room_target_temperature=lambda room, frost_temp, off_temp: (
@@ -107,6 +193,39 @@ def _load_sensor_module() -> ModuleType:
     )
 
     spec = importlib.util.spec_from_file_location("wiser.sensor", SOURCE_PATH)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_binary_sensor_module() -> ModuleType:
+    """Load the binary sensor module using the shared HA stubs."""
+    _load_sensor_module()
+
+    class BinarySensorEntity:
+        pass
+
+    _module(
+        "homeassistant.components.binary_sensor",
+        BinarySensorDeviceClass=SimpleNamespace(
+            SMOKE="smoke",
+            HEAT="heat",
+            TAMPER="tamper",
+            PROBLEM="problem",
+            POWER="power",
+            OPENING="opening",
+            WINDOW="window",
+            DOOR="door",
+            RUNNING="running",
+        ),
+        BinarySensorEntity=BinarySensorEntity,
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "wiser.binary_sensor", BINARY_SENSOR_SOURCE_PATH
+    )
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -270,7 +389,9 @@ class WiserOpenThermModulationTest(unittest.TestCase):
                 rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
             ),
         )
-        self.sensor = self.sensor_module.WiserOpenThermModulationSensor(self.data)
+        self.sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "relative_modulation_level"
+        )
         self.sensor.async_write_ha_state = Mock()
 
     def test_reads_zero_and_fractional_percentages(self):
@@ -296,7 +417,11 @@ class WiserOpenThermModulationTest(unittest.TestCase):
         self.assertEqual(self.sensor.state_class, "measurement")
         self.assertEqual(self.sensor.icon, "mdi:fire")
         self.assertIsNone(getattr(self.sensor, "device_class", None))
-        self.assertEqual(self.sensor._attr_translation_key, "relative_modulation_level")
+        self.assertEqual(self.sensor._attr_translation_key, "opentherm_attribute")
+        self.assertEqual(
+            self.sensor._attr_translation_placeholders,
+            {"name": "Relative modulation level"},
+        )
         self.assertEqual(self.sensor._sensor_type, "relative_modulation_level")
         self.assertNotIn("_attr_name", self.sensor.__dict__)
         self.assertEqual(self.sensor.device_info, {"identifiers": {("wiser", "hub")}})
@@ -312,33 +437,161 @@ class WiserOpenThermModulationTest(unittest.TestCase):
         self.data.last_update_success = False
         self.assertFalse(self.sensor.available)
 
-    def test_setup_only_adds_sensor_for_enabled_connected_opentherm(self):
-        tree = ast.parse(SOURCE_PATH.read_text())
-        setup = next(node for node in tree.body
-                     if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_setup_entry")
-        block = next(node for node in setup.body
-                     if isinstance(node, ast.If)
-                     and any(isinstance(child, ast.Call)
-                             and isinstance(child.func, ast.Name)
-                             and child.func.id == "WiserOpenThermModulationSensor"
-                             for child in ast.walk(node)))
-        for connected, enabled, expected in (
-            ("Connected", True, 1), ("Disconnected", True, 0), ("Connected", False, 0)
-        ):
-            with self.subTest(connected=connected, enabled=enabled):
-                self.opentherm.connection_status = connected
-                self.opentherm.enabled = enabled
-                sensors = []
-                env = {**self.sensor_module.__dict__, "data": self.data, "wiser_sensors": sensors}
-                exec(compile(ast.Module(body=[block], type_ignores=[]), "sensor.py", "exec"), env)
-                self.assertEqual(sum(isinstance(sensor, self.sensor_module.WiserOpenThermModulationSensor)
-                                     for sensor in sensors), expected)
+class WiserOpenThermAttributeSensorTest(unittest.TestCase):
+    """Tests for opt-in OpenTherm attribute entities."""
 
-    def test_translations_include_modulation_name(self):
-        paths = [SOURCE_PATH.parent / "strings.json"]
-        paths.extend(SOURCE_PATH.parent / "translations" / f"{language}.json"
-                     for language in ("en", "de", "fr"))
-        for path in paths:
-            with self.subTest(path=path):
-                translations = json.loads(path.read_text())
-                self.assertTrue(translations["entity"]["sensor"]["relative_modulation_level"]["name"])
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    def setUp(self):
+        self.opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(ch_pressure_bar=1.2, json_data={}),
+            enabled=True,
+            connection_status="Connected",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat058A52", opentherm=self.opentherm),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+            ),
+        )
+        self.sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "ch_pressure_bar"
+        )
+        self.sensor.async_write_ha_state = Mock()
+
+    def test_reads_selected_attribute_with_measurement_metadata(self):
+        self.sensor._handle_coordinator_update()
+
+        self.assertEqual(self.sensor.native_value, 1.2)
+        self.assertEqual(self.sensor.native_unit_of_measurement, "bar")
+        self.assertEqual(self.sensor.device_class, "pressure")
+        self.assertEqual(self.sensor.state_class, "measurement")
+        self.assertEqual(self.sensor._attr_translation_key, "opentherm_attribute")
+        self.assertEqual(
+            self.sensor._attr_translation_placeholders, {"name": "CH pressure"}
+        )
+        self.assertEqual(self.sensor._sensor_type, "opentherm_ch_pressure_bar")
+        self.assertEqual(self.sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+    def test_connection_sensor_remains_available_when_disconnected(self):
+        sensor = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "ch_pressure_bar"
+        )
+        self.opentherm.connection_status = "Disconnected"
+        self.assertFalse(sensor.available)
+
+        self.sensor_module.OPENTHERM_SENSOR_NAMES["connection_status"] = (
+            "Connection status"
+        )
+        connection = self.sensor_module.WiserOpenThermAttributeSensor(
+            self.data, "connection_status"
+        )
+        self.assertTrue(connection.available)
+
+
+class WiserOpenThermFlameStatisticsSensorTest(unittest.TestCase):
+    """Tests for the optional rolling flame-runtime entity."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    def test_metadata_identity_and_runtime_conversion(self):
+        data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat058A52"),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+            ),
+        )
+        sensor = self.sensor_module.WiserOpenThermFlameStatisticsSensor(data)
+        sensor.async_write_ha_state = Mock()
+        sensor._history_coordinator = SimpleNamespace(
+            last_update_success=True,
+            data=SimpleNamespace(seconds_matched=5400),
+        )
+
+        sensor._handle_history_update()
+
+        self.assertEqual(sensor.native_value, 1.5)
+        self.assertEqual(sensor._attr_native_unit_of_measurement, "h")
+        self.assertEqual(sensor._attr_device_class, "duration")
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_translation_key, "flame_statistics")
+        self.assertEqual(sensor._sensor_type, "opentherm_flame_statistics")
+        self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+        self.assertTrue(sensor.available)
+
+
+class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
+    """Tests for boolean OpenTherm attributes exposed as binary sensors."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.binary_sensor_module = _load_binary_sensor_module()
+
+    def setUp(self):
+        self.opentherm = SimpleNamespace(
+            ch1_flow_enabled=False,
+            operational_data=SimpleNamespace(json_data={}),
+            enabled=True,
+            connection_status="Connected",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    name="WiserHeat058A52", opentherm=self.opentherm
+                ),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+            ),
+        )
+        self.sensor = (
+            self.binary_sensor_module.WiserOpenThermAttributeBinarySensor(
+                self.data, "ch1_flow_enabled"
+            )
+        )
+        self.sensor.async_write_ha_state = Mock()
+
+    def test_reads_boolean_attribute_and_uses_hub_device(self):
+        self.assertFalse(self.sensor.is_on)
+
+        self.sensor._handle_coordinator_update()
+        self.assertFalse(self.sensor.is_on)
+
+        self.opentherm.ch1_flow_enabled = True
+        self.sensor._handle_coordinator_update()
+        self.assertTrue(self.sensor.is_on)
+        self.assertEqual(
+            self.sensor._attr_translation_placeholders,
+            {"name": "CH1 flow enabled"},
+        )
+        self.assertEqual(
+            self.sensor.device_info, {"identifiers": {("wiser", "hub")}}
+        )
+
+    def test_unavailable_when_opentherm_disconnects(self):
+        self.assertTrue(self.sensor.available)
+        self.opentherm.connection_status = "Disconnected"
+        self.assertFalse(self.sensor.available)
+
+    def test_slave_status_flag_uses_running_device_class(self):
+        self.binary_sensor_module.OPENTHERM_SENSOR_NAMES["hot_water_active"] = (
+            "Hot water active"
+        )
+        self.binary_sensor_module.opentherm_sensor_value = (
+            lambda opentherm, _key: bool(opentherm.operational_data.slave_status & 4)
+        )
+        self.opentherm.operational_data.slave_status = 4
+        sensor = self.binary_sensor_module.WiserOpenThermAttributeBinarySensor(
+            self.data, "hot_water_active"
+        )
+        sensor.async_write_ha_state = Mock()
+
+        sensor._handle_coordinator_update()
+
+        self.assertTrue(sensor.is_on)
+        self.assertEqual(sensor._attr_device_class, "running")

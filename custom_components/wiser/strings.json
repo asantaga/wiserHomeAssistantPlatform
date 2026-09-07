@@ -36,7 +36,12 @@
     "step": {
       "init": {
         "title": "Wiser Integration Options",
-        "description": "Select parameters to amend"
+        "description": "Select parameters to amend",
+        "menu_options": {
+          "main_params": "Main Parameters",
+          "automation_params": "Automation Parameters",
+          "opentherm_sensors": "OpenTherm sensors"
+        }
       },
       "main_params": {
         "title": "Wiser Integration Options",
@@ -69,7 +74,82 @@
           "automations_passive_mode": "Enable Passive Mode",
           "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
         }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm sensors",
+        "description": "Choose a category of detected OpenTherm attributes.",
+        "menu_options": {
+          "opentherm_readings": "Readings",
+          "opentherm_central_heating": "Central heating",
+          "opentherm_hot_water": "Hot water",
+          "opentherm_status": "Status and diagnostics"
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm readings",
+        "description": "Choose which detected OpenTherm readings are exposed as sensor entities.",
+        "data": {
+          "ch_flow_temperature": "Boiler flow temperature",
+          "ch_pressure_bar": "CH pressure",
+          "ch_return_temperature": "Boiler return temperature",
+          "hw_flow_rate": "Hot water flow rate",
+          "hw_temperature": "Hot water temperature",
+          "relative_modulation_level": "Relative modulation level",
+          "room_temperature": "Room temperature"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm central heating",
+        "description": "Choose which detected central-heating attributes are exposed as entities.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Boiler CH maximum setpoint read/write",
+          "boiler_ch_max_setpoint_transfer_enable": "Boiler CH maximum setpoint transfer enabled",
+          "boiler_ch_setpoint": "Boiler CH setpoint",
+          "boiler_ch_setpoint_lower_bound": "Boiler CH setpoint lower bound",
+          "boiler_ch_setpoint_upper_bound": "Boiler CH setpoint upper bound",
+          "ch_flow_active_lower_setpoint": "CH flow active lower setpoint",
+          "ch_flow_active_upper_setpoint": "CH flow active upper setpoint",
+          "ch1_flow_enabled": "CH1 flow enabled",
+          "ch1_flow_setpoint": "CH1 flow setpoint",
+          "ch2_flow_enabled": "CH2 flow enabled",
+          "ch2_flow_setpoint": "CH2 flow setpoint",
+          "room_setpoint": "Room setpoint"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm hot water",
+        "description": "Choose which detected hot-water attributes are exposed as entities.",
+        "data": {
+          "boiler_hw_setpoint": "Boiler hot water setpoint",
+          "boiler_hw_setpoint_lower_bound": "Boiler hot water setpoint lower bound",
+          "boiler_hw_setpoint_read_write": "Boiler hot water setpoint read/write",
+          "boiler_hw_setpoint_transfer_enable": "Boiler hot water setpoint transfer enabled",
+          "boiler_hw_setpoint_upper_bound": "Boiler hot water setpoint upper bound",
+          "hw_enabled": "Hot water enabled",
+          "hw_flow_setpoint": "Hot water flow setpoint"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm status and diagnostics",
+        "description": "Choose which detected status and diagnostic attributes are exposed as sensor entities.",
+        "data": {
+          "boiler_fault": "Boiler fault",
+          "central_heating_active": "Central heating active",
+          "central_heating_2_active": "Central heating 2 active",
+          "connection_status": "Connection status",
+          "cooling_active": "Cooling active",
+          "diagnostic_event": "Diagnostic event",
+          "flame_active": "Flame active",
+          "flame_statistics": "Flame statistics",
+          "hot_water_active": "Hot water active",
+          "operating_mode": "Operating mode",
+          "slave_status": "OpenTherm slave status",
+          "tracked_room_id": "Tracked room ID"
+        }
       }
+    },
+    "abort": {
+      "opentherm_not_available": "OpenTherm data is not available for this Wiser hub."
     }
   },
   "entity": {
@@ -144,7 +224,8 @@
       "is_tilt_supported": { "name": "Tilt supported" },
       "is_open": { "name": "Open" },
       "is_closed": { "name": "Closed" },
-      "active": { "name": "Active" }
+      "active": { "name": "Active" },
+      "opentherm_attribute": { "name": "{name}" }
     },
     "sensor": {
       "signal": { "name": "Signal" },
@@ -157,8 +238,9 @@
       "target_temperature": { "name": "Target temperature" },
       "floor_temperature": { "name": "Floor temperature" },
       "boiler_flow_temperature": { "name": "Boiler flow temperature" },
-      "relative_modulation_level": { "name": "Relative modulation level" },
       "boiler_return_temperature": { "name": "Boiler return temperature" },
+      "flame_statistics": { "name": "Flame statistics" },
+      "opentherm_attribute": { "name": "{name}" },
       "heating_demand": { "name": "Heating demand" },
       "heating_demand_channel": { "name": "Heating demand channel {channel}" },
       "hot_water_demand": { "name": "Hot water demand" },

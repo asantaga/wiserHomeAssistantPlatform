@@ -3,11 +3,12 @@
 import ast
 import importlib.util
 import inspect
+import json
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 COMPONENT = Path(__file__).parents[1] / "custom_components/wiser"
 LEGACY_URL = "{}:{}/data/v2/opentherm/"
@@ -78,6 +79,157 @@ class ParameterValueTest(unittest.TestCase):
             with self.subTest(raw=raw), self.assertRaises(ValueError):
                 HELPER.parse_parameter_value(raw)
 
+    def test_known_temperature_feedback_is_compared_in_degrees(self):
+        system = _system()
+        system.opentherm.hw_flow_setpoint = 40
+        system.opentherm.boiler_parameters = SimpleNamespace(
+            hw_setpoint=50, ch_setpoint=70
+        )
+
+        self.assertTrue(
+            HELPER.opentherm_parameter_matches(
+                system, "", "dhwFlowSetpoint", 400
+            )
+        )
+        self.assertFalse(
+            HELPER.opentherm_parameter_matches(
+                system, "", "dhwFlowSetpoint", 450
+            )
+        )
+        self.assertTrue(
+            HELPER.opentherm_parameter_matches(system, "", "dhwSetpoint", 500)
+        )
+        self.assertEqual(
+            HELPER.opentherm_parameter_feedback(system, "", "dhwSetpoint"), 50
+        )
+
+    def test_unknown_or_unavailable_feedback_is_not_retryable(self):
+        system = _system()
+        system.opentherm.hw_flow_setpoint = None
+
+        self.assertIsNone(
+            HELPER.opentherm_parameter_matches(system, "", "unknown", 400)
+        )
+        self.assertIsNone(
+            HELPER.opentherm_parameter_matches(
+                system, "", "dhwFlowSetpoint", 400
+            )
+        )
+        self.assertIsNone(
+            HELPER.opentherm_parameter_matches(
+                system, "customEndpoint", "dhwSetpoint", 500
+            )
+        )
+
+
+class OpenThermSensorDiscoveryTest(unittest.TestCase):
+    """Validate the selectable OpenTherm attribute catalogue."""
+
+    def test_only_original_temperature_sensors_are_enabled_by_default(self):
+        self.assertEqual(
+            HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS,
+            {"ch_flow_temperature", "ch_return_temperature"},
+        )
+        self.assertNotIn(
+            "relative_modulation_level", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS
+        )
+        self.assertNotIn("flame_statistics", HELPER.DEFAULT_OPENTHERM_SENSOR_KEYS)
+
+    def test_detects_supported_fields_even_when_the_value_is_none(self):
+        opentherm = SimpleNamespace(
+            connection_status="Connected",
+            operational_data=SimpleNamespace(
+                ch_flow_temperature=42.0,
+                relative_modulation_level=None,
+            ),
+        )
+
+        self.assertEqual(
+            HELPER.detected_opentherm_sensor_keys(opentherm),
+            [
+                "connection_status",
+                "ch_flow_temperature",
+                "relative_modulation_level",
+            ],
+        )
+
+    def test_decodes_all_non_reserved_slave_status_bits(self):
+        opentherm = SimpleNamespace(
+            operational_data=SimpleNamespace(slave_status=0b01010101)
+        )
+        expected = {
+            "boiler_fault": True,
+            "central_heating_active": False,
+            "hot_water_active": True,
+            "flame_active": False,
+            "cooling_active": True,
+            "central_heating_2_active": False,
+            "diagnostic_event": True,
+        }
+
+        self.assertEqual(set(HELPER.OPENTHERM_SLAVE_STATUS_BITS), set(expected))
+        for key, state in expected.items():
+            with self.subTest(key=key):
+                self.assertIs(HELPER.opentherm_sensor_value(opentherm, key), state)
+
+    def test_invalid_slave_status_is_unknown(self):
+        for slave_status in (None, True, 1.5, "4"):
+            with self.subTest(slave_status=slave_status):
+                opentherm = SimpleNamespace(
+                    operational_data=SimpleNamespace(slave_status=slave_status)
+                )
+                self.assertIsNone(
+                    HELPER.opentherm_sensor_value(opentherm, "hot_water_active")
+                )
+
+    def test_catalogue_names_cover_every_selectable_field(self):
+        self.assertEqual(
+            set(HELPER.OPENTHERM_SENSOR_NAMES),
+            set(HELPER.OPENTHERM_SENSOR_PATHS),
+        )
+
+    def test_categories_partition_every_selectable_field(self):
+        category_keys = [
+            key
+            for keys in HELPER.OPENTHERM_SENSOR_CATEGORIES.values()
+            for key in keys
+        ]
+        self.assertEqual(len(category_keys), len(set(category_keys)))
+        self.assertEqual(set(category_keys), set(HELPER.OPENTHERM_SENSOR_PATHS))
+
+    def test_options_form_labels_cover_every_selectable_field(self):
+        for path in (
+            COMPONENT / "strings.json",
+            COMPONENT / "translations/en.json",
+        ):
+            with self.subTest(path=path):
+                strings = json.loads(path.read_text())
+                steps = strings["options"]["step"]
+                labels = {
+                    key
+                    for category in HELPER.OPENTHERM_SENSOR_CATEGORIES
+                    for key in steps[category]["data"]
+                }
+                self.assertEqual(set(labels), set(HELPER.OPENTHERM_SENSOR_PATHS))
+
+    def test_selected_sensor_options_support_lists_and_legacy_mappings(self):
+        self.assertTrue(
+            HELPER.opentherm_sensor_is_enabled(None, "ch_flow_temperature")
+        )
+        self.assertFalse(
+            HELPER.opentherm_sensor_is_enabled(None, "relative_modulation_level")
+        )
+        self.assertTrue(
+            HELPER.opentherm_sensor_is_enabled(
+                ["relative_modulation_level"], "relative_modulation_level"
+            )
+        )
+        self.assertFalse(
+            HELPER.opentherm_sensor_is_enabled(
+                {"ch_flow_temperature": False}, "ch_flow_temperature"
+            )
+        )
+
 
 class OpenThermWriteTest(unittest.IsolatedAsyncioTestCase):
     async def test_build_suffix_does_not_affect_endpoint_selection(self):
@@ -133,6 +285,24 @@ class OpenThermWriteTest(unittest.IsolatedAsyncioTestCase):
             {"dhwSetpointTransferEnable": True},
         )
 
+    async def test_known_nested_parameter_infers_its_endpoint(self):
+        system = _system()
+        await HELPER.async_set_parameter(system, "", "dhwSetpoint", 500)
+        system.opentherm._wiser_rest_controller._do_hub_action.assert_awaited_once_with(
+            "PATCH",
+            MODERN_URL + "preDefinedRemoteBoilerParameters",
+            {"dhwSetpoint": 500},
+        )
+
+    async def test_explicit_endpoint_overrides_inference(self):
+        system = _system()
+        await HELPER.async_set_parameter(
+            system, "customEndpoint", "dhwSetpoint", 500
+        )
+        system.opentherm._wiser_rest_controller._do_hub_action.assert_awaited_once_with(
+            "PATCH", MODERN_URL + "customEndpoint", {"dhwSetpoint": 500}
+        )
+
     async def test_invalid_inputs_never_send_a_request(self):
         for endpoint, parameter, value, firmware in (
             ("../domain/System", "dhwFlowSetpoint", 400, "4.48.2"),
@@ -159,11 +329,44 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
     """Execute the real nested action handler with lightweight HA dependencies."""
 
     def setUp(self):
-        self.first = SimpleNamespace(wiserhub=SimpleNamespace(system=_system()), async_refresh=AsyncMock())
-        self.second = SimpleNamespace(wiserhub=SimpleNamespace(system=_system()), async_refresh=AsyncMock())
-        self.hass = SimpleNamespace(data={"wiser": {
+        self.listeners = {}
+
+        def coordinator(name):
+            listeners = self.listeners[name] = []
+
+            def add_listener(listener):
+                listeners.append(listener)
+
+                def remove_listener():
+                    if listener in listeners:
+                        listeners.remove(listener)
+
+                return remove_listener
+
+            return SimpleNamespace(
+                wiserhub=SimpleNamespace(system=_system()),
+                async_refresh=AsyncMock(),
+                async_add_listener=add_listener,
+                last_update_status="Success",
+            )
+
+        self.first = coordinator("first")
+        self.second = coordinator("second")
+        self.tasks = []
+
+        def create_task(coro, _name):
+            task = __import__("asyncio").create_task(coro)
+            self.tasks.append(task)
+            return task
+
+        self.hass = SimpleNamespace(
+            async_create_task=create_task,
+            bus=SimpleNamespace(async_fire=Mock()),
+            services=SimpleNamespace(async_call=AsyncMock()),
+            data={"wiser": {
             "first": {"data": self.first}, "second": {"data": self.second},
-        }})
+            }},
+        )
         self.errors = {
             name: type(name, (Exception,), {}) for name in (
                 "WiserHubRESTError", "WiserHubConnectionError",
@@ -176,10 +379,21 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             "hass": self.hass, "data": self.first, "DOMAIN": "wiser", "DATA": "data",
             "ATTR_OPENTHERM_ENDPOINT": "endpoint", "ATTR_OPENTHERM_PARAM": "parameter",
             "ATTR_OPENTHERM_PARAM_VALUE": "parameter_value", "ATTR_HUB": "hub",
+            "ATTR_OPENTHERM_TEMPERATURE": "temperature",
+            "ATTR_OPENTHERM_REQUEST_ID": "request_id",
+            "EVENT_OPENTHERM_COMMAND_FAILED": "wiser_opentherm_command_failed",
             "get_instance_count": lambda hass: len(hass.data["wiser"]),
             "is_wiser_config_id": lambda hass, hub: hub in hass.data["wiser"],
             "get_config_entry_id_by_name": lambda hass, hub: {"Other hub": "second"}.get(hub),
             "async_set_parameter": HELPER.async_set_parameter,
+            "opentherm_parameter_matches": HELPER.opentherm_parameter_matches,
+            "opentherm_parameter_feedback": HELPER.opentherm_parameter_feedback,
+            "parse_parameter_value": HELPER.parse_parameter_value,
+            "asyncio": __import__("asyncio"),
+            "OPENTHERM_CONFIRMATION_WINDOW": 90,
+            "_LOGGER": SimpleNamespace(
+                warning=lambda *args: None, debug=lambda *args: None
+            ),
         }
         source = ast.parse((COMPONENT / "services.py").read_text())
         handler = next(node for node in ast.walk(source)
@@ -190,10 +404,42 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         self.handler = self.env[handler.name]
         self.assertTrue(inspect.iscoroutinefunction(self.handler))
 
-    async def call(self, hub="", value="400"):
-        await self.handler(SimpleNamespace(data={
+    async def asyncTearDown(self):
+        for task in self.tasks:
+            if not task.done():
+                task.cancel()
+        if self.tasks:
+            await __import__("asyncio").gather(
+                *self.tasks, return_exceptions=True
+            )
+
+    async def call(self, hub="", value="400", request_id=None):
+        payload = {
             "hub": hub, "endpoint": "", "parameter": "dhwFlowSetpoint", "parameter_value": value,
-        }))
+        }
+        if request_id is not None:
+            payload["request_id"] = request_id
+        await self.handler(SimpleNamespace(
+            data=payload,
+            context=SimpleNamespace(id="test-context"),
+        ))
+
+    async def test_celsius_ui_temperature_is_converted_to_api_tenths(self):
+        del self.hass.data["wiser"]["second"]
+        await self.handler(
+            SimpleNamespace(
+                data={
+                    "hub": "",
+                    "endpoint": "",
+                    "parameter": "dhwFlowSetpoint",
+                    "temperature": 47.0,
+                },
+                context=SimpleNamespace(id="test-context"),
+            )
+        )
+        self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action.assert_awaited_once_with(
+            "PATCH", MODERN_URL, {"dhwFlowSetpoint": 470}
+        )
 
     async def test_single_hub_defaults_to_current_instance(self):
         del self.hass.data["wiser"]["second"]
@@ -207,6 +453,122 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             "PATCH", MODERN_URL, {"dhwFlowSetpoint": 400}
         )
         self.first.async_refresh.assert_awaited_once()
+
+    async def test_known_mismatch_is_retried_once(self):
+        del self.hass.data["wiser"]["second"]
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+
+        await self.call()
+
+        # The immediate refresh is allowed to settle. A later successful
+        # coordinator update confirms drift and triggers the single retry.
+        await __import__("asyncio").sleep(0)
+        self.assertEqual(len(self.listeners["first"]), 1)
+        initial_listener = self.listeners["first"][0]
+        self.listeners["first"][0]()
+        while (
+            self.first.async_refresh.await_count < 2
+            or self.listeners["first"][0] is initial_listener
+        ):
+            await __import__("asyncio").sleep(0)
+        # A post-retry update can still contain stale feedback. It must not
+        # fail the command before the confirmation deadline.
+        self.listeners["first"][0]()
+        await __import__("asyncio").sleep(0)
+        self.hass.services.async_call.assert_not_awaited()
+        self.hass.bus.async_fire.assert_not_called()
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
+        self.listeners["first"][0]()
+        await __import__("asyncio").gather(*self.tasks)
+
+        transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
+        self.assertEqual(transport.await_count, 2)
+        self.assertEqual(self.first.async_refresh.await_count, 2)
+
+    async def test_matching_feedback_is_not_retried(self):
+        del self.hass.data["wiser"]["second"]
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
+
+        await self.call()
+
+        transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
+        self.assertEqual(transport.await_count, 1)
+        self.assertEqual(self.first.async_refresh.await_count, 1)
+
+    async def test_later_drift_within_confirmation_window_is_retried(self):
+        del self.hass.data["wiser"]["second"]
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
+
+        await self.call()
+        await __import__("asyncio").sleep(0)
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+        initial_listener = self.listeners["first"][0]
+        self.listeners["first"][0]()
+        while (
+            self.first.async_refresh.await_count < 2
+            or self.listeners["first"][0] is initial_listener
+        ):
+            await __import__("asyncio").sleep(0)
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
+        self.listeners["first"][0]()
+        await __import__("asyncio").gather(*self.tasks)
+
+        transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
+        self.assertEqual(transport.await_count, 2)
+        self.assertEqual(self.first.async_refresh.await_count, 2)
+
+    async def test_persistent_warning_requires_post_retry_mismatch(self):
+        del self.hass.data["wiser"]["second"]
+        self.env["OPENTHERM_CONFIRMATION_WINDOW"] = 0.2
+        self.first.wiserhub.system.name = "Test hub"
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+
+        await self.call(request_id="hot-water-preset-1")
+        # Use most of the original write's window before confirming the
+        # mismatch. The retry must still receive a complete new window.
+        await __import__("asyncio").sleep(0.12)
+        initial_listener = self.listeners["first"][0]
+        self.listeners["first"][0]()
+        while (
+            self.first.async_refresh.await_count < 2
+            or self.listeners["first"][0] is initial_listener
+        ):
+            await __import__("asyncio").sleep(0)
+        self.hass.services.async_call.assert_not_awaited()
+        self.listeners["first"][0]()
+        await __import__("asyncio").sleep(0.12)
+        self.hass.services.async_call.assert_not_awaited()
+        self.hass.bus.async_fire.assert_not_called()
+        await __import__("asyncio").gather(*self.tasks)
+
+        self.hass.services.async_call.assert_awaited_once()
+        self.hass.bus.async_fire.assert_called_once()
+        event_type, event_data = self.hass.bus.async_fire.call_args.args[:2]
+        self.assertEqual(event_type, "wiser_opentherm_command_failed")
+        self.assertEqual(event_data["request_id"], "hot-water-preset-1")
+        self.assertEqual(event_data["requested"], 40)
+        self.assertEqual(event_data["reported"], 35)
+        notification = self.hass.services.async_call.await_args.args[2]
+        self.assertIn("40 °C", notification["message"])
+        self.assertIn("35 °C", notification["message"])
+        self.assertIn("confirmation window", notification["message"])
+        self.assertIn("No further retry", notification["message"])
+
+    async def test_newer_command_cancels_older_confirmation(self):
+        del self.hass.data["wiser"]["second"]
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+
+        await self.call(value="400")
+        await __import__("asyncio").sleep(0)
+        first_task = self.tasks[-1]
+        await self.call(value="450")
+        await __import__("asyncio").gather(first_task, return_exceptions=True)
+
+        self.assertTrue(first_task.cancelled())
+        self.assertEqual(
+            self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action.await_count,
+            2,
+        )
 
     async def test_selected_hub_is_written_and_refreshed(self):
         for hub in ("second", "Other hub"):

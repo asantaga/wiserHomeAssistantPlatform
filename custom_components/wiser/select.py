@@ -10,6 +10,7 @@ from .entity import WiserEntityMixin
 
 from .helpers import (
     get_device_name,
+    get_hub_via_device_info,
     get_unique_id,
     get_identifier,
     hub_error_handler,
@@ -128,7 +129,7 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
@@ -182,7 +183,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
