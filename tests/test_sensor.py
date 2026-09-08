@@ -165,6 +165,22 @@ def _load_sensor_module() -> ModuleType:
         OPENTHERM_DERIVED_SENSOR_KEYS=frozenset(
             {"delta_t", "estimated_boiler_output", "flame_statistics"}
         ),
+        OPENTHERM_DIAGNOSTIC_SENSOR_KEYS=frozenset(
+            {
+                "boiler_ch_max_setpoint_read_write",
+                "boiler_ch_max_setpoint_transfer_enable",
+                "boiler_fault",
+                "boiler_hw_setpoint_read_write",
+                "boiler_hw_setpoint_transfer_enable",
+                "connection_status",
+                "coprocessor_update_status",
+                "coprocessor_version",
+                "diagnostic_event",
+                "operating_mode",
+                "slave_status",
+                "tracked_room_id",
+            }
+        ),
         OPENTHERM_SENSOR_DEPENDENCIES={
             "estimated_boiler_output": frozenset(
                 {
@@ -546,6 +562,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
             self.data, "connection_status"
         )
         self.assertTrue(connection.available)
+        self.assertEqual(connection._attr_entity_category, "diagnostic")
 
     def test_delta_t_has_temperature_measurement_metadata(self):
         self.opentherm.operational_data.ch_flow_temperature = 42.4
@@ -733,3 +750,10 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
 
         self.assertTrue(sensor.is_on)
         self.assertEqual(sensor._attr_device_class, "running")
+
+    def test_capability_flag_is_a_diagnostic_entity(self):
+        sensor = self.binary_sensor_module.WiserOpenThermAttributeBinarySensor(
+            self.data, "boiler_ch_max_setpoint_read_write"
+        )
+
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")

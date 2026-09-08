@@ -288,6 +288,11 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
             set(HELPER.OPENTHERM_SENSOR_NAMES),
             set(HELPER.OPENTHERM_SENSOR_PATHS),
         )
+        self.assertTrue(
+            HELPER.OPENTHERM_DIAGNOSTIC_SENSOR_KEYS.issubset(
+                HELPER.OPENTHERM_SENSOR_PATHS
+            )
+        )
 
     def test_categories_partition_every_selectable_field(self):
         category_keys = [

@@ -6,6 +6,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -20,6 +21,7 @@ from .helpers import (
 )
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
+    OPENTHERM_DIAGNOSTIC_SENSOR_KEYS,
     OPENTHERM_SLAVE_STATUS_BITS,
     detected_opentherm_sensor_keys,
     opentherm_sensor_value,
@@ -225,6 +227,8 @@ class WiserOpenThermAttributeBinarySensor(
         except (AttributeError, KeyError, TypeError):
             pass
         self._attr_translation_key = sensor_key
+        if sensor_key in OPENTHERM_DIAGNOSTIC_SENSOR_KEYS:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
         if sensor_key in OPENTHERM_SLAVE_STATUS_BITS:
             self._attr_device_class = (
                 BinarySensorDeviceClass.PROBLEM

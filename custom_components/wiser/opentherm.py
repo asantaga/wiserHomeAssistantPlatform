@@ -149,6 +149,25 @@ OPENTHERM_BINARY_SENSOR_KEYS = frozenset(
     }
 )
 
+# Device metadata, protocol status, and capability flags belong in Home
+# Assistant's Diagnostic section rather than alongside operational readings.
+OPENTHERM_DIAGNOSTIC_SENSOR_KEYS = frozenset(
+    {
+        "boiler_ch_max_setpoint_read_write",
+        "boiler_ch_max_setpoint_transfer_enable",
+        "boiler_fault",
+        "boiler_hw_setpoint_read_write",
+        "boiler_hw_setpoint_transfer_enable",
+        "connection_status",
+        "coprocessor_update_status",
+        "coprocessor_version",
+        "diagnostic_event",
+        "operating_mode",
+        "slave_status",
+        "tracked_room_id",
+    }
+)
+
 # These selectable sensors are calculated from another OpenTherm entity rather
 # than exposing the current value of an API attribute directly.
 OPENTHERM_DERIVED_SENSOR_KEYS = frozenset(

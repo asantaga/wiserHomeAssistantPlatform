@@ -62,6 +62,7 @@ from .helpers import (
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
     OPENTHERM_DERIVED_SENSOR_KEYS,
+    OPENTHERM_DIAGNOSTIC_SENSOR_KEYS,
     OPENTHERM_SENSOR_DEPENDENCIES,
     OPENTHERM_SENSOR_PATHS,
     detected_opentherm_sensor_keys,
@@ -1293,10 +1294,7 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             sensor_type,
             translation_key=sensor_key,
         )
-        if sensor_key in {
-            "coprocessor_update_status",
-            "coprocessor_version",
-        }:
+        if sensor_key in OPENTHERM_DIAGNOSTIC_SENSOR_KEYS:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
