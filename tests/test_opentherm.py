@@ -690,6 +690,31 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("confirmation window", notification["message"])
         self.assertIn("No further retry", notification["message"])
 
+    async def test_background_retry_transport_error_is_reported(self):
+        del self.hass.data["wiser"]["second"]
+        self.env["OPENTHERM_CONFIRMATION_WINDOW"] = 0.05
+        self.first.wiserhub.system.name = "Test hub"
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+        transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
+        retry_failure = self.errors["WiserHubConnectionError"]("Hub unavailable")
+        transport.side_effect = [None, retry_failure]
+
+        await self.call(request_id="hot-water-preset-2")
+        await __import__("asyncio").sleep(0)
+        self.listeners["first"][0]()
+        await __import__("asyncio").gather(*self.tasks)
+
+        self.assertEqual(transport.await_count, 2)
+        self.assertEqual(self.first.async_refresh.await_count, 1)
+        self.hass.bus.async_fire.assert_called_once()
+        event_type, event_data = self.hass.bus.async_fire.call_args.args[:2]
+        self.assertEqual(event_type, "wiser_opentherm_command_failed")
+        self.assertEqual(event_data["request_id"], "hot-water-preset-2")
+        self.assertIn("Hub unavailable", event_data["error"])
+        notification = self.hass.services.async_call.await_args.args[2]
+        self.assertIn("retry could not be sent", notification["message"])
+        self.assertIn("Hub unavailable", notification["message"])
+
     async def test_newer_command_cancels_older_confirmation(self):
         del self.hass.data["wiser"]["second"]
         self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35

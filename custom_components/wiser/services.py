@@ -419,6 +419,7 @@ async def async_setup_services(hass: HomeAssistant, data):
             update_received = asyncio.Event()
             remove_listener = instance.async_add_listener(update_received.set)
             retry_sent = False
+            retry_error = None
             deadline = (
                 asyncio.get_running_loop().time() + OPENTHERM_CONFIRMATION_WINDOW
             )
@@ -439,22 +440,48 @@ async def async_setup_services(hass: HomeAssistant, data):
                     instance.wiserhub.system, endpoint, param
                 )
                 requested = parse_parameter_value(value) / 10
-                _LOGGER.warning(
-                    "OpenTherm parameter %s still does not match after "
-                    "retry and confirmation window: requested=%s reported=%s",
-                    param,
-                    requested,
-                    reported,
-                )
+                if retry_error is None:
+                    _LOGGER.warning(
+                        "OpenTherm parameter %s still does not match after "
+                        "retry and confirmation window: requested=%s reported=%s",
+                        param,
+                        requested,
+                        reported,
+                    )
+                    message = (
+                        f"OpenTherm parameter {param} did not remain at "
+                        f"{requested:g} °C after one retry and the "
+                        f"{OPENTHERM_CONFIRMATION_WINDOW}-second confirmation "
+                        f"window. Wiser reports {reported:g} °C. No further "
+                        "retry will be sent."
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Unable to retry OpenTherm parameter %s: %s; "
+                        "requested=%s reported=%s",
+                        param,
+                        retry_error,
+                        requested,
+                        reported,
+                    )
+                    message = (
+                        f"OpenTherm parameter {param} did not remain at "
+                        f"{requested:g} °C, and its retry could not be sent: "
+                        f"{retry_error}. Wiser reports {reported:g} °C. No "
+                        "further retry will be sent."
+                    )
+                event_data = {
+                    "request_id": request_id,
+                    "endpoint": endpoint,
+                    "parameter": param,
+                    "requested": requested,
+                    "reported": reported,
+                }
+                if retry_error is not None:
+                    event_data["error"] = str(retry_error)
                 hass.bus.async_fire(
                     EVENT_OPENTHERM_COMMAND_FAILED,
-                    {
-                        "request_id": request_id,
-                        "endpoint": endpoint,
-                        "parameter": param,
-                        "requested": requested,
-                        "reported": reported,
-                    },
+                    event_data,
                     context=service_call.context,
                 )
                 await hass.services.async_call(
@@ -462,13 +489,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     "create",
                     {
                         "title": "Wiser OpenTherm command",
-                        "message": (
-                            f"OpenTherm parameter {param} did not remain at "
-                            f"{requested:g} °C after one retry and the "
-                            f"{OPENTHERM_CONFIRMATION_WINDOW}-second confirmation "
-                            f"window. Wiser reports {reported:g} °C. No further "
-                            "retry will be sent."
-                        ),
+                        "message": message,
                         "notification_id": (
                             f"wiser_opentherm_{instance.wiserhub.system.name}_{param}"
                         ),
@@ -530,8 +551,17 @@ async def async_setup_services(hass: HomeAssistant, data):
                             "retrying once",
                             param,
                         )
-                        await write_parameter()
                         retry_sent = True
+                        try:
+                            await write_parameter()
+                        except HomeAssistantError as err:
+                            # This verifier runs after the service call has
+                            # returned, so surface a failed retry through the
+                            # same event and notification as a rejected value.
+                            # Keep watching until the original deadline in case
+                            # the first write was merely slow to settle.
+                            retry_error = err
+                            continue
                         # Give the retry its own complete confirmation window.
                         # Time spent confirming the original write must not
                         # shorten the period in which the retry may settle.
