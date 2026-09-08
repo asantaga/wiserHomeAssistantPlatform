@@ -4,10 +4,39 @@ from aioWiserHeatAPI.wiserhub import (
     WiserHubRESTError,
 )
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ENTITY_PREFIX
+from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
+import re
+from uuid import UUID, uuid5
 
 _LOGGER = logging.getLogger(__name__)
+
+# This namespace is part of the entity registry identity contract and must never
+# be changed after release.
+ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
+
+
+def get_hub_mac_suffix(data):
+    """Return the last three octets of the physical hub MAC address."""
+    mac_address = data.wiserhub.system.network.mac_address
+    compact_mac = re.sub(r"[^0-9A-Fa-f]", "", str(mac_address))
+    return compact_mac[-6:].upper()
+
+
+def get_hub_device_name(data):
+    """Return the context-aware display name for the physical HeatHub."""
+    if getattr(data, "_wiser_show_hub_suffix", False):
+        return f"{ENTITY_PREFIX} HeatHub ({get_hub_mac_suffix(data)})"
+    return f"{ENTITY_PREFIX} HeatHub"
+
+
+def get_hub_entity_object_id(data, entity_name):
+    """Return the MAC-derived entity portion of a new hub object ID."""
+    entity_slug = re.sub(r"[^a-z0-9]+", "_", str(entity_name).lower()).strip("_")
+    # Home Assistant adds the area and device portions. Supplying them here too
+    # would produce IDs such as ``wiser_heathub_wiser_heathub_...`` when users
+    # recreate entity IDs from the device page.
+    return f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
 
 
 def hub_error_handler(func):
@@ -31,7 +60,7 @@ def get_device_name(data, device_id, device_type="device"):
         device = data.wiserhub.devices.get_by_id(device_id)
 
         if device_id == 0:
-            return f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+            return get_hub_device_name(data)
 
         if device.product_type == "iTRV":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
@@ -48,10 +77,9 @@ def get_device_name(data, device_id, device_type="device"):
 
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
-            # If device not allocated to a room return type and id only
             if device_room:
-                return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
-            return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
+                return f"{ENTITY_PREFIX} Thermostat"
+            return f"{ENTITY_PREFIX} Thermostat {device.id}"
 
         if device.product_type == "UnderFloorHeating":
             return f"{ENTITY_PREFIX} {device.name}"
@@ -86,6 +114,9 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "BoilerInterface":
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
+        if device.product_type == "TemperatureHumiditySensor":
+            return f"{ENTITY_PREFIX} Temperature/Humidity Sensor"
+
         if device.product_type in [
             "Shutter",
             "OnOffLight",
@@ -104,21 +135,103 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif device_type == "room":
-        room = data.wiserhub.rooms.get_by_id(device_id)
-        return f"{ENTITY_PREFIX} {room.name}"
+        return f"{ENTITY_PREFIX} Room"
 
     else:
         return f"{ENTITY_PREFIX} {device_type}"
 
 
+def get_legacy_device_name(data, device_id):
+    """Return a physical device name used by historical entity unique IDs."""
+    device = data.wiserhub.devices.get_by_id(device_id)
+    if device.product_type != "TemperatureHumiditySensor":
+        return get_device_name(data, device_id)
+
+    device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+    if device_room:
+        return (
+            f"{ENTITY_PREFIX} {device.product_type} "
+            f"{device_room.name} {device.name}"
+        )
+    return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+
+
 def get_identifier(data, device_id, device_type="device"):
-    return (
-        f"{data.wiserhub.system.name} {get_device_name(data, device_id, device_type)}"
-    )
+    if device_type == "room":
+        return f"{data.wiserhub.system.name} room {device_id}"
+    if device_id == 0 and device_type == "device":
+        # Preserve the historical Controller identifier for registry migration.
+        device_name = f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
+    elif device_type == "device" and (
+        device := data.wiserhub.devices.get_by_id(device_id)
+    ).product_type == "RoomStat":
+        # Preserve the existing name-derived identifier while modernising the
+        # RoomStat's display name.
+        device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+        if device_room:
+            device_name = f"{ENTITY_PREFIX} RoomStat {device_room.name}"
+        else:
+            device_name = f"{ENTITY_PREFIX} RoomStat {device.id}"
+    elif (
+        device_type == "device"
+        and device.product_type == "TemperatureHumiditySensor"
+    ):
+        # Preserve the former name-derived identifier while modernising the
+        # physical sensor's display name.
+        device_name = get_legacy_device_name(data, device_id)
+    else:
+        device_name = get_device_name(data, device_id, device_type)
+    return f"{data.wiserhub.system.name} {device_name}"
+
+
+def get_legacy_room_identifier(data, room_id):
+    """Return the former name-derived identifier for a Wiser room device."""
+    room = data.wiserhub.rooms.get_by_id(room_id)
+    return f"{data.wiserhub.system.name} {ENTITY_PREFIX} {room.name}"
+
+
+def get_device_area_info(data, device_id):
+    """Return a Wiser room as a Home Assistant creation-time area suggestion."""
+    room = data.wiserhub.rooms.get_by_device_id(device_id)
+    if room is None:
+        return {}
+    return {"suggested_area": room.name}
+
+
+def get_hub_device_info(data):
+    """Return device registry information for the physical HeatHub."""
+    return {
+        "name": get_hub_device_name(data),
+        "identifiers": {(DOMAIN, data.wiserhub.system.name)},
+        "manufacturer": MANUFACTURER,
+        "model": data.wiserhub.system.model,
+        "sw_version": data.wiserhub.system.firmware_version,
+    }
+
+
+def get_hub_via_device_info(data):
+    """Return the registered physical HeatHub as a parent device."""
+    hub_device_id = getattr(data, "hub_device_id", None)
+    if hub_device_id is None:
+        return {}
+    return {"via_device_id": hub_device_id}
+
+
+def get_legacy_unique_id(data, device_type, entity_type, device_id):
+    """Return the entity unique ID used before deterministic UUIDs."""
+    return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+
+
+def get_uuid_unique_id(legacy_unique_id: str) -> str:
+    """Return the deterministic UUIDv5 replacement for a legacy unique ID."""
+    return str(uuid5(ENTITY_UNIQUE_ID_NAMESPACE, legacy_unique_id))
 
 
 def get_unique_id(data, device_type, entity_type, device_id):
-    return f"{data.wiserhub.system.name}-{device_type}-{entity_type}-{device_id}"
+    """Return a deterministic UUIDv5 entity unique ID."""
+    return get_uuid_unique_id(
+        get_legacy_unique_id(data, device_type, entity_type, device_id)
+    )
 
 
 def get_room_name(data, room_id):

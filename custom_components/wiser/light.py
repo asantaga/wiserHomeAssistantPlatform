@@ -12,7 +12,14 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
-from .helpers import get_device_name, get_identifier, get_unique_id, hub_error_handler
+from .entity import WiserEntityMixin
+from .helpers import (
+    get_device_name,
+    get_hub_via_device_info,
+    get_identifier,
+    get_unique_id,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
@@ -35,8 +42,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         async_add_entities(wiser_lights, True)
 
 
-class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
+class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserScheduleEntity):
     """WiserLight ClientEntity Object."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, light_id) -> None:
         """Initialize the sensor."""
@@ -78,7 +87,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return the name of the Device."""
-        return f"{get_device_name(self._data, self._device.id)} Light"
+        return None
 
     @property
     def icon(self):
@@ -90,7 +99,8 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
 
     @property
     def unique_id(self):
-        return get_unique_id(self._data, "device", "light", self.name)
+        legacy_name = f"{get_device_name(self._data, self._device.id)} Light"
+        return get_unique_id(self._data, "device", "light", legacy_name)
 
     @property
     def device_info(self):
@@ -101,7 +111,7 @@ class WiserLight(CoordinatorEntity, LightEntity, WiserScheduleEntity):
             "manufacturer": MANUFACTURER,
             "model": self._data.wiserhub.devices.get_by_id(self._device_id).model,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property

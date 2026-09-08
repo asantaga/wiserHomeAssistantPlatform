@@ -20,7 +20,14 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
-from .helpers import get_device_name, get_identifier, hub_error_handler
+from .entity import WiserEntityMixin
+from .helpers import (
+    get_device_name,
+    get_hub_via_device_info,
+    get_identifier,
+    get_uuid_unique_id,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
 
 MANUFACTURER = MANUFACTURER_SCHNEIDER
@@ -55,8 +62,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         async_add_entities(wiser_shutters, True)
 
 
-class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
+class WiserShutter(
+    WiserEntityMixin, CoordinatorEntity, CoverEntity, WiserScheduleEntity
+):
     """Wisershutter ClientEntity Object."""
+
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, shutter_id) -> None:
         """Initialize the sensor."""
@@ -97,7 +108,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
             "model": self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).product_type,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -108,7 +119,7 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device"""
-        return f"{get_device_name(self._data, self._device_id)} Control"
+        return None
 
     @property
     def current_cover_position(self):
@@ -137,7 +148,12 @@ class WiserShutter(CoordinatorEntity, CoverEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-Wisershutter-{self._device_id}-{self.name}"
+        legacy_name = f"{get_device_name(self._data, self._device_id)} Control"
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-Wisershutter-"
+            f"{self._device_id}-{legacy_name}"
+        )
+        return get_uuid_unique_id(legacy_unique_id)
 
     @property
     def extra_state_attributes(self):

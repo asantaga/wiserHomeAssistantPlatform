@@ -107,6 +107,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
         self.hub_version = 0
+        self.hub_device_id: str | None = None
         self.last_update_time = datetime.now()
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM

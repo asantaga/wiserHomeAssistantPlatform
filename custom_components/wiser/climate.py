@@ -49,8 +49,17 @@ from .const import (
     HWCycleModes,
 )
 from .events import fire_events
-from .helpers import get_device_name, get_identifier, hub_error_handler
+from .entity import WiserEntityMixin
+from .helpers import (
+    get_device_name,
+    get_hub_via_device_info,
+    get_identifier,
+    get_room_name,
+    get_uuid_unique_id,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
+from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,10 +188,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         async_add_entities([wiser_hotwater], True)
 
 
-class WiserTempProbe(CoordinatorEntity, ClimateEntity):
+class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
     """Wiser temp probe climate entity object."""
 
     _enable_turn_on_off_backwards_compatibility = False
+    _attr_has_entity_name = True
+    _attr_translation_key = "floor_temperature"
 
     def __init__(self, hass: HomeAssistant, coordinator, actuator_id) -> None:
         """Initialize the sensor."""
@@ -194,16 +205,18 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
             self._actuator_id
         )
 
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
+        _LOGGER.debug(
+            "%s Floor temperature initialise", self._data.wiserhub.system.name
+        )
 
     async def async_force_update(self):
         """Force update from hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
+        _LOGGER.debug("Hub update initiated by floor temperature")
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("%s updating", self.name)
+        _LOGGER.debug("Floor temperature updating")
         self._actuator = self._data.wiserhub.devices.heating_actuators.get_by_id(
             self._actuator_id
         )
@@ -219,7 +232,7 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
         return {
             "name": get_device_name(self._data, self._actuator_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._actuator_id))},
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -246,11 +259,6 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     def min_temp(self):
         """Return min temp from data."""
         return TEMP_MINIMUM
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._actuator_id)} Floor Temp"
 
     @hub_error_handler
     async def async_set_temperature(self, **kwargs) -> None:
@@ -307,14 +315,19 @@ class WiserTempProbe(CoordinatorEntity, ClimateEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-WiserHeatingActuatorTempSensor-{self._actuator_id}"
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-"
+            f"WiserHeatingActuatorTempSensor-{self._actuator_id}"
+        )
+        return get_uuid_unique_id(legacy_unique_id)
 
 
-class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
+class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     """WiserRoom ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
-    _attr_translation_key = "wiser"
+    _attr_has_entity_name = True
+    _attr_translation_key = "heating"
 
     def __init__(self, hass: HomeAssistant, coordinator, room_id) -> None:
         """Initialize the sensor."""
@@ -330,16 +343,18 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
 
         self.passive_temperature_increment = self._data.passive_temperature_increment
 
-        _LOGGER.debug("%s %s initialise", self._data.wiserhub.system.name, self.name)
+        _LOGGER.debug(
+            "%s Heating initialise", self._data.wiserhub.system.name
+        )
 
     async def async_force_update(self):
         """Force update form hub."""
-        _LOGGER.debug("Hub update initiated by %s", self.name)
+        _LOGGER.debug("Hub update initiated by heating")
         await self._data.async_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        _LOGGER.debug("%s updating", self.name)
+        _LOGGER.debug("Heating updating")
         previous_room_values = self._room
         self._room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         self._schedule = self._room.schedule
@@ -378,7 +393,8 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             },
             "manufacturer": MANUFACTURER,
             "model": ROOM.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            "suggested_area": self._room.name,
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -426,11 +442,6 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     def min_temp(self):
         """Return min temp from data."""
         return TEMP_MINIMUM
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return get_device_name(self._data, self._room_id, "room")
 
     @property
     def preset_mode(self):
@@ -612,13 +623,15 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def target_temperature(self):
         """Return target temp."""
-        if (
-            self._room.mode == "Off"
-            or self._room.current_target_temperature == TEMP_OFF
-        ):
-            return None
-
-        return self._room.current_target_temperature
+        return room_target_temperature(
+            self._room,
+            (
+                self._data.wiserhub.system.away_mode_target_temperature
+                if self._data.wiserhub.system.is_away_mode_enabled
+                else TEMP_MINIMUM
+            ),
+            TEMP_OFF,
+        )
 
     @property
     def target_temperature_step(self) -> float | None:
@@ -686,9 +699,12 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return (
-            f"{self._data.wiserhub.system.name}-WiserRoom-{self._room_id}-{self.name}"
+        legacy_name = get_room_name(self._data, self._room_id)
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-WiserRoom-"
+            f"{self._room_id}-{legacy_name}"
         )
+        return get_uuid_unique_id(legacy_unique_id)
 
     @hub_error_handler
     async def async_boost_heating(
@@ -720,11 +736,13 @@ class WiserRoom(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
         await self.async_force_update()
 
 
-class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
+class WiserHotWater(
+    WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserScheduleEntity
+):
     """WiserHotWater ClientEntity Object."""
 
     _enable_turn_on_off_backwards_compatibility = False
-    _attr_translation_key = "wiser"
+    _attr_has_entity_name = True
 
     def __init__(self, hass: HomeAssistant, coordinator) -> None:
         """Initialize the sensor."""
@@ -968,7 +986,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return get_device_name(self._data, self.hotwater.id, "Hot Water")
+        return None
 
     @property
     def device_info(self):
@@ -980,7 +998,7 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -1153,7 +1171,12 @@ class WiserHotWater(CoordinatorEntity, ClimateEntity, WiserScheduleEntity):
     @property
     def unique_id(self):
         """Return unique Id."""
-        return f"{self._data.wiserhub.system.name}-WiserHotWater-{self.hotwater.id}-{self.name}"
+        legacy_name = get_device_name(self._data, self.hotwater.id, "Hot Water")
+        legacy_unique_id = (
+            f"{self._data.wiserhub.system.name}-WiserHotWater-"
+            f"{self.hotwater.id}-{legacy_name}"
+        )
+        return get_uuid_unique_id(legacy_unique_id)
 
     async def _async_sensor_changed(self, event) -> None:
         """Handle temperature changes."""
