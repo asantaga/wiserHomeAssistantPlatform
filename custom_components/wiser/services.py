@@ -479,28 +479,29 @@ async def async_setup_services(hass: HomeAssistant, data):
             try:
                 while True:
                     remaining = deadline - asyncio.get_running_loop().time()
+                    timed_out = remaining <= 0
                     if remaining <= 0:
                         _LOGGER.debug(
                             "OpenTherm confirmation window expired for parameter %s",
                             param,
                         )
-                        if retry_sent:
-                            await report_failure_if_still_mismatched()
-                        return
-                    try:
-                        await asyncio.wait_for(update_received.wait(), remaining)
-                    except asyncio.TimeoutError:
-                        _LOGGER.debug(
-                            "OpenTherm confirmation window expired for parameter %s",
-                            param,
-                        )
-                        if retry_sent:
-                            await report_failure_if_still_mismatched()
-                        return
-                    update_received.clear()
+                    else:
+                        try:
+                            await asyncio.wait_for(update_received.wait(), remaining)
+                        except asyncio.TimeoutError:
+                            timed_out = True
+                            _LOGGER.debug(
+                                "OpenTherm confirmation window expired for parameter %s",
+                                param,
+                            )
+
+                    if not timed_out:
+                        update_received.clear()
                     if instance._opentherm_write_revision != revision:
                         return
                     if instance.last_update_status != "Success":
+                        if timed_out:
+                            return
                         continue
 
                     matches = opentherm_parameter_matches(
@@ -509,13 +510,16 @@ async def async_setup_services(hass: HomeAssistant, data):
                     if matches is None:
                         return
                     if matches:
-                        if retry_sent:
+                        if retry_sent or timed_out:
                             return
                         continue
 
                     if retry_sent:
                         # A slow hub may still apply the retry. Keep observing
                         # until the deadline instead of warning on this update.
+                        if timed_out:
+                            await report_failure_if_still_mismatched()
+                            return
                         continue
 
                     async with lock:

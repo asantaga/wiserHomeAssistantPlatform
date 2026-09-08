@@ -600,6 +600,27 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(transport.await_count, 2)
         self.assertEqual(self.first.async_refresh.await_count, 2)
 
+    async def test_initial_mismatch_is_retried_when_no_update_arrives(self):
+        del self.hass.data["wiser"]["second"]
+        self.env["OPENTHERM_CONFIRMATION_WINDOW"] = 0.05
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
+
+        await self.call()
+
+        # Even without another coordinator update, feedback that remains
+        # mismatched at the deadline must trigger the one permitted retry.
+        while self.first.async_refresh.await_count < 2:
+            await __import__("asyncio").sleep(0.01)
+        self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
+        self.listeners["first"][0]()
+        await __import__("asyncio").gather(*self.tasks)
+
+        transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
+        self.assertEqual(transport.await_count, 2)
+        self.assertEqual(self.first.async_refresh.await_count, 2)
+        self.hass.services.async_call.assert_not_awaited()
+        self.hass.bus.async_fire.assert_not_called()
+
     async def test_matching_feedback_is_not_retried(self):
         del self.hass.data["wiser"]["second"]
         self.first.wiserhub.system.opentherm.hw_flow_setpoint = 40
