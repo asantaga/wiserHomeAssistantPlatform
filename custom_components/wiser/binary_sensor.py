@@ -20,7 +20,6 @@ from .helpers import (
 )
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
-    OPENTHERM_SENSOR_NAMES,
     OPENTHERM_SLAVE_STATUS_BITS,
     detected_opentherm_sensor_keys,
     opentherm_sensor_value,
@@ -225,10 +224,7 @@ class WiserOpenThermAttributeBinarySensor(
             self._state = value if isinstance(value, bool) else None
         except (AttributeError, KeyError, TypeError):
             pass
-        self._attr_translation_key = "opentherm_attribute"
-        self._attr_translation_placeholders = {
-            "name": OPENTHERM_SENSOR_NAMES[sensor_key]
-        }
+        self._attr_translation_key = sensor_key
         if sensor_key in OPENTHERM_SLAVE_STATUS_BITS:
             self._attr_device_class = (
                 BinarySensorDeviceClass.PROBLEM

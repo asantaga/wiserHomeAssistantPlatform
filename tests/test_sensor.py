@@ -455,10 +455,8 @@ class WiserOpenThermModulationTest(unittest.TestCase):
         self.assertEqual(self.sensor.state_class, "measurement")
         self.assertEqual(self.sensor.icon, "mdi:fire")
         self.assertIsNone(getattr(self.sensor, "device_class", None))
-        self.assertEqual(self.sensor._attr_translation_key, "opentherm_attribute")
         self.assertEqual(
-            self.sensor._attr_translation_placeholders,
-            {"name": "Relative modulation level"},
+            self.sensor._attr_translation_key, "relative_modulation_level"
         )
         self.assertEqual(self.sensor._sensor_type, "relative_modulation_level")
         self.assertNotIn("_attr_name", self.sensor.__dict__)
@@ -508,10 +506,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
         self.assertEqual(self.sensor.native_unit_of_measurement, "bar")
         self.assertEqual(self.sensor.device_class, "pressure")
         self.assertEqual(self.sensor.state_class, "measurement")
-        self.assertEqual(self.sensor._attr_translation_key, "opentherm_attribute")
-        self.assertEqual(
-            self.sensor._attr_translation_placeholders, {"name": "CH pressure"}
-        )
+        self.assertEqual(self.sensor._attr_translation_key, "ch_pressure_bar")
         self.assertEqual(self.sensor._sensor_type, "opentherm_ch_pressure_bar")
         self.assertEqual(self.sensor.device_info, {"identifiers": {("wiser", "hub")}})
 
@@ -522,9 +517,6 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
         self.opentherm.connection_status = "Disconnected"
         self.assertFalse(sensor.available)
 
-        self.sensor_module.OPENTHERM_SENSOR_NAMES["connection_status"] = (
-            "Connection status"
-        )
         connection = self.sensor_module.WiserOpenThermAttributeSensor(
             self.data, "connection_status"
         )
@@ -692,10 +684,7 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
         self.opentherm.ch1_flow_enabled = True
         self.sensor._handle_coordinator_update()
         self.assertTrue(self.sensor.is_on)
-        self.assertEqual(
-            self.sensor._attr_translation_placeholders,
-            {"name": "CH1 flow enabled"},
-        )
+        self.assertEqual(self.sensor._attr_translation_key, "ch1_flow_enabled")
         self.assertEqual(
             self.sensor.device_info, {"identifiers": {("wiser", "hub")}}
         )
@@ -706,9 +695,6 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
         self.assertFalse(self.sensor.available)
 
     def test_slave_status_flag_uses_running_device_class(self):
-        self.binary_sensor_module.OPENTHERM_SENSOR_NAMES["hot_water_active"] = (
-            "Hot water active"
-        )
         self.binary_sensor_module.opentherm_sensor_value = (
             lambda opentherm, _key: bool(opentherm.operational_data.slave_status & 4)
         )

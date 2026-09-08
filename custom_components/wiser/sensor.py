@@ -63,7 +63,6 @@ from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
     OPENTHERM_DERIVED_SENSOR_KEYS,
     OPENTHERM_SENSOR_DEPENDENCIES,
-    OPENTHERM_SENSOR_NAMES,
     OPENTHERM_SENSOR_PATHS,
     detected_opentherm_sensor_keys,
     opentherm_sensor_value,
@@ -1292,8 +1291,7 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             data,
             0,
             sensor_type,
-            translation_key="opentherm_attribute",
-            translation_placeholders={"name": OPENTHERM_SENSOR_NAMES[sensor_key]},
+            translation_key=sensor_key,
         )
         if sensor_key in {
             "coprocessor_update_status",

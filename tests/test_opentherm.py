@@ -300,7 +300,7 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
     def test_options_form_labels_cover_every_selectable_field(self):
         for path in (
             COMPONENT / "strings.json",
-            COMPONENT / "translations/en.json",
+            *sorted((COMPONENT / "translations").glob("*.json")),
         ):
             with self.subTest(path=path):
                 strings = json.loads(path.read_text())
@@ -311,6 +311,30 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
                     for key in steps[category]["data"]
                 }
                 self.assertEqual(set(labels), set(HELPER.OPENTHERM_SENSOR_PATHS))
+
+    def test_entity_names_are_translated_without_english_placeholders(self):
+        binary_keys = set(HELPER.OPENTHERM_BINARY_SENSOR_KEYS)
+        sensor_keys = set(HELPER.OPENTHERM_SENSOR_PATHS) - binary_keys - {
+            "ch_flow_temperature",
+            "ch_return_temperature",
+            "flame_statistics",
+        }
+        for path in (
+            COMPONENT / "strings.json",
+            *sorted((COMPONENT / "translations").glob("*.json")),
+        ):
+            with self.subTest(path=path):
+                entities = json.loads(path.read_text())["entity"]
+                self.assertTrue(binary_keys.issubset(entities["binary_sensor"]))
+                self.assertTrue(sensor_keys.issubset(entities["sensor"]))
+                for domain, keys in (
+                    ("binary_sensor", binary_keys),
+                    ("sensor", sensor_keys),
+                ):
+                    for key in keys:
+                        self.assertNotIn(
+                            "{name}", entities[domain][key]["name"]
+                        )
 
     def test_selected_sensor_options_support_lists_and_legacy_mappings(self):
         self.assertTrue(
