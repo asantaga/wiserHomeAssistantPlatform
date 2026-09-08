@@ -192,6 +192,7 @@ def _load_sensor_module() -> ModuleType:
             "ch1_flow_enabled": ("ch1_flow_enabled",),
             "ch_pressure_bar": ("operational_data", "ch_pressure_bar"),
             "connection_status": ("connection_status",),
+            "flame_statistics": ("operational_data", "slave_status"),
             "relative_modulation_level": (
                 "operational_data",
                 "relative_modulation_level",
@@ -404,6 +405,30 @@ class WiserLTSOpenthermSensorDeviceTest(unittest.TestCase):
         sensor._data = object()
 
         self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+    def test_flame_statistics_is_not_exposed_as_raw_slave_status(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserLTSOpenthermSensor)
+        sensor._lts_sensor_type = "opentherm_flow_temp"
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    opentherm=SimpleNamespace(
+                        ch1_flow_enabled=False,
+                        connection_status="Connected",
+                        operational_data=SimpleNamespace(
+                            ch_pressure_bar=1.2,
+                            json_data={},
+                            slave_status=8,
+                        ),
+                    )
+                )
+            )
+        )
+
+        attributes = sensor.extra_state_attributes
+
+        self.assertEqual(attributes["ch_pressure_bar"], 1.2)
+        self.assertNotIn("flame_statistics", attributes)
 
 
 class WiserOpenThermModulationTest(unittest.TestCase):

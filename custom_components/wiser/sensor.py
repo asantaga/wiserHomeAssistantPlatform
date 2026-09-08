@@ -1546,6 +1546,11 @@ class WiserLTSOpenthermSensor(WiserSensor):
             opentherm = self._data.wiserhub.system.opentherm
             if opentherm is not None:
                 for key in OPENTHERM_SENSOR_PATHS:
+                    # Flame statistics is calculated by Home Assistant's
+                    # history engine; its OpenTherm path only indicates that
+                    # the required flame-status bit is available.
+                    if key == "flame_statistics":
+                        continue
                     try:
                         attrs[key] = opentherm_sensor_value(opentherm, key)
                     except (AttributeError, KeyError, TypeError):
