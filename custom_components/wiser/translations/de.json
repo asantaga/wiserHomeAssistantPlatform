@@ -7,6 +7,7 @@
         "description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "password": "API Schl\u00fcssel"
         }
       },
@@ -15,13 +16,15 @@
         "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "password": "API Schl\u00fcssel"
         }
       }
     },
     "abort": {
       "already_in_progress": "Der Konfigurationsablauf f\u00fcr Wiser Heat Hub wird bereits ausgef\u00fchrt.",
-      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert."
+      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert.",
+      "not_wiser_hub": "Das erkannte Gerät ist kein Wiser Heat Hub."
     },
     "error": {
       "auth_failure": "Authentifizierung mit Wiser Heat Hub fehlgeschlagen. Pr\u00fcfe den API Key und versuche es erneut.",
@@ -37,8 +40,8 @@
         "description": "Wiser-Parameter ändern.",
         "menu_options": {
           "main_params": "Hauptparameter",
-          "hw_climate_params": "Warmwasser-Klimaparameter",
-          "automation_params": "Aktivieren Sie integrierte Automatisierungen"
+          "automation_params": "Aktivieren Sie integrierte Automatisierungen",
+          "opentherm_sensors": "OpenTherm-Sensoren"
         }
       },
       "main_params": {
@@ -46,6 +49,7 @@
         "description": "Hauptparameter",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "scan_interval": "Scan Intervall",
           "heating_boost_temp": "Boost Temperatur",
           "heating_boost_time": "Boost Dauer",
@@ -54,26 +58,158 @@
           "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist"
         }
       },
-      "hw_climate_params": {
-        "title": "Wiser Integrationsoptionen",
-        "description": "Warmwasser-Klimaparameter",
-        "data": {
-          "hotwater_climate": "Aktivieren Sie die Climate-Entität",
-          "experimental_mode": "Aktivieren Sie den experimentellen Arbeitsmodus",
-          "hotwater_auto_mode": "Warmwasser-Automatikmodus",
-          "hotwater_heat_mode": "Warmwasser-Heizmodus",
-          "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
-        }
-      },
       "automation_params": {
         "title": "Wiser Integrationsoptionen",
         "description": "Aktivieren Sie integrierte Automatisierungen",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passivmodus",
+            "description": "Aktiviert die passive TRV-Funktion. Sie muss für jeden Raum einzeln aktiviert werden.",
+            "data": {
+              "automations_passive_mode": "Passivmodus",
+              "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Warmwasser-Klimasteuerung",
+            "description": "Aktiviert die Warmwasser-Klimasteuerung. Weitere Informationen finden Sie im Wiki.",
+            "data": {
+              "hotwater_climate": "Climate-Entität aktivieren",
+              "experimental_mode": "Experimentellen Betriebsmodus aktivieren",
+              "hotwater_auto_mode": "Warmwasser-Automatikmodus",
+              "hotwater_heat_mode": "Warmwasser-Heizmodus",
+              "hotwater_boost_mode": "Warmwasser-Boost-Modus",
+              "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
+            }
+          }
+        }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm-Sensoren",
+        "description": "Wählen Sie eine Kategorie erkannter OpenTherm-Attribute.",
+        "menu_options": {
+          "opentherm_readings": "Messwerte",
+          "opentherm_central_heating": "Zentralheizung",
+          "opentherm_hot_water": "Warmwasser",
+          "opentherm_status": "Status und Diagnose"
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm-Messwerte",
+        "description": "Wählen Sie aus, welche erkannten OpenTherm-Messwerte als Sensorentitäten bereitgestellt werden.",
         "data": {
-          "automations_passive_mode": "Passivmodus",
-          "passive_mode_temperature_increments": "Temperaturerhöhungen im passiven Modus"
+          "ch_flow_temperature": "Kessel-Vorlauftemperatur",
+          "ch_pressure_bar": "Heizungsdruck",
+          "ch_return_temperature": "Kessel-Rücklauftemperatur",
+          "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Kessel-Abgastemperatur",
+          "estimated_boiler_output": "Geschätzte Kesselleistung",
+          "hw_flow_rate": "Warmwasser-Durchfluss",
+          "hw_temperature": "Warmwassertemperatur",
+          "maximum_capacity_kw": "Maximale Kesselleistung",
+          "minimum_modulation_level": "Minimale Modulationsstufe",
+          "relative_modulation_level": "Relativer Modulationsgrad",
+          "room_temperature": "Raumtemperatur"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm-Zentralheizung",
+        "description": "Wählen Sie aus, welche erkannten Zentralheizungsattribute als Entitäten bereitgestellt werden.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Maximaler Kessel-Heizsollwert Lesen/Schreiben",
+          "boiler_ch_max_setpoint_transfer_enable": "Übertragung des maximalen Kessel-Heizsollwerts aktiviert",
+          "boiler_ch_setpoint": "Kessel-Heizsollwert",
+          "boiler_ch_setpoint_lower_bound": "Untere Grenze des Kessel-Heizsollwerts",
+          "boiler_ch_setpoint_upper_bound": "Obere Grenze des Kessel-Heizsollwerts",
+          "ch_flow_active_lower_setpoint": "Aktive untere Grenze des Heizungsvorlaufs",
+          "ch_flow_active_upper_setpoint": "Aktive obere Grenze des Heizungsvorlaufs",
+          "ch1_flow_enabled": "Heizungsvorlauf 1 aktiviert",
+          "ch1_flow_setpoint": "Sollwert Heizungsvorlauf 1",
+          "ch2_flow_enabled": "Heizungsvorlauf 2 aktiviert",
+          "ch2_flow_setpoint": "Sollwert Heizungsvorlauf 2",
+          "room_setpoint": "Raumsollwert"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm-Warmwasser",
+        "description": "Wählen Sie aus, welche erkannten Warmwasserattribute als Entitäten bereitgestellt werden.",
+        "data": {
+          "boiler_hw_setpoint": "Kessel-Warmwassersollwert",
+          "boiler_hw_setpoint_lower_bound": "Untere Grenze des Kessel-Warmwassersollwerts",
+          "boiler_hw_setpoint_read_write": "Kessel-Warmwassersollwert Lesen/Schreiben",
+          "boiler_hw_setpoint_transfer_enable": "Übertragung des Kessel-Warmwassersollwerts aktiviert",
+          "boiler_hw_setpoint_upper_bound": "Obere Grenze des Kessel-Warmwassersollwerts",
+          "hw_enabled": "Warmwasser aktiviert",
+          "hw_flow_setpoint": "Warmwasser-Durchflusssollwert"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm-Status und -Diagnose",
+        "description": "Wählen Sie aus, welche erkannten Status- und Diagnoseattribute als Sensorentitäten bereitgestellt werden.",
+        "data": {
+          "boiler_fault": "Kesselstörung",
+          "central_heating_active": "Zentralheizung aktiv",
+          "central_heating_2_active": "Zentralheizung 2 aktiv",
+          "connection_status": "Verbindungsstatus",
+          "coprocessor_update_status": "OpenTherm-Coprozessor-Aktualisierungsstatus",
+          "coprocessor_version": "OpenTherm-Coprozessor-Version",
+          "cooling_active": "Kühlung aktiv",
+          "diagnostic_event": "Diagnoseereignis",
+          "flame_active": "Flamme aktiv",
+          "flame_statistics": "Flammenstatistik",
+          "hot_water_active": "Warmwasser aktiv",
+          "operating_mode": "Betriebsmodus",
+          "slave_status": "OpenTherm-Slave-Status",
+          "tracked_room_id": "ID des überwachten Raums"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "OpenTherm-Parameter festlegen",
+      "description": "Ändert einen unterstützten OpenTherm-Temperaturparameter am Wiser Heat Hub.",
+      "fields": {
+        "parameter": {
+          "name": "Parameter",
+          "description": "Zu ändernder OpenTherm-Temperaturparameter. Der erforderliche API-Endpunkt wird automatisch ausgewählt."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Verwenden Sie eine Temperatur innerhalb der vom Kessel gemeldeten Grenzwerte."
+        },
+        "hub": {
+          "name": "Wiser Heat Hub",
+          "description": "Wählen Sie nur dann einen Hub aus, wenn Sie mehrere Wiser Heat Hubs verwenden."
         }
       }
     }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Untere aktive Zentralheizungs-Solltemperatur",
+        "chFlowActiveUpperSetpoint": "Obere aktive Zentralheizungs-Solltemperatur",
+        "dhwFlowSetpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
+        "dhwSetpoint": "Warmwasser-Solltemperatur des Kessels",
+        "maxChSetpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": { "message": "Bitte geben Sie eine OpenTherm-Temperatur an." },
+    "opentherm_hub_not_found": { "message": "Der angegebene Wiser Heat Hub wurde nicht gefunden." },
+    "opentherm_hub_not_loaded": { "message": "Der angegebene Wiser Heat Hub ist nicht geladen." },
+    "opentherm_hub_required": { "message": "Bitte wählen Sie einen Wiser Heat Hub aus, wenn mehrere Hubs konfiguriert sind." },
+    "opentherm_not_supported": { "message": "Dieser Hub unterstützt OpenTherm nicht." },
+    "opentherm_invalid_parameter": { "message": "Der OpenTherm-Parameter oder -Wert ist ungültig: {error}" },
+    "opentherm_write_failed": { "message": "OpenTherm-Parameter {parameter} konnte nicht festgelegt werden: {error}" },
+    "opentherm_confirmation_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nach einem Wiederholungsversuch und dem Bestätigungszeitraum von {window} Sekunden nicht bei {requested} °C. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
+    "opentherm_retry_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nicht bei {requested} °C und der Wiederholungsversuch konnte nicht gesendet werden: {error}. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
+    "opentherm_notification_title": { "message": "Wiser-OpenTherm-Befehl" }
   },
   "entity": {
     "climate": {
@@ -145,7 +281,21 @@
       "is_tilt_supported": { "name": "Neigung unterstützt" },
       "is_open": { "name": "Geöffnet" },
       "is_closed": { "name": "Geschlossen" },
-      "active": { "name": "Aktiv" }
+      "active": { "name": "Aktiv" },
+      "boiler_ch_max_setpoint_read_write": { "name": "Maximaler Kessel-Heizsollwert Lesen/Schreiben" },
+      "boiler_ch_max_setpoint_transfer_enable": { "name": "Übertragung des maximalen Kessel-Heizsollwerts aktiviert" },
+      "boiler_fault": { "name": "Kesselstörung" },
+      "boiler_hw_setpoint_read_write": { "name": "Kessel-Warmwassersollwert Lesen/Schreiben" },
+      "boiler_hw_setpoint_transfer_enable": { "name": "Übertragung des Kessel-Warmwassersollwerts aktiviert" },
+      "central_heating_2_active": { "name": "Zentralheizung 2 aktiv" },
+      "central_heating_active": { "name": "Zentralheizung aktiv" },
+      "ch1_flow_enabled": { "name": "Heizungsvorlauf 1 aktiviert" },
+      "ch2_flow_enabled": { "name": "Heizungsvorlauf 2 aktiviert" },
+      "cooling_active": { "name": "Kühlung aktiv" },
+      "diagnostic_event": { "name": "Diagnoseereignis" },
+      "flame_active": { "name": "Flamme aktiv" },
+      "hot_water_active": { "name": "Warmwasser aktiv" },
+      "hw_enabled": { "name": "Warmwasser aktiviert" }
     },
     "sensor": {
       "signal": { "name": "Signal" },
@@ -159,6 +309,35 @@
       "floor_temperature": { "name": "Fußbodentemperatur" },
       "boiler_flow_temperature": { "name": "Kesselvorlauftemperatur" },
       "boiler_return_temperature": { "name": "Kesselrücklauftemperatur" },
+      "flame_statistics": { "name": "Flammenstatistik" },
+      "boiler_ch_setpoint": { "name": "Kessel-Heizsollwert" },
+      "boiler_ch_setpoint_lower_bound": { "name": "Untere Grenze des Kessel-Heizsollwerts" },
+      "boiler_ch_setpoint_upper_bound": { "name": "Obere Grenze des Kessel-Heizsollwerts" },
+      "boiler_exhaust_temperature": { "name": "Kessel-Abgastemperatur" },
+      "boiler_hw_setpoint": { "name": "Kessel-Warmwassersollwert" },
+      "boiler_hw_setpoint_lower_bound": { "name": "Untere Grenze des Kessel-Warmwassersollwerts" },
+      "boiler_hw_setpoint_upper_bound": { "name": "Obere Grenze des Kessel-Warmwassersollwerts" },
+      "ch1_flow_setpoint": { "name": "Sollwert Heizungsvorlauf 1" },
+      "ch2_flow_setpoint": { "name": "Sollwert Heizungsvorlauf 2" },
+      "ch_flow_active_lower_setpoint": { "name": "Aktive untere Grenze des Heizungsvorlaufs" },
+      "ch_flow_active_upper_setpoint": { "name": "Aktive obere Grenze des Heizungsvorlaufs" },
+      "ch_pressure_bar": { "name": "Heizungsdruck" },
+      "connection_status": { "name": "Verbindungsstatus" },
+      "coprocessor_update_status": { "name": "OpenTherm-Coprozessor-Aktualisierungsstatus" },
+      "coprocessor_version": { "name": "OpenTherm-Coprozessor-Version" },
+      "delta_t": { "name": "Delta-T" },
+      "estimated_boiler_output": { "name": "Geschätzte Kesselleistung" },
+      "hw_flow_rate": { "name": "Warmwasser-Durchfluss" },
+      "hw_flow_setpoint": { "name": "Warmwasser-Durchflusssollwert" },
+      "hw_temperature": { "name": "Warmwassertemperatur" },
+      "maximum_capacity_kw": { "name": "Maximale Kesselleistung" },
+      "minimum_modulation_level": { "name": "Minimale Modulationsstufe" },
+      "operating_mode": { "name": "Betriebsmodus" },
+      "relative_modulation_level": { "name": "Relativer Modulationsgrad" },
+      "room_setpoint": { "name": "Raumsollwert" },
+      "room_temperature": { "name": "Raumtemperatur" },
+      "slave_status": { "name": "OpenTherm-Slave-Status" },
+      "tracked_room_id": { "name": "ID des überwachten Raums" },
       "heating_demand": { "name": "Heizbedarf" },
       "heating_demand_channel": { "name": "Heizbedarf Kanal {channel}" },
       "hot_water_demand": { "name": "Warmwasserbedarf" },

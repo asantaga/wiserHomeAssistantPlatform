@@ -6,16 +6,26 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER
+from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
+    get_hub_via_device_info,
     get_identifier,
     get_unique_id,
+)
+from .opentherm import (
+    OPENTHERM_BINARY_SENSOR_KEYS,
+    OPENTHERM_DIAGNOSTIC_SENSOR_KEYS,
+    OPENTHERM_SLAVE_STATUS_BITS,
+    detected_opentherm_sensor_keys,
+    opentherm_sensor_value,
+    opentherm_sensor_is_enabled,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +41,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
 
     binary_sensors = []
+
+    opentherm = getattr(data.wiserhub.system, "opentherm", None)
+    if opentherm is not None and opentherm.enabled:
+        configured_sensors = config_entry.options.get(CONF_OPENTHERM_SENSORS)
+        binary_sensors.extend(
+            WiserOpenThermAttributeBinarySensor(data, key)
+            for key in detected_opentherm_sensor_keys(opentherm)
+            if key in OPENTHERM_BINARY_SENSOR_KEYS
+            and (
+                opentherm_sensor_is_enabled(configured_sensors, key)
+                or (
+                    key == "flame_active"
+                    and opentherm_sensor_is_enabled(
+                        configured_sensors, "flame_statistics"
+                    )
+                )
+            )
+        )
 
     # System sensors
     if data.wiserhub.system:
@@ -175,8 +203,80 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
+
+
+class WiserOpenThermAttributeBinarySensor(
+    WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
+):
+    """An opt-in boolean OpenTherm attribute."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, sensor_key) -> None:
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._sensor_key = sensor_key
+        self._state = None
+        try:
+            value = opentherm_sensor_value(
+                self._data.wiserhub.system.opentherm, self._sensor_key
+            )
+            self._state = value if isinstance(value, bool) else None
+        except (AttributeError, KeyError, TypeError):
+            pass
+        self._attr_translation_key = sensor_key
+        if sensor_key in OPENTHERM_DIAGNOSTIC_SENSOR_KEYS:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        if sensor_key in OPENTHERM_SLAVE_STATUS_BITS:
+            self._attr_device_class = (
+                BinarySensorDeviceClass.PROBLEM
+                if sensor_key in {"boiler_fault", "diagnostic_event"}
+                else BinarySensorDeviceClass.RUNNING
+            )
+
+    @property
+    def available(self):
+        opentherm = self._data.wiserhub.system.opentherm
+        return (
+            super().available
+            and opentherm is not None
+            and opentherm.enabled
+            and opentherm.connection_status == "Connected"
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        try:
+            value = opentherm_sensor_value(
+                self._data.wiserhub.system.opentherm, self._sensor_key
+            )
+            self._state = value if isinstance(value, bool) else None
+        except (AttributeError, KeyError, TypeError):
+            self._state = None
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self):
+        return self._state
+
+    @property
+    def unique_id(self):
+        return get_unique_id(
+            self._data,
+            "binary_sensor",
+            f"opentherm_{self._sensor_key}",
+            0,
+        )
+
+    @property
+    def device_info(self):
+        return get_hub_device_info(self._data)
+
+    @property
+    def icon(self):
+        return "mdi:toggle-switch"
 
 
 class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
@@ -274,7 +374,7 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
             "model": self._data.wiserhub.system.product_type,
             "suggested_area": self._room.name,
             "sw_version": self._data.wiserhub.system.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 

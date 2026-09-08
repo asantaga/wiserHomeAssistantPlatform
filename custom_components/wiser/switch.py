@@ -21,6 +21,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
+    get_hub_via_device_info,
     get_identifier,
     get_legacy_device_name,
     get_legacy_unique_id,
@@ -407,7 +408,7 @@ class WiserRoomSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": "Room",
             "suggested_area": self._room.name,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -467,7 +468,7 @@ class WiserDeviceSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -518,7 +519,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -605,7 +606,7 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._smartplug.product_type,
             "sw_version": self._smartplug.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
@@ -662,7 +663,7 @@ class WiserLightAwayActionSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._light.product_type,
             "sw_version": self._light.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
@@ -719,7 +720,7 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._shutter.product_type,
             "sw_version": self._shutter.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
@@ -781,7 +782,7 @@ class WiserPassiveModeSwitch(WiserSwitch):
             "suggested_area": self._data.wiserhub.rooms.get_by_id(
                 self._room_id
             ).name,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -846,7 +847,7 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._shutter.product_type,
             "sw_version": self._shutter.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
@@ -951,7 +952,7 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
@@ -1022,7 +1023,7 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler

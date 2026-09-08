@@ -1,14 +1,22 @@
 # Initialise global services
+import asyncio
 import os
 import aiofiles
 import voluptuous as vol
 import logging
+from aioWiserHeatAPI.exceptions import (
+    WiserHubAuthenticationError,
+    WiserHubConnectionError,
+    WiserHubResponseError,
+)
 from .const import (
     ATTR_FILENAME,
     ATTR_HUB,
     ATTR_OPENTHERM_ENDPOINT,
     ATTR_OPENTHERM_PARAM,
     ATTR_OPENTHERM_PARAM_VALUE,
+    ATTR_OPENTHERM_TEMPERATURE,
+    ATTR_OPENTHERM_REQUEST_ID,
     ATTR_SCHEDULE,
     ATTR_SCHEDULE_ID,
     ATTR_SCHEDULE_NAME,
@@ -17,19 +25,29 @@ from .const import (
     DATA,
     DEFAULT_BOOST_TEMP_TIME,
     DOMAIN,
+    EVENT_OPENTHERM_COMMAND_FAILED,
     WISER_SERVICES,
 )
 from .coordinator import WiserHubRESTError
 from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
+from .opentherm import (
+    async_set_parameter,
+    opentherm_parameter_feedback,
+    opentherm_parameter_matches,
+    parse_parameter_value,
+)
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
 )
 from homeassistant.core import HomeAssistant, callback, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.translation import async_get_translations
 
 _LOGGER = logging.getLogger(__name__)
+
+OPENTHERM_CONFIRMATION_WINDOW = 90
 
 
 async def async_setup_services(hass: HomeAssistant, data):
@@ -90,7 +108,17 @@ async def async_setup_services(hass: HomeAssistant, data):
         {
             vol.Optional(ATTR_OPENTHERM_ENDPOINT, default=""): vol.Coerce(str),
             vol.Required(ATTR_OPENTHERM_PARAM): vol.Coerce(str),
-            vol.Required(ATTR_OPENTHERM_PARAM_VALUE): vol.Coerce(str),
+            # ``parameter_value`` remains available for existing YAML callers.
+            # The action UI uses the friendlier Celsius ``temperature`` field.
+            vol.Exclusive(ATTR_OPENTHERM_PARAM_VALUE, "opentherm_value"): vol.Any(
+                str, bool, int, float
+            ),
+            vol.Exclusive(ATTR_OPENTHERM_TEMPERATURE, "opentherm_value"): vol.Coerce(
+                float
+            ),
+            # Optional caller token used to correlate asynchronous confirmation
+            # failures without coupling Wiser to any consuming integration.
+            vol.Optional(ATTR_OPENTHERM_REQUEST_ID): vol.Coerce(str),
             vol.Optional(ATTR_HUB, default=""): vol.Coerce(str),
         }
     )
@@ -328,39 +356,293 @@ async def async_setup_services(hass: HomeAssistant, data):
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
 
-    @callback
     async def async_set_opentherm_parameter(service_call):
+        def validation_error(key, **placeholders):
+            """Build a localizable action validation error."""
+            return ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key=key,
+                translation_placeholders={
+                    name: str(value) for name, value in placeholders.items()
+                },
+            )
+
+        async def localized_message(key, fallback, **placeholders):
+            """Render an integration exception string in the HA language."""
+            try:
+                translations = await async_get_translations(
+                    hass,
+                    hass.config.language,
+                    "exceptions",
+                    integrations={DOMAIN},
+                )
+                template = translations.get(
+                    f"component.{DOMAIN}.exceptions.{key}.message", fallback
+                )
+                return template.format(**placeholders)
+            except (KeyError, ValueError):
+                return fallback.format(**placeholders)
+
         endpoint = service_call.data[ATTR_OPENTHERM_ENDPOINT]
         param = service_call.data[ATTR_OPENTHERM_PARAM]
-        value = service_call.data[ATTR_OPENTHERM_PARAM_VALUE]
+        if ATTR_OPENTHERM_TEMPERATURE in service_call.data:
+            # The Wiser API represents temperatures in tenths of a degree.
+            value = round(service_call.data[ATTR_OPENTHERM_TEMPERATURE] * 10)
+        elif ATTR_OPENTHERM_PARAM_VALUE in service_call.data:
+            value = service_call.data[ATTR_OPENTHERM_PARAM_VALUE]
+        else:
+            raise validation_error("opentherm_temperature_required")
+        request_id = service_call.data.get(ATTR_OPENTHERM_REQUEST_ID)
         hub = service_call.data[ATTR_HUB]
         instance = data
 
-        if get_instance_count(hass) > 1:
-            if not hub:
-                raise HomeAssistantError("Please specify a hub config entry id or name")
-            else:
-                # Find hub from config_entry_id or hub name
-                if is_wiser_config_id(hass, hub):
-                    instance = hass.data[DOMAIN][hub][DATA]
-                else:
-                    # Find hub by name
-                    config_entry_id = get_config_entry_id_by_name(hass, hub)
-                    if config_entry_id:
-                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+        if hub:
+            config_entry_id = (
+                hub
+                if is_wiser_config_id(hass, hub)
+                else get_config_entry_id_by_name(hass, hub)
+            )
+            if not config_entry_id:
+                raise validation_error("opentherm_hub_not_found")
+            instance = hass.data[DOMAIN].get(config_entry_id, {}).get(DATA)
+            if instance is None:
+                raise validation_error("opentherm_hub_not_loaded")
+        elif get_instance_count(hass) > 1:
+            raise validation_error("opentherm_hub_required")
 
-        # If hub has opentherm
-        if instance.wiserhub.system.opentherm:
-            command = {param: value}
+        if not instance.wiserhub.system.opentherm:
+            raise validation_error("opentherm_not_supported")
+        lock = getattr(instance, "_opentherm_write_lock", None)
+        if lock is None:
+            lock = instance._opentherm_write_lock = asyncio.Lock()
+
+        revision = getattr(instance, "_opentherm_write_revision", 0) + 1
+        instance._opentherm_write_revision = revision
+        previous_verification = getattr(
+            instance, "_opentherm_verification_task", None
+        )
+        if previous_verification is not None:
+            previous_verification.cancel()
+            instance._opentherm_verification_task = None
+
+        async def write_parameter():
             try:
-                await instance.wiserhub.system.opentherm.set_opentherm_parameter(
-                    endpoint, command
+                await async_set_parameter(
+                    instance.wiserhub.system, endpoint, param, value
                 )
-            except WiserHubRESTError:
-                raise HomeAssistantError(
-                    "Error setting parameter.  Invalid parameter/endpoint or maybe a parameter that cannot be set"
+            except ValueError as err:
+                raise validation_error(
+                    "opentherm_invalid_parameter", error=err
+                ) from err
+            except (
+                WiserHubRESTError,
+                WiserHubConnectionError,
+                WiserHubResponseError,
+                WiserHubAuthenticationError,
+            ) as err:
+                raise validation_error(
+                    "opentherm_write_failed", parameter=param, error=err
+                ) from err
+
+        async def verify_on_next_update():
+            update_received = asyncio.Event()
+            remove_listener = instance.async_add_listener(update_received.set)
+            retry_sent = False
+            retry_error = None
+            deadline = (
+                asyncio.get_running_loop().time() + OPENTHERM_CONFIRMATION_WINDOW
+            )
+
+            async def report_failure_if_still_mismatched():
+                """Report only a mismatch that survives the full window."""
+                if (
+                    instance._opentherm_write_revision != revision
+                    or instance.last_update_status != "Success"
+                    or opentherm_parameter_matches(
+                        instance.wiserhub.system, endpoint, param, value
+                    )
+                    is not False
+                ):
+                    return
+
+                reported = opentherm_parameter_feedback(
+                    instance.wiserhub.system, endpoint, param
                 )
-            await data.async_refresh()
+                requested = parse_parameter_value(value) / 10
+                if retry_error is None:
+                    _LOGGER.warning(
+                        "OpenTherm parameter %s still does not match after "
+                        "retry and confirmation window: requested=%s reported=%s",
+                        param,
+                        requested,
+                        reported,
+                    )
+                    message = await localized_message(
+                        "opentherm_confirmation_failed",
+                        "OpenTherm parameter {parameter} did not remain at "
+                        "{requested} °C after one retry and the "
+                        "{window}-second confirmation window. Wiser reports "
+                        "{reported} °C. No further retry will be sent.",
+                        parameter=param,
+                        requested=f"{requested:g}",
+                        window=OPENTHERM_CONFIRMATION_WINDOW,
+                        reported=f"{reported:g}",
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Unable to retry OpenTherm parameter %s: %s; "
+                        "requested=%s reported=%s",
+                        param,
+                        retry_error,
+                        requested,
+                        reported,
+                    )
+                    message = await localized_message(
+                        "opentherm_retry_failed",
+                        "OpenTherm parameter {parameter} did not remain at "
+                        "{requested} °C, and its retry could not be sent: "
+                        "{error}. Wiser reports {reported} °C. No further "
+                        "retry will be sent.",
+                        parameter=param,
+                        requested=f"{requested:g}",
+                        error=retry_error,
+                        reported=f"{reported:g}",
+                    )
+                title = await localized_message(
+                    "opentherm_notification_title", "Wiser OpenTherm command"
+                )
+                event_data = {
+                    "request_id": request_id,
+                    "endpoint": endpoint,
+                    "parameter": param,
+                    "requested": requested,
+                    "reported": reported,
+                }
+                if retry_error is not None:
+                    event_data["error"] = str(retry_error)
+                hass.bus.async_fire(
+                    EVENT_OPENTHERM_COMMAND_FAILED,
+                    event_data,
+                    context=service_call.context,
+                )
+                await hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": title,
+                        "message": message,
+                        "notification_id": (
+                            f"wiser_opentherm_{instance.wiserhub.system.name}_{param}"
+                        ),
+                    },
+                    blocking=False,
+                )
+
+            try:
+                while True:
+                    remaining = deadline - asyncio.get_running_loop().time()
+                    timed_out = remaining <= 0
+                    if remaining <= 0:
+                        _LOGGER.debug(
+                            "OpenTherm confirmation window expired for parameter %s",
+                            param,
+                        )
+                    else:
+                        try:
+                            await asyncio.wait_for(update_received.wait(), remaining)
+                        except asyncio.TimeoutError:
+                            timed_out = True
+                            _LOGGER.debug(
+                                "OpenTherm confirmation window expired for parameter %s",
+                                param,
+                            )
+
+                    if not timed_out:
+                        update_received.clear()
+                    if instance._opentherm_write_revision != revision:
+                        return
+                    if instance.last_update_status != "Success":
+                        if timed_out:
+                            return
+                        continue
+
+                    matches = opentherm_parameter_matches(
+                        instance.wiserhub.system, endpoint, param, value
+                    )
+                    if matches is None:
+                        return
+                    if matches:
+                        if retry_sent or timed_out:
+                            return
+                        continue
+
+                    if retry_sent:
+                        # A slow hub may still apply the retry. Keep observing
+                        # until the deadline instead of warning on this update.
+                        if timed_out:
+                            await report_failure_if_still_mismatched()
+                            return
+                        continue
+
+                    async with lock:
+                        if instance._opentherm_write_revision != revision:
+                            return
+                        _LOGGER.warning(
+                            "OpenTherm parameter %s did not match after writing; "
+                            "retrying once",
+                            param,
+                        )
+                        retry_sent = True
+                        try:
+                            await write_parameter()
+                        except HomeAssistantError as err:
+                            # This verifier runs after the service call has
+                            # returned, so surface a failed retry through the
+                            # same event and notification as a rejected value.
+                            # Keep watching until the original deadline in case
+                            # the first write was merely slow to settle.
+                            # Keep the transport detail machine-readable in the
+                            # event and notification. The translated wrapper is
+                            # intended for the original foreground action only.
+                            retry_error = err.__cause__ or err
+                            continue
+                        # Give the retry its own complete confirmation window.
+                        # Time spent confirming the original write must not
+                        # shorten the period in which the retry may settle.
+                        deadline = (
+                            asyncio.get_running_loop().time()
+                            + OPENTHERM_CONFIRMATION_WINDOW
+                        )
+                        # Do not let the refresh initiated by the retry count as
+                        # independent confirmation that the boiler rejected it.
+                        remove_listener()
+                        await instance.async_refresh()
+                        update_received = asyncio.Event()
+                        remove_listener = instance.async_add_listener(
+                            update_received.set
+                        )
+            finally:
+                remove_listener()
+                if (
+                    getattr(instance, "_opentherm_verification_task", None)
+                    is asyncio.current_task()
+                ):
+                    instance._opentherm_verification_task = None
+
+        # Keep each initial write atomic per hub. A later command increments
+        # the revision and cancels this command's pending confirmation.
+        async with lock:
+            await write_parameter()
+            await instance.async_refresh()
+
+            matches = opentherm_parameter_matches(
+                instance.wiserhub.system, endpoint, param, value
+            )
+            if matches is not None:
+                instance._opentherm_verification_task = hass.async_create_task(
+                    verify_on_next_update(),
+                    f"Wiser OpenTherm confirmation: {param}",
+                )
 
     hass.services.async_register(
         DOMAIN,

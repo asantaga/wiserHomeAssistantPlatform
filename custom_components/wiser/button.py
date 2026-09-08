@@ -13,6 +13,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
+    get_hub_via_device_info,
     get_identifier,
     get_unique_id,
     hub_error_handler,
@@ -180,7 +181,7 @@ class WiserBoostHotWaterButton(WiserButton):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
@@ -221,7 +222,7 @@ class WiserCancelHotWaterOverridesButton(WiserButton):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
@@ -262,7 +263,7 @@ class WiserOverrideHotWaterButton(WiserButton):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 

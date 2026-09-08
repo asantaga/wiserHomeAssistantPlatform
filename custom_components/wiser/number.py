@@ -6,6 +6,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
+    get_hub_via_device_info,
     get_identifier,
     get_unique_id,
     hub_error_handler,
@@ -223,7 +224,7 @@ class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEnti
         return {
             "name": get_device_name(self._data, self._actuator.id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._actuator.id))},
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @property
