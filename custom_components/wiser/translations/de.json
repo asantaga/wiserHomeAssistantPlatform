@@ -158,6 +158,49 @@
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar."
     }
   },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "OpenTherm-Parameter festlegen",
+      "description": "Ändert einen unterstützten OpenTherm-Temperaturparameter am Wiser Heat Hub.",
+      "fields": {
+        "parameter": {
+          "name": "Parameter",
+          "description": "Zu ändernder OpenTherm-Temperaturparameter. Der erforderliche API-Endpunkt wird automatisch ausgewählt."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Verwenden Sie eine Temperatur innerhalb der vom Kessel gemeldeten Grenzwerte."
+        },
+        "hub": {
+          "name": "Wiser Heat Hub",
+          "description": "Wählen Sie nur dann einen Hub aus, wenn Sie mehrere Wiser Heat Hubs verwenden."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Untere aktive Zentralheizungs-Solltemperatur",
+        "chFlowActiveUpperSetpoint": "Obere aktive Zentralheizungs-Solltemperatur",
+        "dhwFlowSetpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
+        "dhwSetpoint": "Warmwasser-Solltemperatur des Kessels",
+        "maxChSetpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": { "message": "Bitte geben Sie eine OpenTherm-Temperatur an." },
+    "opentherm_hub_not_found": { "message": "Der angegebene Wiser Heat Hub wurde nicht gefunden." },
+    "opentherm_hub_not_loaded": { "message": "Der angegebene Wiser Heat Hub ist nicht geladen." },
+    "opentherm_hub_required": { "message": "Bitte wählen Sie einen Wiser Heat Hub aus, wenn mehrere Hubs konfiguriert sind." },
+    "opentherm_not_supported": { "message": "Dieser Hub unterstützt OpenTherm nicht." },
+    "opentherm_invalid_parameter": { "message": "Der OpenTherm-Parameter oder -Wert ist ungültig: {error}" },
+    "opentherm_write_failed": { "message": "OpenTherm-Parameter {parameter} konnte nicht festgelegt werden: {error}" },
+    "opentherm_confirmation_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nach einem Wiederholungsversuch und dem Bestätigungszeitraum von {window} Sekunden nicht bei {requested} °C. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
+    "opentherm_retry_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nicht bei {requested} °C und der Wiederholungsversuch konnte nicht gesendet werden: {error}. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
+    "opentherm_notification_title": { "message": "Wiser-OpenTherm-Befehl" }
+  },
   "entity": {
     "climate": {
       "heating": {

@@ -238,17 +238,13 @@ set_opentherm_parameter:
       selector:
         select:
           mode: dropdown
+          translation_key: opentherm_parameter
           options:
-            - label: "Active central-heating lower setpoint"
-              value: chFlowActiveLowerSetpoint
-            - label: "Active central-heating upper setpoint"
-              value: chFlowActiveUpperSetpoint
-            - label: "Hub hot-water flow setpoint"
-              value: dhwFlowSetpoint
-            - label: "Boiler hot-water setpoint"
-              value: dhwSetpoint
-            - label: "Boiler maximum central-heating setpoint"
-              value: maxChSetpoint
+            - chFlowActiveLowerSetpoint
+            - chFlowActiveUpperSetpoint
+            - dhwFlowSetpoint
+            - dhwSetpoint
+            - maxChSetpoint
     temperature:
       name: Temperature
       description: Use a temperature within the limits reported by your boiler.

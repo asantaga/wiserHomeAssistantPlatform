@@ -159,6 +159,49 @@
       "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser."
     }
   },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "Définir un paramètre OpenTherm",
+      "description": "Modifie un paramètre de température OpenTherm pris en charge sur la passerelle Wiser.",
+      "fields": {
+        "parameter": {
+          "name": "Paramètre",
+          "description": "Paramètre de température OpenTherm à modifier. Le point de terminaison API requis est sélectionné automatiquement."
+        },
+        "temperature": {
+          "name": "Température",
+          "description": "Utilisez une température comprise dans les limites indiquées par votre chaudière."
+        },
+        "hub": {
+          "name": "Passerelle Wiser",
+          "description": "Sélectionnez une passerelle uniquement si vous en utilisez plusieurs."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Consigne basse active du chauffage central",
+        "chFlowActiveUpperSetpoint": "Consigne haute active du chauffage central",
+        "dhwFlowSetpoint": "Consigne de départ d’eau chaude de la passerelle",
+        "dhwSetpoint": "Consigne d’eau chaude de la chaudière",
+        "maxChSetpoint": "Consigne maximale de chauffage central de la chaudière"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": { "message": "Veuillez indiquer une température OpenTherm." },
+    "opentherm_hub_not_found": { "message": "La passerelle Wiser indiquée est introuvable." },
+    "opentherm_hub_not_loaded": { "message": "La passerelle Wiser indiquée n’est pas chargée." },
+    "opentherm_hub_required": { "message": "Sélectionnez une passerelle Wiser lorsque plusieurs passerelles sont configurées." },
+    "opentherm_not_supported": { "message": "Cette passerelle ne prend pas en charge OpenTherm." },
+    "opentherm_invalid_parameter": { "message": "Le paramètre ou la valeur OpenTherm n’est pas valide : {error}" },
+    "opentherm_write_failed": { "message": "Impossible de définir le paramètre OpenTherm {parameter} : {error}" },
+    "opentherm_confirmation_failed": { "message": "Le paramètre OpenTherm {parameter} n’est pas resté à {requested} °C après une nouvelle tentative et la fenêtre de confirmation de {window} secondes. Wiser indique {reported} °C. Aucune autre tentative ne sera envoyée." },
+    "opentherm_retry_failed": { "message": "Le paramètre OpenTherm {parameter} n’est pas resté à {requested} °C et la nouvelle tentative n’a pas pu être envoyée : {error}. Wiser indique {reported} °C. Aucune autre tentative ne sera envoyée." },
+    "opentherm_notification_title": { "message": "Commande OpenTherm Wiser" }
+  },
   "entity": {
     "climate": {
       "heating": {

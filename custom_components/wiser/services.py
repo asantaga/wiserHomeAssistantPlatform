@@ -41,8 +41,9 @@ from homeassistant.const import (
     ATTR_MODE,
 )
 from homeassistant.core import HomeAssistant, callback, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.translation import async_get_translations
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -356,6 +357,32 @@ async def async_setup_services(hass: HomeAssistant, data):
             raise HomeAssistantError("This hub does not have hotwater functionality")
 
     async def async_set_opentherm_parameter(service_call):
+        def validation_error(key, **placeholders):
+            """Build a localizable action validation error."""
+            return ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key=key,
+                translation_placeholders={
+                    name: str(value) for name, value in placeholders.items()
+                },
+            )
+
+        async def localized_message(key, fallback, **placeholders):
+            """Render an integration exception string in the HA language."""
+            try:
+                translations = await async_get_translations(
+                    hass,
+                    hass.config.language,
+                    "exceptions",
+                    integrations={DOMAIN},
+                )
+                template = translations.get(
+                    f"component.{DOMAIN}.exceptions.{key}.message", fallback
+                )
+                return template.format(**placeholders)
+            except (KeyError, ValueError):
+                return fallback.format(**placeholders)
+
         endpoint = service_call.data[ATTR_OPENTHERM_ENDPOINT]
         param = service_call.data[ATTR_OPENTHERM_PARAM]
         if ATTR_OPENTHERM_TEMPERATURE in service_call.data:
@@ -364,7 +391,7 @@ async def async_setup_services(hass: HomeAssistant, data):
         elif ATTR_OPENTHERM_PARAM_VALUE in service_call.data:
             value = service_call.data[ATTR_OPENTHERM_PARAM_VALUE]
         else:
-            raise HomeAssistantError("Please provide an OpenTherm temperature")
+            raise validation_error("opentherm_temperature_required")
         request_id = service_call.data.get(ATTR_OPENTHERM_REQUEST_ID)
         hub = service_call.data[ATTR_HUB]
         instance = data
@@ -376,15 +403,15 @@ async def async_setup_services(hass: HomeAssistant, data):
                 else get_config_entry_id_by_name(hass, hub)
             )
             if not config_entry_id:
-                raise HomeAssistantError("The specified Wiser hub was not found")
+                raise validation_error("opentherm_hub_not_found")
             instance = hass.data[DOMAIN].get(config_entry_id, {}).get(DATA)
             if instance is None:
-                raise HomeAssistantError("The specified Wiser hub is not loaded")
+                raise validation_error("opentherm_hub_not_loaded")
         elif get_instance_count(hass) > 1:
-            raise HomeAssistantError("Please specify a hub config entry id or name")
+            raise validation_error("opentherm_hub_required")
 
         if not instance.wiserhub.system.opentherm:
-            raise HomeAssistantError("This hub does not have OpenTherm functionality")
+            raise validation_error("opentherm_not_supported")
         lock = getattr(instance, "_opentherm_write_lock", None)
         if lock is None:
             lock = instance._opentherm_write_lock = asyncio.Lock()
@@ -404,15 +431,17 @@ async def async_setup_services(hass: HomeAssistant, data):
                     instance.wiserhub.system, endpoint, param, value
                 )
             except ValueError as err:
-                raise HomeAssistantError(str(err)) from err
+                raise validation_error(
+                    "opentherm_invalid_parameter", error=err
+                ) from err
             except (
                 WiserHubRESTError,
                 WiserHubConnectionError,
                 WiserHubResponseError,
                 WiserHubAuthenticationError,
             ) as err:
-                raise HomeAssistantError(
-                    f"Unable to set OpenTherm parameter {param}: {err}"
+                raise validation_error(
+                    "opentherm_write_failed", parameter=param, error=err
                 ) from err
 
         async def verify_on_next_update():
@@ -448,12 +477,16 @@ async def async_setup_services(hass: HomeAssistant, data):
                         requested,
                         reported,
                     )
-                    message = (
-                        f"OpenTherm parameter {param} did not remain at "
-                        f"{requested:g} °C after one retry and the "
-                        f"{OPENTHERM_CONFIRMATION_WINDOW}-second confirmation "
-                        f"window. Wiser reports {reported:g} °C. No further "
-                        "retry will be sent."
+                    message = await localized_message(
+                        "opentherm_confirmation_failed",
+                        "OpenTherm parameter {parameter} did not remain at "
+                        "{requested} °C after one retry and the "
+                        "{window}-second confirmation window. Wiser reports "
+                        "{reported} °C. No further retry will be sent.",
+                        parameter=param,
+                        requested=f"{requested:g}",
+                        window=OPENTHERM_CONFIRMATION_WINDOW,
+                        reported=f"{reported:g}",
                     )
                 else:
                     _LOGGER.warning(
@@ -464,12 +497,20 @@ async def async_setup_services(hass: HomeAssistant, data):
                         requested,
                         reported,
                     )
-                    message = (
-                        f"OpenTherm parameter {param} did not remain at "
-                        f"{requested:g} °C, and its retry could not be sent: "
-                        f"{retry_error}. Wiser reports {reported:g} °C. No "
-                        "further retry will be sent."
+                    message = await localized_message(
+                        "opentherm_retry_failed",
+                        "OpenTherm parameter {parameter} did not remain at "
+                        "{requested} °C, and its retry could not be sent: "
+                        "{error}. Wiser reports {reported} °C. No further "
+                        "retry will be sent.",
+                        parameter=param,
+                        requested=f"{requested:g}",
+                        error=retry_error,
+                        reported=f"{reported:g}",
                     )
+                title = await localized_message(
+                    "opentherm_notification_title", "Wiser OpenTherm command"
+                )
                 event_data = {
                     "request_id": request_id,
                     "endpoint": endpoint,
@@ -488,7 +529,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     "persistent_notification",
                     "create",
                     {
-                        "title": "Wiser OpenTherm command",
+                        "title": title,
                         "message": message,
                         "notification_id": (
                             f"wiser_opentherm_{instance.wiserhub.system.name}_{param}"
@@ -560,7 +601,10 @@ async def async_setup_services(hass: HomeAssistant, data):
                             # same event and notification as a rejected value.
                             # Keep watching until the original deadline in case
                             # the first write was merely slow to settle.
-                            retry_error = err
+                            # Keep the transport detail machine-readable in the
+                            # event and notification. The translated wrapper is
+                            # intended for the original foreground action only.
+                            retry_error = err.__cause__ or err
                             continue
                         # Give the retry its own complete confirmation window.
                         # Time spent confirming the original write must not

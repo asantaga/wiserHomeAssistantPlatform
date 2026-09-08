@@ -6,6 +6,7 @@ import inspect
 import json
 from pathlib import Path
 import sys
+from string import Formatter
 from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
@@ -336,6 +337,38 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
                             "{name}", entities[domain][key]["name"]
                         )
 
+    def test_opentherm_action_translations_are_complete(self):
+        paths = (
+            COMPONENT / "strings.json",
+            *sorted((COMPONENT / "translations").glob("*.json")),
+        )
+        reference = json.loads(paths[0].read_text())
+        for path in paths[1:]:
+            with self.subTest(path=path):
+                translated = json.loads(path.read_text())
+                self.assertEqual(
+                    set(translated["services"]["set_opentherm_parameter"]["fields"]),
+                    set(reference["services"]["set_opentherm_parameter"]["fields"]),
+                )
+                self.assertEqual(
+                    set(translated["selector"]["opentherm_parameter"]["options"]),
+                    set(reference["selector"]["opentherm_parameter"]["options"]),
+                )
+                self.assertEqual(
+                    set(translated["exceptions"]), set(reference["exceptions"])
+                )
+                for key, value in reference["exceptions"].items():
+                    reference_fields = {
+                        field for _, field, _, _ in Formatter().parse(value["message"])
+                        if field is not None
+                    }
+                    translated_fields = {
+                        field for _, field, _, _ in Formatter().parse(
+                            translated["exceptions"][key]["message"]
+                        ) if field is not None
+                    }
+                    self.assertEqual(translated_fields, reference_fields)
+
     def test_selected_sensor_options_support_lists_and_legacy_mappings(self):
         self.assertTrue(
             HELPER.opentherm_sensor_is_enabled(None, "ch_flow_temperature")
@@ -464,6 +497,20 @@ class HomeAssistantError(Exception):
     pass
 
 
+class ServiceValidationError(HomeAssistantError):
+    def __init__(
+        self,
+        *,
+        translation_domain,
+        translation_key,
+        translation_placeholders=None,
+    ):
+        super().__init__(translation_key)
+        self.translation_domain = translation_domain
+        self.translation_key = translation_key
+        self.translation_placeholders = translation_placeholders
+
+
 class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
     """Execute the real nested action handler with lightweight HA dependencies."""
 
@@ -502,6 +549,7 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             async_create_task=create_task,
             bus=SimpleNamespace(async_fire=Mock()),
             services=SimpleNamespace(async_call=AsyncMock()),
+            config=SimpleNamespace(language="en"),
             data={"wiser": {
             "first": {"data": self.first}, "second": {"data": self.second},
             }},
@@ -515,6 +563,7 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         self.env = {
             **self.errors,
             "HomeAssistantError": HomeAssistantError,
+            "ServiceValidationError": ServiceValidationError,
             "hass": self.hass, "data": self.first, "DOMAIN": "wiser", "DATA": "data",
             "ATTR_OPENTHERM_ENDPOINT": "endpoint", "ATTR_OPENTHERM_PARAM": "parameter",
             "ATTR_OPENTHERM_PARAM_VALUE": "parameter_value", "ATTR_HUB": "hub",
@@ -530,6 +579,7 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             "parse_parameter_value": HELPER.parse_parameter_value,
             "asyncio": __import__("asyncio"),
             "OPENTHERM_CONFIRMATION_WINDOW": 90,
+            "async_get_translations": AsyncMock(return_value={}),
             "_LOGGER": SimpleNamespace(
                 warning=lambda *args: None, debug=lambda *args: None
             ),
@@ -680,6 +730,14 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
     async def test_persistent_warning_requires_post_retry_mismatch(self):
         del self.hass.data["wiser"]["second"]
         self.env["OPENTHERM_CONFIRMATION_WINDOW"] = 0.2
+        self.env["async_get_translations"].return_value = {
+            "component.wiser.exceptions.opentherm_confirmation_failed.message": (
+                "Translated {parameter}: {requested}/{reported}/{window}"
+            ),
+            "component.wiser.exceptions.opentherm_notification_title.message": (
+                "Translated OpenTherm title"
+            ),
+        }
         self.first.wiserhub.system.name = "Test hub"
         self.first.wiserhub.system.opentherm.hw_flow_setpoint = 35
 
@@ -709,10 +767,11 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(event_data["requested"], 40)
         self.assertEqual(event_data["reported"], 35)
         notification = self.hass.services.async_call.await_args.args[2]
-        self.assertIn("40 °C", notification["message"])
-        self.assertIn("35 °C", notification["message"])
-        self.assertIn("confirmation window", notification["message"])
-        self.assertIn("No further retry", notification["message"])
+        self.assertEqual(notification["title"], "Translated OpenTherm title")
+        self.assertEqual(
+            notification["message"],
+            "Translated dhwFlowSetpoint: 40/35/0.2",
+        )
 
     async def test_background_retry_transport_error_is_reported(self):
         del self.hass.data["wiser"]["second"]
@@ -768,31 +827,40 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
                 self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action.assert_not_awaited()
 
     async def test_missing_multi_hub_selection_is_rejected(self):
-        with self.assertRaisesRegex(HomeAssistantError, "specify a hub"):
+        with self.assertRaises(ServiceValidationError) as raised:
             await self.call()
+        self.assertEqual(raised.exception.translation_key, "opentherm_hub_required")
 
     async def test_invalid_hub_never_falls_back_to_another_hub(self):
         for single_hub in (False, True):
             if single_hub:
                 del self.hass.data["wiser"]["second"]
-            with self.assertRaisesRegex(HomeAssistantError, "not found"):
+            with self.assertRaises(ServiceValidationError) as raised:
                 await self.call("missing")
+            self.assertEqual(
+                raised.exception.translation_key, "opentherm_hub_not_found"
+            )
         self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action.assert_not_awaited()
 
     async def test_missing_opentherm_is_reported(self):
         self.first.wiserhub.system.opentherm = None
-        with self.assertRaisesRegex(HomeAssistantError, "does not have OpenTherm"):
+        with self.assertRaises(ServiceValidationError) as raised:
             await self.call("first")
+        self.assertEqual(raised.exception.translation_key, "opentherm_not_supported")
 
     async def test_unloaded_hub_is_reported_without_writing_to_default(self):
         self.hass.data["wiser"]["second"] = {}
-        with self.assertRaisesRegex(HomeAssistantError, "not loaded"):
+        with self.assertRaises(ServiceValidationError) as raised:
             await self.call("second")
+        self.assertEqual(raised.exception.translation_key, "opentherm_hub_not_loaded")
         self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action.assert_not_awaited()
 
     async def test_bad_value_becomes_an_action_error(self):
-        with self.assertRaisesRegex(HomeAssistantError, "must not be empty"):
+        with self.assertRaises(ServiceValidationError) as raised:
             await self.call("first", "")
+        self.assertEqual(
+            raised.exception.translation_key, "opentherm_invalid_parameter"
+        )
         self.first.async_refresh.assert_not_awaited()
 
     async def test_library_errors_are_reported_including_wrapped_404(self):
@@ -801,8 +869,18 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             with self.subTest(error_class=error_class):
                 error = error_class("Rest endpoint not found")
                 transport.side_effect = error
-                with self.assertRaisesRegex(HomeAssistantError, "dhwFlowSetpoint: Rest endpoint not found") as raised:
+                with self.assertRaises(ServiceValidationError) as raised:
                     await self.call("first")
+                self.assertEqual(
+                    raised.exception.translation_key, "opentherm_write_failed"
+                )
+                self.assertEqual(
+                    raised.exception.translation_placeholders,
+                    {
+                        "parameter": "dhwFlowSetpoint",
+                        "error": "Rest endpoint not found",
+                    },
+                )
                 self.assertIs(raised.exception.__cause__, error)
         self.first.async_refresh.assert_not_awaited()
 
