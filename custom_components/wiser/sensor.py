@@ -363,7 +363,6 @@ class WiserSensor(CoordinatorEntity, SensorEntity):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-
 class WiserBatterySensor(WiserSensor):
     """Definition of a battery sensor for wiser iTRVs and RoomStats."""
 
@@ -435,7 +434,6 @@ class WiserBatterySensor(WiserSensor):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-
 class WiserDeviceSignalSensor(WiserSensor):
     """Definition of Wiser Device Sensor."""
 
@@ -480,8 +478,7 @@ class WiserDeviceSignalSensor(WiserSensor):
 
     @property
     def device_info(self):
-        """Return device specific attributes."""
-               
+        """Return device specific attributes."""               
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
@@ -705,7 +702,6 @@ class WiserSystemHotWaterPreset(WiserSensor):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-
 class WiserSystemCircuitState(WiserSensor):
     """Definition of a Hotwater/Heating circuit state sensor."""
 
@@ -815,7 +811,6 @@ class WiserSystemCircuitState(WiserSensor):
             "model": HOT_WATER.title(),
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
-
 
 class WiserSystemCloudSensor(WiserSensor):
     """Sensor to display the status of the Wiser Cloud."""
@@ -927,7 +922,6 @@ class WiserCurrentVoltageSensor(WiserSensor):
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
-
 
 class WiserSmartplugPower(WiserSensor):
     """Sensor for the power of a Wiser SmartPlug."""
@@ -1640,7 +1634,6 @@ class WiserThresholdSensor(WiserSensor):
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
 
-
 class WiserThresholdLightLevelSensor(WiserThresholdSensor):
     """Sensor for light level of threshold devices."""
 
@@ -1762,6 +1755,7 @@ class WiserEquipmentSensor(WiserSensor):
             "sw_version": self._device.firmware_version,
             "via_device": (DOMAIN, self._data.wiserhub.system.name),
         }
+    
     @property
     def extra_state_attributes(self):
         """Return device state attributes."""
