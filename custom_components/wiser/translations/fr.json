@@ -7,6 +7,7 @@
         "description": "Entrez l'adresse IP et la clé secrète SVP.",
         "data": {
           "host": "Adresse IP ou nom d'hote",
+          "port": "Numéro de port",
           "password": "Clé Secrète"
         }
       },
@@ -15,13 +16,15 @@
         "description": "Entrez la clé secrète obtenue de la Box Wiser.",
         "data": {
           "host": "Adresse IP ou nom d'hote",
+          "port": "Numéro de port",
           "password": "Clé Secrète"
         }
       }
     },
     "abort": {
       "already_in_progress": "La configuration de la box Wiser est déjà en cours.",
-      "already_configured": "Cet équipement est déjà configuré."
+      "already_configured": "Cet équipement est déjà configuré.",
+      "not_wiser_hub": "L’appareil détecté n’est pas une passerelle Wiser."
     },
     "error": {
       "auth_failure": "Authentification après de la Wiser Box impossible. Controlez la clé secrète et rééssayez.",
@@ -37,7 +40,6 @@
         "description": "Réglages des paramètres Wiser.",
         "menu_options": {
           "main_params": "Paramètres principaux",
-          "hw_climate_params": "Paramètres climatiques de l'eau chaude",
           "automation_params": "Paramètres d'automatisation",
           "opentherm_sensors": "Capteurs OpenTherm"
         }
@@ -47,6 +49,7 @@
         "description": "Paramètres principaux",
         "data": {
           "host": "Adresse IP ou nom d'hote",
+          "port": "Numéro de port",
           "scan_interval": " Période d'acquisition",
           "heating_boost_temp": "Défault temperature de boost chauffage",
           "heating_boost_time": "Défault durée de boost chauffage",
@@ -55,24 +58,30 @@
           "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée"
         }
       },
-      "hw_climate_params": {
-        "title": "Wiser possibilités d'intégration",
-        "description": "Paramètres climatiques de l'eau chaude",
-        "data": {
-          "hotwater_climate": "Activer l'entité climatique",
-          "experimental_mode": "Activer le mode de travail expérimental",
-          "hotwater_auto_mode": "Mode automatique d'eau chaude",
-          "hotwater_heat_mode": "Mode de chauffage de l'eau chaude",
-          "hotwater_sensor_entity_id": "Capteur de température d'eau chaude",
-          "hotwater_schedule_mode": "Mode de programmation d'eau chaude"
-        }
-      },
       "automation_params": {
         "title": "Wiser possibilités d'intégration",
         "description": "Activer les automatisations intégrées",
-        "data": {
-          "automations_passive_mode": "Mode passif",
-          "passive_mode_temperature_increments": "Incréments de température en mode passif"
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Mode passif",
+            "description": "Active la fonction TRV passive. Elle doit être activée individuellement pour chaque pièce.",
+            "data": {
+              "automations_passive_mode": "Mode passif",
+              "passive_mode_temperature_increments": "Incréments de température du mode passif"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Commande climatique de l’eau chaude",
+            "description": "Active la commande climatique de l’eau chaude. Consultez le wiki pour plus de détails.",
+            "data": {
+              "hotwater_climate": "Activer l’entité climatique",
+              "experimental_mode": "Activer le mode de fonctionnement expérimental",
+              "hotwater_auto_mode": "Mode automatique de l’eau chaude",
+              "hotwater_heat_mode": "Mode chauffage de l’eau chaude",
+              "hotwater_boost_mode": "Mode boost de l’eau chaude",
+              "hotwater_sensor_entity_id": "Capteur de température de l’eau chaude"
+            }
+          }
         }
       },
       "opentherm_sensors": {

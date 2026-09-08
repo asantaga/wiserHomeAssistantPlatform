@@ -7,6 +7,7 @@
         "description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "password": "API Schl\u00fcssel"
         }
       },
@@ -15,13 +16,15 @@
         "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "password": "API Schl\u00fcssel"
         }
       }
     },
     "abort": {
       "already_in_progress": "Der Konfigurationsablauf f\u00fcr Wiser Heat Hub wird bereits ausgef\u00fchrt.",
-      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert."
+      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert.",
+      "not_wiser_hub": "Das erkannte Gerät ist kein Wiser Heat Hub."
     },
     "error": {
       "auth_failure": "Authentifizierung mit Wiser Heat Hub fehlgeschlagen. Pr\u00fcfe den API Key und versuche es erneut.",
@@ -37,7 +40,6 @@
         "description": "Wiser-Parameter ändern.",
         "menu_options": {
           "main_params": "Hauptparameter",
-          "hw_climate_params": "Warmwasser-Klimaparameter",
           "automation_params": "Aktivieren Sie integrierte Automatisierungen",
           "opentherm_sensors": "OpenTherm-Sensoren"
         }
@@ -47,6 +49,7 @@
         "description": "Hauptparameter",
         "data": {
           "host": "IP Adresse",
+          "port": "Portnummer",
           "scan_interval": "Scan Intervall",
           "heating_boost_temp": "Boost Temperatur",
           "heating_boost_time": "Boost Dauer",
@@ -55,23 +58,30 @@
           "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist"
         }
       },
-      "hw_climate_params": {
-        "title": "Wiser Integrationsoptionen",
-        "description": "Warmwasser-Klimaparameter",
-        "data": {
-          "hotwater_climate": "Aktivieren Sie die Climate-Entität",
-          "experimental_mode": "Aktivieren Sie den experimentellen Arbeitsmodus",
-          "hotwater_auto_mode": "Warmwasser-Automatikmodus",
-          "hotwater_heat_mode": "Warmwasser-Heizmodus",
-          "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
-        }
-      },
       "automation_params": {
         "title": "Wiser Integrationsoptionen",
         "description": "Aktivieren Sie integrierte Automatisierungen",
-        "data": {
-          "automations_passive_mode": "Passivmodus",
-          "passive_mode_temperature_increments": "Temperaturerhöhungen im passiven Modus"
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passivmodus",
+            "description": "Aktiviert die passive TRV-Funktion. Sie muss für jeden Raum einzeln aktiviert werden.",
+            "data": {
+              "automations_passive_mode": "Passivmodus",
+              "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Warmwasser-Klimasteuerung",
+            "description": "Aktiviert die Warmwasser-Klimasteuerung. Weitere Informationen finden Sie im Wiki.",
+            "data": {
+              "hotwater_climate": "Climate-Entität aktivieren",
+              "experimental_mode": "Experimentellen Betriebsmodus aktivieren",
+              "hotwater_auto_mode": "Warmwasser-Automatikmodus",
+              "hotwater_heat_mode": "Warmwasser-Heizmodus",
+              "hotwater_boost_mode": "Warmwasser-Boost-Modus",
+              "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
+            }
+          }
         }
       },
       "opentherm_sensors": {

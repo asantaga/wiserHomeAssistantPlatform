@@ -72,6 +72,37 @@ class EntityNamingTest(unittest.TestCase):
                 self.assertIsInstance(value, ast.Constant, class_name)
                 self.assertTrue(value.value, class_name)
 
+    def test_flow_translation_catalogues_have_matching_keys(self) -> None:
+        """Every language must describe the live config and options flows."""
+
+        def key_paths(value, prefix=()):
+            paths = set()
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    path = (*prefix, key)
+                    paths.add(path)
+                    paths.update(key_paths(child, path))
+            return paths
+
+        catalogues = (
+            COMPONENT_PATH / "strings.json",
+            *sorted((COMPONENT_PATH / "translations").glob("*.json")),
+        )
+        reference = json.loads(catalogues[0].read_text())
+        expected = key_paths(
+            {section: reference[section] for section in ("config", "options")}
+        )
+        for path in catalogues[1:]:
+            with self.subTest(path=path):
+                translated = json.loads(path.read_text())
+                actual = key_paths(
+                    {
+                        section: translated[section]
+                        for section in ("config", "options")
+                    }
+                )
+                self.assertEqual(actual, expected)
+
     def test_names_do_not_embed_device_or_room_names(self) -> None:
         forbidden_helpers = {"get_device_name", "get_room_name"}
         for filename in ENTITY_BASE_CLASSES:
