@@ -195,12 +195,15 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertEqual(HELPER.opentherm_sensor_value(opentherm, key), value)
 
-    def test_estimated_output_requires_capacity_and_modulation(self):
+    def test_estimated_output_accounts_for_minimum_modulation_and_flame(self):
         opentherm = SimpleNamespace(
             operational_data=SimpleNamespace(
+                slave_status=8,
                 json_data={
                     "MaximumCapacityKw": 30,
-                    "RelativeModulationLevel": 425,
+                    "MinimumModulationLevel": 27,
+                    "RelativeModulationLevel": 52,
+                    "SlaveStatus": 8,
                 }
             )
         )
@@ -211,7 +214,14 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
         )
         self.assertEqual(
             HELPER.opentherm_sensor_value(opentherm, "estimated_boiler_output"),
-            12.75,
+            9.24,
+        )
+
+        opentherm.operational_data.json_data["SlaveStatus"] = 0
+        opentherm.operational_data.slave_status = 0
+        self.assertEqual(
+            HELPER.opentherm_sensor_value(opentherm, "estimated_boiler_output"),
+            0,
         )
 
         del opentherm.operational_data.json_data["RelativeModulationLevel"]
@@ -327,7 +337,12 @@ class OpenThermSensorDiscoveryTest(unittest.TestCase):
         )
         self.assertEqual(
             HELPER.OPENTHERM_SENSOR_DEPENDENCIES["estimated_boiler_output"],
-            {"maximum_capacity_kw", "relative_modulation_level"},
+            {
+                "flame_active",
+                "maximum_capacity_kw",
+                "minimum_modulation_level",
+                "relative_modulation_level",
+            },
         )
 
 

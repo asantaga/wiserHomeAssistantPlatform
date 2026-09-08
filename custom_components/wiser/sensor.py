@@ -62,6 +62,7 @@ from .helpers import (
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
     OPENTHERM_DERIVED_SENSOR_KEYS,
+    OPENTHERM_SENSOR_DEPENDENCIES,
     OPENTHERM_SENSOR_NAMES,
     OPENTHERM_SENSOR_PATHS,
     detected_opentherm_sensor_keys,
@@ -216,11 +217,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             opentherm_sensor_is_enabled(
                 configured_sensors, "estimated_boiler_output"
             )
-            and opentherm_sensor_is_enabled(
-                configured_sensors, "maximum_capacity_kw"
-            )
-            and opentherm_sensor_is_enabled(
-                configured_sensors, "relative_modulation_level"
+            and all(
+                opentherm_sensor_is_enabled(configured_sensors, dependency)
+                for dependency in OPENTHERM_SENSOR_DEPENDENCIES[
+                    "estimated_boiler_output"
+                ]
             )
         ):
             wiser_sensors.append(

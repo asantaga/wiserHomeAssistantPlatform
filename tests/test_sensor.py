@@ -131,8 +131,13 @@ def _load_sensor_module() -> ModuleType:
         if key == "relative_modulation_level":
             return relative_modulation_level(opentherm)
         if key == "estimated_boiler_output":
-            capacity = opentherm.operational_data.json_data["MaximumCapacityKw"]
-            return round(capacity * relative_modulation_level(opentherm) / 100, 2)
+            data = opentherm.operational_data.json_data
+            if not data["SlaveStatus"] & 8:
+                return 0
+            minimum = data["MinimumModulationLevel"]
+            modulation = relative_modulation_level(opentherm)
+            effective = minimum + modulation * (100 - minimum) / 100
+            return round(data["MaximumCapacityKw"] * effective / 100, 2)
         if key == "coprocessor_version":
             return opentherm.json_data.get("CoprocessorVersion")
         if key == "coprocessor_update_status":
@@ -160,6 +165,16 @@ def _load_sensor_module() -> ModuleType:
         OPENTHERM_DERIVED_SENSOR_KEYS=frozenset(
             {"delta_t", "estimated_boiler_output", "flame_statistics"}
         ),
+        OPENTHERM_SENSOR_DEPENDENCIES={
+            "estimated_boiler_output": frozenset(
+                {
+                    "flame_active",
+                    "maximum_capacity_kw",
+                    "minimum_modulation_level",
+                    "relative_modulation_level",
+                }
+            )
+        },
         OPENTHERM_SENSOR_NAMES={
             "ch1_flow_enabled": "CH1 flow enabled",
             "ch_pressure_bar": "CH pressure",
@@ -557,7 +572,9 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
     def test_estimated_boiler_output_uses_capacity_and_modulation(self):
         self.opentherm.operational_data.json_data = {
             "MaximumCapacityKw": 30,
-            "RelativeModulationLevel": 425,
+            "MinimumModulationLevel": 27,
+            "RelativeModulationLevel": 52,
+            "SlaveStatus": 8,
         }
         sensor = self.sensor_module.WiserOpenThermAttributeSensor(
             self.data, "estimated_boiler_output"
@@ -566,11 +583,15 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
 
         sensor._handle_coordinator_update()
 
-        self.assertEqual(sensor.native_value, 12.75)
+        self.assertEqual(sensor.native_value, 9.24)
         self.assertEqual(sensor.native_unit_of_measurement, "kW")
         self.assertEqual(sensor.device_class, "power")
         self.assertEqual(sensor.state_class, "measurement")
         self.assertEqual(sensor.icon, "mdi:flash")
+
+        self.opentherm.operational_data.json_data["SlaveStatus"] = 0
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.native_value, 0)
 
     def test_coprocessor_fields_are_diagnostic_sensors(self):
         self.opentherm.json_data = {

@@ -157,7 +157,12 @@ OPENTHERM_DERIVED_SENSOR_KEYS = frozenset(
 OPENTHERM_SENSOR_DEPENDENCIES = {
     "delta_t": frozenset({"ch_flow_temperature", "ch_return_temperature"}),
     "estimated_boiler_output": frozenset(
-        {"maximum_capacity_kw", "relative_modulation_level"}
+        {
+            "flame_active",
+            "maximum_capacity_kw",
+            "minimum_modulation_level",
+            "relative_modulation_level",
+        }
     ),
     "flame_statistics": frozenset({"flame_active"}),
 }
@@ -315,17 +320,31 @@ def opentherm_sensor_value(opentherm, key):
             return None
         return round(flow - return_temperature, 1)
     if key == "estimated_boiler_output":
-        capacity = opentherm.operational_data.json_data.get("MaximumCapacityKw")
+        operational_data = opentherm.operational_data.json_data
+        capacity = operational_data.get("MaximumCapacityKw")
+        minimum_modulation = operational_data.get("MinimumModulationLevel")
         modulation = relative_modulation_level(opentherm)
         if (
             isinstance(capacity, bool)
             or not isinstance(capacity, (int, float))
             or not math.isfinite(capacity)
             or capacity < 0
+            or isinstance(minimum_modulation, bool)
+            or not isinstance(minimum_modulation, (int, float))
+            or not math.isfinite(minimum_modulation)
+            or not 0 <= minimum_modulation <= 100
             or modulation is None
         ):
             return None
-        return round(capacity * modulation / 100, 2)
+        flame_active = opentherm_sensor_value(opentherm, "flame_active")
+        if flame_active is None:
+            return None
+        if not flame_active:
+            return 0
+        effective_modulation = minimum_modulation + (
+            modulation * (100 - minimum_modulation) / 100
+        )
+        return round(capacity * effective_modulation / 100, 2)
     if key in OPENTHERM_RAW_SENSOR_FIELDS:
         value = opentherm.operational_data.json_data.get(
             OPENTHERM_RAW_SENSOR_FIELDS[key]
@@ -388,7 +407,9 @@ def detected_opentherm_sensor_keys(opentherm):
     raw_operational_data = getattr(opentherm.operational_data, "json_data", {})
     if {
         "MaximumCapacityKw",
+        "MinimumModulationLevel",
         "RelativeModulationLevel",
+        "SlaveStatus",
     }.issubset(raw_operational_data):
         detected.append("estimated_boiler_output")
     return detected
