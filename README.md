@@ -31,17 +31,6 @@ For more information checkout the AMAZING community thread available on
 ## Change log
 
 - v3.4.20
-  - Add an OpenTherm relative modulation level sensor on the HeatHub, preserving zero and fractional percentage readings in both the sensor and existing attributes.
-  - Fix OpenTherm parameter writes on generation-2 hubs by selecting the firmware-appropriate endpoint. Preserve numeric and boolean parameter types, refresh the selected hub, and surface API failures as action errors.
-  - Verify supported OpenTherm temperature writes for 90 seconds, retry a mismatch once, then publish a generic `wiser_opentherm_command_failed` event and persistent warning if the retried value still does not stick. Optional request IDs allow callers to correlate the asynchronous result without Wiser depending on them.
-  - Adopt Home Assistant's modern entity naming so device and room prefixes are supplied contextually by Home Assistant.
-  - Use concise HeatHub device names, adding a physical MAC suffix only when multiple hubs are loaded, and include that suffix in IDs suggested for new hub entities without duplicating Home Assistant's device prefix.
-  - Represent Wiser rooms as `Wiser Heating` devices in their matching Home Assistant areas, using stable room-ID identifiers and entity-only measurement names. New physical devices also suggest their matching Wiser room as the Home Assistant area without overriding later user choices.
-  - Display physical temperature/humidity sensors with the concise `Wiser Temperature/Humidity Sensor` name while preserving their existing device-registry identifiers.
-  - Present smart plugs as outlets and remove duplicate Hub V2 equipment readings while retaining the established `Equipment Power` and `Equipment Total Energy` IDs for the canonical readings.
-  - Name room thermostats `Wiser Thermostat`, relying on their Home Assistant area for room context instead of repeating the room name.
-  - Merge the virtual Wiser Controller into the physical HeatHub device in Home Assistant.
-  - Display the built-in Wiser frost-protection target for room climate entities and target-temperature sensors while heating is off.
   - Added equipment data to smart plugs, heating actuators, and PowerTag E devices.
   - Added LED-indicator support for on/off and dimmable lights.
   - Added seasonal-comfort controls, including the target lift for shutters.
