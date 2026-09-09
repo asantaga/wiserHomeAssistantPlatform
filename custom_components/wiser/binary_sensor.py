@@ -135,7 +135,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Binary sensors active
     for device in data.wiserhub.devices.binary_sensor.all:
-        binary_sensors.extend([BaseBinarySensor(data, device.id, "Active")])
+        binary_sensors.extend(
+            [
+                #BaseBinarySensor(data, device.id, "Active"),
+                WiserStateActive(data, device.id, "Active"),
+            ]
+        )
 
     async_add_entities(binary_sensors, True)
 
@@ -513,12 +518,20 @@ class WiserStateActive(BaseBinarySensor):
     def extra_state_attributes(self):
         """Return the state attributes of WindowDoor sensor."""
         attrs = {}   
-        if self._data.wiserhub.devices.binary_sensor.get_by_id(
+
+        match self._data.wiserhub.devices.binary_sensor.get_by_id(
                 self._device_id
-            ).type == "Door"  :   
-            attrs["device_class"] = BinarySensorDeviceClass.DOOR
-        else:  attrs["device_class"] = BinarySensorDeviceClass.WINDOW 
-        attrs["type"] = self._data.wiserhub.devices.binary_sensor.get_by_id(
-                self._device_id
-            ).type 
+            ).product_type:
+            case ('WindowDoorSensor'):     
+                if self._data.wiserhub.devices.binary_sensor.get_by_id(
+                        self._device_id
+                    ).type == "Door"  :   
+                    attrs["device_class"] = BinarySensorDeviceClass.DOOR
+                else:  
+                    attrs["device_class"] = BinarySensorDeviceClass.WINDOW
+
+                attrs["type"] = self._data.wiserhub.devices.binary_sensor.get_by_id(
+                        self._device_id
+                    ).type 
+                
         return attrs
