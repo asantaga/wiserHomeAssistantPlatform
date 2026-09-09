@@ -69,10 +69,16 @@ def _load_light_module() -> ModuleType:
     _module(
         "wiser.helpers",
         get_device_name=lambda *_a, **_k: "Wiser Light",
+        get_hub_via_device_info=lambda _data: {},
         get_identifier=lambda *_a, **_k: "identifier",
         get_unique_id=lambda *_a, **_k: "unique-id",
         hub_error_handler=hub_error_handler,
     )
+
+    class WiserEntityMixin:
+        pass
+
+    _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
 
     class WiserScheduleEntity:
         pass

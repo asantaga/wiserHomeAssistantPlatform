@@ -7,8 +7,15 @@ from .const import (
     HOT_WATER,
     MANUFACTURER,
 )
+from .entity import WiserEntityMixin
 
-from .helpers import get_device_name, get_unique_id, get_identifier, hub_error_handler
+from .helpers import (
+    get_device_name,
+    get_hub_via_device_info,
+    get_unique_id,
+    get_identifier,
+    hub_error_handler,
+)
 from .schedules import WiserScheduleEntity
 
 from homeassistant.components.select import SelectEntity
@@ -67,15 +74,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     async_add_entities(wiser_selects)
 
 
-class WiserSelectEntity(CoordinatorEntity, SelectEntity):
+class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "mode"
+
     def __init__(self, coordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
-        _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initalise")
+        _LOGGER.debug(
+            f"{self._data.wiserhub.system.name} {self._attr_translation_key} initialise"
+        )
 
     async def async_force_update(self, delay: int = 0):
-        _LOGGER.debug(f"Hub update initiated by {self.name}")
+        _LOGGER.debug(f"Hub update initiated by {self._attr_translation_key}")
         if delay:
             asyncio.sleep(delay)
         await self._data.async_refresh()
@@ -83,12 +95,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"{self.name} updating")
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, self._device_id)} Mode"
+        _LOGGER.debug(f"{self._attr_translation_key} updating")
 
     @property
     def options(self) -> list[str]:
@@ -129,7 +136,7 @@ class WiserSelectEntity(CoordinatorEntity, SelectEntity):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
@@ -150,11 +157,6 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self._hotwater = self._data.wiserhub.hotwater
         self._schedule = self._hotwater.schedule
         self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return f"{get_device_name(self._data, 0, 'Hot Water')} Mode"
 
     @property
     def current_option(self) -> str:
@@ -188,7 +190,7 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
 
@@ -289,6 +291,7 @@ class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
 
 
 class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
+    _attr_translation_key = "power_on_behavior"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         # See WiserLightModeSelect: resolve by the unique per-channel light_id.
@@ -340,6 +343,7 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
 
 
 class WiserLightLedIndicatorSelect(WiserSelectEntity):
+    _attr_translation_key = "led_indicator"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         # See WiserLightModeSelect: resolve by the unique per-channel light_id.

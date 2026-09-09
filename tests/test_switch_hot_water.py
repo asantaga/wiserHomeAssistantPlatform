@@ -31,7 +31,11 @@ def _load_switch_module() -> ModuleType:
     class SwitchEntity:
         pass
 
-    _module("homeassistant.components.switch", SwitchEntity=SwitchEntity)
+    _module(
+        "homeassistant.components.switch",
+        SwitchDeviceClass=SimpleNamespace(OUTLET="outlet"),
+        SwitchEntity=SwitchEntity,
+    )
     _module("homeassistant.const", ATTR_ENTITY_ID="entity_id")
     _module("homeassistant.helpers")
     _module("homeassistant.helpers.config_validation", entity_id=lambda x: x)
@@ -64,11 +68,21 @@ def _load_switch_module() -> ModuleType:
         get_device_name=lambda _data, device_id, device_type="device": (
             "Hot Water" if device_type == "Hot Water" else "Wiser HeatHub"
         ),
+        get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
+        get_hub_via_device_info=lambda _data: {},
         get_room_name=lambda *_args: "Room",
         get_identifier=lambda *_args: "identifier",
+        get_legacy_device_name=lambda *_args, **_kwargs: "Wiser HeatHub",
+        get_legacy_unique_id=lambda *_args: "legacy-unique-id",
         get_unique_id=lambda *_args: "unique-id",
+        get_uuid_unique_id=lambda *_args: "uuid-unique-id",
         hub_error_handler=hub_error_handler,
     )
+
+    class WiserEntityMixin:
+        pass
+
+    _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
 
     class WiserScheduleEntity:
         pass

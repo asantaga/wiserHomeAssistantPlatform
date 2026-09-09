@@ -94,11 +94,14 @@ CONF_AUTOMATIONS_HW_HEAT_MODE = "hotwater_heat_mode"
 CONF_AUTOMATIONS_HW_BOOST_MODE = "hotwater_boost_mode"
 CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
 CONF_DEPRECATED_HW_TARGET_TEMP = "hotwater_target_temperature"
+CONF_OPENTHERM_SENSORS = "opentherm_sensors"
 
 # Custom Attributes
 ATTR_OPENTHERM_ENDPOINT = "endpoint"
 ATTR_OPENTHERM_PARAM = "parameter"
 ATTR_OPENTHERM_PARAM_VALUE = "parameter_value"
+ATTR_OPENTHERM_TEMPERATURE = "temperature"
+ATTR_OPENTHERM_REQUEST_ID = "request_id"
 ATTR_HUB = "hub"
 ATTR_TIME_PERIOD = "time_period"
 ATTR_FILENAME = "filename"
@@ -106,6 +109,9 @@ ATTR_TO_ENTITY_ID = "to_entity_id"
 ATTR_SCHEDULE_ID = "schedule_id"
 ATTR_SCHEDULE_NAME = "schedule_name"
 ATTR_SCHEDULE = "schedule"
+
+# Events
+EVENT_OPENTHERM_COMMAND_FAILED = "wiser_opentherm_command_failed"
 
 
 # Signal icons

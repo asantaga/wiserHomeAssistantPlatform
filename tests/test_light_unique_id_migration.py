@@ -46,7 +46,9 @@ def _load_helpers_module() -> ModuleType:
 
     package = _module("wiser")
     package.__path__ = []
-    _module("wiser.const", DOMAIN="wiser", ENTITY_PREFIX=ENTITY_PREFIX)
+    _module(
+        "wiser.const", DOMAIN="wiser", ENTITY_PREFIX=ENTITY_PREFIX, MANUFACTURER="Drayton"
+    )
 
     spec = importlib.util.spec_from_file_location("wiser.helpers", SOURCE_PATH)
     assert spec and spec.loader
@@ -111,44 +113,61 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
     def _mapping(self):
         return self.helpers.build_light_unique_id_migration(_hub_data())
 
+    def _unique_id(self, device_type, entity_type, device_id):
+        return self.helpers.get_unique_id(_hub_data(), device_type, entity_type, device_id)
+
     def test_light_entity_maps_name_to_light_id(self) -> None:
         mapping = self._mapping()
-        old = f"{SYSTEM_NAME}-device-light-Wiser DimmableLight Diele Diele Light"
-        self.assertEqual(mapping[old], f"{SYSTEM_NAME}-device-light-1")
+        old = self._unique_id(
+            "device", "light", "Wiser DimmableLight Diele Diele Light"
+        )
+        self.assertEqual(mapping[old], self._unique_id("device", "light", 1))
 
     def test_selects_map_device_id_to_light_id(self) -> None:
         mapping = self._mapping()
         for kind in ("mode-select", "led-indicator", "power_on_behaviour_select"):
-            old = f"{SYSTEM_NAME}-DimmableLight-{kind}-101"
-            self.assertEqual(mapping[old], f"{SYSTEM_NAME}-DimmableLight-{kind}-1")
+            old = self._unique_id("DimmableLight", kind, 101)
+            self.assertEqual(mapping[old], self._unique_id("DimmableLight", kind, 1))
 
     def test_away_switch_maps_name_and_id(self) -> None:
         mapping = self._mapping()
-        old = (
-            f"{SYSTEM_NAME}-DimmableLight-"
-            "Wiser DimmableLight Diele Diele Away Mode Turns Off-101"
+        old = self._unique_id(
+            "DimmableLight",
+            "Wiser DimmableLight Diele Diele Away Mode Turns Off",
+            101,
         )
-        new = f"{SYSTEM_NAME}-DimmableLight-Wiser Diele Away Mode Turns Off-1"
+        new = self._unique_id(
+            "DimmableLight", "Wiser Diele Away Mode Turns Off", 1
+        )
         self.assertEqual(mapping[old], new)
 
     def test_capability_binary_sensors_map_name(self) -> None:
         mapping = self._mapping()
-        old = f"{SYSTEM_NAME}-binary_sensor-Is Dimmable-Wiser DimmableLight Diele Diele Is Dimmable"
-        new = f"{SYSTEM_NAME}-binary_sensor-Is Dimmable-Wiser Diele Is Dimmable"
+        old = self._unique_id(
+            "binary_sensor",
+            "Is Dimmable",
+            "Wiser DimmableLight Diele Diele Is Dimmable",
+        )
+        new = self._unique_id(
+            "binary_sensor", "Is Dimmable", "Wiser Diele Is Dimmable"
+        )
         self.assertEqual(mapping[old], new)
 
     def test_no_room_light_uses_type_and_name(self) -> None:
         mapping = self._mapping()
-        old = f"{SYSTEM_NAME}-device-light-Wiser OnOffLight Flur Light"
-        self.assertEqual(mapping[old], f"{SYSTEM_NAME}-device-light-2")
+        old = self._unique_id("device", "light", "Wiser OnOffLight Flur Light")
+        self.assertEqual(mapping[old], self._unique_id("device", "light", 2))
 
     def test_multi_gang_channels_are_skipped(self) -> None:
         mapping = self._mapping()
         # No mapping may reference the shared physical device id 200 ...
-        self.assertFalse(any("-200" in key for key in mapping))
+        for kind in ("mode-select", "led-indicator", "power_on_behaviour_select"):
+            shared_id = self._unique_id("DimmableLight", kind, 200)
+            self.assertNotIn(shared_id, mapping)
+            self.assertNotIn(shared_id, mapping.values())
         # ... nor target the multi-gang channels' light_ids (3, 4).
-        self.assertNotIn(f"{SYSTEM_NAME}-device-light-3", mapping.values())
-        self.assertNotIn(f"{SYSTEM_NAME}-device-light-4", mapping.values())
+        self.assertNotIn(self._unique_id("device", "light", 3), mapping.values())
+        self.assertNotIn(self._unique_id("device", "light", 4), mapping.values())
 
     def test_no_noop_entries_and_exact_count(self) -> None:
         mapping = self._mapping()
