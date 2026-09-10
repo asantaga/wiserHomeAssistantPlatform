@@ -33,6 +33,24 @@ class EntityEntry:
     device_id: str | None
 
 
+@dataclass
+class AreaEntry:
+    """Minimal area-registry entry used by the tests."""
+
+    id: str
+
+
+class AreaRegistry:
+    """Minimal Home Assistant area registry."""
+
+    def __init__(self) -> None:
+        self.requested = []
+
+    def async_get_or_create(self, name):
+        self.requested.append(name)
+        return AreaEntry(name.lower().replace(" ", "_"))
+
+
 class EntityRegistry:
     """Minimal Home Assistant entity registry."""
 
@@ -245,6 +263,41 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
         )
 
 
+class AssignDeviceAreaIfUnsetTest(unittest.TestCase):
+    """Test conservative assignment of Wiser devices to areas."""
+
+    def test_assigns_unassigned_device_to_wiser_room_area(self) -> None:
+        device_registry = DeviceRegistry()
+        area_registry = AreaRegistry()
+
+        result = DEVICE.assign_device_area_if_unset(
+            device_registry,
+            area_registry,
+            DeviceEntry("room-device"),
+            "Andys Bedroom",
+        )
+
+        self.assertEqual(area_registry.requested, ["Andys Bedroom"])
+        self.assertEqual(
+            device_registry.updated,
+            [("room-device", {"area_id": "andys_bedroom"})],
+        )
+        self.assertEqual(result.id, "room-device")
+
+    def test_preserves_existing_user_area(self) -> None:
+        device_registry = DeviceRegistry()
+        area_registry = AreaRegistry()
+        device = DeviceEntry("room-device", area_id="custom_area")
+
+        result = DEVICE.assign_device_area_if_unset(
+            device_registry, area_registry, device, "Andys Bedroom"
+        )
+
+        self.assertIs(result, device)
+        self.assertEqual(area_registry.requested, [])
+        self.assertEqual(device_registry.updated, [])
+
+
 class MigrateRoomDeviceTest(unittest.TestCase):
     """Test migration of logical Wiser room devices."""
 
@@ -311,3 +364,25 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             [("sensor.temperature", {"device_id": "stable-room"})],
         )
         self.assertEqual(registry.removed, ["legacy-room"])
+
+    def test_preserves_legacy_area_when_merging_duplicate_room(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.identifier, self.config_entry_id): DeviceEntry("stable-room"),
+                (self.legacy_identifier, self.config_entry_id): DeviceEntry(
+                    "legacy-room", area_id="custom_area"
+                ),
+            }
+        )
+
+        DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Room",
+        )
+
+        self.assertEqual(registry.updated[0][0], "stable-room")
+        self.assertEqual(registry.updated[0][1]["area_id"], "custom_area")
