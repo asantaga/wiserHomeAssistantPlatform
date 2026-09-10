@@ -1,6 +1,17 @@
 """Device registry helpers for the Wiser integration."""
 
 
+def assign_device_area_if_unset(
+    device_registry, area_registry, device, suggested_area
+):
+    """Assign a device to its Wiser room without overriding a user area."""
+    if device is None or device.area_id is not None or not suggested_area:
+        return device
+
+    area = area_registry.async_get_or_create(suggested_area)
+    return device_registry.async_update_device(device.id, area_id=area.id)
+
+
 def register_room_assigned_device(
     device_registry,
     config_entry_id,
@@ -122,9 +133,14 @@ def migrate_room_device(
         )
 
     if room_device is not None:
-        device_registry.async_update_device(
-            room_device.id, new_identifiers={identifier}, name=name
-        )
+        updates = {"new_identifiers": {identifier}, "name": name}
+        if (
+            room_device.area_id is None
+            and legacy_device is not None
+            and legacy_device.area_id is not None
+        ):
+            updates["area_id"] = legacy_device.area_id
+        room_device = device_registry.async_update_device(room_device.id, **updates)
         if legacy_device is not None and legacy_device.id != room_device.id:
             for entity in list(entity_registry.entities.values()):
                 if entity.device_id == legacy_device.id:
