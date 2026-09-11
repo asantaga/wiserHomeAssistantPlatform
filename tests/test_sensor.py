@@ -680,7 +680,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
         self.assertEqual(sensor.native_unit_of_measurement, "kW")
         self.assertEqual(sensor.device_class, "power")
         self.assertEqual(sensor.state_class, "measurement")
-        self.assertEqual(sensor.icon, "mdi:flash")
+        self.assertEqual(sensor.icon, "mdi:gas-burner")
 
         self.opentherm.operational_data.json_data["SlaveStatus"] = 0
         sensor._handle_coordinator_update()
