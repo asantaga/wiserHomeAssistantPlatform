@@ -1396,7 +1396,7 @@ class WiserOpenThermAttributeSensor(WiserSensor):
         if self._sensor_key == "estimated_boiler_output":
             return "mdi:gas-burner"
         if self._sensor_key == "maximum_capacity_kw":
-            return "mdi:flash"
+            return "mdi:gas-burner"
         if self._sensor_key == "coprocessor_version":
             return "mdi:chip"
         if self._sensor_key == "coprocessor_update_status":
