@@ -221,3 +221,19 @@ For more information checkout the AMAZING community thread available on
 A full change log can be seen on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log)
 
 The sidebar panel is built together with the schedule card in the `wiser-schedule-card` repository. The integration distributes that matching bundle; it does not maintain a separate panel JavaScript source.
+
+### Packaging published cards
+
+The Publish workflow downloads compiled card assets from `andyblac/wiser-schedule-card` and `andyblac/wiser-zigbee-card` into the integration's `frontend` directory in a temporary staging copy. It does not change the tracked card files or build branch source.
+
+- Pushes to `test-build` and prereleases select the newest published prerelease of each card, falling back to its newest stable release if no prerelease exists.
+- Stable integration releases select only stable card releases.
+- Manual workflow runs let you test either channel and produce a downloadable `wiser-package` artifact, without publishing a release.
+
+Each card release must have its compiled `wiser-schedule-card.js` or `wiser-zigbee-card.js` attached. Missing releases or assets fail the build instead of silently shipping old files. The schedule asset must include the sidebar panel when packaging a panel-enabled integration. The ZIP includes `frontend/card-releases.json` recording the exact tags, asset IDs, download URLs, and SHA-256 digests used. Repository variables `WISER_SCHEDULE_CARD_REPOSITORY` and `WISER_ZIGBEE_CARD_REPOSITORY` can override the source repositories.
+
+To preview selection without changing files:
+
+```sh
+python3 scripts/fetch_card_releases.py --channel dev --plan
+```

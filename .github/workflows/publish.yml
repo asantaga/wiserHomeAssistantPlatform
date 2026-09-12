@@ -2,26 +2,71 @@ name: Publish
 
 on:
   release:
-    types:
-      - published
+    types: [published]
+  push:
+    branches: [test-build]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Card release channel to test (does not publish a release)
+        type: choice
+        options: [dev, stable]
+        default: dev
+
+permissions:
+  contents: read
 
 jobs:
-  release_zip_file:
-    name: Publish Wiser zip file asset
+  package:
+    name: Build Wiser with published card assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test release selection
+        run: python -m unittest discover -s tests -p test_card_releases.py
+      - name: Stage integration
+        run: |
+          mkdir -p dist/wiser
+          cp -a custom_components/wiser/. dist/wiser/
+      - name: Fetch card release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
+          SCHEDULE_REPOSITORY: ${{ vars.WISER_SCHEDULE_CARD_REPOSITORY || 'andyblac/wiser-schedule-card' }}
+          ZIGBEE_REPOSITORY: ${{ vars.WISER_ZIGBEE_CARD_REPOSITORY || 'andyblac/wiser-zigbee-card' }}
+        run: >-
+          python scripts/fetch_card_releases.py
+          --channel "$CARD_CHANNEL"
+          --schedule-repository "$SCHEDULE_REPOSITORY"
+          --zigbee-repository "$ZIGBEE_REPOSITORY"
+      - name: Package integration
+        working-directory: dist/wiser
+        run: zip -r ../wiser.zip . -x '*/__pycache__/*' '*.pyc'
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiser-package
+          path: |
+            dist/wiser.zip
+            dist/wiser/frontend/card-releases.json
+          if-no-files-found: error
+
+  publish:
+    name: Attach package to published release
+    if: github.event_name == 'release'
+    needs: package
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: 📥 Checkout the repository
-        uses: actions/checkout@v3.0.2
-      # Pack the Wiser dir as a zip and upload to the release
-      - name: 📦 ZIP Wiser Dir
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          cd ${{ github.workspace }}/custom_components/wiser
-          zip wiser.zip -r ./
-      - name: 📤 Upload zip to release
-        uses: softprops/action-gh-release@v0.1.14
-        if: ${{ github.event_name == 'release' }}
+      - uses: actions/download-artifact@v4
         with:
-          files: ${{ github.workspace }}/custom_components/wiser/wiser.zip
+          name: wiser-package
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/wiser.zip
+          fail_on_unmatched_files: true
