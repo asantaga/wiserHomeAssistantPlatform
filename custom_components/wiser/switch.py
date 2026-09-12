@@ -1104,7 +1104,7 @@ class WiserHotWaterSwitch(WiserSwitch):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
