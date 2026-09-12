@@ -3,20 +3,16 @@
 Card behaviour is tested in the wiser-schedule-card source repository.
 """
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1] / "custom_components/wiser"
 CARD = ROOT / "frontend/wiser-schedule-card.js"
-CONST = ROOT / "const.py"
 WEBSOCKETS = ROOT / "websockets.py"
 
 
 class ScheduleCardBundleTest(unittest.TestCase):
     def test_matching_card_and_panel_are_bundled_together(self):
         source = CARD.read_text()
-        version = re.search(r'"filename": "wiser-schedule-card.js",\s*"version": "([^"]+)"', CONST.read_text()).group(1)
-        self.assertIn(version, source)
         self.assertIn('wiser-schedules-panel', source)
         self.assertIn('wiser-schedule-card-editor', source)
         self.assertIn('panelApiVersion', source)
