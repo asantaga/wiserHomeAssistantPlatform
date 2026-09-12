@@ -36,3 +36,17 @@ class ZigbeeCardVersionTest(unittest.TestCase):
     def test_installed_zigbee_bundle_has_readable_version(self):
         version = module.zigbee_card_version(ROOT / "custom_components/wiser/frontend/wiser-zigbee-card.js", "missing")
         self.assertEqual(version, "2.1.2")
+
+    def test_modern_editor_footer_with_inlined_version(self):
+        source = 'const library="3.3.3";html`<div class="version">${this.t("common.version")}: ${"3.0.0-dev.65"}</div>`'
+        self.assertEqual(self.version(source), "3.0.0-dev.65")
+
+    def test_modern_release_footer(self):
+        source = 'html`<div class="version">${this.t("common.version")}: ${"3.0.0"}</div>`'
+        self.assertEqual(self.version(source), "3.0.0")
+
+    def test_explicit_version_marker(self):
+        self.assertEqual(self.version('/*! WISER-CARD-VERSION wiser-zigbee-card 4.0.0-dev.9 */\nconst library="3.3.3";'), "4.0.0-dev.9")
+
+    def test_other_card_marker_is_ignored(self):
+        self.assertTrue(self.version('/*! WISER-CARD-VERSION wiser-schedule-card 4.0.0 */').startswith("sha256-"))

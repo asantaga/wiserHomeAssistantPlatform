@@ -15,6 +15,23 @@ def zigbee_card_version(path: Path, fallback: str) -> str:
     except OSError:
         return fallback
     source = contents.decode("utf-8", errors="replace")
+    # Explicit build metadata is authoritative; legacy parsing remains below.
+    marker = re.search(
+        rf"/\*!\s*WISER-CARD-VERSION wiser-zigbee-card\s+({_VERSION})\s*\*/",
+        source,
+    )
+    if marker:
+        return marker[1]
+    # New builds inline CARD_VERSION into the editor's version footer and
+    # no longer emit the legacy startup banner.
+    footer = re.search(
+        rf'class=["\']version["\'][^`]*?common\.version["\']\)\}}:\s*'
+        rf'\$\{{["\']({_VERSION})["\']\}}',
+        source,
+    )
+    if footer:
+        return footer[1]
+
     banner = re.search(
         r'WISER-ZIGBEE(?:-NETWORK)?-CARD[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
         source,

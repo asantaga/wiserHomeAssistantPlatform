@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
 from ..const import JSMODULES, URL_BASE  # noqa: TID252
-from .version import schedule_card_version
+from .schedule_version import schedule_card_version
 from .zigbee_version import zigbee_card_version
 
 _LOGGER = logging.getLogger(__name__)

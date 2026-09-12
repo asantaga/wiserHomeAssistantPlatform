@@ -15,6 +15,13 @@ def schedule_card_version(path: Path, fallback: str) -> str:
     except OSError:
         return fallback
     source = contents.decode("utf-8", errors="replace")
+    # Explicit build metadata is authoritative; legacy parsing remains below.
+    marker = re.search(
+        rf"/\*!\s*WISER-CARD-VERSION wiser-schedule-card\s+({_VERSION})\s*\*/",
+        source,
+    )
+    if marker:
+        return marker[1]
     banner = re.search(
         r'WISER-SCHEDULE-CARD[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
         source,

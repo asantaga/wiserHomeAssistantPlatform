@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("card_version", ROOT / "custom_components/wiser/frontend/version.py")
+spec = importlib.util.spec_from_file_location("card_version", ROOT / "custom_components/wiser/frontend/schedule_version.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
@@ -36,3 +36,9 @@ class CardVersionTest(unittest.TestCase):
     def test_installed_bundle_has_readable_version(self):
         version = module.schedule_card_version(ROOT / "custom_components/wiser/frontend/wiser-schedule-card.js", "missing")
         self.assertRegex(version, r"^\d+\.\d+\.\d+")
+
+    def test_explicit_version_marker(self):
+        self.assertEqual(self.version('/*! WISER-CARD-VERSION wiser-schedule-card 4.0.0-dev.9 */\nconst library="3.3.3";'), "4.0.0-dev.9")
+
+    def test_other_card_marker_is_ignored(self):
+        self.assertTrue(self.version('/*! WISER-CARD-VERSION wiser-zigbee-card 4.0.0 */').startswith("sha256-"))
