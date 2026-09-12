@@ -18,20 +18,24 @@ permissions:
 
 jobs:
   package:
-    name: Build Wiser with published card assets
+    name: Build Wiser integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Test release selection
-        run: python -m unittest discover -s tests -p test_card_releases.py
+      - name: Test packaging and sidebar integration
+        run: |
+          python -m unittest discover -s tests -p test_card_releases.py
+          python -m unittest discover -s tests -p 'test_*sidebar.py'
+          python -m unittest discover -s tests -p 'test_*version.py'
       - name: Stage integration
         run: |
           mkdir -p dist/wiser
           cp -a custom_components/wiser/. dist/wiser/
       - name: Fetch card release assets
+        if: github.event_name != 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
