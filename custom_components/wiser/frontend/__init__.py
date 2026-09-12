@@ -13,6 +13,7 @@ from homeassistant.helpers.event import async_call_later
 
 from ..const import JSMODULES, URL_BASE  # noqa: TID252
 from .version import schedule_card_version
+from .zigbee_version import zigbee_card_version
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +84,12 @@ class JSModuleRegistration:
             if module["filename"] == "wiser-schedule-card.js":
                 version = await self.hass.async_add_executor_job(
                     schedule_card_version, Path(__file__).parent / module["filename"], version
+                )
+            elif module["filename"] == "wiser-zigbee-card.js":
+                version = await self.hass.async_add_executor_job(
+                    zigbee_card_version,
+                    Path(__file__).parent / module["filename"],
+                    version,
                 )
 
             card_registered = False
