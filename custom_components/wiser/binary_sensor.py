@@ -507,8 +507,7 @@ class WiserStateIsClosed(BaseBinarySensor):
 
 ## binary sensor of Room
 class WiserRoomWindow(RoomBinarySensor):
-    """Window of room sensor."""
-    _attr_device_class = BinarySensorDeviceClass.WINDOW
+    """Wiser window detection enabled state."""
 
 #Windowdoor 
 class WiserStateActive(BaseBinarySensor):
