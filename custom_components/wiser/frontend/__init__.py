@@ -1,5 +1,7 @@
 """View Assist Javascript module registration."""
 
+from hashlib import sha256
+import re
 import logging
 import os
 from pathlib import Path
@@ -12,10 +14,50 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
 from ..const import JSMODULES, URL_BASE  # noqa: TID252
-from .schedule_version import schedule_card_version
-from .zigbee_version import zigbee_card_version
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def card_version(path: Path) -> str:
+    """Resolve the card's banner variable, ignoring bundled library versions."""
+    version_pattern = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+    try:
+        contents = path.read_bytes()
+    except OSError:
+        return "missing"
+    source = contents.decode("utf-8", errors="replace")
+    # Explicit build metadata is authoritative; legacy parsing remains below.
+    marker = re.search(
+        rf"/\*!\s*WISER-CARD-VERSION {re.escape(path.stem)}\s+({version_pattern})\s*\*/",
+        source,
+    )
+    if marker:
+        return marker[1]
+    # New builds inline CARD_VERSION into the editor's version footer and
+    # no longer emit the legacy startup banner.
+    footer = re.search(
+        rf'class=["\']version["\'][^`]*?common\.version["\']\)\}}:\s*'
+        rf'\$\{{["\']({version_pattern})["\']\}}',
+        source,
+    )
+    if path.stem == "wiser-zigbee-card" and footer:
+        return footer[1]
+
+    banner_name = "WISER-ZIGBEE(?:-NETWORK)?-CARD" if path.stem == "wiser-zigbee-card" else re.escape(path.stem.upper())
+    banner = re.search(
+        banner_name + r'[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
+        source,
+    )
+    if banner:
+        assignment = re.search(
+            rf'(?<![\w$]){re.escape(banner[1])}\s*=\s*[\"\']({version_pattern})[\"\']',
+            source,
+        )
+        if assignment:
+            return assignment[1]
+    # Still refresh caches for unfamiliar builds rather than advertise a stale
+    # version from const.py. This is a content identifier, not a release number.
+    return f"sha256-{sha256(contents).hexdigest()[:16]}"
 
 
 class JSModuleRegistration:
@@ -80,12 +122,8 @@ class JSModuleRegistration:
         for module in JSMODULES:
             url = f"{URL_BASE}/{module.get('filename')}"
 
-            reader = (
-                schedule_card_version if module["filename"] == "wiser-schedule-card.js"
-                else zigbee_card_version
-            )
             version = await self.hass.async_add_executor_job(
-                reader, Path(__file__).parent / module["filename"]
+                card_version, Path(__file__).parent / module["filename"]
             )
 
             card_registered = False

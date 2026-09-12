@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from homeassistant.components import frontend, panel_custom
-from .schedule_version import schedule_card_version
+from . import card_version
 from .zigbee_sidebar import async_update_zigbee_panel
 
 from ..const import (
@@ -36,7 +36,7 @@ async def async_update_schedules_panel(hass):
     if hubs:
         card = next(module for module in JSMODULES if module["filename"] == "wiser-schedule-card.js")
         version = await hass.async_add_executor_job(
-            schedule_card_version, Path(__file__).parent / card["filename"]
+            card_version, Path(__file__).parent / card["filename"]
         )
         state["card_url"] = f"{URL_BASE}/{card['filename']}?v={version}"
     if state == hass.data.get(PANEL_STATE) or (not hubs and PANEL_STATE not in hass.data):

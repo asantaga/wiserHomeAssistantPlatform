@@ -5,7 +5,7 @@ from pathlib import Path
 
 from homeassistant.components import frontend, panel_custom
 
-from .zigbee_version import zigbee_card_version
+from . import card_version
 
 from ..const import (
     CONF_SHOW_ZIGBEE_SIDEBAR, CONF_ZIGBEE_PANEL_CONFIG,
@@ -40,7 +40,7 @@ async def async_update_zigbee_panel(hass):
             if module["filename"] == "wiser-zigbee-card.js"
         )
         version = await hass.async_add_executor_job(
-            zigbee_card_version,
+            card_version,
             Path(__file__).parent / card["filename"],
         )
         state["card_url"] = f"{URL_BASE}/{card['filename']}?v={version}"

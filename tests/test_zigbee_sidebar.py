@@ -26,7 +26,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         constants.CONF_ZIGBEE_PANEL_CONFIG = "zigbee_panel_config"
         version_module = ModuleType("sidebar_test.frontend.zigbee_version")
         self.version_reader = Mock(return_value="4.5.6-beta.2")
-        version_module.zigbee_card_version = self.version_reader
+        version_module.card_version = self.version_reader
         constants.DATA = "data"
         constants.DOMAIN = "wiser"
         constants.URL_BASE = "/wiser"
@@ -37,9 +37,8 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
             "homeassistant": ModuleType("homeassistant"),
             "homeassistant.components": components,
             "sidebar_test": ModuleType("sidebar_test"),
-            "sidebar_test.frontend": ModuleType("sidebar_test.frontend"),
+            "sidebar_test.frontend": version_module,
             "sidebar_test.const": constants,
-            "sidebar_test.frontend.zigbee_version": version_module,
         }):
             spec = importlib.util.spec_from_file_location(
                 "sidebar_test.frontend.sidebar", ROOT / "frontend/zigbee_sidebar.py"
