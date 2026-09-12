@@ -15,7 +15,7 @@ class CardVersionTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "card.js"
             path.write_text(source)
-            return module.schedule_card_version(path, "1.0.0")
+            return module.schedule_card_version(path)
 
     def test_legacy_banner_ignores_library_versions(self):
         self.assertEqual(self.version('const library="3.3.3";const $t="1.5.6";console.info(`WISER-SCHEDULE-CARD ${Vt("common.version")} ${$t}`)'), "1.5.6")
@@ -29,12 +29,12 @@ class CardVersionTest(unittest.TestCase):
         self.assertEqual(first, self.version('const library="3.3.3"'))
         self.assertNotEqual(first, self.version('const library="4.0.0"'))
 
-    def test_missing_file_keeps_fallback(self):
+    def test_missing_file_returns_missing(self):
         with TemporaryDirectory() as directory:
-            self.assertEqual(module.schedule_card_version(Path(directory) / "missing.js", "1.5.6"), "1.5.6")
+            self.assertEqual(module.schedule_card_version(Path(directory) / "missing.js"), "missing")
 
     def test_installed_bundle_has_readable_version(self):
-        version = module.schedule_card_version(ROOT / "custom_components/wiser/frontend/wiser-schedule-card.js", "missing")
+        version = module.schedule_card_version(ROOT / "custom_components/wiser/frontend/wiser-schedule-card.js")
         self.assertRegex(version, r"^\d+\.\d+\.\d+")
 
     def test_explicit_version_marker(self):

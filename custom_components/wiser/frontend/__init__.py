@@ -80,10 +80,9 @@ class JSModuleRegistration:
         for module in JSMODULES:
             url = f"{URL_BASE}/{module.get('filename')}"
 
-            version = module["version"]
             if module["filename"] == "wiser-schedule-card.js":
                 version = await self.hass.async_add_executor_job(
-                    schedule_card_version, Path(__file__).parent / module["filename"], version
+                    schedule_card_version, Path(__file__).parent / module["filename"]
                 )
             elif module["filename"] == "wiser-zigbee-card.js":
                 version = await self.hass.async_add_executor_job(
@@ -91,6 +90,9 @@ class JSModuleRegistration:
                     Path(__file__).parent / module["filename"],
                     version,
                 )
+
+            if module["filename"] != "wiser-schedule-card.js":
+                version = module["version"]
 
             card_registered = False
 

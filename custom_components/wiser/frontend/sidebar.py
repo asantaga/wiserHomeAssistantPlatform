@@ -1,6 +1,9 @@
 """Manage the shared Wiser schedules sidebar panel."""
 
+from pathlib import Path
+
 from homeassistant.components import frontend, panel_custom
+from .schedule_version import schedule_card_version
 
 from ..const import (
     CONF_SHOW_SCHEDULES_SIDEBAR, CONF_SCHEDULES_PANEL_CONFIG,
@@ -29,6 +32,12 @@ async def async_update_schedules_panel(hass):
         and loaded[entry.entry_id][DATA].wiserhub.system.name in hubs
     }
     state = {"hubs": hubs, "card_configs": card_configs}
+    if hubs:
+        card = next(module for module in JSMODULES if module["filename"] == "wiser-schedule-card.js")
+        version = await hass.async_add_executor_job(
+            schedule_card_version, Path(__file__).parent / card["filename"]
+        )
+        state["card_url"] = f"{URL_BASE}/{card['filename']}?v={version}"
     if state == hass.data.get(PANEL_STATE) or (not hubs and PANEL_STATE not in hass.data):
         return
 
@@ -37,14 +46,7 @@ async def async_update_schedules_panel(hass):
         hass.data.pop(PANEL_STATE)
 
     if hubs:
-        card = next(
-            module for module in JSMODULES
-            if module["filename"] == "wiser-schedule-card.js"
-        )
-        config = {
-            **state,
-            "card_url": f"{URL_BASE}/{card['filename']}?v={card['version']}",
-        }
+        config = dict(state)
         module_url = config["card_url"]
         if PANEL_STATE in hass.data:
             # Keep the route registered while notifying clients of new settings.

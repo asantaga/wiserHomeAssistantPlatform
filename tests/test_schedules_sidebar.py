@@ -24,11 +24,14 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         constants = ModuleType("sidebar_test.const")
         constants.CONF_SHOW_SCHEDULES_SIDEBAR = "show_schedules_sidebar"
         constants.CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
+        version_module = ModuleType("sidebar_test.frontend.schedule_version")
+        self.version_reader = Mock(return_value="4.5.6-beta.2")
+        version_module.schedule_card_version = self.version_reader
         constants.DATA = "data"
         constants.DOMAIN = "wiser"
         constants.URL_BASE = "/wiser"
         constants.JSMODULES = [
-            {"filename": "wiser-schedule-card.js", "version": "1.5.6"}
+            {"filename": "wiser-schedule-card.js"}
         ]
         with patch.dict(sys.modules, {
             "homeassistant": ModuleType("homeassistant"),
@@ -36,6 +39,7 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
             "sidebar_test": ModuleType("sidebar_test"),
             "sidebar_test.frontend": ModuleType("sidebar_test.frontend"),
             "sidebar_test.const": constants,
+            "sidebar_test.frontend.schedule_version": version_module,
         }):
             spec = importlib.util.spec_from_file_location(
                 "sidebar_test.frontend.sidebar", ROOT / "frontend/sidebar.py"
@@ -45,6 +49,7 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.entries = []
         self.hass = SimpleNamespace(
             data={"wiser": {}},
+            async_add_executor_job=AsyncMock(side_effect=lambda fn, *args: fn(*args)),
             config_entries=SimpleNamespace(async_entries=lambda _: self.entries),
         )
 
@@ -80,7 +85,7 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args["frontend_url_path"], "wiser-schedules")
         self.assertEqual(args["webcomponent_name"], "wiser-schedules-panel")
         self.assertEqual(args["config"]["hubs"], ["hub"])
-        self.assertEqual(args["config"]["card_url"], "/wiser/wiser-schedule-card.js?v=1.5.6")
+        self.assertEqual(args["config"]["card_url"], "/wiser/wiser-schedule-card.js?v=4.5.6-beta.2")
 
     async def test_disable_last_hub_removes_panel(self):
         entry = self.add_hub("hub", True)
@@ -183,3 +188,12 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         entry.data = {"host": "other.local"}
         await self.sidebar.async_handle_entry_update(self.hass, entry)
         self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
+
+    async def test_new_bundle_updates_panel_version(self):
+        self.add_hub("hub", True)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.version_reader.return_value = "4.5.6-beta.3"
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        config = self.frontend.async_register_built_in_panel.call_args.kwargs["config"]
+        self.assertEqual(config["card_url"], "/wiser/wiser-schedule-card.js?v=4.5.6-beta.3")
+        self.assertEqual(config["_panel_custom"]["module_url"], config["card_url"])
