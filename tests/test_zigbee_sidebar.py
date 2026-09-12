@@ -81,7 +81,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         await self.sidebar.async_update_zigbee_panel(self.hass)
         self.custom.async_register_panel.assert_awaited_once()
         args = self.custom.async_register_panel.call_args.kwargs
-        self.assertEqual(args["frontend_url_path"], "wiser-zigbee")
+        self.assertEqual(args["frontend_url_path"], "wiser-zigbee-panel")
         self.assertEqual(args["webcomponent_name"], "wiser-zigbee-panel")
         self.assertEqual(args["config"]["hubs"], ["hub"])
         self.assertEqual(args["config"]["card_url"], "/wiser/wiser-zigbee-card.js?v=4.5.6-beta.2")
@@ -91,7 +91,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         await self.sidebar.async_update_zigbee_panel(self.hass)
         entry.options["show_zigbee_sidebar"] = False
         await self.sidebar.async_update_zigbee_panel(self.hass)
-        self.frontend.async_remove_panel.assert_called_once_with(self.hass, "wiser-zigbee")
+        self.frontend.async_remove_panel.assert_called_once_with(self.hass, "wiser-zigbee-panel")
         self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
 
     async def test_unload_keeps_other_hub_then_removes_last(self):
@@ -110,9 +110,11 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_registration_failure_can_be_retried(self):
         self.add_hub("hub", True)
-        self.custom.async_register_panel.side_effect = ValueError("registration failed")
-        with self.assertRaises(ValueError):
+        self.custom.async_register_panel.side_effect = ValueError("Overwriting panel wiser-zigbee-panel owned by lovelace")
+        with self.assertLogs(self.sidebar._LOGGER, level="WARNING") as logs:
             await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertIn("owned by lovelace", logs.output[0])
+        self.frontend.async_remove_panel.assert_not_called()
         self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
         self.custom.async_register_panel.side_effect = None
         await self.sidebar.async_update_zigbee_panel(self.hass)
@@ -184,7 +186,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.frontend.async_register_built_in_panel.assert_called_once()
         update = self.frontend.async_register_built_in_panel.call_args.kwargs
         self.assertTrue(update["update"])
-        self.assertEqual(update["frontend_url_path"], "wiser-zigbee")
+        self.assertEqual(update["frontend_url_path"], "wiser-zigbee-panel")
         self.assertEqual(update["config"]["card_configs"]["hub"], {"orientation": "pie"})
 
     async def test_other_options_and_connection_changes_still_reload(self):
@@ -209,3 +211,33 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         update = self.frontend.async_register_built_in_panel.call_args.kwargs
         self.assertEqual(update["config"]["card_url"], "/wiser/wiser-zigbee-card.js?v=4.5.6-beta.3")
         self.assertEqual(update["config"]["_panel_custom"]["module_url"], update["config"]["card_url"])
+
+    async def test_existing_lovelace_dashboard_is_not_overwritten(self):
+        self.add_hub("hub", True)
+        dashboard = object()
+        panels = {"wiser-zigbee": dashboard}
+
+        async def register(hass, **kwargs):
+            path = kwargs["frontend_url_path"]
+            if path in panels:
+                raise ValueError(f"Overwriting panel {path} owned by lovelace")
+            panels[path] = kwargs
+
+        self.custom.async_register_panel.side_effect = register
+        await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertIs(panels["wiser-zigbee"], dashboard)
+        self.assertIn("wiser-zigbee-panel", panels)
+        self.frontend.async_remove_panel.assert_not_called()
+
+    async def test_update_conflict_does_not_abort_and_can_be_retried(self):
+        entry = self.add_hub("hub", True)
+        await self.sidebar.async_update_zigbee_panel(self.hass)
+        previous = self.hass.data[self.sidebar.PANEL_STATE]
+        entry.options["zigbee_panel_config"] = {"show_labels": True}
+        self.frontend.async_register_built_in_panel.side_effect = ValueError("owned by lovelace")
+        with self.assertLogs(self.sidebar._LOGGER, level="WARNING"):
+            await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertIs(self.hass.data[self.sidebar.PANEL_STATE], previous)
+        self.frontend.async_register_built_in_panel.side_effect = None
+        await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertTrue(self.hass.data[self.sidebar.PANEL_STATE]["card_configs"]["hub"]["show_labels"])

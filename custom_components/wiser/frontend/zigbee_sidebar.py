@@ -1,5 +1,6 @@
 """Manage the shared Wiser zigbee sidebar panel."""
 
+import logging
 import math
 from pathlib import Path
 
@@ -12,7 +13,9 @@ from ..const import (
     DATA, DOMAIN, JSMODULES, URL_BASE,
 )
 
-PANEL_PATH = "wiser-zigbee"
+_LOGGER = logging.getLogger(__name__)
+
+PANEL_PATH = "wiser-zigbee-panel"
 PANEL_STATE = "wiser_zigbee_panel"
 
 
@@ -54,35 +57,41 @@ async def async_update_zigbee_panel(hass):
     if hubs:
         config = dict(state)
         module_url = config["card_url"]
-        if PANEL_STATE in hass.data:
-            # Keep the route registered while notifying clients of new settings.
-            frontend.async_register_built_in_panel(
-                hass,
-                component_name="custom",
-                frontend_url_path=PANEL_PATH,
-                sidebar_title="Wiser Zigbee",
-                sidebar_icon="mdi:zigbee",
-                config={
-                    **config,
-                    "_panel_custom": {
-                        "name": "wiser-zigbee-panel",
-                        "module_url": module_url,
-                        "embed_iframe": False,
-                        "trust_external": False,
+        try:
+            if PANEL_STATE in hass.data:
+                # Keep the route registered while notifying clients of new settings.
+                frontend.async_register_built_in_panel(
+                    hass,
+                    component_name="custom",
+                    frontend_url_path=PANEL_PATH,
+                    sidebar_title="Wiser Zigbee",
+                    sidebar_icon="mdi:zigbee",
+                    config={
+                        **config,
+                        "_panel_custom": {
+                            "name": "wiser-zigbee-panel",
+                            "module_url": module_url,
+                            "embed_iframe": False,
+                            "trust_external": False,
+                        },
                     },
-                },
-                update=True,
-            )
-        else:
-            await panel_custom.async_register_panel(
-                hass,
-                frontend_url_path=PANEL_PATH,
-                webcomponent_name="wiser-zigbee-panel",
-                sidebar_title="Wiser Zigbee",
-                sidebar_icon="mdi:zigbee",
-                module_url=module_url,
-                config=config,
-            )
+                    update=True,
+                )
+            else:
+                await panel_custom.async_register_panel(
+                    hass,
+                    frontend_url_path=PANEL_PATH,
+                    webcomponent_name="wiser-zigbee-panel",
+                    sidebar_title="Wiser Zigbee",
+                    sidebar_icon="mdi:zigbee",
+                    module_url=module_url,
+                    config=config,
+                )
+        except ValueError as err:
+            # A sidebar route can already belong to a user dashboard. This
+            # optional UI must not fail setup after entity platforms loaded.
+            _LOGGER.warning("Unable to register Wiser Zigbee sidebar at %s: %s", PANEL_PATH, err)
+            return
         hass.data[PANEL_STATE] = state
 
 
