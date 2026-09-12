@@ -55,6 +55,7 @@ from .const import (
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CONF_SHOW_SCHEDULES_SIDEBAR,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -391,6 +392,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(data=options)
 
         data_schema = {
+            vol.Optional(
+                CONF_SHOW_SCHEDULES_SIDEBAR,
+                default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
+            ): BooleanSelector(),
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
             vol.Optional(
                 CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)

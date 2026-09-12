@@ -12,12 +12,14 @@ DOMAIN = "wiser"
 CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
+CONF_SHOW_SCHEDULES_SIDEBAR = "show_schedules_sidebar"
+CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
 
 JSMODULES = [
     {
         "name": "Wiser Schedule Card",
         "filename": "wiser-schedule-card.js",
-        "version": "1.5.6",
+        "version": "2.0.0-dev.60",
     },
     {
         "name": "Wiser Zigbee Card",

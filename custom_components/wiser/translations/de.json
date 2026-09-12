@@ -58,6 +58,7 @@
         "title": "Wiser Integrationsoptionen",
         "description": "Hauptparameter",
         "data": {
+          "show_schedules_sidebar": "Wiser-Zeitpläne in der Seitenleiste anzeigen",
           "host": "IP Adresse",
           "port": "Portnummer",
           "scan_interval": "Scan Intervall",

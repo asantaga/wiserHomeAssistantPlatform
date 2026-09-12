@@ -13,6 +13,8 @@ For the latest version of the Wiser Home Assistant Platform please install via H
 
 **This integration requires a minimum HA version of 2025.5.**
 
+To open the schedule editor in a dedicated sidebar panel, go to **Settings → Devices & services → Wiser → Configure → Main Parameters** and enable **Show Wiser Schedules in sidebar**. The option is off by default. With multiple hubs, the panel shows schedules for each hub with this option enabled. Use the cog in the panel header to edit its display settings (administrators only). These are saved in the integration configuration for backups and are separate from the configuration of schedule cards on dashboards.
+
 Detailed information about this integration has now been moved to our [Wiki pages](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki)
 
 For more information checkout the AMAZING community thread available on
@@ -217,3 +219,5 @@ For more information checkout the AMAZING community thread available on
   - Reduced log error level for failed update form hub to warning
 
 A full change log can be seen on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log)
+
+The sidebar panel is built together with the schedule card in the `wiser-schedule-card` repository. The integration distributes that matching bundle; it does not maintain a separate panel JavaScript source.

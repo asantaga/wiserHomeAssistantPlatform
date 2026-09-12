@@ -45,6 +45,9 @@ from .device import (
 )
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
+from .frontend.sidebar import (
+    async_handle_entry_update, async_update_schedules_panel, integration_reload_settings,
+)
 from .helpers import (
     build_light_unique_id_migration,
     get_device_name,
@@ -194,6 +197,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     hass.data[DOMAIN][config_entry.entry_id] = {
         DATA: coordinator,
         UPDATE_LISTENER: update_listener,
+        "reload_settings": integration_reload_settings(config_entry),
     }
 
     update_hub_device_names(hass)
@@ -229,6 +233,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Register custom cards
     moodule_register = JSModuleRegistration(hass)
     await moodule_register.async_register()
+    await async_update_schedules_panel(hass)
 
     _LOGGER.info(
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
@@ -334,7 +339,7 @@ def update_hub_device_names(hass: HomeAssistant):
 
 async def _async_update_listener(hass: HomeAssistant, config_entry):
     """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await async_handle_entry_update(hass, config_entry)
 
 
 async def async_remove_config_entry_device(
@@ -386,6 +391,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     _LOGGER.debug("Unload integration")
     if unload_ok:
         hass.data[DOMAIN].pop(config_entry.entry_id)
+        await async_update_schedules_panel(hass)
         update_hub_device_names(hass)
 
     return unload_ok

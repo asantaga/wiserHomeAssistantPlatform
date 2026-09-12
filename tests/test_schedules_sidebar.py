@@ -1,0 +1,185 @@
+"""Test sidebar panel lifecycle without Home Assistant runtime dependencies."""
+
+import importlib.util
+from pathlib import Path
+import sys
+from types import ModuleType, SimpleNamespace
+import unittest
+from unittest.mock import AsyncMock, Mock, patch
+
+
+ROOT = Path(__file__).resolve().parents[1] / "custom_components/wiser"
+
+
+class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.frontend = ModuleType("homeassistant.components.frontend")
+        self.frontend.async_remove_panel = Mock()
+        self.frontend.async_register_built_in_panel = Mock()
+        self.custom = ModuleType("homeassistant.components.panel_custom")
+        self.custom.async_register_panel = AsyncMock()
+        components = ModuleType("homeassistant.components")
+        components.frontend = self.frontend
+        components.panel_custom = self.custom
+        constants = ModuleType("sidebar_test.const")
+        constants.CONF_SHOW_SCHEDULES_SIDEBAR = "show_schedules_sidebar"
+        constants.CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
+        constants.DATA = "data"
+        constants.DOMAIN = "wiser"
+        constants.URL_BASE = "/wiser"
+        constants.JSMODULES = [
+            {"filename": "wiser-schedule-card.js", "version": "1.5.6"}
+        ]
+        with patch.dict(sys.modules, {
+            "homeassistant": ModuleType("homeassistant"),
+            "homeassistant.components": components,
+            "sidebar_test": ModuleType("sidebar_test"),
+            "sidebar_test.frontend": ModuleType("sidebar_test.frontend"),
+            "sidebar_test.const": constants,
+        }):
+            spec = importlib.util.spec_from_file_location(
+                "sidebar_test.frontend.sidebar", ROOT / "frontend/sidebar.py"
+            )
+            self.sidebar = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.sidebar)
+        self.entries = []
+        self.hass = SimpleNamespace(
+            data={"wiser": {}},
+            config_entries=SimpleNamespace(async_entries=lambda _: self.entries),
+        )
+
+    def add_hub(self, name, enabled=None, loaded=True, disabled=False):
+        entry = SimpleNamespace(
+            entry_id=name, disabled_by=disabled, data={"host": "hub.local"},
+            options={} if enabled is None else {"show_schedules_sidebar": enabled},
+        )
+        self.entries.append(entry)
+        if loaded:
+            self.hass.data["wiser"][name] = {
+                "data": SimpleNamespace(wiserhub=SimpleNamespace(
+                    system=SimpleNamespace(name=name)
+                ))
+            }
+        return entry
+
+    async def test_default_disabled_and_unloaded_hubs_do_not_register(self):
+        self.add_hub("default")
+        self.add_hub("off", False)
+        self.add_hub("unloaded", True, loaded=False)
+        self.add_hub("disabled", True, disabled=True)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.custom.async_register_panel.assert_not_called()
+        self.frontend.async_remove_panel.assert_not_called()
+
+    async def test_enable_registers_dedicated_panel_once(self):
+        self.add_hub("hub", True)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.custom.async_register_panel.assert_awaited_once()
+        args = self.custom.async_register_panel.call_args.kwargs
+        self.assertEqual(args["frontend_url_path"], "wiser-schedules")
+        self.assertEqual(args["webcomponent_name"], "wiser-schedules-panel")
+        self.assertEqual(args["config"]["hubs"], ["hub"])
+        self.assertEqual(args["config"]["card_url"], "/wiser/wiser-schedule-card.js?v=1.5.6")
+
+    async def test_disable_last_hub_removes_panel(self):
+        entry = self.add_hub("hub", True)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        entry.options["show_schedules_sidebar"] = False
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.frontend.async_remove_panel.assert_called_once_with(self.hass, "wiser-schedules")
+        self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
+
+    async def test_unload_keeps_other_hub_then_removes_last(self):
+        self.add_hub("first", True)
+        self.add_hub("second", True)
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.hass.data["wiser"].pop("first")
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertEqual(
+            self.frontend.async_register_built_in_panel.call_args.kwargs["config"]["hubs"],
+            ["second"],
+        )
+        self.hass.data["wiser"].pop("second")
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
+
+    async def test_registration_failure_can_be_retried(self):
+        self.add_hub("hub", True)
+        self.custom.async_register_panel.side_effect = ValueError("registration failed")
+        with self.assertRaises(ValueError):
+            await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
+        self.custom.async_register_panel.side_effect = None
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertEqual(self.hass.data[self.sidebar.PANEL_STATE]["hubs"], ["hub"])
+
+    async def test_saved_config_is_sent_to_panel(self):
+        entry = self.add_hub("hub", True)
+        entry.options["schedules_panel_config"] = {"hide_hw_schedule": True}
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertEqual(
+            self.custom.async_register_panel.call_args.kwargs["config"]["card_configs"],
+            {"hub": {"hide_hw_schedule": True}},
+        )
+
+    def test_save_preserves_other_options(self):
+        entry = self.add_hub("hub", True)
+        entry.options["scan_interval"] = 30
+        self.hass.config_entries.async_update_entry = Mock()
+        self.sidebar.save_schedules_panel_config(self.hass, {
+            "hub": {"type": "custom:wiser-schedule-card", "hub": "hub", "hide_hw_schedule": True},
+        })
+        options = self.hass.config_entries.async_update_entry.call_args.kwargs["options"]
+        self.assertEqual(options["scan_interval"], 30)
+        self.assertTrue(options["show_schedules_sidebar"])
+        self.assertEqual(options["schedules_panel_config"], {"hide_hw_schedule": True})
+
+    def test_invalid_settings_do_not_partially_save(self):
+        self.add_hub("first", True)
+        self.add_hub("second", True)
+        self.hass.config_entries.async_update_entry = Mock()
+        with self.assertRaises(ValueError):
+            self.sidebar.save_schedules_panel_config(self.hass, {
+                "first": {"name": "Valid"}, "second": {"hide_hw_schedule": "invalid"},
+            })
+        self.hass.config_entries.async_update_entry.assert_not_called()
+
+    def test_current_external_card_editor_options_are_supported(self):
+        self.add_hub("hub", True)
+        self.hass.config_entries.async_update_entry = Mock()
+        settings = {"home_screen": "overview", "overview_details": True, "hide_card_background": True}
+        self.sidebar.save_schedules_panel_config(self.hass, {"hub": settings})
+        self.assertEqual(
+            self.hass.config_entries.async_update_entry.call_args.kwargs["options"]["schedules_panel_config"],
+            settings,
+        )
+
+    async def test_save_updates_panel_without_removing_route_or_reloading(self):
+        entry = self.add_hub("hub", True)
+        loaded = self.hass.data["wiser"]["hub"]
+        loaded["reload_settings"] = self.sidebar.integration_reload_settings(entry)
+        self.hass.config_entries.async_reload = AsyncMock()
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        entry.options = {**entry.options, "schedules_panel_config": {"home_screen": "overview"}}
+        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        self.hass.config_entries.async_reload.assert_not_called()
+        self.frontend.async_remove_panel.assert_not_called()
+        self.frontend.async_register_built_in_panel.assert_called_once()
+        update = self.frontend.async_register_built_in_panel.call_args.kwargs
+        self.assertTrue(update["update"])
+        self.assertEqual(update["frontend_url_path"], "wiser-schedules")
+        self.assertEqual(update["config"]["card_configs"]["hub"], {"home_screen": "overview"})
+
+    async def test_other_options_and_connection_changes_still_reload(self):
+        entry = self.add_hub("hub", True)
+        self.hass.data["wiser"]["hub"]["reload_settings"] = self.sidebar.integration_reload_settings(entry)
+        self.hass.config_entries.async_reload = AsyncMock()
+        entry.options = {**entry.options, "scan_interval": 60}
+        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
+        self.hass.config_entries.async_reload.reset_mock()
+        entry.options.pop("scan_interval")
+        entry.data = {"host": "other.local"}
+        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
