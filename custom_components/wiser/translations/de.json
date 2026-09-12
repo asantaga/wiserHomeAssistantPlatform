@@ -259,7 +259,8 @@
       "temperature_interacts_with_room_climate": { "name": "Temperatur beeinflusst die Raumklimaregelung" },
       "illuminance_interacts_with_room_climate": { "name": "Beleuchtungsstärke beeinflusst die Raumklimaregelung" },
       "sensor_interacts_with_room_climate": { "name": "{sensor} beeinflusst die Raumklimaregelung" },
-      "manual_heat": { "name": "Manuelles Heizen" }
+      "manual_heat": { "name": "Manuelles Heizen" },
+      "hot_water": { "name": "Warmwasser" }
     },
     "binary_sensor": {
       "summer_discomfort_prevention": { "name": "Sommerliche Unbehaglichkeitsvermeidung" },

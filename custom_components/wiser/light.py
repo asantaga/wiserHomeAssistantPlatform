@@ -11,7 +11,7 @@ from homeassistant.components.light import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
+from .const import DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER_SCHNEIDER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
@@ -35,10 +35,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.lights:
         _LOGGER.debug("Setting up light entities")
         for light in data.wiserhub.devices.lights.all:
+            # Key entities by the unique per-channel light_id, not light.id:
+            # multi-gang dimmers (2GANG/DIMMER/2) share one device id across
+            # their channels, and get_by_id() then returns a list, crashing setup.
             if light.is_dimmable:
-                wiser_lights.append(WiserDimmableLight(data, light.id))
+                wiser_lights.append(WiserDimmableLight(data, light.light_id))
             else:
-                wiser_lights.append(WiserLight(data, light.id))
+                wiser_lights.append(WiserLight(data, light.light_id))
         async_add_entities(wiser_lights, True)
 
 
@@ -51,9 +54,24 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._data = coordinator
-        self._device_id = light_id
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        # light_id is the unique per-channel id; resolve the light through it and
+        # derive the (possibly shared) physical device id from the light object,
+        # so device grouping still works for multi-gang dimmers.
+        self._light_id = light_id
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
+        self._device_id = self._device.id
         self._schedule = self._device.schedule
+        # Optimistic state: a just-sent command is reflected in the UI at once
+        # and held only until the follow-up refresh returns real hub data.
+        # None means "no command pending, use the device's own state".
+        self._optimistic_is_on = None
+        self._optimistic_percentage = None
+        # Bumped on every command. A command's delayed cleanup only clears the
+        # optimistic state if it is still the latest, so rapid toggles don't let
+        # an earlier command wipe a newer command's value.
+        self._optimistic_gen = 0
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
     async def async_force_update(self, delay: int = 0):
@@ -65,8 +83,19 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._schedule = self._device.schedule
+        # Once the hub confirms the on/off command, drop the optimistic override
+        # so the real state takes over seamlessly. Clearing on a match never
+        # changes what is shown, so a slow hub can't revert the UI to the
+        # pre-command value between the command and its confirmation.
+        if (
+            self._optimistic_is_on is not None
+            and self._device.is_on == self._optimistic_is_on
+        ):
+            self._optimistic_is_on = None
         self.async_write_ha_state()
 
     @property
@@ -82,12 +111,17 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @property
     def is_on(self):
         """Return the boolean response if the node is on."""
+        if self._optimistic_is_on is not None:
+            return self._optimistic_is_on
         return self._device.is_on
 
     @property
     def name(self):
         """Return the name of the Device."""
-        return None
+        # Use the per-channel light name directly. It already carries room and
+        # channel (e.g. "Badezimmer Badewanne") and is distinct per channel, so
+        # the two channels of a multi-gang dimmer no longer collide.
+        return f"{ENTITY_PREFIX} {self._device.name} Light"
 
     @property
     def icon(self):
@@ -99,8 +133,9 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
 
     @property
     def unique_id(self):
-        legacy_name = f"{get_device_name(self._data, self._device.id)} Light"
-        return get_unique_id(self._data, "device", "light", legacy_name)
+        # Base the unique_id on the unique light_id (not the name) so the
+        # channels of a multi-gang dimmer never collide.
+        return get_unique_id(self._data, "device", "light", self._light_id)
 
     @property
     def device_info(self):
@@ -177,15 +212,26 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
-            brightness = int(kwargs[ATTR_BRIGHTNESS])
-            _LOGGER.debug(
-                f"Setting brightness of {self.name} to {round((brightness / 255) * 100)}%"
-            )
-            await self._device.set_current_percentage(round((brightness / 255) * 100))
+            percentage = round((int(kwargs[ATTR_BRIGHTNESS]) / 255) * 100)
+            _LOGGER.debug(f"Setting brightness of {self.name} to {percentage}%")
+            await self._device.set_current_percentage(percentage)
+            self._optimistic_percentage = percentage
         else:
             _LOGGER.debug(f"Turning on {self.name}")
             await self._device.turn_on()
-        await self.async_force_update(2)
+        # Reflect the command in the UI immediately (the hub only reports the new
+        # state a few seconds later); the refresh below then confirms it.
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = True
+        self.async_write_ha_state()
+        try:
+            await self.async_force_update(2)
+        finally:
+            # Only the latest command clears the optimistic state; a superseded
+            # command must leave the newer command's value untouched.
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
         return True
 
     @hub_error_handler
@@ -193,8 +239,23 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         """Turn light off."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self._device.turn_off()
-        await self.async_force_update(2)
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = False
+        self.async_write_ha_state()
+        try:
+            await self.async_force_update(2)
+        finally:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
         return True
+
+    @callback
+    def _clear_optimistic_state(self) -> None:
+        """Drop the optimistic override so the real hub state is shown again."""
+        self._optimistic_is_on = None
+        self._optimistic_percentage = None
+        self.async_write_ha_state()
 
 
 class WiserDimmableLight(WiserLight):
@@ -213,7 +274,12 @@ class WiserDimmableLight(WiserLight):
     @property
     def brightness(self):
         """Return the brightness of this light between 0..100."""
-        return round((self._device.current_percentage / 100) * 255)
+        percentage = (
+            self._optimistic_percentage
+            if self._optimistic_percentage is not None
+            else self._device.current_percentage
+        )
+        return round((percentage / 100) * 255)
 
     @property
     def extra_state_attributes(self):

@@ -259,7 +259,8 @@
       "temperature_interacts_with_room_climate": { "name": "La température interagit avec le climat de la pièce" },
       "illuminance_interacts_with_room_climate": { "name": "L’éclairement interagit avec le climat de la pièce" },
       "sensor_interacts_with_room_climate": { "name": "{sensor} interagit avec le climat de la pièce" },
-      "manual_heat": { "name": "Chauffage manuel" }
+      "manual_heat": { "name": "Chauffage manuel" },
+      "hot_water": { "name": "Eau chaude" }
     },
     "binary_sensor": {
       "summer_discomfort_prevention": { "name": "Prévention de l’inconfort estival" },

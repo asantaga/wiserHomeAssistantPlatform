@@ -1,3 +1,5 @@
+from collections import Counter
+
 from aioWiserHeatAPI.wiserhub import (
     WiserHubConnectionError,
     WiserHubAuthenticationError,
@@ -10,6 +12,16 @@ import re
 from uuid import UUID, uuid5
 
 _LOGGER = logging.getLogger(__name__)
+
+# Capability sensor types emitted per light by WiserStateIsDimmable
+# (binary_sensor.py), needed to rebuild the pre-fix name-based unique_ids in
+# build_light_unique_id_migration().
+LIGHT_BINARY_SENSOR_TYPES = (
+    "Is Dimmable",
+    "Is LED Indicator Supported",
+    "Is Output Mode Supported",
+    "Is Power On Behaviour Supported",
+)
 
 # This namespace is part of the entity registry identity contract and must never
 # be changed after release.
@@ -231,6 +243,65 @@ def get_unique_id(data, device_type, entity_type, device_id):
     return get_uuid_unique_id(
         get_legacy_unique_id(data, device_type, entity_type, device_id)
     )
+
+
+def build_light_unique_id_migration(data) -> dict:
+    """Map pre-#683 light unique_ids to the new per-channel light_id scheme.
+
+    The multi-gang dimmer fix keys every light-derived entity on the unique
+    per-channel ``light_id`` (hub Lighting section) instead of the physical
+    device ``id`` (hub Devices section). Those id spaces differ even for
+    single-gang lights, so the unique_ids of the light, its mode/LED/power-on
+    selects, its away-mode switch and its four capability binary_sensors all
+    change on update. Returns ``{old_unique_id: new_unique_id}`` so the caller
+    can rename the existing registry entries and preserve them.
+
+    Multi-gang dimmer channels are skipped: before the fix their light and
+    select platforms crashed and their other entities collided on unique_id,
+    so their pre-fix registry state is ambiguous. They are left to orphan.
+    """
+    lights = data.wiserhub.devices.lights.all
+    if not lights:
+        return {}
+
+    # A physical device id shared by more than one light == multi-gang dimmer.
+    device_id_counts = Counter(light.id for light in lights)
+
+    mapping: dict[str, str] = {}
+    for light in lights:
+        if device_id_counts[light.id] > 1:
+            continue  # multi-gang: pre-fix state ambiguous, skip
+
+        old_id = light.id
+        new_id = light.light_id
+        ptype = light.product_type
+        old_name = get_device_name(data, old_id)
+        new_name = f"{ENTITY_PREFIX} {light.name}"
+
+        # light (name-based -> light_id-based)
+        mapping[get_unique_id(data, "device", "light", f"{old_name} Light")] = (
+            get_unique_id(data, "device", "light", new_id)
+        )
+
+        # light selects (id-based; entity_type stable, only the id changes)
+        for kind in ("mode-select", "led-indicator", "power_on_behaviour_select"):
+            mapping[get_unique_id(data, ptype, kind, old_id)] = get_unique_id(
+                data, ptype, kind, new_id
+            )
+
+        # away-mode switch (both name and id embedded in the unique_id)
+        mapping[
+            get_unique_id(data, ptype, f"{old_name} Away Mode Turns Off", old_id)
+        ] = get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
+
+        # capability binary_sensors (name-based)
+        for stype in LIGHT_BINARY_SENSOR_TYPES:
+            mapping[
+                get_unique_id(data, "binary_sensor", stype, f"{old_name} {stype}")
+            ] = get_unique_id(data, "binary_sensor", stype, f"{new_name} {stype}")
+
+    # Drop no-ops where the two id spaces happen to coincide for a light.
+    return {old: new for old, new in mapping.items() if old != new}
 
 
 def get_room_name(data, room_id):
