@@ -59,6 +59,7 @@
         "description": "Main Parameters",
         "data": {
           "show_schedules_sidebar": "Show Wiser Schedules in sidebar",
+          "show_zigbee_sidebar": "Show Wiser Zigbee in sidebar",
           "host": "IP Address or Hostname",
           "port": "Port number",
           "scan_interval": "Scan Interval (secs)",

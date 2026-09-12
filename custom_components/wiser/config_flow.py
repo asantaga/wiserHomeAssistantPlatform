@@ -39,6 +39,7 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_SHOW_ZIGBEE_SIDEBAR,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -395,6 +396,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             vol.Optional(
                 CONF_SHOW_SCHEDULES_SIDEBAR,
                 default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_SHOW_ZIGBEE_SIDEBAR,
+                default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
             ): BooleanSelector(),
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
             vol.Optional(

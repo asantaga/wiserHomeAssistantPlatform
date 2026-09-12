@@ -59,6 +59,7 @@
         "description": "Paramètres principaux",
         "data": {
           "show_schedules_sidebar": "Afficher les programmes Wiser dans la barre latérale",
+          "show_zigbee_sidebar": "Afficher Wiser Zigbee dans la barre latérale",
           "host": "Adresse IP ou nom d'hote",
           "port": "Numéro de port",
           "scan_interval": " Période d'acquisition",

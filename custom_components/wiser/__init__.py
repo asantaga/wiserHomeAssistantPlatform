@@ -57,6 +57,7 @@ from .helpers import (
     get_legacy_room_identifier,
 )
 from .services import async_setup_services
+from .frontend.zigbee_sidebar import async_update_zigbee_panel
 from .websockets import async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
@@ -234,6 +235,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     moodule_register = JSModuleRegistration(hass)
     await moodule_register.async_register()
     await async_update_schedules_panel(hass)
+    await async_update_zigbee_panel(hass)
 
     _LOGGER.info(
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
@@ -393,5 +395,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         hass.data[DOMAIN].pop(config_entry.entry_id)
         await async_update_schedules_panel(hass)
         update_hub_device_names(hass)
+        await async_update_zigbee_panel(hass)
 
     return unload_ok

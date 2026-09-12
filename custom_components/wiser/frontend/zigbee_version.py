@@ -8,12 +8,12 @@ import re
 _VERSION = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
 
 
-def zigbee_card_version(path: Path, fallback: str) -> str:
+def zigbee_card_version(path: Path) -> str:
     """Resolve the card's banner variable, ignoring bundled library versions."""
     try:
         contents = path.read_bytes()
     except OSError:
-        return fallback
+        return "missing"
     source = contents.decode("utf-8", errors="replace")
     # Explicit build metadata is authoritative; legacy parsing remains below.
     marker = re.search(
