@@ -1393,8 +1393,10 @@ class WiserOpenThermAttributeSensor(WiserSensor):
             return "mdi:delta"
         if self._sensor_key == "boiler_exhaust_temperature":
             return "mdi:smoke"
-        if self._sensor_key in {"estimated_boiler_output", "maximum_capacity_kw"}:
-            return "mdi:flash"
+        if self._sensor_key == "estimated_boiler_output":
+            return "mdi:gas-burner"
+        if self._sensor_key == "maximum_capacity_kw":
+            return "mdi:gas-burner"
         if self._sensor_key == "coprocessor_version":
             return "mdi:chip"
         if self._sensor_key == "coprocessor_update_status":
