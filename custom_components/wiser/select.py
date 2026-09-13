@@ -3,6 +3,7 @@ import asyncio
 from .const import (
     DATA,
     DOMAIN,
+    ENTITY_PREFIX,
     HOT_WATER,
     MANUFACTURER,
 )
@@ -42,16 +43,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.wiserhub.devices.lights.count > 0:
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
-            wiser_selects.extend([WiserLightModeSelect(data, light.id)])
+            # Key entities by the unique per-channel light_id, not light.id:
+            # multi-gang dimmers (2GANG/DIMMER/2) share one device id across
+            # their channels, so get_by_id() returns a list and .available_modes
+            # then raises, aborting setup of the whole select platform.
+            wiser_selects.extend([WiserLightModeSelect(data, light.light_id)])
             if light.is_led_indicator_supported:
-                wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
+                wiser_selects.extend(
+                    [WiserLightLedIndicatorSelect(data, light.light_id)]
+                )
 
             if light.is_dimmable:
 #                if light.is_led_indicator_supported:
 #                    wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
                 if light.is_power_on_behaviour_supported:
                     wiser_selects.extend(
-                        [WiserLightPowerOnBehaviourSelect(data, light.id)]
+                        [WiserLightPowerOnBehaviourSelect(data, light.light_id)]
                     )
 
     if data.wiserhub.devices.shutters.count > 0:
@@ -230,9 +237,13 @@ class WiserPowerTagCModeSelect(WiserSelectEntity, WiserScheduleEntity):
 class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
-        self._device_id = light_id
+        # light_id is the unique per-channel id; resolve the light through it and
+        # derive the (possibly shared) physical device id from the light object,
+        # so device grouping still works for multi-gang dimmers.
+        self._light_id = light_id
+        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._device.id
         super().__init__(data)
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._options = self._device.available_modes
         self._schedule = self._device.schedule
 
@@ -240,9 +251,25 @@ class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._schedule = self._device.schedule
         self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        # Per-channel light name so the two channels of a multi-gang dimmer do
+        # not collide (WiserSelectEntity.name would use the shared device id).
+        return f"{ENTITY_PREFIX} {self._device.name} Mode"
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "mode-select", self._light_id
+        )
 
 
 class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
@@ -267,16 +294,20 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
     _attr_translation_key = "power_on_behavior"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
-        self._device_id = light_id
+        # See WiserLightModeSelect: resolve by the unique per-channel light_id.
+        self._light_id = light_id
+        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._device.id
         super().__init__(data)
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._options = self._device.available_power_on_behaviour
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._options = self._device.available_power_on_behaviour
         self.async_write_ha_state()
 
@@ -287,8 +318,13 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
             self._data,
             self._device.product_type,
             "power_on_behaviour_select",
-            self._device_id,
+            self._light_id,
         )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{ENTITY_PREFIX} {self._device.name} Power On Behaviour"
 
     @property
     def current_option(self) -> str:
@@ -310,16 +346,20 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     _attr_translation_key = "led_indicator"
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
-        self._device_id = light_id
+        # See WiserLightModeSelect: resolve by the unique per-channel light_id.
+        self._light_id = light_id
+        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._device.id
         super().__init__(data)
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
         self._options = self._device.available_led_indicator
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.lights.get_by_id(self._device_id)
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._options = self._device.available_led_indicator
         self.async_write_ha_state()
 
@@ -330,8 +370,13 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             self._data,
             self._device.product_type,
             "led-indicator",
-            self._device_id,
+            self._light_id,
         )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return f"{ENTITY_PREFIX} {self._device.name} Led Indicator"
 
     @property
     def current_option(self) -> str:

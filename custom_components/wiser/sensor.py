@@ -118,10 +118,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     # Add hub wifi signal sensor
     wiser_sensors.append(WiserDeviceSignalSensor(data, 0, "Controller"))
     if data.wiserhub.devices:
+        # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per channel
+        # but share a single physical device id. Signal strength is a property of
+        # that physical device, so emit one signal sensor per device id — two
+        # channels would otherwise collide on unique_id and the second be dropped.
+        signal_sensor_device_ids = set()
         for device in data.wiserhub.devices.all:
-            wiser_sensors.append(
-                WiserDeviceSignalSensor(data, device.id, device.product_type)
-            )
+            if device.id not in signal_sensor_device_ids:
+                signal_sensor_device_ids.add(device.id)
+                wiser_sensors.append(
+                    WiserDeviceSignalSensor(data, device.id, device.product_type)
+                )
+                if device.product_type == "UnderFloorHeating":
+                    wiser_sensors.append(
+                        WiserLTSTempSensor(
+                            data, device.id, sensor_type="ufh_measured_temp"
+                        )
+                    )
             if hasattr(device, "battery"):
                 wiser_sensors.append(
                     WiserBatterySensor(data, device.id, sensor_type="Battery")
@@ -522,7 +535,8 @@ class WiserBatterySensor(WiserSensor):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._device.battery.level != TEXT_UNKNOWN
+        battery = self._device.battery
+        return battery.level != TEXT_UNKNOWN or battery.voltage is not None
 
     @property
     def device_class(self):
@@ -1168,6 +1182,13 @@ class WiserLTSTempSensor(WiserSensor):
                 f"LTS Temperature iTRV {sensor_name}",
                 use_device_class_name=True,
             )
+        elif sensor_type == "ufh_measured_temp":
+            super().__init__(
+                data,
+                device_id,
+                f"{data.wiserhub.devices.get_by_id(device_id).name} "
+                "Measured Temperature",
+            )
         elif sensor_type == "threshold_temp":
             super().__init__(
                 data,
@@ -1204,6 +1225,10 @@ class WiserLTSTempSensor(WiserSensor):
             self._state = self._data.wiserhub.devices.get_by_id(
                 self._device_id
             ).current_temperature    
+        elif self._lts_sensor_type == "ufh_measured_temp":
+            self._state = self._data.wiserhub.devices.get_by_id(
+                self._device_id
+            ).current_temperature
         elif self._lts_sensor_type == "threshold_temp":
             for th_sensor in self._data.wiserhub.devices.get_by_id(
                 self._device_id
@@ -1230,6 +1255,7 @@ class WiserLTSTempSensor(WiserSensor):
             "smokealarm_temp",
             "threshold_temp",
             "smartvalve_temp",
+            "ufh_measured_temp",
         ]:
             return {
                 "name": get_device_name(self._data, self._device_id),

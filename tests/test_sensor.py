@@ -90,6 +90,7 @@ def _load_sensor_module() -> ModuleType:
         DATA="data",
         CONF_OPENTHERM_SENSORS="opentherm_sensors",
         DOMAIN="wiser",
+        ENTITY_PREFIX="Wiser",
         HOT_WATER="hot_water",
         MANUFACTURER="Drayton",
         MANUFACTURER_SCHNEIDER="Schneider Electric",
@@ -407,6 +408,64 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
         self.assertEqual(energy._attr_translation_key, "total_energy")
         self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
+
+
+class WiserBatterySensorAvailabilityTest(unittest.TestCase):
+    """Regression tests for battery availability when level text is absent."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def _sensor(self, *, level: str, voltage: float | None):
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device = SimpleNamespace(
+            battery=SimpleNamespace(level=level, voltage=voltage)
+        )
+        return sensor
+
+    def test_voltage_keeps_battery_available_when_level_is_unknown(self) -> None:
+        sensor = self._sensor(level="Unknown", voltage=3.0)
+
+        self.assertTrue(sensor.available)
+
+    def test_unknown_level_and_voltage_keeps_battery_unavailable(self) -> None:
+        sensor = self._sensor(level="Unknown", voltage=None)
+
+        self.assertFalse(sensor.available)
+
+    def test_known_level_keeps_battery_available_without_voltage(self) -> None:
+        sensor = self._sensor(level="Normal", voltage=None)
+
+        self.assertTrue(sensor.available)
+
+
+class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
+    """Tests for the UFH controller measured-temperature sensor."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def test_measured_temperature_uses_ufh_device_value(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserLTSTempSensor)
+        sensor._lts_sensor_type = "ufh_measured_temp"
+        sensor._sensor_type = "UFH Measured Temperature"
+        sensor._device_id = 42
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    get_by_id=lambda device_id: SimpleNamespace(
+                        current_temperature=21.5
+                    )
+                )
+            )
+        )
+        sensor.async_write_ha_state = lambda: None
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, 21.5)
 
 
 class WiserLTSOpenthermSensorDeviceTest(unittest.TestCase):

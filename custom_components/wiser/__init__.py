@@ -9,10 +9,9 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import (
@@ -41,6 +40,7 @@ from .device import (
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
 from .helpers import (
+    build_light_unique_id_migration,
     get_device_name,
     get_hub_device_name,
     get_identifier,
@@ -125,6 +125,48 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     return True
 
 
+async def async_migrate_light_unique_ids(hass: HomeAssistant, config_entry, data) -> None:
+    """Preserve light entities across the multi-gang dimmer fix (#681/#683).
+
+    The fix keys every light-derived entity on the per-channel ``light_id``
+    instead of the physical device ``id`` (see build_light_unique_id_migration),
+    which changes the unique_ids of the light, its mode/LED/power-on selects,
+    its away-mode switch and its four capability binary_sensors. Without this
+    the pre-fix entities orphan on update, losing their history and dashboard
+    references. This renames the matching registry entries to the new scheme so
+    their entity_ids survive the update untouched.
+    """
+    mapping = build_light_unique_id_migration(data)
+    if not mapping:
+        return
+
+    ent_reg = er.async_get(hass)
+
+    @callback
+    def _migrate(entry: er.RegistryEntry) -> dict | None:
+        new_unique_id = mapping.get(entry.unique_id)
+        if not new_unique_id:
+            return None
+        # async_update_entity raises if the target unique_id already exists, so
+        # a partially-migrated setup can't be allowed to abort config entry
+        # setup: skip and keep the pre-fix entity as an orphan instead.
+        if ent_reg.async_get_entity_id(entry.domain, entry.platform, new_unique_id):
+            _LOGGER.warning(
+                "Wiser: not migrating unique_id %s -> %s, target already exists",
+                entry.unique_id,
+                new_unique_id,
+            )
+            return None
+        _LOGGER.info(
+            "Wiser: migrating light unique_id %s -> %s",
+            entry.unique_id,
+            new_unique_id,
+        )
+        return {"new_unique_id": new_unique_id}
+
+    await er.async_migrate_entries(hass, config_entry.entry_id, _migrate)
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry):
     """Set up Wiser from a config entry."""
     hass.data.setdefault(DOMAIN, {})
@@ -159,6 +201,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Give logical room devices stable IDs and concise device names.
     migrate_room_device_registry(hass, config_entry)
+
+    # Remap light entity unique_ids from the pre-#683 scheme before the
+    # platforms create entities, so existing light entities are preserved
+    # instead of orphaned (see async_migrate_light_unique_ids).
+    await async_migrate_light_unique_ids(hass, config_entry, coordinator)
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(config_entry, WISER_PLATFORMS)

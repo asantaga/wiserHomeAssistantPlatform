@@ -16,7 +16,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
+from .const import DATA, DOMAIN, ENTITY_PREFIX, HOT_WATER, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
@@ -140,11 +140,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
         elif switch["type"] == "device":
+            # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per
+            # channel but share a single physical device id. Device Lock and
+            # Identify act on that physical device, so emit one switch per device
+            # id — the second channel would otherwise collide on unique_id.
+            seen_device_ids = set()
             for device in [
                 device
                 for device in data.wiserhub.devices.all
                 if hasattr(device, switch["key"])
             ]:
+                if device.id in seen_device_ids:
+                    continue
+                seen_device_ids.add(device.id)
                 wiser_switches.append(
                     WiserDeviceSwitch(
                         data, switch["name"], switch["key"], switch["icon"], device.id
@@ -153,8 +161,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add Lights (if any)
     for light in data.wiserhub.devices.lights.all:
+        # Key by the unique per-channel light_id, not light.id: multi-gang
+        # dimmers (2GANG/DIMMER/2) share one device id across their channels,
+        # so the second channel's switch would collide on unique_id.
         wiser_switches.extend(
-            [WiserLightAwayActionSwitch(data, light.id, f"Wiser {light.name}")]
+            [WiserLightAwayActionSwitch(data, light.light_id, f"Wiser {light.name}")]
         )
 
     # Add Shutters (if any)
@@ -229,6 +240,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     if data.enable_hw_climate and not data.hw_climate_experimental_mode:
         wiser_switches.append(WiserHWClimateManualHeatSwitch(data, 0, "Manual Heat"))
 
+    # Add hot water on/off switch (non hw-climate mode only)
+    if data.wiserhub.hotwater and not data.enable_hw_climate:
+        wiser_switches.append(WiserHotWaterSwitch(data, 0, "Hot Water"))
+
     async_add_entities(wiser_switches)
 
     return True
@@ -259,6 +274,7 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
             "Device Lock": "device_lock",
             "Identify": "identify",
             "Manual Heat": "manual_heat",
+            "Hot Water": "hot_water",
         }.get(name)
         self._is_on = False
         self._type = device_type
@@ -629,20 +645,32 @@ class WiserLightAwayActionSwitch(WiserSwitch):
 
     def __init__(self, data, LightId, name) -> None:
         """Initialize the sensor."""
+        # LightId is the unique per-channel light_id; resolve the light through
+        # it and take the (possibly shared) physical device id for grouping, so
+        # the two channels of a multi-gang dimmer get distinct names/unique_ids.
         self._name = name
         self._light_id = LightId
+        self._light = data.wiserhub.devices.lights.get_by_light_id(LightId)
+        self._device_id = self._light.id
         super().__init__(data, name, "", "light", "mdi:lightbulb-off-outline")
-        self._attr_translation_key = "away_mode_turns_off"
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
         self._is_on = True if self._light.away_mode_action == "Off" else False
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._light = self._data.wiserhub.devices.get_by_id(self._light_id)
+        self._light = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
         self._is_on = True if self._light.away_mode_action == "Off" else False
         self.async_write_ha_state()
+
+    @property
+    def name(self):
+        """Return the name of the Device."""
+        # Per-channel light name so the two channels of a multi-gang dimmer do
+        # not collide.
+        return f"{ENTITY_PREFIX} {self._light.name} Away Mode Turns Off"
 
     @property
     def unique_id(self):
@@ -658,8 +686,8 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     def device_info(self):
         """Return device specific attributes."""
         return {
-            "name": get_device_name(self._data, self._light_id),
-            "identifiers": {(DOMAIN, get_identifier(self._data, self._light_id))},
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
             "model": self._light.product_type,
             "sw_version": self._light.firmware_version,
@@ -1037,3 +1065,57 @@ class WiserHWClimateManualHeatSwitch(WiserSwitch):
         """Turn off hw climate manual heat."""
         await self._data.wiserhub.hotwater.set_manual_heat(False)
         await self.async_force_update()
+
+
+class WiserHotWaterSwitch(WiserSwitch):
+    """Class for Hot Water on/off switch, reflecting the true on/off state."""
+
+    def __init__(
+        self,
+        data,
+        device_id,
+        name,
+    ) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._device_id = device_id
+        self._hotwater = data.wiserhub.hotwater
+        super().__init__(data, name, "", "hotwater", "mdi:water-boiler")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._hotwater = self._data.wiserhub.hotwater
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the entity."""
+        return self._hotwater.current_state == "On"
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._hotwater.id, "Hot Water"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._hotwater.id, "hot_water"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+        }
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn hot water on."""
+        await self._data.wiserhub.hotwater.override_state("On")
+        await self.async_force_update()
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn hot water off."""
+        await self._data.wiserhub.hotwater.override_state("Off")
+        await self.async_force_update()
+

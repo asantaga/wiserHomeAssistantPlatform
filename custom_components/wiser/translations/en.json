@@ -259,7 +259,8 @@
       "temperature_interacts_with_room_climate": { "name": "Temperature interacts with room climate" },
       "illuminance_interacts_with_room_climate": { "name": "Illuminance interacts with room climate" },
       "sensor_interacts_with_room_climate": { "name": "{sensor} interacts with room climate" },
-      "manual_heat": { "name": "Manual heat" }
+      "manual_heat": { "name": "Manual heat" },
+      "hot_water": { "name": "Hot water" }
     },
     "binary_sensor": {
       "summer_discomfort_prevention": { "name": "Summer discomfort prevention" },

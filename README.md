@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v3.4.20
+# Wiser Home Assistant Integration v3.4.21b0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -29,6 +29,15 @@ For more information checkout the AMAZING community thread available on
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=asantaga&repository=wiserHomeAssistantPlatform&category=integration)
 
 ## Change log
+
+- v3.4.21b0
+  - Added a Hot Water on/off switch entity - issue [#626](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/626).
+  - Added a UFH controller measured-temperature sensor - issue [#628](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/628).
+  - Fixed multi-gang dimmer lights breaking select, binary_sensor, switch, and sensor entities - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681).
+  - Preserved light entities across the multi-gang unique_id migration - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681).
+  - Added optimistic light state for instant UI feedback on toggles, kept stable across rapid repeated toggles.
+  - Fixed the device signal sensor to emit once per physical device instead of once per light channel on multi-gang dimmers.
+  - Fix for issue [#662](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/662).
 
 - v3.4.20
   - Added equipment data to smart plugs, heating actuators, and PowerTag E devices.
