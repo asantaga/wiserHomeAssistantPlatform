@@ -231,7 +231,7 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
             "physical-hub-id",
             "Andys Bedroom",
             manufacturer="Drayton Wiser",
-            name="Wiser Thermostat",
+            name="Wiser Thermostat Andys Bedroom",
             model="RoomStat",
             sw_version="4.48.2",
         )
@@ -267,7 +267,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.config_entry_id,
             self.identifier,
             self.legacy_identifier,
-            "Wiser Room",
+            "Wiser Andys Bedroom",
         )
 
         self.assertEqual(result.id, "room-device")
@@ -275,7 +275,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
         self.assertEqual(
             registry.updated[0][1]["new_identifiers"], {self.identifier}
         )
-        self.assertEqual(registry.updated[0][1]["name"], "Wiser Room")
+        self.assertEqual(registry.updated[0][1]["name"], "Wiser Andys Bedroom")
         self.assertNotIn("area_id", registry.updated[0][1])
         self.assertEqual(registry.removed, [])
 
@@ -302,7 +302,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.config_entry_id,
             self.identifier,
             self.legacy_identifier,
-            "Wiser Room",
+            "Wiser Andys Bedroom",
         )
 
         self.assertEqual(result.id, "stable-room")

@@ -140,10 +140,25 @@ class HubNamingTest(unittest.TestCase):
             "WiserHeatNOTUSED Wiser HeatHub (WiserHeatNOTUSED)",
         )
 
-    def test_room_device_name_uses_area_for_room_context(self) -> None:
+    def test_room_device_name_identifies_the_room(self) -> None:
         self.assertEqual(
             self.helpers.get_device_name(self.data, 7, "room"),
-            "Wiser Room",
+            "Wiser Andys Bedroom",
+        )
+
+    def test_room_device_names_are_unique_per_room(self) -> None:
+        names = {"Kitchen": 3, "Lounge": 5, "Andys Bedroom": 7}
+        self.data.wiserhub.rooms.get_by_id = lambda room_id: SimpleNamespace(
+            id=room_id,
+            name=next(name for name, id_ in names.items() if id_ == room_id),
+        )
+
+        self.assertEqual(
+            {
+                self.helpers.get_device_name(self.data, room_id, "room")
+                for room_id in names.values()
+            },
+            {"Wiser Kitchen", "Wiser Lounge", "Wiser Andys Bedroom"},
         )
 
     def test_room_identifier_uses_stable_room_id(self) -> None:
@@ -184,10 +199,10 @@ class HubNamingTest(unittest.TestCase):
             self.helpers.get_uuid_unique_id(legacy_unique_id),
         )
 
-    def test_roomstat_name_uses_area_for_room_context(self) -> None:
+    def test_roomstat_name_identifies_its_room(self) -> None:
         self.assertEqual(
             self.helpers.get_device_name(self.data, 21),
-            "Wiser Thermostat",
+            "Wiser Thermostat Andys Bedroom",
         )
         self.assertEqual(
             self.helpers.get_identifier(self.data, 21),
@@ -213,7 +228,7 @@ class HubNamingTest(unittest.TestCase):
 
         self.assertEqual(
             self.helpers.get_device_name(self.data, 31),
-            "Wiser Temperature/Humidity Sensor",
+            "Wiser Temperature/Humidity Sensor Andys Bedroom",
         )
         self.assertEqual(
             self.helpers.get_identifier(self.data, 31),

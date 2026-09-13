@@ -90,7 +90,7 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             if device_room:
-                return f"{ENTITY_PREFIX} Thermostat"
+                return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
             return f"{ENTITY_PREFIX} Thermostat {device.id}"
 
         if device.product_type == "UnderFloorHeating":
@@ -126,7 +126,13 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
         if device.product_type == "TemperatureHumiditySensor":
-            return f"{ENTITY_PREFIX} Temperature/Humidity Sensor"
+            device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+            if device_room:
+                return (
+                    f"{ENTITY_PREFIX} Temperature/Humidity Sensor "
+                    f"{device_room.name}"
+                )
+            return f"{ENTITY_PREFIX} Temperature/Humidity Sensor {device.name}"
 
         if device.product_type in [
             "Shutter",
@@ -135,7 +141,6 @@ def get_device_name(data, device_id, device_type="device"):
             "WindowDoorSensor",
             "WaterLeakageSensor",
             "MotionLightSensor",
-            "TemperatureHumiditySensor",
         ]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
@@ -146,7 +151,11 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif device_type == "room":
-        return f"{ENTITY_PREFIX} Room"
+        # The room name must stay in the device name: Home Assistant only
+        # applies ``suggested_area`` when a device is first created, so
+        # upgraded installations have no area to tell the rooms apart.
+        room = data.wiserhub.rooms.get_by_id(device_id)
+        return f"{ENTITY_PREFIX} {room.name}"
 
     else:
         return f"{ENTITY_PREFIX} {device_type}"
