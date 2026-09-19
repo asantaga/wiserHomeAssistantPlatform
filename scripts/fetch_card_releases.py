@@ -71,29 +71,44 @@ def download_asset(repository, asset):
     return contents, digest
 
 
-def fetch_cards(channel, output_dir, repositories, plan=False):
-    selections = []
-    # Resolve every release before downloading or replacing any assets.
-    for card, repository in repositories.items():
-        release = select_release(list_releases(repository), channel)
-        filename = f"wiser-{card}-card.js"
-        asset = select_asset(release, filename)
-        selections.append((repository, release, asset))
+def fetch_cards(channel, output_dir, repositories, plan=False, local_root=None):
     report = []
     payloads = {}
-    for repository, release, asset in selections:
-        record = {
-            "repository": repository, "tag": release["tag_name"],
-            "prerelease": release["prerelease"], "asset": asset["name"],
-            "asset_id": asset["id"], "url": asset["browser_download_url"],
-        }
+    # Resolve and validate every source before replacing any staged assets.
+    for card, repository in repositories.items():
+        filename = f"wiser-{card}-card.js"
+        local = (
+            Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / filename
+            if local_root is not None else None
+        )
+        if local is not None and local.is_file():
+            contents = local.read_bytes()
+            record = {
+                "repository": repository, "source": "local", "asset": filename,
+                "path": str(local.resolve()),
+                "digest": "sha256:" + sha256(contents).hexdigest(),
+            }
+        else:
+            release = select_release(list_releases(repository), channel)
+            asset = select_asset(release, filename)
+            record = {
+                "repository": repository, "source": "release",
+                "tag": release["tag_name"], "prerelease": release["prerelease"],
+                "asset": filename, "asset_id": asset["id"],
+                "url": asset["browser_download_url"],
+            }
+            if not plan:
+                contents, record["digest"] = download_asset(repository, asset)
         if not plan:
-            contents, digest = download_asset(repository, asset)
-            # The integration's dedicated panel must have a matching card build.
-            if asset["name"] == "wiser-schedule-card.js" and (output_dir / "schedules_sidebar.py").exists() and b"wiser-schedules-panel" not in contents:
-                raise ValueError("Selected schedule card does not include the sidebar panel required by this integration")
-            payloads[asset["name"]] = contents
-            record["digest"] = digest
+            if not contents or contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
+                raise ValueError(f"Invalid JavaScript bundle: {filename}")
+            panel_file, component = {
+                "schedule": ("schedules_sidebar.py", b"wiser-schedules-panel"),
+                "zigbee": ("zigbee_sidebar.py", b"wiser-zigbee-panel"),
+            }[card]
+            if (output_dir / panel_file).exists() and component not in contents:
+                raise ValueError(f"Selected {card} card does not include the sidebar panel required by this integration")
+            payloads[filename] = contents
         report.append(record)
     if not plan:
         output_dir.mkdir(parents=True, exist_ok=True)

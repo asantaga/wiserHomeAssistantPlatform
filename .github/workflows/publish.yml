@@ -28,34 +28,27 @@ jobs:
       - name: Test packaging and sidebar integration
         run: |
           python -m unittest discover -s tests -p test_card_releases.py
+          python -m unittest discover -s tests -p test_build.py
           python -m unittest discover -s tests -p 'test_*sidebar.py'
           python -m unittest discover -s tests -p 'test_*version.py'
-      - name: Stage integration
-        run: |
-          mkdir -p dist/wiser
-          cp -a custom_components/wiser/. dist/wiser/
-      - name: Fetch card release assets
-        if: github.event_name != 'push'
+      - name: Build integration with published card releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
           SCHEDULE_REPOSITORY: ${{ vars.WISER_SCHEDULE_CARD_REPOSITORY || 'andyblac/wiser-schedule-card' }}
           ZIGBEE_REPOSITORY: ${{ vars.WISER_ZIGBEE_CARD_REPOSITORY || 'andyblac/wiser-zigbee-card' }}
         run: >-
-          python scripts/fetch_card_releases.py
+          python scripts/build.py --release
           --channel "$CARD_CHANNEL"
           --schedule-repository "$SCHEDULE_REPOSITORY"
           --zigbee-repository "$ZIGBEE_REPOSITORY"
-      - name: Package integration
-        working-directory: dist/wiser
-        run: zip -r ../wiser.zip . -x '*/__pycache__/*' '*.pyc'
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
           name: wiser-package
           path: |
             dist/wiser.zip
-            dist/wiser/frontend/card-releases.json
+            dist/card-releases.json
           if-no-files-found: error
 
   publish:

@@ -222,17 +222,23 @@ A full change log can be seen on our wiki [here](https://github.com/asantaga/wis
 
 The sidebar panel is built together with the schedule card in the `wiser-schedule-card` repository. The integration distributes that matching bundle; it does not maintain a separate panel JavaScript source.
 
-### Packaging published cards
+### Building the integration
 
-The Publish workflow downloads compiled card assets from `andyblac/wiser-schedule-card` and `andyblac/wiser-zigbee-card` into the integration's `frontend` directory in a temporary staging copy. It does not change the tracked card files or build branch source.
+Run `python3 scripts/build.py` to create `dist/wiser.zip`. For each card, the build automatically uses the compiled bundle in a sibling repository (`../wiser-schedule-card/dist/wiser-schedule-card.js` or `../wiser-zigbee-card/dist/wiser-zigbee-card.js`). Build the card in its own repository first to include source changes. Use `--local-root /path/to/repositories` if those repositories are elsewhere.
+
+If a local bundle is missing, the build downloads the corresponding GitHub release asset. It never falls back to the integration's old bundled copy. Development builds use local bundles first, with the `dev` release channel as fallback. An invalid local bundle fails the build.
+
+Release builds always use published GitHub assets, even when local bundles exist. Run `python3 scripts/build.py --release --channel dev` for a prerelease build or `python3 scripts/build.py --release --channel stable` for a stable release build. Selecting `--channel stable` also enforces release-only assets without requiring `--release`. Failed release downloads fail the build; they never fall back to local bundles.
+
+The Publish workflow always passes `--release`, so it ignores any local card builds and downloads compiled assets from `andyblac/wiser-schedule-card` and `andyblac/wiser-zigbee-card`. Packaging uses a temporary staging copy and does not change tracked card files.
 
 - Pushes to `test-build` and prereleases select the newest published prerelease of each card, falling back to its newest stable release if no prerelease exists.
 - Stable integration releases select only stable card releases.
 - Manual workflow runs let you test either channel and produce a downloadable `wiser-package` artifact, without publishing a release.
 
-Each card release must have its compiled `wiser-schedule-card.js` or `wiser-zigbee-card.js` attached. Missing releases or assets fail the build instead of silently shipping old files. The schedule asset must include the sidebar panel when packaging a panel-enabled integration. The ZIP includes `frontend/card-releases.json` recording the exact tags, asset IDs, download URLs, and SHA-256 digests used. Repository variables `WISER_SCHEDULE_CARD_REPOSITORY` and `WISER_ZIGBEE_CARD_REPOSITORY` can override the source repositories.
+Each card release must have its compiled `wiser-schedule-card.js` or `wiser-zigbee-card.js` attached. Missing releases or assets fail the build instead of silently shipping old files. Each card asset must include its sidebar panel when packaging a panel-enabled integration. The ZIP includes `frontend/card-releases.json` recording local paths or release tags, asset IDs and download URLs, plus SHA-256 digests. A copy is also written to `dist/card-releases.json`. Repository variables `WISER_SCHEDULE_CARD_REPOSITORY` and `WISER_ZIGBEE_CARD_REPOSITORY` can override the source repositories.
 
-To preview selection without changing files:
+To preview GitHub release selection without changing files:
 
 ```sh
 python3 scripts/fetch_card_releases.py --channel dev --plan
