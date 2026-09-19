@@ -48,7 +48,9 @@
       "ui_options": {
         "title": "Options de l’interface",
         "data": {
-          "legacy_naming": "Nommage historique"
+          "legacy_naming": "Nommage historique",
+          "show_schedules_sidebar": "Afficher les programmes Wiser dans la barre latérale",
+          "show_zigbee_sidebar": "Afficher Wiser Zigbee dans la barre latérale"
         },
         "data_description": {
           "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants."
@@ -58,8 +60,6 @@
         "title": "Wiser possibilités d'intégration",
         "description": "Paramètres principaux",
         "data": {
-          "show_schedules_sidebar": "Afficher les programmes Wiser dans la barre latérale",
-          "show_zigbee_sidebar": "Afficher Wiser Zigbee dans la barre latérale",
           "host": "Adresse IP ou nom d'hote",
           "port": "Numéro de port",
           "scan_interval": " Période d'acquisition",

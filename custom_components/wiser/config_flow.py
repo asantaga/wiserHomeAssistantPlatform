@@ -277,7 +277,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_ui_options(self, user_input=None):
-        """Configure device naming for the Home Assistant UI."""
+        """Configure Wiser UI options, including legacy naming and sidebar panels."""
         if user_input is not None:
             return self.async_create_entry(
                 data=self.config_entry.options | user_input
@@ -292,6 +292,14 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_LEGACY_NAMING, True
                         ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_SCHEDULES_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_ZIGBEE_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
                     ): BooleanSelector(),
                 }
             ),
@@ -393,14 +401,6 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(data=options)
 
         data_schema = {
-            vol.Optional(
-                CONF_SHOW_SCHEDULES_SIDEBAR,
-                default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_SHOW_ZIGBEE_SIDEBAR,
-                default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
-            ): BooleanSelector(),
             vol.Required(CONF_HOST, default=self.config_entry.data[CONF_HOST]): str,
             vol.Optional(
                 CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)
