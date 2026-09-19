@@ -19,7 +19,6 @@ _SCHEDULES_PANEL = SidebarPanel(
     config_option=CONF_SCHEDULES_PANEL_CONFIG,
     hub_error="Hub is not enabled in the schedules panel",
     setting_error="Invalid schedule card setting",
-
 )
 
 
@@ -31,4 +30,3 @@ async def async_update_schedules_panel(hass):
 def save_schedules_panel_config(hass, configs):
     """Validate all submitted settings before updating integration options."""
     save_panel_config(hass, _SCHEDULES_PANEL, configs)
-

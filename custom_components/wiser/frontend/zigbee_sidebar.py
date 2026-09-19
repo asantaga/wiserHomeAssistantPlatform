@@ -21,7 +21,6 @@ _ZIGBEE_PANEL = SidebarPanel(
     config_option=CONF_ZIGBEE_PANEL_CONFIG,
     hub_error="Hub is not enabled in the zigbee panel",
     setting_error="Invalid Zigbee card setting",
-
 )
 
 

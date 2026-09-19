@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   push:
-    branches: [test-build, frontend-panels]
+    branches: [test-build]
   workflow_dispatch:
     inputs:
       channel:
@@ -21,20 +21,22 @@ jobs:
     name: Build Wiser integration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Test packaging and sidebar integration
         run: |
           python -m unittest discover -s tests -p test_card_releases.py
           python -m unittest discover -s tests -p test_build.py
+          python -m unittest discover -s tests -p test_ui_options.py
+          python -m unittest discover -s tests -p test_sidebar_icons.py
           python -m unittest discover -s tests -p 'test_*sidebar.py'
           python -m unittest discover -s tests -p 'test_*version.py'
       - name: Build integration with published card releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || (github.ref_name == 'frontend-panels' && 'stable' || 'dev') }}
+          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
           SCHEDULE_REPOSITORY: ${{ vars.WISER_SCHEDULE_CARD_REPOSITORY || 'andyblac/wiser-schedule-card' }}
           ZIGBEE_REPOSITORY: ${{ vars.WISER_ZIGBEE_CARD_REPOSITORY || 'andyblac/wiser-zigbee-card' }}
         run: >-
@@ -43,7 +45,7 @@ jobs:
           --schedule-repository "$SCHEDULE_REPOSITORY"
           --zigbee-repository "$ZIGBEE_REPOSITORY"
       - name: Upload release package for inspection
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wiser-package
           path: |
@@ -59,7 +61,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: wiser-package
           path: dist
