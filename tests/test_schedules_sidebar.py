@@ -1,6 +1,6 @@
 """Test sidebar panel lifecycle without Home Assistant runtime dependencies."""
 
-import importlib.util
+import importlib
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
@@ -25,12 +25,11 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         constants.CONF_SHOW_SCHEDULES_SIDEBAR = "show_schedules_sidebar"
         constants.CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
         constants.CONF_ZIGBEE_PANEL_CONFIG = "zigbee_panel_config"
-        zigbee = ModuleType("sidebar_test.frontend.zigbee_sidebar")
-        self.update_zigbee = AsyncMock()
-        zigbee.async_update_zigbee_panel = self.update_zigbee
+        constants.CONF_SHOW_ZIGBEE_SIDEBAR = "show_zigbee_sidebar"
         version_module = ModuleType("sidebar_test.frontend.schedule_version")
         self.version_reader = Mock(return_value="4.5.6-beta.2")
         version_module.card_version = self.version_reader
+        version_module.__path__ = [str(ROOT / "frontend")]
         constants.DATA = "data"
         constants.DOMAIN = "wiser"
         constants.URL_BASE = "/wiser"
@@ -43,13 +42,12 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
             "sidebar_test": ModuleType("sidebar_test"),
             "sidebar_test.frontend": version_module,
             "sidebar_test.const": constants,
-            "sidebar_test.frontend.zigbee_sidebar": zigbee,
         }):
-            spec = importlib.util.spec_from_file_location(
-                "sidebar_test.frontend.sidebar", ROOT / "frontend/sidebar.py"
-            )
-            self.sidebar = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(self.sidebar)
+            self.zigbee = importlib.import_module("sidebar_test.frontend.zigbee_sidebar")
+            self.update_zigbee = AsyncMock(wraps=self.zigbee.async_update_zigbee_panel)
+            self.zigbee.async_update_zigbee_panel = self.update_zigbee
+            self.sidebar = importlib.import_module("sidebar_test.frontend.schedules_sidebar")
+            self.entry_updates = importlib.import_module("sidebar_test.frontend.entry_updates")
         self.entries = []
         self.hass = SimpleNamespace(
             data={"wiser": {}},
@@ -167,11 +165,11 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
     async def test_save_updates_panel_without_removing_route_or_reloading(self):
         entry = self.add_hub("hub", True)
         loaded = self.hass.data["wiser"]["hub"]
-        loaded["reload_settings"] = self.sidebar.integration_reload_settings(entry)
+        loaded["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
         self.hass.config_entries.async_reload = AsyncMock()
         await self.sidebar.async_update_schedules_panel(self.hass)
         entry.options = {**entry.options, "schedules_panel_config": {"home_screen": "overview"}}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
         self.hass.config_entries.async_reload.assert_not_called()
         self.frontend.async_remove_panel.assert_not_called()
         self.frontend.async_register_built_in_panel.assert_called_once()
@@ -182,15 +180,15 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_other_options_and_connection_changes_still_reload(self):
         entry = self.add_hub("hub", True)
-        self.hass.data["wiser"]["hub"]["reload_settings"] = self.sidebar.integration_reload_settings(entry)
+        self.hass.data["wiser"]["hub"]["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
         self.hass.config_entries.async_reload = AsyncMock()
         entry.options = {**entry.options, "scan_interval": 60}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
         self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
         self.hass.config_entries.async_reload.reset_mock()
         entry.options.pop("scan_interval")
         entry.data = {"host": "other.local"}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
         self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
 
     async def test_new_bundle_updates_panel_version(self):
@@ -204,9 +202,51 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_zigbee_preferences_update_both_panels_without_reload(self):
         entry = self.add_hub("hub", True)
-        self.hass.data["wiser"]["hub"]["reload_settings"] = self.sidebar.integration_reload_settings(entry)
+        self.hass.data["wiser"]["hub"]["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
         self.hass.config_entries.async_reload = AsyncMock()
         entry.options["zigbee_panel_config"] = {"show_labels": True}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
         self.update_zigbee.assert_awaited_once_with(self.hass)
         self.hass.config_entries.async_reload.assert_not_called()
+
+    async def test_panel_preferences_remain_independent_during_live_updates(self):
+        entry = self.add_hub("hub", True)
+        entry.options["show_zigbee_sidebar"] = True
+        self.hass.data["wiser"]["hub"]["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
+        self.hass.config_entries.async_reload = AsyncMock()
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
+        self.assertEqual(self.custom.async_register_panel.await_count, 2)
+        entry.options["zigbee_panel_config"] = {"orientation": "pie"}
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
+        self.hass.config_entries.async_reload.assert_not_called()
+        self.frontend.async_register_built_in_panel.assert_called_once()
+        self.assertEqual(
+            self.frontend.async_register_built_in_panel.call_args.kwargs["frontend_url_path"],
+            "wiser-zigbee-panel",
+        )
+        self.assertEqual(self.hass.data[self.sidebar.PANEL_STATE]["card_configs"], {"hub": {}})
+        self.assertEqual(
+            self.hass.data[self.zigbee.PANEL_STATE]["card_configs"],
+            {"hub": {"orientation": "pie"}},
+        )
+
+    async def test_disabled_hub_with_same_name_cannot_override_settings(self):
+        enabled = self.add_hub("enabled", True)
+        enabled.options["schedules_panel_config"] = {"hide_hw_schedule": True}
+        disabled = self.add_hub("disabled", True, disabled=True)
+        disabled.options["schedules_panel_config"] = {"hide_hw_schedule": False}
+        self.hass.data["wiser"]["disabled"]["data"].wiserhub.system.name = "enabled"
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertEqual(
+            self.custom.async_register_panel.call_args.kwargs["config"]["card_configs"],
+            {"enabled": {"hide_hw_schedule": True}},
+        )
+
+    def test_disabled_hub_settings_cannot_be_saved(self):
+        self.add_hub("disabled", True, disabled=True)
+        self.hass.config_entries.async_update_entry = Mock()
+        with self.assertRaises(ValueError):
+            self.sidebar.save_schedules_panel_config(
+                self.hass, {"disabled": {"hide_hw_schedule": True}}
+            )
+        self.hass.config_entries.async_update_entry.assert_not_called()

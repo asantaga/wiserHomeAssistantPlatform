@@ -45,9 +45,8 @@ from .device import (
 )
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
-from .frontend.sidebar import (
-    async_handle_entry_update, async_update_schedules_panel, integration_reload_settings,
-)
+from .frontend.entry_updates import async_handle_entry_update, integration_reload_settings
+from .frontend.schedules_sidebar import async_update_schedules_panel
 from .helpers import (
     build_light_unique_id_migration,
     get_device_name,

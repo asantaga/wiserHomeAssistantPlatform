@@ -90,7 +90,7 @@ def fetch_cards(channel, output_dir, repositories, plan=False):
         if not plan:
             contents, digest = download_asset(repository, asset)
             # The integration's dedicated panel must have a matching card build.
-            if asset["name"] == "wiser-schedule-card.js" and (output_dir / "sidebar.py").exists() and b"wiser-schedules-panel" not in contents:
+            if asset["name"] == "wiser-schedule-card.js" and (output_dir / "schedules_sidebar.py").exists() and b"wiser-schedules-panel" not in contents:
                 raise ValueError("Selected schedule card does not include the sidebar panel required by this integration")
             payloads[asset["name"]] = contents
             record["digest"] = digest

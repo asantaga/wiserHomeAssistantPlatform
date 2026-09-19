@@ -10,7 +10,7 @@ from aioWiserHeatAPI.exceptions import WiserScheduleError
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import DATA, DOMAIN
-from .frontend.sidebar import save_schedules_panel_config
+from .frontend.schedules_sidebar import save_schedules_panel_config
 from .frontend.zigbee_sidebar import save_zigbee_panel_config
 
 _LOGGER = logging.getLogger(__name__)

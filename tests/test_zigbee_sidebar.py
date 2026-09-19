@@ -27,6 +27,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         version_module = ModuleType("sidebar_test.frontend.zigbee_version")
         self.version_reader = Mock(return_value="4.5.6-beta.2")
         version_module.card_version = self.version_reader
+        version_module.__path__ = [str(ROOT / "frontend")]
         constants.DATA = "data"
         constants.DOMAIN = "wiser"
         constants.URL_BASE = "/wiser"
@@ -41,7 +42,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
             "sidebar_test.const": constants,
         }):
             spec = importlib.util.spec_from_file_location(
-                "sidebar_test.frontend.sidebar", ROOT / "frontend/zigbee_sidebar.py"
+                "sidebar_test.frontend.zigbee_sidebar", ROOT / "frontend/zigbee_sidebar.py"
             )
             self.sidebar = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.sidebar)
@@ -173,34 +174,17 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ValueError):
                 self.sidebar.save_zigbee_panel_config(self.hass, {"hub": settings})
         self.hass.config_entries.async_update_entry.assert_not_called()
-    async def test_save_updates_panel_without_removing_route_or_reloading(self):
+    async def test_saved_settings_update_panel_without_removing_route(self):
         entry = self.add_hub("hub", True)
-        loaded = self.hass.data["wiser"]["hub"]
-        loaded["reload_settings"] = self.sidebar.integration_reload_settings(entry)
-        self.hass.config_entries.async_reload = AsyncMock()
         await self.sidebar.async_update_zigbee_panel(self.hass)
         entry.options = {**entry.options, "zigbee_panel_config": {"orientation": "pie"}}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
-        self.hass.config_entries.async_reload.assert_not_called()
+        await self.sidebar.async_update_zigbee_panel(self.hass)
         self.frontend.async_remove_panel.assert_not_called()
         self.frontend.async_register_built_in_panel.assert_called_once()
         update = self.frontend.async_register_built_in_panel.call_args.kwargs
         self.assertTrue(update["update"])
         self.assertEqual(update["frontend_url_path"], "wiser-zigbee-panel")
         self.assertEqual(update["config"]["card_configs"]["hub"], {"orientation": "pie"})
-
-    async def test_other_options_and_connection_changes_still_reload(self):
-        entry = self.add_hub("hub", True)
-        self.hass.data["wiser"]["hub"]["reload_settings"] = self.sidebar.integration_reload_settings(entry)
-        self.hass.config_entries.async_reload = AsyncMock()
-        entry.options = {**entry.options, "scan_interval": 60}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
-        self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
-        self.hass.config_entries.async_reload.reset_mock()
-        entry.options.pop("scan_interval")
-        entry.data = {"host": "other.local"}
-        await self.sidebar.async_handle_entry_update(self.hass, entry)
-        self.hass.config_entries.async_reload.assert_awaited_once_with("hub")
 
     async def test_bundle_version_change_updates_panel_without_settings_change(self):
         self.add_hub("hub", True)
@@ -241,3 +225,24 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.frontend.async_register_built_in_panel.side_effect = None
         await self.sidebar.async_update_zigbee_panel(self.hass)
         self.assertTrue(self.hass.data[self.sidebar.PANEL_STATE]["card_configs"]["hub"]["show_labels"])
+
+    async def test_disabled_hub_with_same_name_cannot_override_settings(self):
+        enabled = self.add_hub("enabled", True)
+        enabled.options["zigbee_panel_config"] = {"show_labels": True}
+        disabled = self.add_hub("disabled", True, disabled=True)
+        disabled.options["zigbee_panel_config"] = {"show_labels": False}
+        self.hass.data["wiser"]["disabled"]["data"].wiserhub.system.name = "enabled"
+        await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertEqual(
+            self.custom.async_register_panel.call_args.kwargs["config"]["card_configs"],
+            {"enabled": {"show_labels": True}},
+        )
+
+    def test_disabled_hub_settings_cannot_be_saved(self):
+        self.add_hub("disabled", True, disabled=True)
+        self.hass.config_entries.async_update_entry = Mock()
+        with self.assertRaises(ValueError):
+            self.sidebar.save_zigbee_panel_config(
+                self.hass, {"disabled": {"show_labels": True}}
+            )
+        self.hass.config_entries.async_update_entry.assert_not_called()

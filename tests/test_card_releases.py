@@ -79,7 +79,7 @@ class CardReleaseTest(unittest.TestCase):
     def test_panel_integration_rejects_old_schedule_card(self):
         with TemporaryDirectory() as directory:
             out = Path(directory)
-            (out / "sidebar.py").touch()
+            (out / "schedules_sidebar.py").touch()
             with patch.object(FETCH, "list_releases", return_value=[release("old", "2026", card="schedule")]), patch.object(FETCH, "download_asset", return_value=(b"old card", "sha256:test")):
                 with self.assertRaisesRegex(ValueError, "does not include the sidebar panel"):
                     FETCH.fetch_cards("stable", out, {"schedule": "andyblac/wiser-schedule-card"})
