@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from homeassistant.components import frontend, panel_custom
 
@@ -26,8 +26,6 @@ class SidebarPanel:
     config_option: str
     hub_error: str
     setting_error: str
-    field_types: dict
-    validate_setting: Callable | None = None
 
 
 def _enabled_entries(hass, panel):
@@ -99,25 +97,43 @@ async def async_update_panel(hass, panel):
     hass.data[panel.state_key] = state
 
 
+def _is_json_value(value, depth=0):
+    """Accept finite JSON data, including future card options."""
+    if depth > 64:
+        return False
+    if type(value) in (str, bool, int, type(None)):
+        return True
+    if type(value) is float:
+        return math.isfinite(value)
+    if type(value) is list:
+        return all(_is_json_value(item, depth + 1) for item in value)
+    if type(value) is dict:
+        return all(
+            type(key) is str and _is_json_value(item, depth + 1)
+            for key, item in value.items()
+        )
+    return False
+
+
 def save_panel_config(hass, panel, configs):
-    """Validate every hub's settings before persisting any options."""
+    """Validate every hub's settings before persisting any options.
+
+    Cards own their display options. Only validate JSON structure here so new
+    card settings do not require an integration release.
+    """
+    if type(configs) is not dict:
+        raise ValueError(panel.setting_error)
     entries = dict(_enabled_entries(hass, panel))
     updates = []
     for hub, config in configs.items():
         if hub not in entries:
             raise ValueError(panel.hub_error)
+        if type(config) is not dict or not _is_json_value(config):
+            raise ValueError(panel.setting_error)
         settings = {}
         for key, value in config.items():
             if key in {"type", "hub"}:
                 continue
-            allowed_types = panel.field_types.get(key, ())
-            if not isinstance(allowed_types, tuple):
-                allowed_types = (allowed_types,)
-            # Exact types prevent booleans from being accepted as integers.
-            if type(value) not in allowed_types:
-                raise ValueError(f"{panel.setting_error}: {key}")
-            if panel.validate_setting is not None:
-                panel.validate_setting(key, value)
             settings[key] = value
         updates.append((entries[hub], settings))
     for entry, settings in updates:

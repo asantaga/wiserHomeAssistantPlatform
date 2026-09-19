@@ -142,13 +142,24 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(options["show_zigbee_sidebar"])
         self.assertEqual(options["zigbee_panel_config"], {"show_labels": True})
 
+    def test_theme_modes_are_saved(self):
+        self.add_hub("hub", True)
+        self.hass.config_entries.async_update_entry = Mock()
+        for mode in ("auto", "dark", "light"):
+            with self.subTest(mode=mode):
+                self.sidebar.save_zigbee_panel_config(self.hass, {
+                    "hub": {"theme_mode": mode},
+                })
+                options = self.hass.config_entries.async_update_entry.call_args.kwargs["options"]
+                self.assertEqual(options["zigbee_panel_config"], {"theme_mode": mode})
+
     def test_invalid_settings_do_not_partially_save(self):
         self.add_hub("first", True)
         self.add_hub("second", True)
         self.hass.config_entries.async_update_entry = Mock()
         with self.assertRaises(ValueError):
             self.sidebar.save_zigbee_panel_config(self.hass, {
-                "first": {"name": "Valid"}, "second": {"show_labels": "invalid"},
+                "first": {"name": "Valid"}, "second": {"future_option": float("nan")},
             })
         self.hass.config_entries.async_update_entry.assert_not_called()
 
@@ -162,18 +173,42 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
             settings,
         )
 
-    def test_invalid_coordinates_and_choices_are_rejected(self):
+    async def test_future_card_options_round_trip_without_backend_schema_changes(self):
+        entry = self.add_hub("hub", True)
+        def update_entry(entry, *, options):
+            entry.options = options
+        self.hass.config_entries.async_update_entry = Mock(side_effect=update_entry)
+        settings = {
+            "future_display_option": {"enabled": True, "values": [1, 0.5, None, "new"]},
+            "orientation": "future-layout",
+            "theme_mode": "future-theme",
+        }
+        self.sidebar.save_zigbee_panel_config(self.hass, {"hub": settings})
+        self.assertEqual(entry.options["zigbee_panel_config"], settings)
+        await self.sidebar.async_update_zigbee_panel(self.hass)
+        self.assertEqual(
+            self.custom.async_register_panel.call_args.kwargs["config"]["card_configs"],
+            {"hub": settings},
+        )
+
+    def test_invalid_json_settings_are_rejected(self):
         self.add_hub("hub", True)
         self.hass.config_entries.async_update_entry = Mock()
+        cyclic = {}
+        cyclic["self"] = cyclic
         for settings in [
-            {"orientation": "diagonal"}, {"link_status": "purple"},
-            {"map_height": True}, {"map_height": 99},
-            {"layout_data": {"1": {"x": float("nan"), "y": 0}}},
-            {"layout_data": {"1": {"x": 0}}},
+            None, [], "invalid", {1: "non-string key"},
+            {"future": {"nested": float("nan")}},
+            {"future": [float("inf")]}, {"future": object()},
+            {"future": {1, 2}}, cyclic,
         ]:
-            with self.assertRaises(ValueError):
+            with self.subTest(settings=type(settings)), self.assertRaises(ValueError):
                 self.sidebar.save_zigbee_panel_config(self.hass, {"hub": settings})
+        for configs in (None, [], "invalid"):
+            with self.assertRaises(ValueError):
+                self.sidebar.save_zigbee_panel_config(self.hass, configs)
         self.hass.config_entries.async_update_entry.assert_not_called()
+
     async def test_saved_settings_update_panel_without_removing_route(self):
         entry = self.add_hub("hub", True)
         await self.sidebar.async_update_zigbee_panel(self.hass)

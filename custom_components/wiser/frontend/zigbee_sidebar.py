@@ -1,7 +1,6 @@
 """Manage the shared Wiser zigbee sidebar panel."""
 
 import logging
-import math
 
 from .panel import SidebarPanel, async_update_panel, save_panel_config
 from ..const import CONF_SHOW_ZIGBEE_SIDEBAR, CONF_ZIGBEE_PANEL_CONFIG
@@ -10,30 +9,6 @@ _LOGGER = logging.getLogger(__name__)
 
 PANEL_PATH = "wiser-zigbee-panel"
 PANEL_STATE = "wiser_zigbee_panel"
-
-_CHOICES = {
-    "orientation": {"vertical", "horizontal", "pie"},
-    "group_by": {"none", "area"},
-    "link_status": {"links", "icons", "both", "none"},
-}
-
-
-def _validate_setting(key, value):
-    """Validate Zigbee choices, map bounds, and saved coordinates."""
-    if key in _CHOICES and value not in _CHOICES[key]:
-        raise ValueError(f"Invalid Zigbee card setting: {key}")
-    if key == "map_height" and value is not None and not 100 <= value <= 2000:
-        raise ValueError("Map height must be between 100 and 2000")
-    if key == "layout_data":
-        for position in value.values():
-            if not isinstance(position, dict) or set(position) != {"x", "y"}:
-                raise ValueError("Invalid layout position")
-            if any(
-                type(n) not in (int, float) or not math.isfinite(n)
-                for n in position.values()
-            ):
-                raise ValueError("Invalid layout coordinates")
-
 
 _ZIGBEE_PANEL = SidebarPanel(
     path=PANEL_PATH,
@@ -46,14 +21,7 @@ _ZIGBEE_PANEL = SidebarPanel(
     config_option=CONF_ZIGBEE_PANEL_CONFIG,
     hub_error="Hub is not enabled in the zigbee panel",
     setting_error="Invalid Zigbee card setting",
-    field_types={
-        "name": str, "layout_id": str, "layout_seed": str,
-        "auto_update": bool, "log_seed": bool, "map_only": bool,
-        "show_device_list": bool, "show_labels": bool, "magnifier": bool,
-        "orientation": str, "group_by": str, "link_status": str,
-        "map_height": (int, type(None)), "layout_data": dict,
-    },
-    validate_setting=_validate_setting,
+
 )
 
 

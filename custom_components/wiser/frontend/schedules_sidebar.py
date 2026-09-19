@@ -19,12 +19,7 @@ _SCHEDULES_PANEL = SidebarPanel(
     config_option=CONF_SCHEDULES_PANEL_CONFIG,
     hub_error="Hub is not enabled in the schedules panel",
     setting_error="Invalid schedule card setting",
-    field_types={
-        "name": str, "selected_schedule": str, "view_type": str, "home_screen": str,
-        "theme_colors": bool, "show_badges": bool, "show_schedule_id": bool,
-        "display_only": bool, "hide_hw_schedule": bool, "admin_only": bool,
-        "hide_card_borders": bool, "hide_card_background": bool, "overview_details": bool,
-    },
+
 )
 
 

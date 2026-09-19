@@ -148,7 +148,7 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.hass.config_entries.async_update_entry = Mock()
         with self.assertRaises(ValueError):
             self.sidebar.save_schedules_panel_config(self.hass, {
-                "first": {"name": "Valid"}, "second": {"hide_hw_schedule": "invalid"},
+                "first": {"name": "Valid"}, "second": {"future_option": float("nan")},
             })
         self.hass.config_entries.async_update_entry.assert_not_called()
 
@@ -161,6 +161,48 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
             self.hass.config_entries.async_update_entry.call_args.kwargs["options"]["schedules_panel_config"],
             settings,
         )
+
+    async def test_future_card_options_round_trip_without_backend_schema_changes(self):
+        entry = self.add_hub("hub", True)
+        entry.options["scan_interval"] = 30
+        entry.options["zigbee_panel_config"] = {"theme_mode": "dark"}
+
+        def update_entry(entry, *, options):
+            entry.options = options
+
+        self.hass.config_entries.async_update_entry = Mock(side_effect=update_entry)
+        settings = {
+            "future_display_option": {"enabled": True, "values": [1, 0.5, None, "new"]},
+            "view_type": "future-view",
+            "theme_mode": "light",
+        }
+        self.sidebar.save_schedules_panel_config(self.hass, {"hub": settings})
+        self.assertEqual(entry.options["schedules_panel_config"], settings)
+        self.assertEqual(entry.options["scan_interval"], 30)
+        self.assertEqual(entry.options["zigbee_panel_config"], {"theme_mode": "dark"})
+        await self.sidebar.async_update_schedules_panel(self.hass)
+        self.assertEqual(
+            self.custom.async_register_panel.call_args.kwargs["config"]["card_configs"],
+            {"hub": settings},
+        )
+
+    def test_invalid_json_settings_are_rejected(self):
+        self.add_hub("hub", True)
+        self.hass.config_entries.async_update_entry = Mock()
+        cyclic = {}
+        cyclic["self"] = cyclic
+        for settings in [
+            None, [], "invalid", {1: "non-string key"},
+            {"future": {"nested": float("nan")}},
+            {"future": [float("inf")]}, {"future": object()},
+            {"future": {1, 2}}, cyclic,
+        ]:
+            with self.subTest(settings=type(settings)), self.assertRaises(ValueError):
+                self.sidebar.save_schedules_panel_config(self.hass, {"hub": settings})
+        for configs in (None, [], "invalid"):
+            with self.assertRaises(ValueError):
+                self.sidebar.save_schedules_panel_config(self.hass, configs)
+        self.hass.config_entries.async_update_entry.assert_not_called()
 
     async def test_save_updates_panel_without_removing_route_or_reloading(self):
         entry = self.add_hub("hub", True)
