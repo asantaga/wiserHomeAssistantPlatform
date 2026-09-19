@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   push:
-    branches: [test-build]
+    branches: [test-build, frontend-panels]
   workflow_dispatch:
     inputs:
       channel:
@@ -34,7 +34,7 @@ jobs:
       - name: Build integration with published card releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
+          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || (github.ref_name == 'frontend-panels' && 'stable' || 'dev') }}
           SCHEDULE_REPOSITORY: ${{ vars.WISER_SCHEDULE_CARD_REPOSITORY || 'andyblac/wiser-schedule-card' }}
           ZIGBEE_REPOSITORY: ${{ vars.WISER_ZIGBEE_CARD_REPOSITORY || 'andyblac/wiser-zigbee-card' }}
         run: >-
@@ -42,7 +42,7 @@ jobs:
           --channel "$CARD_CHANNEL"
           --schedule-repository "$SCHEDULE_REPOSITORY"
           --zigbee-repository "$ZIGBEE_REPOSITORY"
-      - name: Upload test artifact
+      - name: Upload release package for inspection
         uses: actions/upload-artifact@v4
         with:
           name: wiser-package

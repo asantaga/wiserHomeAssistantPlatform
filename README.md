@@ -232,9 +232,12 @@ Release builds always use published GitHub assets, even when local bundles exist
 
 The Publish workflow always passes `--release`, so it ignores any local card builds and downloads compiled assets from `andyblac/wiser-schedule-card` and `andyblac/wiser-zigbee-card`. Packaging uses a temporary staging copy and does not change tracked card files.
 
-- Pushes to `test-build` and prereleases select the newest published prerelease of each card, falling back to its newest stable release if no prerelease exists.
-- Stable integration releases select only stable card releases.
-- Manual workflow runs let you test either channel and produce a downloadable `wiser-package` artifact, without publishing a release.
+- Pushes to `frontend-panels` preview a stable release using only stable GitHub card releases. They run the same packaging job used by a real release and upload the resulting `wiser-package` artifact. The publish job is skipped.
+- Pushes to `test-build` keep using the dev card release channel.
+- Stable integration releases select only stable card releases. Prereleases select the newest published prerelease of each card, falling back to its newest stable release if no prerelease exists.
+- Manual workflow runs keep their dev default and let you select either channel without publishing a release.
+
+To test the release workflow before merging into the release branch, commit your changes and push `frontend-panels`. Open **Actions → Publish**, select that push run, and download **wiser-package**. Inspect `card-releases.json` for the selected card releases and install the included `wiser.zip` on your test instance. The release attachment step uses this same ZIP artifact on actual release events. A later build may select newer card releases if they are published between the preview and the real release.
 
 Each card release must have its compiled `wiser-schedule-card.js` or `wiser-zigbee-card.js` attached. Missing releases or assets fail the build instead of silently shipping old files. Each card asset must include its sidebar panel when packaging a panel-enabled integration. The ZIP includes `frontend/card-releases.json` recording local paths or release tags, asset IDs and download URLs, plus SHA-256 digests. A copy is also written to `dist/card-releases.json`. Repository variables `WISER_SCHEDULE_CARD_REPOSITORY` and `WISER_ZIGBEE_CARD_REPOSITORY` can override the source repositories.
 
