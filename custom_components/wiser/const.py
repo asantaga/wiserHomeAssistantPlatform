@@ -9,6 +9,7 @@ from enum import StrEnum
 
 VERSION = "3.4.21b0"
 DOMAIN = "wiser"
+CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 

@@ -68,6 +68,7 @@ def hub_error_handler(func):
 
 
 def get_device_name(data, device_id, device_type="device"):
+    legacy_naming = getattr(data, "legacy_naming", False)
     if device_type == "device":
         device = data.wiserhub.devices.get_by_id(device_id)
 
@@ -90,6 +91,8 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             if device_room:
+                if legacy_naming:
+                    return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
                 return f"{ENTITY_PREFIX} Thermostat"
             return f"{ENTITY_PREFIX} Thermostat {device.id}"
 
@@ -126,6 +129,10 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
         if device.product_type == "TemperatureHumiditySensor":
+            if legacy_naming:
+                device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+                suffix = device_room.name if device_room else device.name
+                return f"{ENTITY_PREFIX} Temperature/Humidity Sensor {suffix}"
             return f"{ENTITY_PREFIX} Temperature/Humidity Sensor"
 
         if device.product_type in [
@@ -146,6 +153,9 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif device_type == "room":
+        if legacy_naming:
+            room = data.wiserhub.rooms.get_by_id(device_id)
+            return f"{ENTITY_PREFIX} {room.name}"
         return f"{ENTITY_PREFIX} Room"
 
     else:

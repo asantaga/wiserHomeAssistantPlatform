@@ -26,6 +26,7 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
+    CONF_LEGACY_NAMING,
     DATA,
     DOMAIN,
     MANUFACTURER,
@@ -117,8 +118,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 migrated_count,
             )
 
+        if config_entry.minor_version < 5:
+            # Keep room context visible for installations upgrading to UI options.
+            new_options.setdefault(CONF_LEGACY_NAMING, True)
+
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=4, version=1
+            config_entry, options=new_options, minor_version=5, version=1
         )
 
     _LOGGER.debug(
