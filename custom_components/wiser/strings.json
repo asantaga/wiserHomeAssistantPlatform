@@ -41,7 +41,17 @@
         "menu_options": {
           "main_params": "Main Parameters",
           "automation_params": "Automation Parameters",
-          "opentherm_sensors": "OpenTherm sensors"
+          "opentherm_sensors": "OpenTherm sensors",
+          "ui_options": "UI options"
+        }
+      },
+      "ui_options": {
+        "title": "UI options",
+        "data": {
+          "legacy_naming": "Legacy naming"
+        },
+        "data_description": {
+          "legacy_naming": "Include room names in Wiser device names. If enabled, using Home Assistant to regenerate entity IDs with the default format in Settings → System → Entity ID format (Home Assistant 2026.8 and later) will duplicate area names when the area and Wiser room names match. Changing this option does not rename existing entity IDs."
         }
       },
       "main_params": {

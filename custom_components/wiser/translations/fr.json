@@ -41,7 +41,17 @@
         "menu_options": {
           "main_params": "Paramètres principaux",
           "automation_params": "Paramètres d'automatisation",
-          "opentherm_sensors": "Capteurs OpenTherm"
+          "opentherm_sensors": "Capteurs OpenTherm",
+          "ui_options": "Options de l’interface"
+        }
+      },
+      "ui_options": {
+        "title": "Options de l’interface",
+        "data": {
+          "legacy_naming": "Nommage historique"
+        },
+        "data_description": {
+          "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants."
         }
       },
       "main_params": {

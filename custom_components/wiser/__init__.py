@@ -11,7 +11,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import (
+    area_registry as ar,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import (
@@ -22,6 +26,7 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
+    CONF_LEGACY_NAMING,
     DATA,
     DOMAIN,
     MANUFACTURER,
@@ -32,6 +37,7 @@ from .const import (
 )
 from .coordinator import WiserUpdateCoordinator
 from .device import (
+    assign_device_area_if_unset,
     merge_legacy_hub_device,
     migrate_room_device,
     register_hub_device,
@@ -112,8 +118,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 migrated_count,
             )
 
+        if config_entry.minor_version < 5:
+            # Keep room context visible for installations upgrading to UI options.
+            new_options.setdefault(CONF_LEGACY_NAMING, True)
+
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=4, version=1
+            config_entry, options=new_options, minor_version=5, version=1
         )
 
     _LOGGER.debug(
@@ -260,13 +270,14 @@ def register_room_assigned_devices(
 ):
     """Register physical Wiser devices in their matching Wiser room."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    area_registry = ar.async_get(hass)
     device_registry = dr.async_get(hass)
 
     for device in data.wiserhub.devices.all:
         room = data.wiserhub.rooms.get_by_device_id(device.id)
         if room is None:
             continue
-        register_room_assigned_device(
+        device_entry = register_room_assigned_device(
             device_registry,
             config_entry.entry_id,
             (DOMAIN, get_identifier(data, device.id)),
@@ -277,22 +288,29 @@ def register_room_assigned_devices(
             model=device.product_type,
             sw_version=device.firmware_version,
         )
+        assign_device_area_if_unset(
+            device_registry, area_registry, device_entry, room.name
+        )
 
 
 def migrate_room_device_registry(hass: HomeAssistant, config_entry):
     """Migrate all logical room devices away from name-derived identifiers."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    area_registry = ar.async_get(hass)
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
 
     for room in data.wiserhub.rooms.all:
-        migrate_room_device(
+        device_entry = migrate_room_device(
             device_registry,
             entity_registry,
             config_entry.entry_id,
             (DOMAIN, get_identifier(data, room.id, "room")),
             (DOMAIN, get_legacy_room_identifier(data, room.id)),
             get_device_name(data, room.id, "room"),
+        )
+        assign_device_area_if_unset(
+            device_registry, area_registry, device_entry, room.name
         )
 
 

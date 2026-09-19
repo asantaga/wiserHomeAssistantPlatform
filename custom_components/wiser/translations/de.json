@@ -41,7 +41,17 @@
         "menu_options": {
           "main_params": "Hauptparameter",
           "automation_params": "Aktivieren Sie integrierte Automatisierungen",
-          "opentherm_sensors": "OpenTherm-Sensoren"
+          "opentherm_sensors": "OpenTherm-Sensoren",
+          "ui_options": "UI-Optionen"
+        }
+      },
+      "ui_options": {
+        "title": "UI-Optionen",
+        "data": {
+          "legacy_naming": "Bisherige Namensgebung"
+        },
+        "data_description": {
+          "legacy_naming": "Raumnamen in Wiser-Gerätenamen aufnehmen. Wenn diese Option aktiviert ist, werden Bereichsnamen beim Neuerstellen der Entitäts-IDs mit dem Standardformat unter Einstellungen → System → Entitäts-ID-Format (Home Assistant 2026.8 und neuer) doppelt verwendet, wenn Bereichs- und Wiser-Raumname übereinstimmen. Diese Option ändert keine bestehenden Entitäts-IDs."
         }
       },
       "main_params": {
