@@ -84,6 +84,7 @@ class ZigbeeSidebarTest(unittest.IsolatedAsyncioTestCase):
         args = self.custom.async_register_panel.call_args.kwargs
         self.assertEqual(args["frontend_url_path"], "wiser-zigbee-panel")
         self.assertEqual(args["webcomponent_name"], "wiser-zigbee-panel")
+        self.assertEqual(args["sidebar_icon"], "wiser:zigbee")
         self.assertEqual(args["config"]["hubs"], ["hub"])
         self.assertEqual(args["config"]["card_url"], "/wiser/wiser-zigbee-card.js?v=4.5.6-beta.2")
 

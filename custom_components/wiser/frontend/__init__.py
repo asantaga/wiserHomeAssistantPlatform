@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace import MODE_STORAGE, LovelaceData
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
@@ -77,6 +78,10 @@ class JSModuleRegistration:
     async def async_register(self):
         """Register view_assist path."""
         await self._async_register_path()
+        icon_version = await self.hass.async_add_executor_job(
+            card_version, Path(__file__).parent / "wiser-icons.js"
+        )
+        add_extra_js_url(self.hass, f"{URL_BASE}/wiser-icons.js?v={icon_version}")
 
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
