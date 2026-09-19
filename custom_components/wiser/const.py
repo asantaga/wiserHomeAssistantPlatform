@@ -7,7 +7,7 @@ Angelosantagata@gmail.com
 
 from enum import StrEnum
 
-VERSION = "3.4.21b0"
+VERSION = "4.0.0-rc1"
 DOMAIN = "wiser"
 CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
