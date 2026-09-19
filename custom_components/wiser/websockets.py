@@ -10,6 +10,8 @@ from aioWiserHeatAPI.exceptions import WiserScheduleError
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import DATA, DOMAIN
+from .frontend.schedules_sidebar import save_schedules_panel_config
+from .frontend.zigbee_sidebar import save_zigbee_panel_config
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +77,36 @@ async def async_register_websockets(hass, data):
         if entity_comp:
             return entity_comp.get_entity(entity)
         return None
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/schedules_panel/configure",
+        vol.Required("configs"): {str: dict},
+    })
+    @websocket_api.require_admin
+    def websocket_configure_schedules_panel(hass, connection, msg):
+        """Save shared panel preferences in the Wiser config entries."""
+        try:
+            save_schedules_panel_config(hass, msg["configs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/zigbee_panel/configure",
+        vol.Required("configs"): {str: dict},
+    })
+    @websocket_api.require_admin
+    def websocket_configure_zigbee_panel(hass, connection, msg):
+        """Save shared panel preferences in the Wiser config entries."""
+        try:
+            save_zigbee_panel_config(hass, msg["configs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
 
     # Get Hubs
     @websocket_api.websocket_command(
@@ -540,6 +572,8 @@ async def async_register_websockets(hass, data):
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
+    async_register_command(hass, websocket_configure_schedules_panel)
+    async_register_command(hass, websocket_configure_zigbee_panel)
     async_register_command(hass, websocket_get_hubs)
     async_register_command(hass, websocket_get_suntimes)
     async_register_command(hass, websocket_get_schedules)

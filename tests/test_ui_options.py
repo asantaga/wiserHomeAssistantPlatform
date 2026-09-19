@@ -31,6 +31,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_LEGACY_NAMING": "legacy_naming",
+            "CONF_SHOW_SCHEDULES_SIDEBAR": "show_schedules_sidebar",
+            "CONF_SHOW_ZIGBEE_SIDEBAR": "show_zigbee_sidebar",
             "CONF_NAME": "name",
             "HomeAssistant": object,
             "ConfigEntry": object,
@@ -83,8 +85,13 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 config_entry=SimpleNamespace(options={"scan_interval": 30}),
                 async_create_entry=lambda **kwargs: kwargs,
             )
-            result = await functions.async_step_ui_options(flow, {"legacy_naming": enabled})
-            self.assertEqual(result["data"], {"scan_interval": 30, "legacy_naming": enabled})
+            preferences = {
+                "legacy_naming": enabled,
+                "show_schedules_sidebar": enabled,
+                "show_zigbee_sidebar": not enabled,
+            }
+            result = await functions.async_step_ui_options(flow, preferences)
+            self.assertEqual(result["data"], {"scan_interval": 30} | preferences)
 
     async def test_form_uses_saved_preference(self):
         self.namespace.update(
@@ -94,8 +101,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
         for enabled in (False, True):
             flow = SimpleNamespace(
-                config_entry=SimpleNamespace(options={"legacy_naming": enabled}),
+                config_entry=SimpleNamespace(options={
+                    "legacy_naming": enabled,
+                    "show_schedules_sidebar": enabled,
+                    "show_zigbee_sidebar": not enabled,
+                }),
                 async_show_form=lambda **kwargs: kwargs,
             )
             result = await functions.async_step_ui_options(flow)
             self.assertIn(("legacy_naming", enabled), result["data_schema"])
+            self.assertIn(("show_schedules_sidebar", enabled), result["data_schema"])
+            self.assertIn(("show_zigbee_sidebar", not enabled), result["data_schema"])

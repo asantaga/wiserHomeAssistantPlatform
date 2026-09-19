@@ -39,6 +39,7 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_SHOW_ZIGBEE_SIDEBAR,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -55,6 +56,7 @@ from .const import (
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CONF_SHOW_SCHEDULES_SIDEBAR,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -275,7 +277,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_ui_options(self, user_input=None):
-        """Configure device naming for the Home Assistant UI."""
+        """Configure Wiser UI options, including legacy naming and sidebar panels."""
         if user_input is not None:
             return self.async_create_entry(
                 data=self.config_entry.options | user_input
@@ -290,6 +292,14 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_LEGACY_NAMING, True
                         ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_SCHEDULES_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_ZIGBEE_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
                     ): BooleanSelector(),
                 }
             ),

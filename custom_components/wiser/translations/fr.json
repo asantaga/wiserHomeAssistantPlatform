@@ -4,20 +4,20 @@
     "step": {
       "user": {
         "title": "Configuration de la Box Wiser",
-        "description": "Entrez l'adresse IP et la clé secrète SVP.",
+        "description": "Veuillez saisir l’adresse IP et la clé secrète obtenue auprès de la box Wiser.",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "password": "Clé Secrète"
+          "password": "Clé secrète"
         }
       },
       "zeroconf_confirm": {
         "title": "Configuration de la Box Wiser ({name})",
         "description": "Entrez la clé secrète obtenue de la Box Wiser.",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "password": "Clé Secrète"
+          "password": "Clé secrète"
         }
       }
     },
@@ -27,16 +27,16 @@
       "not_wiser_hub": "L’appareil détecté n’est pas une passerelle Wiser."
     },
     "error": {
-      "auth_failure": "Authentification après de la Wiser Box impossible. Controlez la clé secrète et rééssayez.",
-      "timeout_error": "Timed out de la connection à la Box Wiser.  Controlez l'adresse IP et rééssayez.",
-      "timeout_error_discovery": "Timed out de la connection à la Box Wiser.  Vérifiez que votre Box Wiser est toujours en ligne et rééssayer.",
-      "unknown": "Erreur inconnue lors de la connexion à la Box Wiser.  Controlez les logs, SVP."
+      "auth_failure": "Impossible de s’authentifier auprès de la box Wiser. Vérifiez la clé secrète et réessayez.",
+      "timeout_error": "Le délai de connexion à la box Wiser a expiré. Vérifiez l’adresse IP et réessayez.",
+      "timeout_error_discovery": "Le délai de connexion à la box Wiser a expiré. Vérifiez que votre box Wiser est toujours en ligne et réessayez.",
+      "unknown": "Erreur inconnue lors de la connexion à la box Wiser. Veuillez consulter les journaux."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Réglages des paramètres Wiser.",
         "menu_options": {
           "main_params": "Paramètres principaux",
@@ -48,28 +48,30 @@
       "ui_options": {
         "title": "Options de l’interface",
         "data": {
-          "legacy_naming": "Nommage historique"
+          "legacy_naming": "Nommage historique",
+          "show_schedules_sidebar": "Afficher les programmes Wiser dans la barre latérale",
+          "show_zigbee_sidebar": "Afficher Wiser Zigbee dans la barre latérale"
         },
         "data_description": {
           "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants."
         }
       },
       "main_params": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Paramètres principaux",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "scan_interval": " Période d'acquisition",
-          "heating_boost_temp": "Défault temperature de boost chauffage",
-          "heating_boost_time": "Défault durée de boost chauffage",
-          "hotwater_boost_time": "Défault durée de boost eau chaude",
-          "setpoint_mode": "Mode de fonctionnement consigne",
-          "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée"
+          "scan_interval": "Intervalle d’actualisation (s)",
+          "heating_boost_temp": "Température de boost du chauffage par défaut (°C)",
+          "heating_boost_time": "Durée de boost du chauffage par défaut (min)",
+          "hotwater_boost_time": "Durée de boost de l’eau chaude par défaut (min)",
+          "setpoint_mode": "Mode de consigne",
+          "restore_manual_temp_option": "Utiliser cette température si aucune température manuelle n’est enregistrée"
         }
       },
       "automation_params": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Activer les automatisations intégrées",
         "sections": {
           "automations_passive_mode": {
@@ -150,7 +152,7 @@
           "boiler_hw_setpoint_transfer_enable": "Transfert de la consigne d’eau chaude activé",
           "boiler_hw_setpoint_upper_bound": "Limite supérieure de la consigne d’eau chaude",
           "hw_enabled": "Eau chaude activée",
-          "hw_flow_setpoint": "Consigne de débit d’eau chaude"
+          "hw_flow_setpoint": "Consigne de température de départ d’eau chaude"
         }
       },
       "opentherm_status": {
@@ -339,7 +341,7 @@
       "delta_t": { "name": "Delta-T" },
       "estimated_boiler_output": { "name": "Puissance estimée de la chaudière" },
       "hw_flow_rate": { "name": "Débit d’eau chaude" },
-      "hw_flow_setpoint": { "name": "Consigne de débit d’eau chaude" },
+      "hw_flow_setpoint": { "name": "Consigne de température de départ d’eau chaude" },
       "hw_temperature": { "name": "Température de l’eau chaude" },
       "maximum_capacity_kw": { "name": "Puissance maximale de la chaudière" },
       "minimum_modulation_level": { "name": "Niveau minimal de modulation" },
@@ -360,11 +362,11 @@
   },
   "device_automation": {
     "trigger_type": {
-      "started_heating": "{entity_name} chauffe démarrée",
-      "stopped_heating": "{entity_name} chauffe arrêté",
+      "started_heating": "{entity_name} commence à chauffer",
+      "stopped_heating": "{entity_name} cesse de chauffer",
       "boosted": "{entity_name} est boosté",
-      "target_temperature_increased": "{entity_name} température cible a diminué",
-      "target_temperature_decreased": "{entity_name} température cible augmentée"
+      "target_temperature_increased": "La température cible de {entity_name} augmente",
+      "target_temperature_decreased": "La température cible de {entity_name} diminue"
     }
   }
 }

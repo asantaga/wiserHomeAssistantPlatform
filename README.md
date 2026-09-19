@@ -217,3 +217,17 @@ For more information checkout the AMAZING community thread available on
   - Reduced log error level for failed update form hub to warning
 
 A full change log can be seen on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log)
+
+## Building
+
+To build a stable release package, run:
+
+```sh
+python3 scripts/build.py --release --channel stable
+```
+
+For a prerelease package, use `--channel dev` instead. The build downloads published Schedules and Zigbee card assets from GitHub. Stable builds use stable card releases; prerelease builds use the newest published prerelease of each card, falling back to its newest stable release when none exists.
+
+The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` records the card releases and checksums included in the package. Missing or invalid card assets fail the build.
+
+The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.zip` when an integration release is published. Preview runs provide a downloadable **wiser-package** artifact without publishing a release.

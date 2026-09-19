@@ -1,9 +1,13 @@
 """View Assist Javascript module registration."""
 
+from hashlib import sha256
+import re
 import logging
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace import MODE_STORAGE, LovelaceData
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
@@ -13,6 +17,48 @@ from homeassistant.helpers.event import async_call_later
 from ..const import JSMODULES, URL_BASE  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def card_version(path: Path) -> str:
+    """Resolve the card's banner variable, ignoring bundled library versions."""
+    version_pattern = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+    try:
+        contents = path.read_bytes()
+    except OSError:
+        return "missing"
+    source = contents.decode("utf-8", errors="replace")
+    # Explicit build metadata is authoritative; legacy parsing remains below.
+    marker = re.search(
+        rf"/\*!\s*WISER-CARD-VERSION {re.escape(path.stem)}\s+({version_pattern})\s*\*/",
+        source,
+    )
+    if marker:
+        return marker[1]
+    # New builds inline CARD_VERSION into the editor's version footer and
+    # no longer emit the legacy startup banner.
+    footer = re.search(
+        rf'class=["\']version["\'][^`]*?common\.version["\']\)\}}:\s*'
+        rf'\$\{{["\']({version_pattern})["\']\}}',
+        source,
+    )
+    if path.stem == "wiser-zigbee-card" and footer:
+        return footer[1]
+
+    banner_name = "WISER-ZIGBEE(?:-NETWORK)?-CARD" if path.stem == "wiser-zigbee-card" else re.escape(path.stem.upper())
+    banner = re.search(
+        banner_name + r'[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
+        source,
+    )
+    if banner:
+        assignment = re.search(
+            rf'(?<![\w$]){re.escape(banner[1])}\s*=\s*[\"\']({version_pattern})[\"\']',
+            source,
+        )
+        if assignment:
+            return assignment[1]
+    # Still refresh caches for unfamiliar builds rather than advertise a stale
+    # version from const.py. This is a content identifier, not a release number.
+    return f"sha256-{sha256(contents).hexdigest()[:16]}"
 
 
 class JSModuleRegistration:
@@ -32,6 +78,10 @@ class JSModuleRegistration:
     async def async_register(self):
         """Register view_assist path."""
         await self._async_register_path()
+        icon_version = await self.hass.async_add_executor_job(
+            card_version, Path(__file__).parent / "wiser-icons.js"
+        )
+        add_extra_js_url(self.hass, f"{URL_BASE}/wiser-icons.js?v={icon_version}")
 
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
@@ -77,26 +127,28 @@ class JSModuleRegistration:
         for module in JSMODULES:
             url = f"{URL_BASE}/{module.get('filename')}"
 
+            version = await self.hass.async_add_executor_job(
+                card_version, Path(__file__).parent / module["filename"]
+            )
+
             card_registered = False
 
             for resource in resources:
                 if self._get_resource_path(resource["url"]) == url:
                     card_registered = True
                     # check version
-                    if self._get_resource_version(resource["url"]) != module.get(
-                        "version"
-                    ):
+                    if self._get_resource_version(resource["url"]) != version:
                         # Update card version
                         _LOGGER.debug(
                             "Updating %s to version %s",
                             module.get("name"),
-                            module.get("version"),
+                            version,
                         )
                         await self.lovelace.resources.async_update_item(
                             resource.get("id"),
                             {
                                 "res_type": "module",
-                                "url": url + "?v=" + module.get("version"),
+                                "url": url + "?v=" + version,
                             },
                         )
                         # Remove old gzipped files
@@ -105,26 +157,24 @@ class JSModuleRegistration:
                         _LOGGER.debug(
                             "%s already registered as version %s",
                             module.get("name"),
-                            module.get("version"),
+                            version,
                         )
 
             if not card_registered:
                 _LOGGER.debug(
                     "Registering %s as version %s",
                     module.get("name"),
-                    module.get("version"),
+                    version,
                 )
                 await self.lovelace.resources.async_create_item(
-                    {"res_type": "module", "url": url + "?v=" + module.get("version")}
+                    {"res_type": "module", "url": url + "?v=" + version}
                 )
 
     def _get_resource_path(self, url: str):
         return url.split("?")[0]
 
     def _get_resource_version(self, url: str):
-        if version := url.split("?")[1].replace("v=", ""):
-            return version
-        return 0
+        return parse_qs(urlsplit(url).query).get("v", [None])[0]
 
     async def async_unregister(self):
         """Unload lovelace module resource."""
