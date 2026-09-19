@@ -3,21 +3,21 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Wiser Heat Hub Setup",
-        "description": "Bitte gib die IP-Adresse und API Schl\u00fcssel vom Wiser Heat Hub ein",
+        "title": "Wiser Heat Hub einrichten",
+        "description": "Bitte geben Sie die IP-Adresse und den geheimen Schlüssel des Wiser Heat Hubs ein.",
         "data": {
-          "host": "IP Adresse",
+          "host": "IP-Adresse oder Hostname",
           "port": "Portnummer",
-          "password": "API Schl\u00fcssel"
+          "password": "Geheimer Schlüssel"
         }
       },
       "zeroconf_confirm": {
-        "title": "Wiser Heat Hub Setup ({name})",
+        "title": "Wiser Heat Hub einrichten ({name})",
         "description": "Bitte geben Sie den geheimen Schlüssel ein, den Sie vom Hub erhalten haben.",
         "data": {
-          "host": "IP Adresse",
+          "host": "IP-Adresse oder Hostname",
           "port": "Portnummer",
-          "password": "API Schl\u00fcssel"
+          "password": "Geheimer Schlüssel"
         }
       }
     },
@@ -27,20 +27,20 @@
       "not_wiser_hub": "Das erkannte Gerät ist kein Wiser Heat Hub."
     },
     "error": {
-      "auth_failure": "Authentifizierung mit Wiser Heat Hub fehlgeschlagen. Pr\u00fcfe den API Key und versuche es erneut.",
-      "timeout_error": "Timeout bei der Verbindung zum Wiser Heat Hub. Pr\u00fcfe die IP Adresse und versuche es erneut.",
-      "timeout_error_discovery": "Timeout bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie, ob Ihr Hub noch online ist, und versuchen Sie es erneut.",
+      "auth_failure": "Authentifizierung beim Wiser Heat Hub fehlgeschlagen. Überprüfen Sie den geheimen Schlüssel und versuchen Sie es erneut.",
+      "timeout_error": "Zeitüberschreitung bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie die IP-Adresse und versuchen Sie es erneut.",
+      "timeout_error_discovery": "Zeitüberschreitung bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie, ob Ihr Hub noch online ist, und versuchen Sie es erneut.",
       "unknown": "Unbekannter Fehler beim Verbinden mit dem Wiser Heat Hub. Bitte überprüfen Sie die Protokolle."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Wiser Integrationsoptionen",
+        "title": "Wiser-Integrationsoptionen",
         "description": "Wiser-Parameter ändern.",
         "menu_options": {
           "main_params": "Hauptparameter",
-          "automation_params": "Aktivieren Sie integrierte Automatisierungen",
+          "automation_params": "Automatisierungsparameter",
           "opentherm_sensors": "OpenTherm-Sensoren",
           "ui_options": "UI-Optionen"
         }
@@ -57,21 +57,21 @@
         }
       },
       "main_params": {
-        "title": "Wiser Integrationsoptionen",
+        "title": "Wiser-Integrationsoptionen",
         "description": "Hauptparameter",
         "data": {
-          "host": "IP Adresse",
+          "host": "IP-Adresse oder Hostname",
           "port": "Portnummer",
-          "scan_interval": "Scan Intervall",
-          "heating_boost_temp": "Boost Temperatur",
-          "heating_boost_time": "Boost Dauer",
-          "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer",
+          "scan_interval": "Abfrageintervall (Sek.)",
+          "heating_boost_temp": "Standard-Heizungs-Boost-Temperatur (°C)",
+          "heating_boost_time": "Standard-Heizungs-Boost-Dauer (Min.)",
+          "hotwater_boost_time": "Standard-Warmwasser-Boost-Dauer (Min.)",
           "setpoint_mode": "Sollwert-Modus",
           "restore_manual_temp_option": "Verwenden Sie diese Temperatur, wenn keine gespeicherte manuelle Temperatur vorhanden ist"
         }
       },
       "automation_params": {
-        "title": "Wiser Integrationsoptionen",
+        "title": "Wiser-Integrationsoptionen",
         "description": "Aktivieren Sie integrierte Automatisierungen",
         "sections": {
           "automations_passive_mode": {
@@ -152,7 +152,7 @@
           "boiler_hw_setpoint_transfer_enable": "Übertragung des Kessel-Warmwassersollwerts aktiviert",
           "boiler_hw_setpoint_upper_bound": "Obere Grenze des Kessel-Warmwassersollwerts",
           "hw_enabled": "Warmwasser aktiviert",
-          "hw_flow_setpoint": "Warmwasser-Durchflusssollwert"
+          "hw_flow_setpoint": "Warmwasser-Vorlaufsolltemperatur"
         }
       },
       "opentherm_status": {
@@ -341,7 +341,7 @@
       "delta_t": { "name": "Delta-T" },
       "estimated_boiler_output": { "name": "Geschätzte Kesselleistung" },
       "hw_flow_rate": { "name": "Warmwasser-Durchfluss" },
-      "hw_flow_setpoint": { "name": "Warmwasser-Durchflusssollwert" },
+      "hw_flow_setpoint": { "name": "Warmwasser-Vorlaufsolltemperatur" },
       "hw_temperature": { "name": "Warmwassertemperatur" },
       "maximum_capacity_kw": { "name": "Maximale Kesselleistung" },
       "minimum_modulation_level": { "name": "Minimale Modulationsstufe" },
@@ -365,8 +365,8 @@
       "started_heating": "{entity_name} beginnt zu heizen",
       "stopped_heating": "{entity_name} stoppt die Heizung",
       "boosted": "{entity_name} wird verstärkt",
-      "target_temperature_increased": "{entity_name} zieltemperatur erhöht",
-      "target_temperature_decreased": "{entity_name} zieltemperatur gesenkt"
+      "target_temperature_increased": "Die Zieltemperatur von {entity_name} steigt",
+      "target_temperature_decreased": "Die Zieltemperatur von {entity_name} sinkt"
     }
   }
 }
