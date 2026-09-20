@@ -19,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpda
 
 from .const import DOMAIN
 from .frontend import JSModuleRegistration, async_card_resource
-from .frontend.card_files import newer_version, store_card
+from .frontend.card_files import newer_version, prune_card_cache, store_card
 from .frontend.schedules_sidebar import async_update_schedules_panel
 from .frontend.zigbee_sidebar import async_update_zigbee_panel
 
@@ -46,17 +46,27 @@ def _validate_release(card, release):
     if release.get("draft") or release.get("prerelease") or not release.get("published_at"):
         raise ValueError("Expected a published stable card release")
     version = _release_version(release["tag_name"])
-    assets = [asset for asset in release["assets"] if asset["name"] == filename and asset.get("state") == "uploaded"]
+    assets = [
+        asset for asset in release["assets"]
+        if asset["name"] == filename and asset.get("state") == "uploaded"
+    ]
     if len(assets) != 1:
         raise ValueError(f"Release must include exactly one {filename}")
     asset = assets[0]
     url = urlsplit(asset["browser_download_url"])
-    if url.scheme != "https" or url.netloc != "github.com" or not url.path.startswith(f"/{repository}/releases/download/"):
+    if (
+        url.scheme != "https"
+        or url.netloc != "github.com"
+        or not url.path.startswith(f"/{repository}/releases/download/")
+    ):
         raise ValueError("Invalid card release download URL")
     if not 100 <= asset["size"] <= _MAX_DOWNLOAD:
         raise ValueError("Invalid card release asset size")
-    return {"version": version, "asset": asset,
-            "release_url": f"https://github.com/{repository}/releases/tag/{release['tag_name']}"}
+    return {
+        "version": version,
+        "asset": asset,
+        "release_url": f"https://github.com/{repository}/releases/tag/{release['tag_name']}",
+    }
 
 
 def _validate_download(card, release, contents):
@@ -111,13 +121,16 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
     """Share one daily GitHub check and install lock across both cards and all hubs."""
 
     def __init__(self, hass):
-        super().__init__(hass, _LOGGER, name="Wiser card updates", config_entry=None,
-                         update_interval=timedelta(hours=24))
+        super().__init__(
+            hass, _LOGGER, name="Wiser card updates", config_entry=None,
+            update_interval=timedelta(hours=24),
+        )
         self.setup_lock = asyncio.Lock()
         self.install_lock = asyncio.Lock()
         self.entries = {}
         self.owner = None
         self.installing = set()
+        self.pending_refresh = {}
         self.data = {}
 
     def add_entities(self, entry_id):
@@ -138,6 +151,8 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
     async def _check_card(self, card):
         repository, filename, _ = _CARDS[card]
         _, _, installed = await async_card_resource(self.hass, filename)
+        if card in self.pending_refresh:
+            installed = self.pending_refresh[card][0]
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(
@@ -160,36 +175,53 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
             if not release:
                 raise HomeAssistantError("No verified card release is available")
             _, filename, _ = _CARDS[card]
-            _, _, installed = await async_card_resource(self.hass, filename)
-            if not newer_version(release["version"], installed):
+            active_path, _, installed = await async_card_resource(self.hass, filename)
+            needs_download = newer_version(release["version"], installed)
+            if not needs_download and card not in self.pending_refresh:
                 return
             self.installing.add(card)
             self.async_update_listeners()
             try:
-                session = async_get_clientsession(self.hass)
-                async with session.get(
-                    release["asset"]["browser_download_url"],
-                    timeout=aiohttp.ClientTimeout(total=120),
-                ) as response:
-                    response.raise_for_status()
-                    chunks = []
-                    size = 0
-                    async for chunk in response.content.iter_chunked(65536):
-                        size += len(chunk)
-                        if size > _MAX_DOWNLOAD:
-                            raise ValueError("Card download exceeds size limit")
-                        chunks.append(chunk)
-                    contents = b"".join(chunks)
-                await self.hass.async_add_executor_job(_validate_download, card, release, contents)
-                await self.hass.async_add_executor_job(
-                    store_card, self.hass.config.path(), filename, release["version"], contents
-                )
-                state["installed"] = release["version"]
+                if needs_download:
+                    session = async_get_clientsession(self.hass)
+                    async with session.get(
+                        release["asset"]["browser_download_url"],
+                        timeout=aiohttp.ClientTimeout(total=120),
+                    ) as response:
+                        response.raise_for_status()
+                        chunks = []
+                        size = 0
+                        async for chunk in response.content.iter_chunked(65536):
+                            size += len(chunk)
+                            if size > _MAX_DOWNLOAD:
+                                raise ValueError("Card download exceeds size limit")
+                            chunks.append(chunk)
+                        contents = b"".join(chunks)
+                    await self.hass.async_add_executor_job(
+                        _validate_download, card, release, contents
+                    )
+                    await self.hass.async_add_executor_job(
+                        store_card, self.hass.config.path(), filename,
+                        release["version"], contents,
+                    )
+                    # Keep offering the update until every frontend registration succeeds.
+                    # Retain the previous asset while a failed refresh can still reference it.
+                    self.pending_refresh.setdefault(card, (installed, active_path))
                 registration = JSModuleRegistration(self.hass)
                 await registration.async_register()
                 await async_update_schedules_panel(self.hass)
                 await async_update_zigbee_panel(self.hass)
-            except (aiohttp.ClientError, TimeoutError, OSError, ValueError) as err:
+                active_path, _, installed = await async_card_resource(self.hass, filename)
+                _, previous_path = self.pending_refresh.pop(card)
+                state["installed"] = installed
+                await self.hass.async_add_executor_job(
+                    prune_card_cache, self.hass.config.path(), filename,
+                    {active_path, previous_path},
+                )
+            except (
+                aiohttp.ClientError, TimeoutError, OSError, ValueError,
+                RuntimeError, HomeAssistantError,
+            ) as err:
                 raise HomeAssistantError(f"Unable to install card update: {err}") from err
             finally:
                 self.installing.discard(card)

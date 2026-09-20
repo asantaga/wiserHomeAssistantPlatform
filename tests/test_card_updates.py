@@ -201,6 +201,76 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.updates.async_update_zigbee_panel.assert_awaited_once()
         self.assertFalse(self.coordinator.installing)
 
+    async def test_failed_frontend_refresh_can_retry_without_downloading_again(self):
+        for target in (
+            self.registration.async_register,
+            self.updates.async_update_schedules_panel,
+            self.updates.async_update_zigbee_panel,
+        ):
+            with self.subTest(target=target):
+                self.files.store_card(
+                    self.directory, "wiser-zigbee-card.js", "1.5.0",
+                    self.payload(version="1.5.0"),
+                )
+                previous, _, _ = self.files.resolve_card(
+                    self.directory, "wiser-zigbee-card.js", self.version_reader
+                )
+                release = self.updates._validate_release("zigbee", self.metadata())
+                self.coordinator.data["zigbee"] = {"installed": "1.5.0", "release": release}
+                self.session.get.reset_mock()
+                self.session.get.return_value = self.response(contents=self.payload())
+                target.side_effect = RuntimeError("frontend unavailable")
+                with self.assertRaisesRegex(RuntimeError, "Unable to install"):
+                    await self.coordinator.install("zigbee")
+                self.assertEqual(self.coordinator.data["zigbee"]["installed"], "1.5.0")
+                self.assertTrue(previous.exists())
+                self.assertFalse(self.coordinator.installing)
+                self.session.get.assert_called_once()
+
+                # A scheduled release check must not hide the unfinished update.
+                self.session.get.return_value = self.response(json_data=self.metadata())
+                self.coordinator.data["zigbee"] = await self.coordinator._check_card("zigbee")
+                self.assertEqual(self.coordinator.data["zigbee"]["installed"], "1.5.0")
+                self.session.get.reset_mock()
+                target.side_effect = None
+                await self.coordinator.install("zigbee")
+                self.session.get.assert_not_called()
+                self.assertEqual(self.coordinator.data["zigbee"]["installed"], "2.0.0")
+                self.assertFalse(self.coordinator.pending_refresh)
+                self.assertFalse(self.coordinator.installing)
+                self.assertTrue(previous.exists())
+
+    async def test_successful_updates_retain_only_current_and_previous_card_bundles(self):
+        filename = "wiser-zigbee-card.js"
+        cache = self.directory / self.files.CARD_CACHE
+        self.files.store_card(self.directory, "wiser-schedule-card.js", "2.0.0", self.payload("schedule"))
+        other_files = set(cache.iterdir())
+        unrelated = cache / "wiser-zigbee-card-not-a-digest.js"
+        unrelated.write_text("unrelated")
+        for version in ("2.0.0", "3.0.0", "4.0.0"):
+            release = self.updates._validate_release("zigbee", self.metadata(version=version))
+            self.coordinator.data["zigbee"] = {"release": release}
+            self.session.get.return_value = self.response(contents=self.payload(version=version))
+            await self.coordinator.install("zigbee")
+        bundles = [p for p in cache.glob("wiser-zigbee-card-*.js") if p != unrelated]
+        self.assertEqual(len(bundles), 2)
+        self.assertEqual(
+            {re.search(rb"card (\S+) ", p.read_bytes())[1].decode() for p in bundles},
+            {"3.0.0", "4.0.0"},
+        )
+        self.assertTrue(all(p.exists() for p in other_files | {unrelated}))
+        self.assertEqual(self.files.resolve_card(self.directory, filename, self.version_reader)[2], "4.0.0")
+
+    async def test_cache_cleanup_failure_does_not_fail_installation(self):
+        release = self.updates._validate_release("zigbee", self.metadata())
+        self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": release}
+        self.session.get.return_value = self.response(contents=self.payload())
+        with patch.object(Path, "iterdir", side_effect=OSError("permission denied")):
+            with self.assertLogs("card_update_test.frontend.card_files", level="WARNING"):
+                await self.coordinator.install("zigbee")
+        self.assertEqual(self.coordinator.data["zigbee"]["installed"], "2.0.0")
+        self.assertFalse(self.coordinator.pending_refresh)
+
     async def test_invalid_download_keeps_existing_installation(self):
         release = self.updates._validate_release("zigbee", self.metadata())
         self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": release}

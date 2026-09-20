@@ -81,20 +81,19 @@ class JSModuleRegistration:
             self.resource_mode = None
             return
 
-        # Fix for change to name of mode to reousrce_mode in 2026.2
+        # Fix for change to name of mode to resource_mode in 2026.2
         if (MAJOR_VERSION, MINOR_VERSION) >= (2026, 2):
             self.resource_mode = self.lovelace.resource_mode
         else:
             self.resource_mode = self.lovelace.mode
 
     async def async_register(self):
-        """Register view_assist path."""
+        """Register Wiser static paths, icons, and card resources."""
         await self._async_register_path()
         icon_version = await self.hass.async_add_executor_job(
             card_version, Path(__file__).parent / "wiser-icons.js"
         )
         add_extra_js_url(self.hass, f"{URL_BASE}/wiser-icons.js?v={icon_version}")
-
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()
@@ -119,7 +118,7 @@ class JSModuleRegistration:
             )
             _LOGGER.debug("Registered resource path from %s", Path(__file__).parent)
         except RuntimeError:
-            # Runtime error is likley this is already registered.
+            # Runtime error is likely this is already registered.
             _LOGGER.debug("Resource path already registered")
 
     async def _async_wait_for_lovelace_resources(self) -> None:

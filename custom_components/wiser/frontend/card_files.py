@@ -2,13 +2,17 @@
 
 from hashlib import sha256
 import json
+import logging
 from pathlib import Path
+import re
 import tempfile
 
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionException
 
 from ..const import URL_BASE
+
+_LOGGER = logging.getLogger(__name__)
 
 CARD_CACHE = ".storage/wiser_cards"
 CARD_CACHE_URL = f"{URL_BASE}/cards"
@@ -34,7 +38,11 @@ def resolve_card(config_dir, filename, version_reader):
         # Metadata must not redirect static serving outside the card cache.
         digest = record["digest"]
         expected = f"{Path(filename).stem}-{digest}.js"
-        if record["file"] != expected or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        if (
+            record["file"] != expected
+            or len(digest) != 64
+            or any(c not in "0123456789abcdef" for c in digest)
+        ):
             return fallback
         if not newer_version(record["version"], version):
             return fallback
@@ -54,6 +62,19 @@ def store_card(config_dir, filename, version, contents):
     _atomic_write(directory / asset_name, contents)
     metadata = {"file": asset_name, "version": version, "digest": digest}
     _atomic_write(directory / f"{filename}.json", json.dumps(metadata).encode())
+
+
+def prune_card_cache(config_dir, filename, keep_paths):
+    """Retain current and previous assets after a successful frontend refresh."""
+    directory = Path(config_dir) / CARD_CACHE
+    pattern = re.compile(rf"{re.escape(Path(filename).stem)}-[0-9a-f]{{64}}\.js")
+    try:
+        for path in directory.iterdir():
+            if pattern.fullmatch(path.name) and path not in keep_paths:
+                path.unlink(missing_ok=True)
+    except OSError as err:
+        # Cache housekeeping must not turn a successful installation into a failure.
+        _LOGGER.warning("Unable to clean up %s card cache: %s", filename, err)
 
 
 def _atomic_write(path, contents):
