@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
 
 from homeassistant.components import frontend, panel_custom
 
-from . import card_version
-from ..const import DATA, DOMAIN, URL_BASE
+from . import async_card_resource
+from ..const import DATA, DOMAIN
 
 
 @dataclass(frozen=True)
@@ -49,10 +48,7 @@ async def async_update_panel(hass, panel):
             hass.data.pop(panel.state_key)
         return
 
-    version = await hass.async_add_executor_job(
-        card_version, Path(__file__).parent / panel.filename
-    )
-    module_url = f"{URL_BASE}/{panel.filename}?v={version}"
+    _, module_url, _ = await async_card_resource(hass, panel.filename)
     state = {
         "hubs": [hub for hub, _ in entries],
         "card_configs": {

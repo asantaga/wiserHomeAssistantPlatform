@@ -58,6 +58,7 @@ from .helpers import (
 from .services import async_setup_services
 from .frontend.zigbee_sidebar import async_update_zigbee_panel
 from .websockets import async_register_websockets
+from .update import async_unload_card_updates
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -391,6 +392,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
     _LOGGER.debug("Unload integration")
     if unload_ok:
+        await async_unload_card_updates(hass, config_entry)
         hass.data[DOMAIN].pop(config_entry.entry_id)
         await async_update_schedules_panel(hass)
         update_hub_device_names(hass)

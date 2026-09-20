@@ -224,6 +224,10 @@
     "opentherm_notification_title": { "message": "Commande OpenTherm Wiser" }
   },
   "entity": {
+    "update": {
+      "schedule_card": { "name": "Carte des programmes Wiser" },
+      "zigbee_card": { "name": "Carte Zigbee Wiser" }
+    },
     "climate": {
       "heating": {
         "name": "Chauffage"

@@ -38,6 +38,7 @@ WISER_PLATFORMS = [
     "number",
     "light",
     "cover",
+    "update",
 ]
 DATA = "data"
 UPDATE_TRACK = "update_track"
