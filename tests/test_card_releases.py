@@ -21,12 +21,27 @@ def release(tag, date, prerelease=False, card="zigbee", draft=False, asset=True)
 
 class CardReleaseTest(unittest.TestCase):
     def setUp(self):
-        self.beta = release("v3-beta", "2026-09-01T00:00:00Z", True)
-        self.stable = release("v2", "2026-09-02T00:00:00Z")
+        self.beta = release("v2.0.0-beta.1", "2026-09-01T00:00:00Z", True)
+        self.stable = release("v2.0.1", "2026-09-02T00:00:00Z")
         self.releases = [self.stable, self.beta, release("draft", "2026-09-03T00:00:00Z", True, draft=True)]
 
-    def test_dev_prefers_latest_prerelease_even_if_stable_is_newer(self):
-        self.assertEqual(FETCH.select_release(self.releases, "dev"), self.beta)
+    def test_dev_selects_newer_stable_over_older_prerelease(self):
+        self.assertEqual(FETCH.select_release(self.releases, "dev"), self.stable)
+
+    def test_dev_selects_newer_prerelease_over_older_stable(self):
+        newer_beta = release("v2.1.0-beta.1", "2026-09-04T00:00:00Z", True)
+        releases = [newer_beta, *self.releases]
+        self.assertEqual(FETCH.select_release(releases, "dev"), newer_beta)
+        self.assertEqual(FETCH.select_release(releases, "stable"), self.stable)
+
+    def test_unpublished_releases_are_excluded(self):
+        unpublished = release("v4.0.0", None)
+        for channel in ("dev", "stable"):
+            with self.subTest(channel=channel):
+                self.assertEqual(
+                    FETCH.select_release([unpublished, *self.releases], channel),
+                    self.stable,
+                )
 
     def test_stable_excludes_prereleases_and_drafts(self):
         self.assertEqual(FETCH.select_release(self.releases, "stable"), self.stable)
@@ -55,7 +70,7 @@ class CardReleaseTest(unittest.TestCase):
                 report = FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, plan=True)
             download.assert_not_called()
             self.assertFalse(out.exists())
-            self.assertEqual(report[0]["tag"], "v3-beta")
+            self.assertEqual(report[0]["tag"], "v2.0.1")
 
     def test_download_failure_does_not_replace_either_card(self):
         with TemporaryDirectory() as directory:
