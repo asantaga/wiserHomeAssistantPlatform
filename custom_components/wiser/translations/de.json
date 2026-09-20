@@ -224,6 +224,10 @@
     "opentherm_notification_title": { "message": "Wiser-OpenTherm-Befehl" }
   },
   "entity": {
+    "update": {
+      "schedule_card": { "name": "Wiser-Zeitplankarte" },
+      "zigbee_card": { "name": "Wiser-Zigbee-Karte" }
+    },
     "climate": {
       "heating": {
         "name": "Heizung"

@@ -29,6 +29,11 @@ class SchedulesSidebarTest(unittest.IsolatedAsyncioTestCase):
         version_module = ModuleType("sidebar_test.frontend.schedule_version")
         self.version_reader = Mock(return_value="4.5.6-beta.2")
         version_module.card_version = self.version_reader
+        async def card_resource(hass, filename):
+            path = ROOT / "frontend" / filename
+            version = await hass.async_add_executor_job(self.version_reader, path)
+            return path, f"/wiser/{filename}?v={version}", version
+        version_module.async_card_resource = card_resource
         version_module.__path__ = [str(ROOT / "frontend")]
         constants.DATA = "data"
         constants.DOMAIN = "wiser"

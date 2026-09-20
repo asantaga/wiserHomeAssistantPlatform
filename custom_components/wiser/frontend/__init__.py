@@ -1,4 +1,4 @@
-"""View Assist Javascript module registration."""
+"""Register Wiser frontend resources and independently updated card bundles."""
 
 from hashlib import sha256
 import re
@@ -13,6 +13,8 @@ from homeassistant.components.lovelace import MODE_STORAGE, LovelaceData
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
+
+from .card_files import CARD_CACHE, CARD_CACHE_URL, resolve_card
 
 from ..const import JSMODULES, URL_BASE  # noqa: TID252
 
@@ -61,6 +63,13 @@ def card_version(path: Path) -> str:
     return f"sha256-{sha256(contents).hexdigest()[:16]}"
 
 
+async def async_card_resource(hass, filename):
+    """Resolve the active card path, cache-busted URL, and version off the loop."""
+    return await hass.async_add_executor_job(
+        resolve_card, hass.config.path(), filename, card_version
+    )
+
+
 class JSModuleRegistration:
     """Register Javascript modules."""
 
@@ -68,21 +77,23 @@ class JSModuleRegistration:
         """Initialise."""
         self.hass = hass
         self.lovelace: LovelaceData = self.hass.data.get("lovelace")
+        if self.lovelace is None:
+            self.resource_mode = None
+            return
 
-        # Fix for change to name of mode to reousrce_mode in 2026.2
-        if MAJOR_VERSION >= 2026 and MINOR_VERSION >= 2:
+        # Fix for change to name of mode to resource_mode in 2026.2
+        if (MAJOR_VERSION, MINOR_VERSION) >= (2026, 2):
             self.resource_mode = self.lovelace.resource_mode
         else:
             self.resource_mode = self.lovelace.mode
 
     async def async_register(self):
-        """Register view_assist path."""
+        """Register Wiser static paths, icons, and card resources."""
         await self._async_register_path()
         icon_version = await self.hass.async_add_executor_job(
             card_version, Path(__file__).parent / "wiser-icons.js"
         )
         add_extra_js_url(self.hass, f"{URL_BASE}/wiser-icons.js?v={icon_version}")
-
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()
@@ -90,13 +101,24 @@ class JSModuleRegistration:
     # install card resources
     async def _async_register_path(self):
         """Register resource path if not already registered."""
+        cache = Path(self.hass.config.path(CARD_CACHE))
+        await self.hass.async_add_executor_job(lambda: cache.mkdir(parents=True, exist_ok=True))
+        if not self.hass.data.get("wiser_card_cache_registered"):
+            try:
+                await self.hass.http.async_register_static_paths(
+                    [StaticPathConfig(CARD_CACHE_URL, cache, False)]
+                )
+            except RuntimeError:
+                # Another hub may have registered the shared path during setup.
+                _LOGGER.debug("Card cache path already registered")
+            self.hass.data["wiser_card_cache_registered"] = True
         try:
             await self.hass.http.async_register_static_paths(
                 [StaticPathConfig(URL_BASE, Path(__file__).parent, False)]
             )
             _LOGGER.debug("Registered resource path from %s", Path(__file__).parent)
         except RuntimeError:
-            # Runtime error is likley this is already registered.
+            # Runtime error is likely this is already registered.
             _LOGGER.debug("Resource path already registered")
 
     async def _async_wait_for_lovelace_resources(self) -> None:
@@ -127,17 +149,20 @@ class JSModuleRegistration:
         for module in JSMODULES:
             url = f"{URL_BASE}/{module.get('filename')}"
 
-            version = await self.hass.async_add_executor_job(
-                card_version, Path(__file__).parent / module["filename"]
-            )
+            _, active_url, version = await async_card_resource(self.hass, module["filename"])
 
             card_registered = False
 
             for resource in resources:
-                if self._get_resource_path(resource["url"]) == url:
+                if (
+                    self._get_resource_path(resource["url"]) == url
+                    or self._get_resource_path(resource["url"]).startswith(
+                        f"{CARD_CACHE_URL}/{Path(module['filename']).stem}-"
+                    )
+                ):
                     card_registered = True
                     # check version
-                    if self._get_resource_version(resource["url"]) != version:
+                    if resource["url"] != active_url:
                         # Update card version
                         _LOGGER.debug(
                             "Updating %s to version %s",
@@ -148,7 +173,7 @@ class JSModuleRegistration:
                             resource.get("id"),
                             {
                                 "res_type": "module",
-                                "url": url + "?v=" + version,
+                                "url": active_url,
                             },
                         )
                         # Remove old gzipped files
@@ -167,7 +192,7 @@ class JSModuleRegistration:
                     version,
                 )
                 await self.lovelace.resources.async_create_item(
-                    {"res_type": "module", "url": url + "?v=" + version}
+                    {"res_type": "module", "url": active_url}
                 )
 
     def _get_resource_path(self, url: str):
@@ -185,6 +210,9 @@ class JSModuleRegistration:
                     resource
                     for resource in self.lovelace.resources.async_items()
                     if str(resource["url"]).startswith(url)
+                    or str(resource["url"]).startswith(
+                        f"{CARD_CACHE_URL}/{Path(module['filename']).stem}-"
+                    )
                 ]
                 for resource in wiser_resources:
                     await self.lovelace.resources.async_delete_item(resource.get("id"))
