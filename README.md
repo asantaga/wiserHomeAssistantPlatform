@@ -31,18 +31,18 @@ Huge thanks to [@andyblac](https://github.com/andyblac) and [@lgo44](https://git
 
 ### Breaking changes in 4.0
 
-**Take a backup before upgrading.**
+**Please Take a backup before upgrading.**
 
 - **The device registry is restructured.** The separate virtual controller device is merged into the physical hub device, and Wiser room devices move to stable identifiers. Entity IDs and history are preserved, but anything that targets a Wiser *device* rather than an entity - device-based automations and scripts, or dashboard cards pointing at a device - needs repointing.
-- **Entity unique IDs migrate to deterministic UUIDv5.** The migration runs automatically on upgrade and renames registry entries in place, so entity IDs, history, and customisations are preserved. It cannot partially apply, but it aborts if it finds a unique ID collision.
-
-See the [change log](CHANGELOG.md) for the full list of changes in this release.
+- If a device has been used in an automation then Home Assistant repairs should catch this and guide the user through the migration
 
 ## What's New in 3.4?
 
 - Added support for v2 hub
 - Added support for many new v2 hub devices
 - Climate entity for controlling hot water with external tank temp sensor
+
+See the [change log](CHANGELOG.md) for the full list of changes in this release.
 
 ## Installing
 
