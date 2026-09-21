@@ -26,26 +26,36 @@ from .frontend.zigbee_sidebar import async_update_zigbee_panel
 _LOGGER = logging.getLogger(__name__)
 _MANAGER = "wiser_card_updates"
 _MAX_DOWNLOAD = 20 * 1024 * 1024
+_HACS_REPOSITORY_ID = "159080189"
 _CARDS = {
     "schedule": ("andyblac/wiser-schedule-card", "wiser-schedule-card.js", "wiser-schedules-panel"),
     "zigbee": ("andyblac/wiser-zigbee-card", "wiser-zigbee-card.js", "wiser-zigbee-panel"),
 }
 
 
-def _release_version(tag):
-    """Only accept stable semantic versions from published releases."""
-    match = re.fullmatch(r"v?(\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?)", tag)
+def _release_version(tag, allow_prerelease=False):
+    """Accept semantic card versions allowed by the selected release channel."""
+    match = re.fullmatch(
+        r"v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)",
+        tag,
+    )
     if not match:
+        raise ValueError(f"Unsupported card release version: {tag}")
+    if "-" in match[1].split("+", 1)[0] and not allow_prerelease:
         raise ValueError(f"Unsupported stable card release version: {tag}")
     return match[1]
 
 
-def _validate_release(card, release):
+def _validate_release(card, release, allow_prerelease=False):
     """Validate release metadata before exposing an installable update."""
     repository, filename, _ = _CARDS[card]
-    if release.get("draft") or release.get("prerelease") or not release.get("published_at"):
+    if (
+        release.get("draft")
+        or (release.get("prerelease") and not allow_prerelease)
+        or not release.get("published_at")
+    ):
         raise ValueError("Expected a published stable card release")
-    version = _release_version(release["tag_name"])
+    version = _release_version(release["tag_name"], allow_prerelease)
     assets = [
         asset for asset in release["assets"]
         if asset["name"] == filename and asset.get("state") == "uploaded"
@@ -67,6 +77,31 @@ def _validate_release(card, release):
         "asset": asset,
         "release_url": f"https://github.com/{repository}/releases/tag/{release['tag_name']}",
     }
+
+
+def _prereleases_enabled(hass):
+    """Follow HACS' prerelease preference for this integration when available."""
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id(
+        "switch", "hacs", _HACS_REPOSITORY_ID
+    )
+    states = getattr(hass, "states", None)
+    return bool(entity_id and states and states.is_state(entity_id, "on"))
+
+
+def _select_release(card, releases, allow_prerelease):
+    """Select the highest valid published release allowed by the channel."""
+    selected = None
+    for metadata in releases:
+        try:
+            release = _validate_release(card, metadata, allow_prerelease)
+        except (ValueError, KeyError, TypeError):
+            continue
+        if selected is None or newer_version(release["version"], selected["version"]):
+            selected = release
+    if selected is None:
+        raise ValueError("No verified card release is available")
+    return selected
 
 
 def _validate_download(card, release, contents):
@@ -154,14 +189,21 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
         if card in self.pending_refresh:
             installed = self.pending_refresh[card][0]
         try:
+            allow_prerelease = _prereleases_enabled(self.hass)
+            endpoint = "releases?per_page=100" if allow_prerelease else "releases/latest"
             session = async_get_clientsession(self.hass)
             async with session.get(
-                f"https://api.github.com/repos/{repository}/releases/latest",
+                f"https://api.github.com/repos/{repository}/{endpoint}",
                 headers={"Accept": "application/vnd.github+json", "User-Agent": "Wiser-Home-Assistant"},
                 timeout=aiohttp.ClientTimeout(total=20),
             ) as response:
                 response.raise_for_status()
-                release = _validate_release(card, await response.json())
+                metadata = await response.json()
+                release = (
+                    _select_release(card, metadata, True)
+                    if allow_prerelease
+                    else _validate_release(card, metadata)
+                )
             return {"installed": installed, "release": release, "error": None}
         except (aiohttp.ClientError, TimeoutError, ValueError, KeyError, TypeError) as err:
             _LOGGER.warning("Unable to check %s card releases: %s", card, err)
