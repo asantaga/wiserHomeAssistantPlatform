@@ -19,7 +19,7 @@ permissions:
 jobs:
   package:
     name: Build Wiser integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -48,7 +48,7 @@ jobs:
           --schedule-repository "$SCHEDULE_REPOSITORY"
           --zigbee-repository "$ZIGBEE_REPOSITORY"
       - name: Upload release package for inspection
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wiser-package
           path: |
@@ -60,15 +60,15 @@ jobs:
     name: Attach package to published release
     if: github.event_name == 'release'
     needs: package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: wiser-package
           path: dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/wiser.zip
           fail_on_unmatched_files: true
