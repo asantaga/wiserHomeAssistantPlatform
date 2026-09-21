@@ -194,6 +194,48 @@ class HubNamingTest(unittest.TestCase):
             "WiserHeatNOTUSED Wiser RoomStat Andys Bedroom",
         )
 
+    def test_legacy_naming_restores_room_context_without_changing_identity(self):
+        for device_type, device_id, expected in (
+            ("room", 7, "Wiser Andys Bedroom"),
+            ("device", 21, "Wiser Thermostat Andys Bedroom"),
+        ):
+            self.data.legacy_naming = False
+            identifier = self.helpers.get_identifier(self.data, device_id, device_type)
+            unique_id = self.helpers.get_unique_id(self.data, "sensor", "Temperature", device_id)
+            self.data.legacy_naming = True
+            self.assertEqual(
+                self.helpers.get_device_name(self.data, device_id, device_type), expected
+            )
+            self.assertEqual(
+                self.helpers.get_identifier(self.data, device_id, device_type), identifier
+            )
+            self.assertEqual(
+                self.helpers.get_unique_id(self.data, "sensor", "Temperature", device_id), unique_id
+            )
+
+    def test_legacy_temperature_sensor_name_and_unassigned_fallback(self):
+        self.data.wiserhub.devices.get_by_id = lambda device_id: SimpleNamespace(
+            id=device_id, name="Sensor 31", product_type="TemperatureHumiditySensor"
+        )
+        self.data.legacy_naming = False
+        identifier = self.helpers.get_identifier(self.data, 31)
+        self.data.legacy_naming = True
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser Temperature/Humidity Sensor Andys Bedroom",
+        )
+        self.assertEqual(self.helpers.get_identifier(self.data, 31), identifier)
+        self.data.wiserhub.rooms.get_by_device_id = lambda _id: None
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser Temperature/Humidity Sensor Sensor 31",
+        )
+        self.data.legacy_naming = False
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser Temperature/Humidity Sensor",
+        )
+
     def test_physical_device_suggests_its_wiser_room_as_area(self) -> None:
         self.assertEqual(
             self.helpers.get_device_area_info(self.data, 21),

@@ -643,7 +643,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
     def test_additional_boiler_readings_have_native_metadata(self):
         readings = {
             "boiler_exhaust_temperature": (28, "°C", "temperature", "mdi:smoke"),
-            "maximum_capacity_kw": (30, "kW", "power", "mdi:flash"),
+            "maximum_capacity_kw": (30, "kW", "power", "mdi:gas-burner"),
             "minimum_modulation_level": (27, "%", None, "mdi:percent"),
         }
         for key, (value, unit, device_class, icon) in readings.items():
@@ -680,7 +680,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
         self.assertEqual(sensor.native_unit_of_measurement, "kW")
         self.assertEqual(sensor.device_class, "power")
         self.assertEqual(sensor.state_class, "measurement")
-        self.assertEqual(sensor.icon, "mdi:flash")
+        self.assertEqual(sensor.icon, "mdi:gas-burner")
 
         self.opentherm.operational_data.json_data["SlaveStatus"] = 0
         sensor._handle_coordinator_update()

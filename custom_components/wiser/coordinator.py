@@ -38,6 +38,7 @@ from .const import (
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
+    CONF_LEGACY_NAMING,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CUSTOM_DATA_STORE,
@@ -112,6 +113,8 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.last_update_status = ""
         self.minimum_temp = TEMP_MINIMUM
         self.maximum_temp = TEMP_MAXIMUM
+
+        self.legacy_naming = config_entry.options.get(CONF_LEGACY_NAMING, True)
 
         # Main option params
         self.boost_temp = config_entry.options.get(

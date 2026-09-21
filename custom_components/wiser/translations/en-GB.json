@@ -232,9 +232,7 @@
       "heating": {
         "name": "Heating"
       },
-      "floor_temperature": {
-        "name": "Floor temperature"
-      }
+      "floor_temperature": { "name": "Floor temperature" }
     },
     "number": {
       "away_mode_target_temperature": { "name": "Away mode target temperature" },
@@ -244,7 +242,7 @@
     },
     "select": {
       "mode": { "name": "Mode" },
-      "power_on_behavior": { "name": "Power-on behavior" },
+      "power_on_behavior": { "name": "Power-on behaviour" },
       "led_indicator": { "name": "LED indicator" }
     },
     "button": {
@@ -267,7 +265,7 @@
       "include_in_summer_comfort": { "name": "Include in summer comfort" },
       "device_lock": { "name": "Device lock" },
       "identify": { "name": "Identify" },
-      "outlet": { "name": "Outlet" },
+      "outlet": { "name": "Socket" },
       "away_mode_turns_off": { "name": "Away mode turns off" },
       "away_mode_closes": { "name": "Away mode closes" },
       "passive_mode": { "name": "Passive mode" },
@@ -296,7 +294,7 @@
       "is_dimmable": { "name": "Dimmable" },
       "is_led_indicator_supported": { "name": "LED indicator supported" },
       "is_output_mode_supported": { "name": "Output mode supported" },
-      "is_power_on_behaviour_supported": { "name": "Power-on behavior supported" },
+      "is_power_on_behaviour_supported": { "name": "Power-on behaviour supported" },
       "is_tilt_supported": { "name": "Tilt supported" },
       "is_open": { "name": "Open" },
       "is_closed": { "name": "Closed" },

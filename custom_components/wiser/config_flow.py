@@ -23,6 +23,8 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
+    MAJOR_VERSION,
+    MINOR_VERSION,
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -37,6 +39,7 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_SHOW_ZIGBEE_SIDEBAR,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -49,9 +52,11 @@ from .const import (
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
     CONF_HW_BOOST_TIME,
+    CONF_LEGACY_NAMING,
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CONF_SHOW_SCHEDULES_SIDEBAR,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -115,7 +120,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 4
+    MINOR_VERSION = 5
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self) -> None:
@@ -156,7 +161,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_NAME] = validated["title"]
 
                 return self.async_create_entry(
-                    title=validated["title"], data=user_input
+                    title=validated["title"],
+                    data=user_input,
+                    options={
+                        CONF_LEGACY_NAMING: (MAJOR_VERSION, MINOR_VERSION) < (2026, 8)
+                    },
                 )
 
         return self.async_show_form(
@@ -217,7 +226,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 # Add hub name to config
                 user_input[CONF_NAME] = validated["title"]
                 return self.async_create_entry(
-                    title=validated["title"], data=user_input
+                    title=validated["title"],
+                    data=user_input,
+                    options={
+                        CONF_LEGACY_NAMING: (MAJOR_VERSION, MINOR_VERSION) < (2026, 8)
+                    },
                 )
 
         return self.async_show_form(
@@ -255,12 +268,41 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
-        menu_options = ["main_params", "automation_params"]
+        menu_options = ["main_params", "automation_params", "ui_options"]
         if self._opentherm() is not None:
             menu_options.append("opentherm_sensors")
         return self.async_show_menu(
             step_id="init",
             menu_options=menu_options,
+        )
+
+    async def async_step_ui_options(self, user_input=None):
+        """Configure Wiser UI options, including legacy naming and sidebar panels."""
+        if user_input is not None:
+            return self.async_create_entry(
+                data=self.config_entry.options | user_input
+            )
+
+        return self.async_show_form(
+            step_id="ui_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_LEGACY_NAMING,
+                        default=self.config_entry.options.get(
+                            CONF_LEGACY_NAMING, True
+                        ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_SCHEDULES_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_ZIGBEE_SIDEBAR,
+                        default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
+                    ): BooleanSelector(),
+                }
+            ),
         )
 
     async def async_step_opentherm_sensors(self, user_input=None):

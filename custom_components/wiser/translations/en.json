@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Wiser Heat Hub Setup",
-        "description": "Please enter the ip address and secret key obtained from the hub.",
+        "description": "Please enter the IP address and secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
           "port": "Port number",
@@ -13,7 +13,7 @@
       },
       "zeroconf_confirm": {
         "title": "Wiser Heat Hub Setup ({name})",
-        "description": "Please enter the secret key obtained from the hub",
+        "description": "Please enter the secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
           "port": "Port number",
@@ -27,10 +27,10 @@
       "not_wiser_hub": "The discovered device is not a Wiser Heat Hub."
     },
     "error": {
-      "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
-      "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
-      "timeout_error_discovery": "Timed out trying to connect to the Wiser Hub.  Check your hub is still online and try again.",
-      "unknown": "Unknown error connecting to the Wiser hub.  Please check the logs."
+      "auth_failure": "Unable to authenticate with the Wiser hub. Check the secret key and try again.",
+      "timeout_error": "Timed out trying to connect to the Wiser hub. Check the IP address and try again.",
+      "timeout_error_discovery": "Timed out trying to connect to the Wiser hub. Check that your hub is still online and try again.",
+      "unknown": "Unknown error connecting to the Wiser hub. Please check the logs."
     }
   },
   "options": {
@@ -41,7 +41,19 @@
         "menu_options": {
           "main_params": "Main Parameters",
           "automation_params": "Automation Parameters",
-          "opentherm_sensors": "OpenTherm sensors"
+          "opentherm_sensors": "OpenTherm sensors",
+          "ui_options": "UI options"
+        }
+      },
+      "ui_options": {
+        "title": "UI options",
+        "data": {
+          "legacy_naming": "Legacy naming",
+          "show_schedules_sidebar": "Show Wiser Schedules in sidebar",
+          "show_zigbee_sidebar": "Show Wiser Zigbee in sidebar"
+        },
+        "data_description": {
+          "legacy_naming": "Include room names in Wiser device names. If enabled, using Home Assistant to regenerate entity IDs with the default format in Settings → System → Entity ID format (Home Assistant 2026.8 and later) will duplicate area names when the area and Wiser room names match. Changing this option does not rename existing entity IDs."
         }
       },
       "main_params": {
@@ -55,12 +67,12 @@
           "heating_boost_time": "Default Heating Boost Duration (mins)",
           "hotwater_boost_time": "Default Hot Water Boost Duration (mins)",
           "setpoint_mode": "Setpoint Mode",
-          "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature"
+          "restore_manual_temp_option": "Use This Temperature If No Manual Temperature Is Stored"
         }
       },
       "automation_params": {
         "title": "Wiser Integration Options",
-        "description": "Enable in-built automations",
+        "description": "Enable built-in automations",
         "sections": {
           "automations_passive_mode": {
             "name": "Passive Mode",
@@ -212,6 +224,10 @@
     "opentherm_notification_title": { "message": "Wiser OpenTherm command" }
   },
   "entity": {
+    "update": {
+      "schedule_card": { "name": "Wiser Schedules Card" },
+      "zigbee_card": { "name": "Wiser Zigbee Card" }
+    },
     "climate": {
       "heating": {
         "name": "Heating"
