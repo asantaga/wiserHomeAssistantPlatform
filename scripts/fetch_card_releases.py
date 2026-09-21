@@ -37,10 +37,10 @@ def list_releases(repository):
 
 
 def select_release(releases, channel):
+    """Select the most recently published release allowed by the channel."""
     published = [r for r in releases if not r.get("draft") and r.get("published_at")]
     stable = [r for r in published if not r.get("prerelease")]
-    beta = [r for r in published if r.get("prerelease")]
-    candidates = (beta or stable) if channel == "dev" else stable
+    candidates = published if channel == "dev" else stable
     if not candidates:
         raise ValueError(f"No published {'prerelease or stable' if channel == 'dev' else 'stable'} release available")
     return max(candidates, key=lambda r: r["published_at"])

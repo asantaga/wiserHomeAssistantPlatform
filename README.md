@@ -62,7 +62,7 @@ To build a stable release package, run:
 python3 scripts/build.py --release --channel stable
 ```
 
-For a prerelease package, use `--channel dev` instead. The build downloads published Schedules and Zigbee card assets from GitHub. Stable builds use stable card releases; prerelease builds use the newest published prerelease of each card, falling back to its newest stable release when none exists.
+For a prerelease package, use `--channel dev` instead. The build downloads published Schedules and Zigbee card assets from GitHub. Stable builds use stable card releases; prerelease builds use the most recently published stable or prerelease card release. In a running installation, card update entities follow the HACS **Pre-release** switch for this integration; without that option they offer stable card releases only.
 
 The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` records the card releases and checksums included in the package. Missing or invalid card assets fail the build.
 
