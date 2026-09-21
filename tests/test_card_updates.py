@@ -90,6 +90,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.hass = SimpleNamespace(
             data={}, config=SimpleNamespace(path=lambda *args: str(self.directory.joinpath(*args))),
             async_add_executor_job=AsyncMock(side_effect=lambda fn, *args: fn(*args)),
+            states=SimpleNamespace(is_state=Mock(return_value=False)),
         )
         self.coordinator = self.updates.CardUpdateCoordinator(self.hass)
 
@@ -98,11 +99,11 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         return (f"/*! WISER-CARD-VERSION {filename[:-3]} {version} */\n"
                 f"customElements.define('{component}', class extends HTMLElement {{}});").encode()
 
-    def metadata(self, card="zigbee", version="2.0.0"):
+    def metadata(self, card="zigbee", version="2.0.0", prerelease=False):
         contents = self.payload(card, version)
         repo, filename, _ = self.updates._CARDS[card]
         return {
-            "tag_name": f"v{version}", "published_at": "2026-09-20", "draft": False, "prerelease": False,
+            "tag_name": f"v{version}", "published_at": "2026-09-20", "draft": False, "prerelease": prerelease,
             "assets": [{"name": filename, "state": "uploaded", "size": len(contents),
                         "digest": "sha256:" + sha256(contents).hexdigest(),
                         "browser_download_url": f"https://github.com/{repo}/releases/download/v{version}/{filename}"}],
@@ -167,6 +168,33 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
                 metadata["assets"][0]["size"] = 21 * 1024 * 1024
             with self.subTest(change=change), self.assertRaises(ValueError):
                 self.updates._validate_release("zigbee", metadata)
+
+    def test_accepts_prerelease_only_when_enabled(self):
+        metadata = self.metadata(version="2.1.0-beta.1", prerelease=True)
+        with self.assertRaises(ValueError):
+            self.updates._validate_release("zigbee", metadata)
+        release = self.updates._validate_release(
+            "zigbee", metadata, allow_prerelease=True
+        )
+        self.assertEqual(release["version"], "2.1.0-beta.1")
+
+    async def test_hacs_prerelease_switch_enables_card_prereleases(self):
+        self.registry.async_get_entity_id.return_value = "switch.wiser_pre_release"
+        self.hass.states.is_state.return_value = True
+        releases = [
+            self.metadata(version="2.0.1"),
+            self.metadata(version="2.1.0-beta.1", prerelease=True),
+        ]
+        self.session.get.return_value = self.response(json_data=releases)
+        state = await self.coordinator._check_card("zigbee")
+        self.assertEqual(state["release"]["version"], "2.1.0-beta.1")
+        self.assertIn("/releases?per_page=100", self.session.get.call_args.args[0])
+
+    async def test_card_updates_remain_stable_without_hacs_prereleases(self):
+        self.session.get.return_value = self.response(json_data=self.metadata())
+        state = await self.coordinator._check_card("zigbee")
+        self.assertEqual(state["release"]["version"], "2.0.0")
+        self.assertIn("/releases/latest", self.session.get.call_args.args[0])
 
     def test_rejects_bad_checksum_and_wrong_version_or_panel(self):
         release = self.updates._validate_release("zigbee", self.metadata())
