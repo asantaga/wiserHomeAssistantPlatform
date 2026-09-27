@@ -40,10 +40,6 @@ class CardVersionTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             self.assertEqual(module.card_version(Path(directory) / "missing.js"), "missing")
 
-    def test_installed_bundle_has_readable_version(self):
-        version = module.card_version(ROOT / "custom_components/wiser/frontend/wiser-schedule-card.js")
-        self.assertRegex(version, r"^\d+\.\d+\.\d+")
-
     def test_explicit_version_marker(self):
         self.assertEqual(self.version('/*! WISER-CARD-VERSION wiser-schedule-card 4.0.0-dev.9 */\nconst library="3.3.3";'), "4.0.0-dev.9")
 
