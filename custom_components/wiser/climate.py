@@ -498,7 +498,6 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["away_mode_supressed"] = self._room.away_mode_suppressed
         attrs["heating_type"] = self._room.heating_type
         attrs["number_of_heating_actuators"] = self._room.number_of_heating_actuators
-        attrs["demand_type"] = self._room.demand_type
 
         # Status
         attrs["target_temperature_origin"] = self._room.target_temperature_origin
@@ -509,12 +508,17 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
 
+        # OpenTherm
+        if self._data.wiserhub.system.opentherm.connection_status == "Connected":
+            attrs["demand_type"] = self._room.demand_type
+            attrs["percentage_demand"] = self._room.percentage_demand
+            attrs["is_calling_for_heat"] = self._room.is_calling_for_heat
+
         # If boosted show boost end time
         if self._room.is_boosted:
             attrs["boost_end"] = self._room.boost_end_time
 
         attrs["boost_time_remaining"] = int(self._room.boost_time_remaining / 60)
-        attrs["percentage_demand"] = self._room.percentage_demand
         attrs["comfort_mode_score"] = self._room.comfort_mode_score
         attrs["control_direction"] = self._room.control_direction
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
