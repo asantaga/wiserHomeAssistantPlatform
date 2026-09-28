@@ -54,7 +54,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Releases before v3.3.5 are listed on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log).
 
-## Building and Contributing
+## Building
 
 To build a stable release package, run:
 
@@ -70,8 +70,8 @@ The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.
 
 ## Contributing
 
-We welcome and greatly appreciate all issues, pull requests, and bug fixes. Please base your PR on the `dev` branch — all development happens there. `dev` is merged into master only when we cut a production release, tagged `vX.Y.Z` (e.g. `v3.4.20`). We also publish release candidates sourced from dev, tagged `vX.Y.Z-rcN` (e.g. `v4.0.0-rc1`). 
+We welcome and greatly appreciate all issues, pull requests, and bug fixes. Please base your PR on the `dev` branch — all development happens there.
 
-
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to report a bug, set up a development environment, run the tests, and get a pull request merged.
 
 Wiser Home Assistant Integration Team
