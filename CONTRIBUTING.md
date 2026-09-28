@@ -20,7 +20,7 @@ Please include:
 - The integration version (Settings → Devices & Services → Wiser), and your
   Home Assistant version.
 - Your hub model (v1 or v2) and firmware version.
-- A **diagnostics download** from the integration's device page — it redacts
+- Depending on the bug we may ask for a **diagnostics download** from the integration's device page — it redacts
   secrets and captures the hub data we need.
 - Relevant log output. Add this to `configuration.yaml`, restart, and reproduce:
 
@@ -45,8 +45,8 @@ Please include:
 
 Two things that trip people up:
 
-- If a change is really about how we talk to the hub, it probably belongs in
-  `aioWiserHeatAPI`, not here.
+- If a change is really about how we talk to the hub, it probably belongs in 
+  [aioWiserHeatAPI](https://github.com/msp1974/aioWiserHeatAPI) git repo, not here.
 - **Card bundles are not committed to this repository.** They are downloaded
   from the card repositories' GitHub releases at build time. Do not add built
   `.js` card assets to `custom_components/wiser/frontend/`.
@@ -84,30 +84,6 @@ The minimum supported Home Assistant version is declared in `hacs.json`
 (currently 2025.5); don't use APIs newer than that without raising the minimum
 deliberately.
 
-## Tests
-
-Tests use plain `unittest` and stub out the Home Assistant runtime, so they run
-without installing Home Assistant. Install the small set of helper dependencies
-first:
-
-```sh
-python -m pip install -r tests/requirements.txt
-```
-
-Run the whole suite from the repository root:
-
-```sh
-python -m unittest discover -s tests -p 'test_*.py'
-```
-
-Or a single file while iterating:
-
-```sh
-python -m unittest discover -s tests -p test_sensor.py
-```
-
-CI (the **Publish** workflow) runs the packaging and frontend tests, and the
-**Validate** workflow runs HACS validation and `hassfest`. Both must pass.
 
 ## Code style
 
