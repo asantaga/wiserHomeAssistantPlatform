@@ -54,7 +54,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Releases before v3.3.5 are listed on our wiki [here](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log).
 
-## Building
+## Building and Contributing
 
 To build a stable release package, run:
 
@@ -67,3 +67,11 @@ For a prerelease package, use `--channel dev` instead. The build downloads publi
 The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` records the card releases and checksums included in the package. Missing or invalid card assets fail the build.
 
 The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.zip` when an integration release is published. Preview runs provide a downloadable **wiser-package** artifact without publishing a release.
+
+## Contributing
+
+We welcome and greatly appreciate all issues, pull requests, and bug fixes. Please base your PR on the `dev` branch — all development happens there. `dev` is merged into master only when we cut a production release, tagged `vX.Y.Z` (e.g. `v3.4.20`). We also publish release candidates sourced from dev, tagged `vX.Y.Z-rcN` (e.g. `v4.0.0-rc1`). 
+
+
+
+Wiser Home Assistant Integration Team
