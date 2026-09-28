@@ -29,7 +29,9 @@ def _module(name: str, **attributes: object) -> ModuleType:
 def _load_sensor_module() -> ModuleType:
     """Load the sensor module with only the imports needed by this test."""
     _module("aioWiserHeatAPI")
-    _module("aioWiserHeatAPI.const", TEXT_UNKNOWN="Unknown")
+    _module(
+        "aioWiserHeatAPI.const", TEXT_OFF="Off", TEXT_ON="On", TEXT_UNKNOWN="Unknown"
+    )
     _module("aioWiserHeatAPI.wiserhub", TEMP_MINIMUM=5, TEMP_OFF="Off")
 
     _module("homeassistant")
@@ -56,6 +58,7 @@ def _load_sensor_module() -> ModuleType:
         LIGHT_LUX="lx",
         STATE_UNAVAILABLE="unavailable",
         STATE_UNKNOWN="unknown",
+        STATE_OFF="off",
         STATE_ON="on",
         EntityCategory=SimpleNamespace(DIAGNOSTIC="diagnostic"),
         UnitOfTemperature=SimpleNamespace(CELSIUS="°C"),
@@ -408,6 +411,82 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
         self.assertEqual(energy._attr_translation_key, "total_energy")
         self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
+
+
+class WiserSystemCircuitStateTest(unittest.TestCase):
+    """Tests for normalized heating and hot-water circuit states."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    def _sensor(
+        self,
+        sensor_type: str,
+        *,
+        heating_state="Off",
+        demand_state="Off",
+        hot_water_state="Off",
+    ):
+        heating_channel = SimpleNamespace(
+            heating_relay_status=heating_state,
+            demand_on_off_output=demand_state,
+        )
+        sensor = object.__new__(self.sensor_module.WiserSystemCircuitState)
+        sensor._sensor_type = sensor_type
+        sensor._device_id = 1
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                heating_channels=SimpleNamespace(
+                    get_by_id=lambda _device_id: heating_channel
+                ),
+                hotwater=SimpleNamespace(current_state=hot_water_state),
+            )
+        )
+        sensor.async_write_ha_state = Mock()
+        return sensor
+
+    def test_heating_state_is_normalized(self) -> None:
+        sensor = self._sensor("Heating", heating_state="On")
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, "on")
+
+    def test_unknown_heating_relay_uses_normalized_demand_output(self) -> None:
+        sensor = self._sensor(
+            "Heating", heating_state="Unknown", demand_state="Off"
+        )
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, "off")
+
+    def test_hot_water_state_is_normalized(self) -> None:
+        sensor = self._sensor("Hot Water", hot_water_state="On")
+
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, "on")
+
+    def test_unknown_or_unexpected_state_is_not_reported_as_off(self) -> None:
+        sensor = self._sensor("Hot Water", hot_water_state="Unknown")
+
+        sensor._handle_coordinator_update()
+
+        self.assertIsNone(sensor.native_value)
+
+    def test_circuit_states_have_translations(self) -> None:
+        files = [
+            SOURCE_PATH.parent / "strings.json",
+            *(SOURCE_PATH.parent / "translations").glob("*.json"),
+        ]
+
+        for path in files:
+            with self.subTest(path=path.name):
+                sensors = json.loads(path.read_text())["entity"]["sensor"]
+                for key in ("heating", "heating_channel", "hot_water"):
+                    self.assertEqual(set(sensors[key]["state"]), {"off", "on"})
 
 
 class WiserBatterySensorAvailabilityTest(unittest.TestCase):

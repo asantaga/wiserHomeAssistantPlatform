@@ -318,9 +318,27 @@
       "signal": { "name": "Signal" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heizungsbetriebsart" },
-      "heating": { "name": "Heizung" },
-      "heating_channel": { "name": "Heizkanal {channel}" },
-      "hot_water": { "name": "Warmwasser" },
+      "heating": {
+        "name": "Heizung",
+        "state": {
+          "off": "Aus",
+          "on": "Ein"
+        }
+      },
+      "heating_channel": {
+        "name": "Heizkanal {channel}",
+        "state": {
+          "off": "Aus",
+          "on": "Ein"
+        }
+      },
+      "hot_water": {
+        "name": "Warmwasser",
+        "state": {
+          "off": "Aus",
+          "on": "Ein"
+        }
+      },
       "hot_water_operation_mode": { "name": "Warmwasserbetriebsart" },
       "target_temperature": { "name": "Zieltemperatur" },
       "floor_temperature": { "name": "Fußbodentemperatur" },

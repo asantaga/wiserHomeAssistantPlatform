@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 
-from aioWiserHeatAPI.const import TEXT_UNKNOWN
+from aioWiserHeatAPI.const import TEXT_OFF, TEXT_ON, TEXT_UNKNOWN
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -22,9 +22,10 @@ from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     EntityCategory,
     LIGHT_LUX,
+    STATE_OFF,
+    STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
-    STATE_ON,
     UnitOfTemperature,
     UnitOfTime,
     UnitOfElectricCurrent,
@@ -73,6 +74,11 @@ from .opentherm import (
 from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
+
+ON_OFF_STATES = {
+    TEXT_ON: STATE_ON,
+    TEXT_OFF: STATE_OFF,
+}
 
 
 OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
@@ -855,26 +861,27 @@ class WiserSystemCircuitState(WiserSensor):
             self._device = self._data.wiserhub.heating_channels.get_by_id(
                 self._device_id
             )
-            self._state = (
+            raw_state = (
                 self._device.heating_relay_status
                 if self._device.heating_relay_status != TEXT_UNKNOWN
                 else self._device.demand_on_off_output
             )
         else:
             self._device = self._data.wiserhub.hotwater
-            self._state = self._device.current_state
+            raw_state = self._device.current_state
+        self._state = ON_OFF_STATES.get(raw_state)
         self.async_write_ha_state()
 
     @property
     def icon(self):
         """Return icon."""
         if self._sensor_type == "Heating":
-            if self._state == "Off":
+            if self._state == STATE_OFF:
                 return "mdi:radiator-disabled"
             return "mdi:radiator"
 
         # Hot water circuit
-        if self._state == "Off":
+        if self._state == STATE_OFF:
             return "mdi:fire-off"
         return "mdi:fire"
 
