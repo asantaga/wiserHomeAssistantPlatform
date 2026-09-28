@@ -713,7 +713,7 @@ class WiserOpenThermAttributeSensorTest(unittest.TestCase):
 
 
 class WiserOpenThermFlameStatisticsSensorTest(unittest.TestCase):
-    """Tests for the optional rolling flame-runtime entity."""
+    """Tests for the optional daily flame-runtime entity."""
 
     @classmethod
     def setUpClass(cls):

@@ -1417,7 +1417,7 @@ class WiserOpenThermAttributeSensor(WiserSensor):
 
 
 class WiserOpenThermFlameStatisticsSensor(WiserSensor):
-    """Rolling 24-hour runtime of the OpenTherm flame-active status."""
+    """Today's runtime of the OpenTherm flame-active status, from local midnight."""
 
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.HOURS
@@ -1444,7 +1444,7 @@ class WiserOpenThermFlameStatisticsSensor(WiserSensor):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Start the rolling history calculation after entities are registered."""
+        """Start the daily history calculation after entities are registered."""
         await super().async_added_to_hass()
         await self._async_setup_history()
 
@@ -1484,9 +1484,9 @@ class WiserOpenThermFlameStatisticsSensor(WiserSensor):
             self.hass,
             source_entity_id,
             [STATE_ON],
-            None,
+            Template("{{ today_at() }}", self.hass),
             Template("{{ now() }}", self.hass),
-            timedelta(hours=24),
+            None,
             timedelta(0),
         )
         coordinator = HistoryStatsUpdateCoordinator(
