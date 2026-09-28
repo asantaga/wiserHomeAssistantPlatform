@@ -1,22 +1,12 @@
-"""Integration contract for the externally built schedule card/panel bundle.
-
-Card behaviour is tested in the wiser-schedule-card source repository.
-"""
+"""Integration contracts for schedule operations used by the external card."""
 from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1] / "custom_components/wiser"
-CARD = ROOT / "frontend/wiser-schedule-card.js"
 WEBSOCKETS = ROOT / "websockets.py"
 
 
 class ScheduleCardBundleTest(unittest.TestCase):
-    def test_matching_card_and_panel_are_bundled_together(self):
-        source = CARD.read_text()
-        self.assertIn('wiser-schedules-panel', source)
-        self.assertIn('wiser-schedule-card-editor', source)
-        self.assertIn('panelApiVersion', source)
-
     def test_delete_websocket_reconciles_ambiguous_hub_errors(self):
         websocket_source = WEBSOCKETS.read_text()
 

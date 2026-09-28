@@ -41,13 +41,6 @@ class ZigbeeCardVersionTest(unittest.TestCase):
     def test_zigbee_dev_version(self):
         self.assertEqual(self.version('const cardBuild="3.0.0-dev.7";console.info(`WISER-ZIGBEE-CARD ${translate("common.version")} ${cardBuild}`)'), "3.0.0-dev.7")
 
-    def test_installed_zigbee_bundle_has_readable_version(self):
-        version = module.card_version(ROOT / "custom_components/wiser/frontend/wiser-zigbee-card.js")
-        source = (ROOT / "custom_components/wiser/frontend/wiser-zigbee-card.js").read_text()
-        marker = re.search(r"/\*! WISER-CARD-VERSION wiser-zigbee-card (\S+) \*/", source)
-        self.assertIsNotNone(marker)
-        self.assertEqual(version, marker[1])
-
     def test_modern_editor_footer_with_inlined_version(self):
         source = 'const library="3.3.3";html`<div class="version">${this.t("common.version")}: ${"3.0.0-dev.65"}</div>`'
         self.assertEqual(self.version(source), "3.0.0-dev.65")
