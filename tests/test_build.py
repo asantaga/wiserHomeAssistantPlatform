@@ -29,12 +29,20 @@ class BuildTest(unittest.TestCase):
         frontend.mkdir(parents=True)
         self.output = self.root / "dist/wiser.zip"
         self.payloads = {
-            "schedule": b"// local wiser-schedules-panel",
-            "zigbee": b"// local wiser-zigbee-panel",
+            "schedule": b'customElements.define("wiser-schedule-card",class{});customElements.define("wiser-schedules-panel",class{})',
+            "zigbee": b'customElements.define("wiser-zigbee-card",class{});customElements.define("wiser-zigbee-panel",class{})',
+            "rooms": (
+                b'customElements.define("wiser-rooms-card",class{});'
+                b'customElements.define("wiser-rooms-panel",class{})'
+            ),
         }
+        (frontend / "cards.json").write_text(
+            json.dumps(FETCH.CARD_MANIFEST), encoding="utf-8"
+        )
         for card, panel in (("schedule", "schedules"), ("zigbee", "zigbee")):
             (frontend / f"{panel}_sidebar.py").touch()
             (frontend / f"wiser-{card}-card.js").write_bytes(b"old tracked bundle")
+        (frontend / "wiser-rooms-card.js").write_bytes(b"old tracked bundle")
         (frontend / "__pycache__").mkdir()
         (frontend / "__pycache__/old.pyc").touch()
 
@@ -53,7 +61,7 @@ class BuildTest(unittest.TestCase):
         with patch.object(FETCH, "list_releases") as releases:
             report = self.build()
         releases.assert_not_called()
-        self.assertEqual([r["source"] for r in report], ["local", "local"])
+        self.assertEqual([r["source"] for r in report], ["local", "local", "local"])
         with ZipFile(self.output) as archive:
             for card, payload in self.payloads.items():
                 self.assertEqual(archive.read(f"frontend/wiser-{card}-card.js"), payload)
@@ -66,27 +74,31 @@ class BuildTest(unittest.TestCase):
 
     def test_missing_local_bundle_falls_back_independently(self):
         self.local("zigbee")
+        self.local("rooms")
         with patch.object(FETCH, "list_releases", return_value=[release("v1", "2026", card="schedule")]) as releases, patch.object(FETCH, "download_asset", return_value=(self.payloads["schedule"], "sha256:test")):
             report = self.build()
         releases.assert_called_once_with(FETCH.CARD_REPOSITORIES["schedule"])
-        self.assertEqual([r["source"] for r in report], ["release", "local"])
+        self.assertEqual([r["source"] for r in report], ["release", "local", "local"])
 
-    def test_no_local_bundles_downloads_both_releases(self):
+    def test_no_local_bundles_downloads_all_releases(self):
         with patch.object(FETCH, "list_releases", side_effect=[
             [release("v1", "2026", card="schedule")],
             [release("v2", "2026", card="zigbee")],
+            [release("v3", "2026", card="rooms")],
         ]), patch.object(FETCH, "download_asset", side_effect=[
             (self.payloads["schedule"], "sha256:schedule"),
             (self.payloads["zigbee"], "sha256:zigbee"),
+            (self.payloads["rooms"], "sha256:rooms"),
         ]):
             report = self.build()
-        self.assertEqual([r["source"] for r in report], ["release", "release"])
+        self.assertEqual([r["source"] for r in report], ["release", "release", "release"])
         with ZipFile(self.output) as archive:
             for card, payload in self.payloads.items():
                 self.assertEqual(archive.read(f"frontend/wiser-{card}-card.js"), payload)
 
     def test_failed_fallback_keeps_previous_package(self):
         self.local("schedule")
+        self.local("rooms")
         self.output.parent.mkdir()
         self.output.write_bytes(b"previous package")
         with patch.object(FETCH, "list_releases", side_effect=ValueError("unavailable")):
@@ -95,7 +107,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(self.output.read_bytes(), b"previous package")
 
     def test_invalid_local_bundle_fails_instead_of_using_old_tracked_card(self):
-        self.local("schedule").write_bytes(b"old card without panel")
+        self.local("schedule").write_bytes(b"wiser-schedule-card without panel")
         with patch.object(FETCH, "list_releases") as releases:
             with self.assertRaisesRegex(ValueError, "does not include the sidebar panel"):
                 self.build()
@@ -107,23 +119,40 @@ class BuildTest(unittest.TestCase):
             self.local(card)
         for channel, explicit_release in (("dev", True), ("stable", True), ("stable", False)):
             with self.subTest(channel=channel, explicit_release=explicit_release):
-                with patch.object(FETCH, "list_releases", side_effect=[
+                with patch.object(BUILD, "fetch_panel_config", return_value=(
+                    FETCH.CARD_MANIFEST,
+                    {"repository": FETCH.PANEL_CONFIG_REPOSITORY, "source": "release"},
+                )), patch.object(FETCH, "list_releases", side_effect=[
                     [release("v1", "2026", card="schedule")],
                     [release("v2", "2026", card="zigbee")],
+                    [release("v3", "2026", card="rooms")],
                 ]), patch.object(FETCH, "download_asset", side_effect=[
-                    (b"// published wiser-schedules-panel", "sha256:schedule"),
-                    (b"// published wiser-zigbee-panel", "sha256:zigbee"),
+                    (self.payloads["schedule"], "sha256:schedule"),
+                    (self.payloads["zigbee"], "sha256:zigbee"),
+                    (
+                        b'customElements.define("wiser-rooms-card",class{});'
+                        b'customElements.define("wiser-rooms-panel",class{})',
+                        "sha256:rooms",
+                    ),
                 ]) as download:
                     report = BUILD.build(
                         self.source, self.output, self.root, channel,
                         FETCH.CARD_REPOSITORIES, release=explicit_release,
                     )
-                self.assertEqual(download.call_count, 2)
-                self.assertEqual([r["source"] for r in report], ["release", "release"])
+                self.assertEqual(download.call_count, 3)
+                self.assertEqual([r["source"] for r in report], ["release", "release", "release"])
                 with ZipFile(self.output) as archive:
                     self.assertEqual(
                         archive.read("frontend/wiser-zigbee-card.js"),
-                        b"// published wiser-zigbee-panel",
+                        self.payloads["zigbee"],
+                    )
+                    self.assertEqual(
+                        json.loads(archive.read("frontend/cards.json")),
+                        FETCH.CARD_MANIFEST,
+                    )
+                    self.assertEqual(
+                        json.loads(archive.read("frontend/panel-config-release.json"))["source"],
+                        "release",
                     )
 
     def test_release_failure_does_not_fall_back_to_local_bundles(self):
