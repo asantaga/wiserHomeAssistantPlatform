@@ -51,20 +51,20 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         package.async_card_resource = card_resource
         constants = ModuleType("wiser_sidebar_test.const")
         for name, value in {
-            "CONF_SCHEDULES_PANEL_CONFIG": "schedules_panel_config",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_WISER_PANEL_CONFIG": "wiser_panel_config",
-            "CONF_ZIGBEE_PANEL_CONFIG": "zigbee_panel_config",
             "DATA": "data",
             "DOMAIN": "wiser",
             "URL_BASE": "/wiser",
         }.items():
             setattr(constants, name, value)
-        constants.JSMODULES = [
-            {"filename": "wiser-schedule-card.js"},
-            {"filename": "wiser-zigbee-card.js"},
-            {"filename": "wiser-rooms-card.js"},
-        ]
+        constants.CARD_MANIFEST = json.loads(
+            (Path(__file__).parent / "fixtures/frontend_cards.json").read_text()
+        )
+
+        registry = ModuleType("wiser_sidebar_test.frontend.registry")
+        registry.get_manifest = lambda hass: constants.CARD_MANIFEST
+        self.manifest = constants.CARD_MANIFEST
 
         with patch.dict(
             sys.modules,
@@ -73,11 +73,15 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
                 "homeassistant.components": components,
                 "wiser_sidebar_test": ModuleType("wiser_sidebar_test"),
                 "wiser_sidebar_test.frontend": package,
+                "wiser_sidebar_test.frontend.registry": registry,
                 "wiser_sidebar_test.const": constants,
             },
         ):
             self.sidebar = importlib.import_module(
                 "wiser_sidebar_test.frontend.wiser_sidebar"
+            )
+            self.entry_updates = importlib.import_module(
+                "wiser_sidebar_test.frontend.entry_updates"
             )
 
         self.entries = []
@@ -107,8 +111,10 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
             "hub-one",
             {
                 "show_wiser_sidebar": True,
-                "schedules_panel_config": {"home_screen": "overview"},
-                "zigbee_panel_config": {"orientation": "pie"},
+                "wiser_panel_config": {
+                    "schedule": {"home_screen": "overview"},
+                    "zigbee": {"orientation": "pie"},
+                },
             },
         )
         self.add_hub("hub-two", {"show_wiser_sidebar": True})
@@ -200,16 +206,6 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         await self.sidebar.async_update_wiser_panel(self.hass)
         self.custom.async_register_panel.assert_not_awaited()
 
-    async def test_obsolete_registered_routes_are_removed(self):
-        self.hass.data["wiser_schedules_panel"] = {}
-        self.hass.data["wiser_zigbee_panel"] = {}
-        self.add_hub("hub", {})
-        await self.sidebar.async_update_wiser_panel(self.hass)
-        self.assertEqual(
-            {call.args[1] for call in self.frontend.async_remove_panel.call_args_list},
-            {"wiser-schedules", "wiser-zigbee-panel"},
-        )
-
     async def test_no_enabled_hubs_removes_existing_shared_panel(self):
         self.hass.data[self.sidebar.PANEL_STATE] = {"panels": []}
         self.add_hub("hub", {"show_wiser_sidebar": False})
@@ -239,50 +235,83 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
 
     def test_new_panel_websocket_commands_are_registered(self):
         source = (ROOT / "websockets.py").read_text()
-        self.assertIn(
-            "async_register_command(hass, websocket_configure_rooms_panel)",
-            source,
-        )
+        self.assertIn("async_register_command(hass, websocket_configure_panel)", source)
+        self.assertNotIn("websocket_configure_rooms_panel", source)
         self.assertIn(
             "async_register_command(hass, websocket_configure_wiser_panel_tabs)",
             source,
         )
 
-    def test_manifest_addition_drives_registration_and_packaging(self):
-        cards = json.loads((ROOT / "frontend/cards.json").read_text())
-        self.assertEqual(
-            {card["id"] for card in cards}, {"schedule", "zigbee", "rooms"}
+    async def test_new_registry_panel_is_discovered_and_saves_generic_settings(self):
+        entry = self.add_hub("hub", {})
+        self.manifest.append({
+            "id": "new-registry-id",
+            "filename": "wiser-energy-card.js", "name": "Wiser Energy Card",
+            "panel": "wiser-energy-panel",
+        })
+        (Path(self.temporary.name) / "wiser-energy-card.js").write_text(
+            'customElements.define("wiser-energy-panel", class extends HTMLElement {})'
         )
+        await self.sidebar.async_update_wiser_panel(self.hass)
+        panels = self.custom.async_register_panel.call_args.kwargs["config"]["panels"]
+        self.assertEqual(panels[-1]["id"], "new-registry-id")
+        self.assertEqual(panels[-1]["config"]["panel_id"], "new-registry-id")
+        self.hass.config_entries.async_update_entry = Mock()
+        self.sidebar.save_panel_config(self.hass, "new-registry-id", {"hub": {"columns": 3}})
+        self.hass.config_entries.async_update_entry.assert_called_once_with(
+            entry, options={"wiser_panel_config": {"new-registry-id": {"columns": 3}}}
+        )
+        self.sidebar.save_wiser_panel_tabs(self.hass, [{"id": "new-registry-id", "title": "Energy"}])
+        self.hass.config_entries.async_update_entry.reset_mock()
+        with self.assertRaises(ValueError):
+            self.sidebar.save_panel_config(self.hass, "unknown", {"hub": {}})
+        self.hass.config_entries.async_update_entry.assert_not_called()
 
     def test_panel_settings_save_without_standalone_sidebar_modules(self):
         self.add_hub("schedule-hub", {})
         self.add_hub("zigbee-hub", {})
         self.hass.config_entries.async_update_entry = Mock()
-        self.sidebar.save_schedules_panel_config(
-            self.hass,
+        self.sidebar.save_panel_config(
+            self.hass, "schedule",
             {"schedule-hub": {"type": "custom:wiser-schedule-card", "home_screen": "overview"}},
         )
-        self.sidebar.save_zigbee_panel_config(
-            self.hass,
+        self.sidebar.save_panel_config(
+            self.hass, "zigbee",
             {"zigbee-hub": {"hub": "zigbee-hub", "orientation": "pie"}},
         )
         calls = self.hass.config_entries.async_update_entry.call_args_list
         self.assertEqual(
             calls[0].kwargs["options"],
-            {"schedules_panel_config": {"home_screen": "overview"}},
+            {"wiser_panel_config": {"schedule": {"home_screen": "overview"}}},
         )
         self.assertEqual(
             calls[1].kwargs["options"],
-            {"zigbee_panel_config": {"orientation": "pie"}},
+            {"wiser_panel_config": {"zigbee": {"orientation": "pie"}}},
         )
+
+    async def test_all_panel_settings_apply_without_reloading_integration(self):
+        entry = self.add_hub("hub", {"scan_interval": 30})
+        entry.data = {"host": "wiser.local"}
+        loaded = self.hass.data["wiser"][entry.entry_id]
+        loaded["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
+        self.hass.config_entries.async_reload = AsyncMock()
+        with patch.object(self.entry_updates, "async_update_wiser_panel", AsyncMock()) as refresh:
+            for panel_id in ("schedule", "zigbee", "rooms", "future-panel"):
+                entry.options["wiser_panel_config"] = {panel_id: {"columns": 3}}
+                await self.entry_updates.async_handle_entry_update(self.hass, entry)
+            self.assertEqual(refresh.await_count, 4)
+            self.hass.config_entries.async_reload.assert_not_awaited()
+            entry.options["scan_interval"] = 60
+            await self.entry_updates.async_handle_entry_update(self.hass, entry)
+            self.hass.config_entries.async_reload.assert_awaited_once_with(entry.entry_id)
 
     def test_invalid_panel_settings_do_not_partially_save(self):
         self.add_hub("first", {})
         self.add_hub("second", {})
         self.hass.config_entries.async_update_entry = Mock()
         with self.assertRaises(ValueError):
-            self.sidebar.save_schedules_panel_config(
-                self.hass,
+            self.sidebar.save_panel_config(
+                self.hass, "schedule",
                 {"first": {"home_screen": "overview"}, "second": {"bad": float("nan")}},
             )
         self.hass.config_entries.async_update_entry.assert_not_called()
@@ -293,8 +322,8 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
             {"wiser_panel_config": {"future": {"enabled": True}}},
         )
         self.hass.config_entries.async_update_entry = Mock()
-        self.sidebar.save_rooms_panel_config(
-            self.hass,
+        self.sidebar.save_panel_config(
+            self.hass, "rooms",
             {
                 "hub": {
                     "type": "custom:wiser-rooms-card",

@@ -2,10 +2,8 @@
 
 from .wiser_sidebar import async_update_wiser_panel
 from ..const import (
-    CONF_SCHEDULES_PANEL_CONFIG,
     CONF_SHOW_WISER_SIDEBAR,
     CONF_WISER_PANEL_CONFIG,
-    CONF_ZIGBEE_PANEL_CONFIG,
     DOMAIN,
 )
 
@@ -14,13 +12,11 @@ def integration_reload_settings(entry):
     """Capture connection and entity options, excluding panel-only preferences."""
     return (
         dict(entry.data),
-        {key: value for key, value in entry.options.items()
-         if key not in {
-             CONF_SCHEDULES_PANEL_CONFIG,
-             CONF_SHOW_WISER_SIDEBAR,
-             CONF_WISER_PANEL_CONFIG,
-             CONF_ZIGBEE_PANEL_CONFIG,
-         }},
+        {
+            key: value
+            for key, value in entry.options.items()
+            if key not in {CONF_SHOW_WISER_SIDEBAR, CONF_WISER_PANEL_CONFIG}
+        },
     )
 
 

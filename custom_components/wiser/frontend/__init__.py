@@ -15,49 +15,28 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
 from .card_files import CARD_CACHE, CARD_CACHE_URL, resolve_card
+from .registry import async_load_registry, get_manifest
 
-from ..const import JSMODULES, URL_BASE  # noqa: TID252
+from ..const import URL_BASE  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def card_version(path: Path) -> str:
-    """Resolve the card's banner variable, ignoring bundled library versions."""
+    """Read the standard version marker or hash an unversioned static asset."""
     version_pattern = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
     try:
         contents = path.read_bytes()
     except OSError:
         return "missing"
     source = contents.decode("utf-8", errors="replace")
-    # Explicit build metadata is authoritative; legacy parsing remains below.
+    # Every registry-provided bundle uses the same build metadata contract.
     marker = re.search(
         rf"/\*!\s*WISER-CARD-VERSION {re.escape(path.stem)}\s+({version_pattern})\s*\*/",
         source,
     )
     if marker:
         return marker[1]
-    # New builds inline CARD_VERSION into the editor's version footer and
-    # no longer emit the legacy startup banner.
-    footer = re.search(
-        rf'class=["\']version["\'][^`]*?common\.version["\']\)\}}:\s*'
-        rf'\$\{{["\']({version_pattern})["\']\}}',
-        source,
-    )
-    if path.stem == "wiser-zigbee-card" and footer:
-        return footer[1]
-
-    banner_name = "WISER-ZIGBEE(?:-NETWORK)?-CARD" if path.stem == "wiser-zigbee-card" else re.escape(path.stem.upper())
-    banner = re.search(
-        banner_name + r'[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
-        source,
-    )
-    if banner:
-        assignment = re.search(
-            rf'(?<![\w$]){re.escape(banner[1])}\s*=\s*[\"\']({version_pattern})[\"\']',
-            source,
-        )
-        if assignment:
-            return assignment[1]
     # Still refresh caches for unfamiliar builds rather than advertise a stale
     # version from const.py. This is a content identifier, not a release number.
     return f"sha256-{sha256(contents).hexdigest()[:16]}"
@@ -89,6 +68,7 @@ class JSModuleRegistration:
 
     async def async_register(self):
         """Register Wiser static paths, icons, and card resources."""
+        await async_load_registry(self.hass)
         await self._async_register_path()
         icon_version = await self.hass.async_add_executor_job(
             card_version, Path(__file__).parent / "wiser-icons.js"
@@ -146,10 +126,13 @@ class JSModuleRegistration:
             if resource["url"].startswith(URL_BASE)
         ]
 
-        for module in JSMODULES:
+        for module in get_manifest(self.hass):
             url = f"{URL_BASE}/{module.get('filename')}"
 
             _, active_url, version = await async_card_resource(self.hass, module["filename"])
+            if version == "missing":
+                # Newly discovered cards become resources only after installation.
+                continue
 
             card_registered = False
 
@@ -204,7 +187,7 @@ class JSModuleRegistration:
     async def async_unregister(self):
         """Unload lovelace module resource."""
         if self.resource_mode == MODE_STORAGE:
-            for module in JSMODULES:
+            for module in get_manifest(self.hass):
                 url = f"{URL_BASE}/{module.get('filename')}"
                 wiser_resources = [
                     resource

@@ -17,22 +17,16 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import CARD_MANIFEST, DOMAIN
+from .const import DOMAIN
 from .frontend import JSModuleRegistration, async_card_resource
 from .frontend.card_files import newer_version, prune_card_cache, store_card
 from .frontend.wiser_sidebar import async_update_wiser_panel
+from .frontend.registry import async_refresh_registry, get_manifest
 
 _LOGGER = logging.getLogger(__name__)
 _MANAGER = "wiser_card_updates"
 _MAX_DOWNLOAD = 20 * 1024 * 1024
 _HACS_REPOSITORY_ID = "159080189"
-_CARDS = {
-    card["id"]: (card["repository"], card["filename"], card["component"])
-    for card in CARD_MANIFEST
-}
-_PANEL_COMPONENTS = {
-    card["id"]: card["panel"] for card in CARD_MANIFEST if card.get("panel")
-}
 
 
 def _release_version(tag, allow_prerelease=False):
@@ -48,9 +42,9 @@ def _release_version(tag, allow_prerelease=False):
     return match[1]
 
 
-def _validate_release(card, release, allow_prerelease=False):
+def _validate_release(definition, release, allow_prerelease=False):
     """Validate release metadata before exposing an installable update."""
-    repository, filename, _ = _CARDS[card]
+    repository, filename = definition["repository"], definition["filename"]
     if (
         release.get("draft")
         or (release.get("prerelease") and not allow_prerelease)
@@ -91,12 +85,12 @@ def _prereleases_enabled(hass):
     return bool(entity_id and states and states.is_state(entity_id, "on"))
 
 
-def _select_release(card, releases, allow_prerelease):
+def _select_release(definition, releases, allow_prerelease):
     """Select the highest valid published release allowed by the channel."""
     selected = None
     for metadata in releases:
         try:
-            release = _validate_release(card, metadata, allow_prerelease)
+            release = _validate_release(definition, metadata, allow_prerelease)
         except (ValueError, KeyError, TypeError):
             continue
         if selected is None or newer_version(release["version"], selected["version"]):
@@ -106,9 +100,9 @@ def _select_release(card, releases, allow_prerelease):
     return selected
 
 
-def _validate_download(card, release, contents):
+def _validate_download(definition, release, contents):
     """Verify the file before changing the currently installed card."""
-    _, filename, component = _CARDS[card]
+    filename, component = definition["filename"], definition["component"]
     asset = release["asset"]
     if len(contents) != asset["size"]:
         raise ValueError("Card download size does not match release metadata")
@@ -118,10 +112,12 @@ def _validate_download(card, release, contents):
     if contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
         raise ValueError("Downloaded HTML instead of JavaScript")
     source = contents.decode("utf-8")
+    if re.search(r"wiser/[a-z0-9_-]+_panel/configure", source):
+        raise ValueError("Panel bundle must use the generic settings API")
     marker = re.search(
         rf"/\*!\s*WISER-CARD-VERSION {re.escape(filename[:-3])}\s+(\S+)\s*\*/", source
     )
-    panel_component = _PANEL_COMPONENTS.get(card)
+    panel_component = definition.get("panel")
     if (
         not marker
         or marker[1] != release["version"]
@@ -132,7 +128,7 @@ def _validate_download(card, release, contents):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Create one shared pair of update entities, regardless of hub count."""
+    """Create shared update entities for all known cards, regardless of hub count."""
     if _MANAGER not in hass.data:
         hass.data[_MANAGER] = CardUpdateCoordinator(hass)
     manager = hass.data[_MANAGER]
@@ -161,7 +157,7 @@ async def async_unload_card_updates(hass, entry):
 
 
 class CardUpdateCoordinator(DataUpdateCoordinator):
-    """Share one daily GitHub check and install lock across both cards and all hubs."""
+    """Discover cards daily and share their update entities across all hubs."""
 
     def __init__(self, hass):
         super().__init__(
@@ -175,24 +171,40 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
         self.installing = set()
         self.pending_refresh = {}
         self.data = {}
+        self.cards = {card["id"]: card for card in get_manifest(hass)}
+        self.added_cards = set()
 
     def add_entities(self, entry_id):
         """Transfer registry ownership before attaching the shared entities."""
+        self.owner = entry_id
+        self.added_cards = set()
+        self._add_discovered_entities()
+
+    def _add_discovered_entities(self):
+        """Attach newly discovered cards once, without reloading the integration."""
+        if self.owner is None:
+            return
         registry = er.async_get(self.hass)
-        for card in _CARDS:
+        cards = self.cards.keys() - self.added_cards
+        for card in sorted(cards):
             entity_id = registry.async_get_entity_id("update", DOMAIN, f"wiser_{card}_card_update")
             if entity_id:
-                registry.async_update_entity(entity_id, config_entry_id=entry_id)
-        self.owner = entry_id
-        self.entries[entry_id]([WiserCardUpdate(self, card) for card in _CARDS])
+                registry.async_update_entity(entity_id, config_entry_id=self.owner)
+        if cards:
+            self.entries[self.owner]([WiserCardUpdate(self, card) for card in sorted(cards)])
+            self.added_cards.update(cards)
 
     async def _async_update_data(self):
         async with self.install_lock:
-            results = await asyncio.gather(*(self._check_card(card) for card in _CARDS))
-            return dict(zip(_CARDS, results))
+            manifest = await async_refresh_registry(self.hass, _prereleases_enabled(self.hass))
+            self.cards = {card["id"]: card for card in manifest}
+            results = await asyncio.gather(*(self._check_card(card) for card in self.cards))
+            self._add_discovered_entities()
+            return dict(zip(self.cards, results))
 
     async def _check_card(self, card):
-        repository, filename, _ = _CARDS[card]
+        definition = self.cards[card]
+        repository, filename = definition["repository"], definition["filename"]
         _, _, installed = await async_card_resource(self.hass, filename)
         if card in self.pending_refresh:
             installed = self.pending_refresh[card][0]
@@ -208,11 +220,11 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
                 response.raise_for_status()
                 metadata = await response.json()
                 release = (
-                    _select_release(card, metadata, True)
+                    _select_release(definition, metadata, True)
                     if allow_prerelease
-                    else _validate_release(card, metadata)
+                    else _validate_release(definition, metadata)
                 )
-            return {"installed": installed, "release": release, "error": None}
+            return {"installed": "0.0.0" if installed == "missing" else installed, "release": release, "error": None}
         except (aiohttp.ClientError, TimeoutError, ValueError, KeyError, TypeError) as err:
             _LOGGER.warning("Unable to check %s card releases: %s", card, err)
             return {"installed": installed, "release": None, "error": str(err)}
@@ -224,9 +236,10 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
             release = state.get("release")
             if not release:
                 raise HomeAssistantError("No verified card release is available")
-            _, filename, _ = _CARDS[card]
+            definition = self.cards[card]
+            filename = definition["filename"]
             active_path, _, installed = await async_card_resource(self.hass, filename)
-            needs_download = newer_version(release["version"], installed)
+            needs_download = installed == "missing" or newer_version(release["version"], installed)
             if not needs_download and card not in self.pending_refresh:
                 return
             self.installing.add(card)
@@ -248,7 +261,7 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
                             chunks.append(chunk)
                         contents = b"".join(chunks)
                     await self.hass.async_add_executor_job(
-                        _validate_download, card, release, contents
+                        _validate_download, definition, release, contents
                     )
                     await self.hass.async_add_executor_job(
                         store_card, self.hass.config.path(), filename,
@@ -289,7 +302,8 @@ class WiserCardUpdate(CoordinatorEntity, UpdateEntity):
         super().__init__(coordinator)
         self.card = card
         self._attr_unique_id = f"wiser_{card}_card_update"
-        self._attr_translation_key = f"{card}_card"
+        # Registry-defined cards must not require new integration translations.
+        self._attr_name = coordinator.cards[card]["name"]
 
     @property
     def available(self):

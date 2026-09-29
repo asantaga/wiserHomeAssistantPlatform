@@ -13,6 +13,8 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Discover new cards and panels from published WiserFrontendPanelConfig registry releases at runtime, with independent card installation, offline caching, and a generic panel-settings API.
+
 - Added configurable OpenTherm monitoring and controls, including relative modulation, a Delta-T sensor, expanded telemetry, and categorized diagnostics - PR [#697](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/697).
 - Added a configurable Wiser Schedules sidebar panel - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
 - Added a Wiser Zigbee sidebar panel with a custom sidebar icon - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).

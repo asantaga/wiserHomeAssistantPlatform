@@ -11,6 +11,11 @@ FETCH = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FETCH)
 
 
+CARD_MANIFEST = json.loads((Path(__file__).parent / "fixtures/frontend_cards.json").read_text())
+CARD_REPOSITORIES = {card["id"]: card["repository"] for card in CARD_MANIFEST}
+CARD_DEFINITIONS = {card["id"]: card for card in CARD_MANIFEST}
+
+
 def release(tag, date, prerelease=False, card="zigbee", draft=False, asset=True):
     return {
         "tag_name": tag, "published_at": date, "prerelease": prerelease, "draft": draft,
@@ -68,21 +73,22 @@ class CardReleaseTest(unittest.TestCase):
             root = Path(directory)
             built = root / "WiserFrontendPanelConfig/dist/cards.json"
             built.parent.mkdir(parents=True)
-            built.write_text(json.dumps(FETCH.CARD_MANIFEST))
+            built.write_text(json.dumps(CARD_MANIFEST))
             with patch.object(FETCH, "list_releases") as releases:
                 manifest, record = FETCH.fetch_panel_config(
-                    "dev", root / "missing.json", local_root=root
+                    "dev", local_root=root
                 )
             releases.assert_not_called()
-            self.assertEqual(manifest, FETCH.CARD_MANIFEST)
+            self.assertEqual(manifest, CARD_MANIFEST)
             self.assertEqual(record["source"], "local")
 
     def test_external_panel_config_rejects_invalid_registry(self):
         with TemporaryDirectory() as directory:
-            packaged = Path(directory) / "cards.json"
+            packaged = Path(directory) / "WiserFrontendPanelConfig/dist/cards.json"
+            packaged.parent.mkdir(parents=True)
             packaged.write_text('[{"id":"bad"}]')
-            with self.assertRaisesRegex(ValueError, "missing required fields"):
-                FETCH.fetch_panel_config("dev", packaged)
+            with self.assertRaisesRegex(ValueError, "Invalid frontend card"):
+                FETCH.fetch_panel_config("dev", local_root=Path(directory))
 
     def test_release_build_fetches_published_panel_config(self):
         published = {
@@ -101,17 +107,17 @@ class CardReleaseTest(unittest.TestCase):
                 ),
             }],
         }
-        payload = json.dumps(FETCH.CARD_MANIFEST).encode()
+        payload = json.dumps(CARD_MANIFEST).encode()
         with patch.object(FETCH, "list_releases", return_value=[published]), patch.object(
             FETCH, "download_asset", return_value=(payload, "sha256:registry")
         ) as download:
             manifest, record = FETCH.fetch_panel_config(
-                "dev", "unused", release=True
+                "dev", release=True
             )
         download.assert_called_once_with(
             FETCH.PANEL_CONFIG_REPOSITORY, published["assets"][0]
         )
-        self.assertEqual(manifest, FETCH.CARD_MANIFEST)
+        self.assertEqual(manifest, CARD_MANIFEST)
         self.assertEqual(record["tag"], "v1.0.0-beta.1")
         self.assertEqual(record["digest"], "sha256:registry")
 
@@ -119,7 +125,7 @@ class CardReleaseTest(unittest.TestCase):
         with TemporaryDirectory() as directory:
             out = Path(directory) / "not-created"
             with patch.object(FETCH, "list_releases", return_value=self.releases), patch.object(FETCH, "download_asset") as download:
-                report = FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, plan=True)
+                report = FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, definitions=CARD_DEFINITIONS, plan=True)
             download.assert_not_called()
             self.assertFalse(out.exists())
             self.assertEqual(report[0]["tag"], "v2.0.1")
@@ -135,7 +141,7 @@ class CardReleaseTest(unittest.TestCase):
             )
             with patch.object(FETCH, "list_releases", side_effect=releases), patch.object(FETCH, "download_asset", side_effect=[(schedule, "sha256:test"), ValueError("download failed")]):
                 with self.assertRaises(ValueError):
-                    FETCH.fetch_cards("dev", out, FETCH.CARD_REPOSITORIES)
+                    FETCH.fetch_cards("dev", out, CARD_REPOSITORIES, CARD_DEFINITIONS)
             self.assertEqual((out / "wiser-schedule-card.js").read_bytes(), b"old")
             self.assertFalse((out / "card-releases.json").exists())
 
@@ -147,7 +153,7 @@ class CardReleaseTest(unittest.TestCase):
                 b'customElements.define("wiser-zigbee-panel",class{})'
             )
             with patch.object(FETCH, "list_releases", return_value=self.releases), patch.object(FETCH, "download_asset", return_value=(card, "sha256:test")):
-                FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"})
+                FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, CARD_DEFINITIONS)
             self.assertEqual((out / "wiser-zigbee-card.js").read_bytes(), card)
             self.assertEqual(json.loads((out / "card-releases.json").read_text())[0]["digest"], "sha256:test")
 
@@ -157,4 +163,4 @@ class CardReleaseTest(unittest.TestCase):
             old_card = b'customElements.define("wiser-schedule-card",class{})'
             with patch.object(FETCH, "list_releases", return_value=[release("old", "2026", card="schedule")]), patch.object(FETCH, "download_asset", return_value=(old_card, "sha256:test")):
                 with self.assertRaisesRegex(ValueError, "does not include the sidebar panel"):
-                    FETCH.fetch_cards("stable", out, {"schedule": "andyblac/wiser-schedule-card"})
+                    FETCH.fetch_cards("stable", out, {"schedule": "andyblac/wiser-schedule-card"}, CARD_DEFINITIONS)

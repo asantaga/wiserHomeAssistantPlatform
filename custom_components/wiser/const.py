@@ -14,24 +14,23 @@ DOMAIN = "wiser"
 CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
-CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
-CONF_ZIGBEE_PANEL_CONFIG = "zigbee_panel_config"
 CONF_SHOW_WISER_SIDEBAR = "show_wiser_sidebar"
 CONF_WISER_PANEL_CONFIG = "wiser_panel_config"
 
 
 def _load_card_manifest():
     """Load the shared card registry used by packaging and runtime setup."""
-    return json.loads(
-        (Path(__file__).parent / "frontend/cards.json").read_text("utf-8")
-    )
+    try:
+        return json.loads(
+            (Path(__file__).parent / "frontend/cards.json").read_text("utf-8")
+        )
+    except FileNotFoundError:
+        # Source checkouts have no card definitions; builds inject the registry.
+        return []
 
 
 CARD_MANIFEST = _load_card_manifest()
-JSMODULES = [
-    {"name": card["name"], "filename": card["filename"]}
-    for card in CARD_MANIFEST
-]
+
 
 WISER_PLATFORMS = [
     "binary_sensor",

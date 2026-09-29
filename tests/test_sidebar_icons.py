@@ -24,6 +24,7 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
         namespace = {
             "__file__": str(ROOT / "__init__.py"), "Path": Path,
             "card_version": version, "add_extra_js_url": register,
+            "async_load_registry": AsyncMock(),
             "URL_BASE": "/wiser", "MODE_STORAGE": "storage",
         }
         exec(compile(ast.Module(body=[method], type_ignores=[]), str(ROOT / "__init__.py"), "exec"), namespace)

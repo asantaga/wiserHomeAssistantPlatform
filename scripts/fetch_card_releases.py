@@ -2,6 +2,7 @@
 
 import argparse
 from hashlib import sha256
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -13,57 +14,26 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 PANEL_CONFIG_REPOSITORY = "andyblac/WiserFrontendPanelConfig"
 PANEL_CONFIG_FILENAME = "cards.json"
-CARD_MANIFEST = json.loads(
-    (ROOT / "custom_components/wiser/frontend/cards.json").read_text("utf-8")
+
+
+# Load the dependency-free schema without importing the Home Assistant package.
+_SPEC = importlib.util.spec_from_file_location(
+    "wiser_frontend_manifest", ROOT / "custom_components/wiser/frontend/manifest.py"
 )
-CARD_REPOSITORIES = {
-    card["id"]: card["repository"] for card in CARD_MANIFEST
-}
-CARD_DEFINITIONS = {card["id"]: card for card in CARD_MANIFEST}
-
-
-def validate_card_manifest(manifest):
-    """Validate an externally maintained frontend card registry."""
-    if not isinstance(manifest, list) or not manifest:
-        raise ValueError("cards.json must contain at least one card")
-    ids = set()
-    filenames = set()
-    required = {"id", "name", "filename", "repository", "component", "panel"}
-    for index, card in enumerate(manifest):
-        if not isinstance(card, dict) or not required.issubset(card):
-            raise ValueError(f"Card {index} is missing required fields")
-        for field in ("id", "name", "filename", "repository", "component"):
-            if not isinstance(card[field], str) or not card[field].strip():
-                raise ValueError(f"Card {index} has invalid {field}")
-        if not re.fullmatch(r"[a-z0-9-]+", card["id"]):
-            raise ValueError(f"Invalid card id: {card['id']}")
-        if not re.fullmatch(r"wiser-[a-z0-9-]+-card\.js", card["filename"]):
-            raise ValueError(f"Invalid card filename: {card['filename']}")
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", card["repository"]):
-            raise ValueError(f"Invalid repository: {card['repository']}")
-        if not re.fullmatch(r"wiser-[a-z0-9-]+", card["component"]):
-            raise ValueError(f"Invalid component: {card['component']}")
-        if card["panel"] is not None and not re.fullmatch(
-            r"wiser-[a-z0-9-]+-panel", card["panel"]
-        ):
-            raise ValueError(f"Invalid panel component for {card['id']}")
-        if card["id"] in ids:
-            raise ValueError(f"Duplicate card id: {card['id']}")
-        if card["filename"] in filenames:
-            raise ValueError(f"Duplicate card filename: {card['filename']}")
-        ids.add(card["id"])
-        filenames.add(card["filename"])
-    return manifest
+if _SPEC is None or _SPEC.loader is None:
+    raise RuntimeError("Unable to load the frontend registry schema")
+_MANIFEST = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_MANIFEST)
+validate_card_manifest = _MANIFEST.validate_manifest
 
 
 def fetch_panel_config(
     channel,
-    packaged_path,
     local_root=None,
     release=False,
     repository=PANEL_CONFIG_REPOSITORY,
 ):
-    """Load the panel registry from a local build, package snapshot, or release."""
+    """Load definitions exclusively from the external registry build or release."""
     local = (
         Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / PANEL_CONFIG_FILENAME
         if local_root is not None and not release
@@ -76,16 +46,6 @@ def fetch_panel_config(
             "source": "local",
             "asset": PANEL_CONFIG_FILENAME,
             "path": str(local.resolve()),
-            "digest": "sha256:" + sha256(contents).hexdigest(),
-        }
-    elif not release and Path(packaged_path).is_file():
-        path = Path(packaged_path)
-        contents = path.read_bytes()
-        record = {
-            "repository": repository,
-            "source": "packaged",
-            "asset": PANEL_CONFIG_FILENAME,
-            "path": str(path.resolve()),
             "digest": "sha256:" + sha256(contents).hexdigest(),
         }
     else:
@@ -168,11 +128,10 @@ def fetch_cards(
     channel,
     output_dir,
     repositories,
+    definitions,
     plan=False,
     local_root=None,
-    definitions=None,
 ):
-    definitions = CARD_DEFINITIONS if definitions is None else definitions
     report = []
     payloads = {}
     # Resolve and validate every source before replacing any staged assets.
@@ -204,6 +163,8 @@ def fetch_cards(
         if not plan:
             if not contents or contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
                 raise ValueError(f"Invalid JavaScript bundle: {filename}")
+            if re.search(rb"wiser/[a-z0-9_-]+_panel/configure", contents):
+                raise ValueError("Panel bundle must use the generic settings API")
             if definition["component"].encode() not in contents:
                 raise ValueError(
                     f"Selected {card} card does not include {definition['component']}"
@@ -224,26 +185,47 @@ def fetch_cards(
     return report
 
 
+def repository_overrides(values):
+    """Parse optional overrides without baking any card identities into the CLI."""
+    result = {}
+    for value in values:
+        card_id, separator, repository = value.partition("=")
+        if not separator or not re.fullmatch(r"[a-z0-9-]+", card_id) or not re.fullmatch(
+            r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository
+        ):
+            raise ValueError("Repository overrides must be ID=OWNER/REPOSITORY")
+        if card_id in result:
+            raise ValueError(f"Duplicate repository override: {card_id}")
+        result[card_id] = repository
+    return result
+
+
+def select_repositories(definitions, overrides):
+    """Resolve every card from its definition and reject misspelled overrides."""
+    unknown = overrides.keys() - definitions.keys()
+    if unknown:
+        raise ValueError(f"Unknown card repository overrides: {sorted(unknown)}")
+    return {key: overrides.get(key, card["repository"]) for key, card in definitions.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel", choices=["dev", "stable"], required=True)
     parser.add_argument("--output-dir", type=Path, default=Path("dist/wiser/frontend"))
-    parser.add_argument("--card", choices=[*CARD_REPOSITORIES, "all"], default="all")
-    parser.add_argument("--schedule-repository", default=CARD_REPOSITORIES["schedule"])
-    parser.add_argument("--zigbee-repository", default=CARD_REPOSITORIES["zigbee"])
-    parser.add_argument("--rooms-repository", default=CARD_REPOSITORIES["rooms"])
-    parser.add_argument("--plan", action="store_true", help="Show selected releases without downloading or writing files")
+    parser.add_argument("--card", default="all", help="Registry card ID, or all")
+    parser.add_argument("--repository", action="append", default=[], metavar="ID=OWNER/REPO")
+    parser.add_argument("--panel-config-repository", default=PANEL_CONFIG_REPOSITORY)
+    parser.add_argument("--plan", action="store_true", help="Resolve registry and releases without downloading card bundles")
     args = parser.parse_args()
-    repositories = {
-        **CARD_REPOSITORIES,
-        "schedule": args.schedule_repository,
-        "zigbee": args.zigbee_repository,
-        "rooms": args.rooms_repository,
-    }
-    if args.card != "all":
-        repositories = {args.card: repositories[args.card]}
     try:
-        report = fetch_cards(args.channel, args.output_dir, repositories, args.plan)
+        manifest, _ = fetch_panel_config(args.channel, release=True, repository=args.panel_config_repository)
+        definitions = {card["id"]: card for card in manifest}
+        repositories = select_repositories(definitions, repository_overrides(args.repository))
+        if args.card != "all":
+            if args.card not in repositories:
+                raise ValueError(f"Unknown registry card: {args.card}")
+            repositories = {args.card: repositories[args.card]}
+        report = fetch_cards(args.channel, args.output_dir, repositories, definitions, plan=args.plan)
     except Exception as error:
         parser.exit(1, f"Card release fetch failed: {error}\n")
     print(json.dumps(report, indent=2))

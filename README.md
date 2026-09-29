@@ -62,14 +62,19 @@ To build a stable release package, run:
 python3 scripts/build.py --release --channel stable
 ```
 
-For a prerelease package, use `--channel dev` instead. The build downloads published Schedules and Zigbee card assets from GitHub. Stable builds use stable card releases; prerelease builds use the most recently published stable or prerelease card release. In a running installation, card update entities follow the HACS **Pre-release** switch for this integration; without that option they offer stable card releases only.
+For a prerelease package, use `--channel dev` instead. The build downloads every card defined by the external frontend registry from GitHub. Stable builds use stable card releases; prerelease builds use the most recently published stable or prerelease card release. In a running installation, card update entities follow the HACS **Pre-release** switch for this integration; without that option they offer stable card releases only.
 
 The frontend card registry is maintained separately in
 [`andyblac/WiserFrontendPanelConfig`](https://github.com/andyblac/WiserFrontendPanelConfig).
 Local development builds prefer that sibling repository's validated
 `dist/cards.json`; release builds download its published `cards.json` asset. A
-snapshot is packaged as `frontend/cards.json`, so Home Assistant startup never
-depends on GitHub being available.
+snapshot is generated as `frontend/cards.json` in the package; no card list is
+maintained in this integration repository. At runtime the integration checks
+published registry releases daily and caches the last valid registry. New cards
+appear as independent update entities and can be installed without updating the
+integration. Installed cards and the cached registry remain available offline.
+See [Adding frontend cards and panels](docs/frontend-registry.md) for the release
+workflow and shared panel API.
 
 The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` and
 `dist/panel-config-release.json` files record the card and registry artifacts

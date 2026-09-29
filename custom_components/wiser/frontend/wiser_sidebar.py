@@ -3,20 +3,17 @@
 from __future__ import annotations
 
 import math
-import re
 from pathlib import Path
 
 from homeassistant.components import frontend, panel_custom
 
 from . import async_card_resource, card_version
+from .registry import get_manifest
 from ..const import (
-    CONF_SCHEDULES_PANEL_CONFIG,
     CONF_SHOW_WISER_SIDEBAR,
     CONF_WISER_PANEL_CONFIG,
-    CONF_ZIGBEE_PANEL_CONFIG,
     DATA,
     DOMAIN,
-    JSMODULES,
     URL_BASE,
 )
 
@@ -26,17 +23,6 @@ PANEL_PATH = "wiser-panel"
 PANEL_STATE = "wiser_sidebar_panel"
 PANEL_COMPONENT = "wiser-panel"
 PANEL_FILENAME = "wiser-panel.js"
-_OBSOLETE_PANELS = {
-    "wiser_schedules_panel": "wiser-schedules",
-    "wiser_zigbee_panel": "wiser-zigbee-panel",
-}
-_PANEL_COMPONENT = re.compile(
-    r"customElements\.define\(\s*[\"'](wiser-[a-z0-9-]+-panel)[\"']"
-)
-_LEGACY_CONFIG_OPTIONS = {
-    "wiser-schedules-panel": CONF_SCHEDULES_PANEL_CONFIG,
-    "wiser-zigbee-panel": CONF_ZIGBEE_PANEL_CONFIG,
-}
 _PANEL_TABS_CONFIG = "_panel_tabs"
 
 
@@ -63,36 +49,31 @@ def _panel_title(component):
     return name.replace("-", " ").title()
 
 
-def _panel_id(filename):
-    """Derive a stable panel id from its card bundle."""
-    return Path(filename).stem.removeprefix("wiser-").removesuffix("-card")
-
-
-def _stored_config(entry, panel_id, component):
-    """Return generic settings, with compatibility for existing panels."""
+def _stored_config(entry, panel_id):
+    """Return settings from the shared container for any panel."""
     generic = entry.options.get(CONF_WISER_PANEL_CONFIG, {})
     if isinstance(generic, dict) and isinstance(generic.get(panel_id), dict):
         return dict(generic[panel_id])
-    legacy = _LEGACY_CONFIG_OPTIONS.get(component)
-    return dict(entry.options.get(legacy, {})) if legacy else {}
+    return {}
 
 
 async def _discover_panels(hass, entries):
-    """Find panel-capable custom elements in every packaged card bundle."""
+    """Find installed panel components from the active frontend registry."""
     panels = []
     hubs = [hub for hub, _ in entries]
-    for module in JSMODULES:
+    for module in get_manifest(hass):
+        component = module.get("panel")
+        if not component:
+            continue
         filename = module["filename"]
         path, module_url, _ = await async_card_resource(hass, filename)
         try:
             source = await hass.async_add_executor_job(path.read_text, "utf-8")
         except OSError:
             continue
-        match = _PANEL_COMPONENT.search(source)
-        if not match:
+        if component not in source:
             continue
-        component = match.group(1)
-        panel_id = _panel_id(filename)
+        panel_id = module["id"]
         panels.append(
             {
                 "id": panel_id,
@@ -100,12 +81,13 @@ async def _discover_panels(hass, entries):
                 "component": component,
                 "module_url": module_url,
                 "config": {
+                    "panel_id": panel_id,
                     "hubs": hubs,
                     "hub_ids": {
                         hub: entry.entry_id for hub, entry in entries
                     },
                     "card_configs": {
-                        hub: _stored_config(entry, panel_id, component)
+                        hub: _stored_config(entry, panel_id)
                         for hub, entry in entries
                     },
                     "card_url": module_url,
@@ -146,10 +128,6 @@ async def _discover_panels(hass, entries):
 
 async def async_update_wiser_panel(hass):
     """Register, refresh, or remove the single Wiser sidebar panel."""
-    for state_key, path in _OBSOLETE_PANELS.items():
-        if state_key in hass.data:
-            frontend.async_remove_panel(hass, path)
-            hass.data.pop(state_key)
     entries = list(_enabled_entries(hass))
     if not entries:
         if PANEL_STATE in hass.data:
@@ -216,62 +194,19 @@ def _is_json_value(value, depth=0):
     return False
 
 
-def _save_panel_config(hass, configs, config_option, hub_error, setting_error):
-    """Validate every hub's card settings before persisting any options."""
+def save_panel_config(hass, panel_id, configs):
+    """Save settings for any registry-defined panel using the shared option."""
+    if panel_id not in {card["id"] for card in get_manifest(hass) if card.get("panel")}:
+        raise ValueError("Unknown Wiser panel")
     if type(configs) is not dict:
-        raise ValueError(setting_error)
-    entries = dict(_enabled_entries(hass))
-    updates = []
-    for hub, config in configs.items():
-        if hub not in entries:
-            raise ValueError(hub_error)
-        if type(config) is not dict or not _is_json_value(config):
-            raise ValueError(setting_error)
-        settings = {
-            key: value
-            for key, value in config.items()
-            if key not in {"type", "hub", "hubs"}
-        }
-        updates.append((entries[hub], settings))
-    for entry, settings in updates:
-        hass.config_entries.async_update_entry(
-            entry, options={**entry.options, config_option: settings}
-        )
-
-
-def save_schedules_panel_config(hass, configs):
-    """Save Schedule panel settings for each loaded hub."""
-    _save_panel_config(
-        hass,
-        configs,
-        CONF_SCHEDULES_PANEL_CONFIG,
-        "Hub is not available in the Wiser panel",
-        "Invalid schedule card setting",
-    )
-
-
-def save_zigbee_panel_config(hass, configs):
-    """Save Zigbee panel settings for each loaded hub."""
-    _save_panel_config(
-        hass,
-        configs,
-        CONF_ZIGBEE_PANEL_CONFIG,
-        "Hub is not available in the Wiser panel",
-        "Invalid Zigbee card setting",
-    )
-
-
-def save_rooms_panel_config(hass, configs):
-    """Save Rooms panel settings under the generic panel registry option."""
-    if type(configs) is not dict:
-        raise ValueError("Invalid rooms card setting")
+        raise ValueError("Invalid panel setting")
     entries = dict(_enabled_entries(hass))
     updates = []
     for hub, config in configs.items():
         if hub not in entries:
             raise ValueError("Hub is not available in the Wiser panel")
         if type(config) is not dict or not _is_json_value(config):
-            raise ValueError("Invalid rooms card setting")
+            raise ValueError("Invalid panel setting")
         settings = {
             key: value
             for key, value in config.items()
@@ -281,7 +216,7 @@ def save_rooms_panel_config(hass, configs):
         generic = entry.options.get(CONF_WISER_PANEL_CONFIG, {})
         if not isinstance(generic, dict):
             generic = {}
-        updates.append((entry, {**generic, "rooms": settings}))
+        updates.append((entry, {**generic, panel_id: settings}))
     for entry, generic in updates:
         hass.config_entries.async_update_entry(
             entry,
@@ -294,7 +229,7 @@ def save_wiser_panel_tabs(hass, tabs):
     if type(tabs) is not list:
         raise ValueError("Invalid Wiser panel tabs")
 
-    known_ids = {_panel_id(module["filename"]) for module in JSMODULES}
+    known_ids = {module["id"] for module in get_manifest(hass) if module.get("panel")}
     saved_tabs = []
     seen = set()
     for tab in tabs:

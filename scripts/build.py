@@ -8,10 +8,11 @@ import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from fetch_card_releases import (
-    CARD_REPOSITORIES,
     PANEL_CONFIG_REPOSITORY,
     fetch_cards,
     fetch_panel_config,
+    repository_overrides,
+    select_repositories,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +23,7 @@ def build(
     output,
     local_root,
     channel,
-    repositories,
+    repositories=None,
     release=False,
     panel_config_repository=PANEL_CONFIG_REPOSITORY,
 ):
@@ -39,7 +40,6 @@ def build(
         )
         manifest, config_record = fetch_panel_config(
             channel,
-            source / "frontend/cards.json",
             local_root=local_root,
             release=release,
             repository=panel_config_repository,
@@ -48,10 +48,7 @@ def build(
             json.dumps(manifest, indent=2) + "\n"
         )
         definitions = {card["id"]: card for card in manifest}
-        selected_repositories = {
-            card_id: repositories.get(card_id, card["repository"])
-            for card_id, card in definitions.items()
-        }
+        selected_repositories = select_repositories(definitions, repositories or {})
         report = fetch_cards(
             channel,
             staging / "frontend",
@@ -90,9 +87,7 @@ def main():
     parser.add_argument("--local-root", type=Path, default=ROOT.parent,
                         help="Directory containing sibling card repositories")
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
-    parser.add_argument("--schedule-repository", default=CARD_REPOSITORIES["schedule"])
-    parser.add_argument("--zigbee-repository", default=CARD_REPOSITORIES["zigbee"])
-    parser.add_argument("--rooms-repository", default=CARD_REPOSITORIES["rooms"])
+    parser.add_argument("--repository", action="append", default=[], metavar="ID=OWNER/REPO")
     parser.add_argument(
         "--panel-config-repository", default=PANEL_CONFIG_REPOSITORY
     )
@@ -101,12 +96,7 @@ def main():
         report = build(
             ROOT / "custom_components/wiser", args.output, args.local_root,
             args.channel,
-            {
-                **CARD_REPOSITORIES,
-                "schedule": args.schedule_repository,
-                "zigbee": args.zigbee_repository,
-                "rooms": args.rooms_repository,
-            },
+            repository_overrides(args.repository),
             release=args.release,
             panel_config_repository=args.panel_config_repository,
         )

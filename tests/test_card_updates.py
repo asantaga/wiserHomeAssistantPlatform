@@ -67,7 +67,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "card_update_test.const": module(
                 "card_update_test.const", URL_BASE="/wiser", DOMAIN="wiser",
                 CARD_MANIFEST=json.loads(
-                    (ROOT / "frontend/cards.json").read_text()
+                    (Path(__file__).parent / "fixtures/frontend_cards.json").read_text()
                 ),
             ),
             "card_update_test.frontend": frontend,
@@ -100,10 +100,15 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             states=SimpleNamespace(is_state=Mock(return_value=False)),
         )
         self.coordinator = self.updates.CardUpdateCoordinator(self.hass)
+        self.manifest = list(self.coordinator.cards.values())
+        self.updates.async_refresh_registry = AsyncMock(
+            side_effect=lambda hass, _prerelease: self.updates.get_manifest(hass)
+        )
 
     def payload(self, card="zigbee", version="2.0.0"):
-        _, filename, component = self.updates._CARDS[card]
-        panel = self.updates._PANEL_COMPONENTS.get(card)
+        definition = self.coordinator.cards[card]
+        filename, component = definition["filename"], definition["component"]
+        panel = definition.get("panel")
         panel_source = (
             f"customElements.define('{panel}', class extends HTMLElement {{}});"
             if panel else ""
@@ -114,7 +119,8 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
 
     def metadata(self, card="zigbee", version="2.0.0", prerelease=False):
         contents = self.payload(card, version)
-        repo, filename, _ = self.updates._CARDS[card]
+        definition = self.coordinator.cards[card]
+        repo, filename = definition["repository"], definition["filename"]
         return {
             "tag_name": f"v{version}", "published_at": "2026-09-20", "draft": False, "prerelease": prerelease,
             "assets": [{"name": filename, "state": "uploaded", "size": len(contents),
@@ -131,6 +137,146 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "__aenter__": AsyncMock(return_value=response), "__aexit__": AsyncMock(return_value=False)
         })()
         return context
+
+    def extra_card(self):
+        return {
+            "id": "energy", "name": "Wiser Energy Card",
+            "filename": "wiser-energy-card.js", "repository": "andyblac/wiser-energy-card",
+            "component": "wiser-energy-card", "panel": "wiser-energy-panel",
+        }
+
+    def registry_response(self, manifest):
+        contents = json.dumps(manifest).encode()
+        registry = sys.modules["card_update_test.frontend.registry"]
+        release = {
+            "published_at": "2026-09-29", "draft": False, "prerelease": False,
+            "assets": [{"name": "cards.json", "state": "uploaded", "size": len(contents),
+                        "digest": "sha256:" + sha256(contents).hexdigest(),
+                        "browser_download_url": f"https://github.com/{registry.REGISTRY_REPOSITORY}/releases/download/v1/cards.json"}],
+        }
+        self.session.get.side_effect = [self.response(json_data=release), self.response(contents=contents)]
+        return registry
+
+    async def test_runtime_registry_adds_card_and_survives_restart_offline(self):
+        registry = self.registry_response([*self.manifest, self.extra_card()])
+        manifest = await registry.async_refresh_registry(self.hass)
+        self.assertEqual(manifest[-1], self.extra_card())
+        self.hass.data.clear()
+        restored = await registry.async_load_registry(self.hass)
+        self.assertEqual(restored, manifest)
+        import aiohttp
+        self.session.get.side_effect = aiohttp.ClientError("offline")
+        with self.assertLogs(registry.__name__, level="WARNING"):
+            self.assertEqual(await registry.async_refresh_registry(self.hass), manifest)
+
+    async def test_invalid_registry_does_not_replace_last_good_cache(self):
+        registry = self.registry_response([*self.manifest, self.extra_card()])
+        original = await registry.async_refresh_registry(self.hass)
+        cache = self.directory / registry.REGISTRY_CACHE
+        previous = cache.read_bytes()
+        self.registry_response([self.extra_card() | {"filename": "../unsafe.js"}])
+        with self.assertLogs(registry.__name__, level="WARNING"):
+            self.assertEqual(await registry.async_refresh_registry(self.hass), original)
+        self.assertEqual(cache.read_bytes(), previous)
+
+    async def test_registry_checksum_failure_preserves_bundled_fallback(self):
+        registry = sys.modules["card_update_test.frontend.registry"]
+        contents = json.dumps([self.extra_card()]).encode()
+        metadata = {"published_at": "2026-09-29", "assets": [{
+            "name": "cards.json", "state": "uploaded", "size": len(contents),
+            "digest": "sha256:" + "0" * 64,
+            "browser_download_url": f"https://github.com/{registry.REGISTRY_REPOSITORY}/releases/download/v1/cards.json",
+        }]}
+        self.session.get.side_effect = [self.response(json_data=metadata), self.response(contents=contents)]
+        with self.assertLogs(registry.__name__, level="WARNING"):
+            self.assertEqual(await registry.async_refresh_registry(self.hass), self.manifest)
+        self.assertFalse((self.directory / registry.REGISTRY_CACHE).exists())
+
+    async def test_registry_rejects_identity_changes_and_duplicate_components(self):
+        registry = sys.modules["card_update_test.frontend.registry"]
+        changed = self.manifest[0] | {"repository": "other/repository"}
+        with self.assertRaises(ValueError):
+            registry._merge_manifest(self.manifest, [changed])
+        with self.assertRaises(ValueError):
+            registry.validate_manifest([self.extra_card(), self.extra_card() | {
+                "id": "other", "filename": "wiser-other-card.js"
+            }])
+        self.assertEqual(registry._merge_manifest(self.manifest, []), self.manifest)
+
+    async def test_registry_rejects_foreign_release_asset_without_downloading(self):
+        registry = self.registry_response([self.extra_card()])
+        # Use an explicit release from another host.
+        self.session.get.side_effect = None
+        self.session.get.return_value = self.response(json_data={
+            "published_at": "2026-09-29", "assets": [{"name": "cards.json", "state": "uploaded",
+            "size": 123, "browser_download_url": "https://example.com/cards.json"}],
+        })
+        with self.assertLogs(registry.__name__, level="WARNING"):
+            await registry.async_refresh_registry(self.hass)
+        self.session.get.assert_called_once()
+
+    async def test_new_card_entity_is_discovered_once_and_installed_without_bundle(self):
+        definition = self.extra_card()
+        registry = sys.modules["card_update_test.frontend.registry"]
+        self.hass.data[registry.REGISTRY_DATA] = [*self.manifest, definition]
+        self.coordinator._check_card = AsyncMock(return_value={"installed": "0.0.0", "release": None})
+        add = Mock()
+        self.coordinator.entries["hub"] = add
+        self.coordinator.add_entities("hub")
+        add.reset_mock()
+        await self.coordinator.async_refresh()
+        add.assert_called_once()
+        entities = add.call_args.args[0]
+        self.assertEqual([entity.card for entity in entities], ["energy"])
+        self.assertEqual(entities[0]._attr_name, definition["name"])
+        add.reset_mock()
+        await self.coordinator.async_refresh()
+        add.assert_not_called()
+        self.assertNotIn("energy", {card["id"] for card in self.manifest})
+
+        contents = (
+            "/*! WISER-CARD-VERSION wiser-energy-card 1.0.0 */\n"
+            "customElements.define('wiser-energy-card', class extends HTMLElement {});"
+            "customElements.define('wiser-energy-panel', class extends HTMLElement {});"
+        ).encode()
+        metadata = {"tag_name": "v1.0.0", "published_at": "2026-09-29", "assets": [{
+            "name": definition["filename"], "state": "uploaded", "size": len(contents),
+            "browser_download_url": "https://github.com/andyblac/wiser-energy-card/releases/download/v1.0.0/wiser-energy-card.js",
+            "digest": "sha256:" + sha256(contents).hexdigest(),
+        }]}
+        self.version_reader.return_value = "missing"
+        self.session.get.return_value = self.response(json_data=metadata)
+        state = await self.updates.CardUpdateCoordinator._check_card(self.coordinator, "energy")
+        self.assertEqual(state["installed"], "0.0.0")
+        self.coordinator.data["energy"] = state
+        self.session.get.return_value = self.response(contents=contents)
+        await self.coordinator.install("energy")
+        self.assertEqual(self.coordinator.data["energy"]["installed"], "1.0.0")
+        self.registration.async_register.assert_awaited_once()
+        self.updates.async_update_wiser_panel.assert_awaited_once()
+        # A fresh resolver still finds the downloaded card without any bundled copy.
+        path, url, version = self.files.resolve_card(self.directory, definition["filename"], self.version_reader)
+        self.assertEqual(path.read_bytes(), contents)
+        self.assertEqual(version, "1.0.0")
+        self.assertIn("/wiser/cards/", url)
+
+    def test_rejects_bundle_using_removed_panel_specific_settings_api(self):
+        definition = self.coordinator.cards["zigbee"]
+        contents = self.payload() + b';const api="wiser/anything_panel/configure";'
+        metadata = self.metadata()
+        metadata["assets"][0].update(size=len(contents), digest="sha256:" + sha256(contents).hexdigest())
+        release = self.updates._validate_release(definition, metadata)
+        with self.assertRaisesRegex(ValueError, "generic settings API"):
+            self.updates._validate_download(definition, release, contents)
+
+    def test_rooms_release_is_validated_and_cached_independently(self):
+        release = self.updates._validate_release(self.coordinator.cards["rooms"], self.metadata("rooms"))
+        contents = self.payload("rooms")
+        self.updates._validate_download(self.coordinator.cards["rooms"], release, contents)
+        self.files.store_card(self.directory, "wiser-rooms-card.js", "2.0.0", contents)
+        path, _, version = self.files.resolve_card(self.directory, "wiser-rooms-card.js", self.version_reader)
+        self.assertEqual(path.read_bytes(), contents)
+        self.assertEqual(version, "2.0.0")
 
     def test_persistent_cache_survives_restart_and_newer_bundle_takes_precedence(self):
         contents = self.payload()
@@ -180,14 +326,14 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             else:
                 metadata["assets"][0]["size"] = 21 * 1024 * 1024
             with self.subTest(change=change), self.assertRaises(ValueError):
-                self.updates._validate_release("zigbee", metadata)
+                self.updates._validate_release(self.coordinator.cards["zigbee"], metadata)
 
     def test_accepts_prerelease_only_when_enabled(self):
         metadata = self.metadata(version="2.1.0-beta.1", prerelease=True)
         with self.assertRaises(ValueError):
-            self.updates._validate_release("zigbee", metadata)
+            self.updates._validate_release(self.coordinator.cards["zigbee"], metadata)
         release = self.updates._validate_release(
-            "zigbee", metadata, allow_prerelease=True
+            self.coordinator.cards["zigbee"], metadata, allow_prerelease=True
         )
         self.assertEqual(release["version"], "2.1.0-beta.1")
 
@@ -210,9 +356,9 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("/releases/latest", self.session.get.call_args.args[0])
 
     def test_rejects_bad_checksum_and_wrong_version_or_panel(self):
-        release = self.updates._validate_release("zigbee", self.metadata())
+        release = self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())
         with self.assertRaises(ValueError):
-            self.updates._validate_download("zigbee", release, self.payload().replace(b"2.0.0", b"9.0.0"))
+            self.updates._validate_download(self.coordinator.cards["zigbee"], release, self.payload().replace(b"2.0.0", b"9.0.0"))
         for contents in (
             self.payload(version="9.0.0"),
             self.payload().replace(b"wiser-zigbee-card", b"other-widget-name"),
@@ -221,7 +367,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             release["asset"]["digest"] = None
             release["asset"]["size"] = len(contents)
             with self.assertRaises(ValueError):
-                self.updates._validate_download("zigbee", release, contents)
+                self.updates._validate_download(self.coordinator.cards["zigbee"], release, contents)
 
     async def test_network_failure_does_not_block_other_card_or_hub_setup(self):
         import aiohttp
@@ -263,7 +409,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
                 previous, _, _ = self.files.resolve_card(
                     self.directory, "wiser-zigbee-card.js", self.version_reader
                 )
-                release = self.updates._validate_release("zigbee", self.metadata())
+                release = self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())
                 self.coordinator.data["zigbee"] = {"installed": "1.5.0", "release": release}
                 self.session.get.reset_mock()
                 self.session.get.return_value = self.response(contents=self.payload())
@@ -296,7 +442,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         unrelated = cache / "wiser-zigbee-card-not-a-digest.js"
         unrelated.write_text("unrelated")
         for version in ("2.0.0", "3.0.0", "4.0.0"):
-            release = self.updates._validate_release("zigbee", self.metadata(version=version))
+            release = self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata(version=version))
             self.coordinator.data["zigbee"] = {"release": release}
             self.session.get.return_value = self.response(contents=self.payload(version=version))
             await self.coordinator.install("zigbee")
@@ -310,7 +456,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.files.resolve_card(self.directory, filename, self.version_reader)[2], "4.0.0")
 
     async def test_cache_cleanup_failure_does_not_fail_installation(self):
-        release = self.updates._validate_release("zigbee", self.metadata())
+        release = self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())
         self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": release}
         self.session.get.return_value = self.response(contents=self.payload())
         with patch.object(Path, "iterdir", side_effect=OSError("permission denied")):
@@ -320,7 +466,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.coordinator.pending_refresh)
 
     async def test_invalid_download_keeps_existing_installation(self):
-        release = self.updates._validate_release("zigbee", self.metadata())
+        release = self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())
         self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": release}
         self.session.get.return_value = self.response(contents=b"broken")
         with self.assertRaisesRegex(RuntimeError, "Unable to install"):
@@ -349,7 +495,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("wiser_card_updates", self.hass.data)
 
     async def test_update_entity_delegates_manual_install_and_exposes_release(self):
-        self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": self.updates._validate_release("zigbee", self.metadata())}
+        self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())}
         entity = self.updates.WiserCardUpdate(self.coordinator, "zigbee")
         self.assertTrue(entity.available)
         self.assertEqual(entity.installed_version, "1.0.0")
@@ -374,7 +520,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
             "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
-            "JSMODULES": [{"filename": "wiser-zigbee-card.js", "name": "Zigbee"}],
+            "get_manifest": lambda hass: [{"filename": "wiser-zigbee-card.js", "name": "Zigbee"}],
             "async_card_resource": AsyncMock(return_value=(None, active, "2.0.0")),
         }
         exec(compile(ast.Module(body=[cls], type_ignores=[]), "frontend/__init__.py", "exec"), namespace)
@@ -393,7 +539,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_older_stable_release_is_not_installed_over_development_card(self):
         self.version_reader.return_value = "3.0.0-dev.84"
-        self.coordinator.data["zigbee"] = {"release": self.updates._validate_release("zigbee", self.metadata())}
+        self.coordinator.data["zigbee"] = {"release": self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())}
         await self.coordinator.install("zigbee")
         self.session.get.assert_not_called()
         self.assertFalse((self.directory / self.files.CARD_CACHE).exists())
