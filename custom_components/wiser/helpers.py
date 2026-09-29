@@ -255,6 +255,17 @@ def get_unique_id(data, device_type, entity_type, device_id):
     )
 
 
+def get_light_binary_sensor_unique_id(data, light, sensor_type):
+    """Return the per-channel unique ID for a light capability sensor."""
+    light_name = f"{ENTITY_PREFIX} {light.name}"
+    return get_unique_id(
+        data,
+        "binary_sensor",
+        sensor_type,
+        f"{light_name} {sensor_type}",
+    )
+
+
 def build_light_unique_id_migration(data) -> dict:
     """Map pre-#683 light unique_ids to the new per-channel light_id scheme.
 
@@ -308,7 +319,7 @@ def build_light_unique_id_migration(data) -> dict:
         for stype in LIGHT_BINARY_SENSOR_TYPES:
             mapping[
                 get_unique_id(data, "binary_sensor", stype, f"{old_name} {stype}")
-            ] = get_unique_id(data, "binary_sensor", stype, f"{new_name} {stype}")
+            ] = get_light_binary_sensor_unique_id(data, light, stype)
 
     # Drop no-ops where the two id spaces happen to coincide for a light.
     return {old: new for old, new in mapping.items() if old != new}

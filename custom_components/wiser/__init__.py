@@ -161,10 +161,26 @@ async def async_migrate_light_unique_ids(hass: HomeAssistant, config_entry, data
         new_unique_id = mapping.get(entry.unique_id)
         if not new_unique_id:
             return None
-        # async_update_entity raises if the target unique_id already exists, so
-        # a partially-migrated setup can't be allowed to abort config entry
-        # setup: skip and keep the pre-fix entity as an orphan instead.
-        if ent_reg.async_get_entity_id(entry.domain, entry.platform, new_unique_id):
+        # The original migration could create the target entry while the
+        # capability binary sensors continued to register with their old
+        # unique_id. Keep the canonical target (which retains the original
+        # entity_id and history) and remove the later legacy-ID duplicate.
+        target_entity_id = ent_reg.async_get_entity_id(
+            entry.domain, entry.platform, new_unique_id
+        )
+        if target_entity_id:
+            target_entry = ent_reg.async_get(target_entity_id)
+            if (
+                target_entry
+                and target_entry.config_entry_id == config_entry.entry_id
+            ):
+                _LOGGER.info(
+                    "Wiser: removing duplicate legacy entity %s; target is %s",
+                    entry.entity_id,
+                    target_entity_id,
+                )
+                ent_reg.async_remove(entry.entity_id)
+                return None
             _LOGGER.warning(
                 "Wiser: not migrating unique_id %s -> %s, target already exists",
                 entry.unique_id,
