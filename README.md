@@ -64,7 +64,16 @@ python3 scripts/build.py --release --channel stable
 
 For a prerelease package, use `--channel dev` instead. The build downloads published Schedules and Zigbee card assets from GitHub. Stable builds use stable card releases; prerelease builds use the newest published prerelease of each card, falling back to its newest stable release when none exists.
 
-The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` records the card releases and checksums included in the package. Missing or invalid card assets fail the build.
+The frontend card registry is maintained separately in
+[`andyblac/WiserFrontendPanelConfig`](https://github.com/andyblac/WiserFrontendPanelConfig).
+Local development builds prefer that sibling repository's validated
+`dist/cards.json`; release builds download its published `cards.json` asset. A
+snapshot is packaged as `frontend/cards.json`, so Home Assistant startup never
+depends on GitHub being available.
+
+The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` and
+`dist/panel-config-release.json` files record the card and registry artifacts
+included in the package. Missing or invalid assets fail the build.
 
 The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.zip` when an integration release is published. Preview runs provide a downloadable **wiser-package** artifact without publishing a release.
 

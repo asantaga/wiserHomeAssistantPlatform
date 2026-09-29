@@ -10,10 +10,103 @@ import tempfile
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+ROOT = Path(__file__).resolve().parents[1]
+PANEL_CONFIG_REPOSITORY = "andyblac/WiserFrontendPanelConfig"
+PANEL_CONFIG_FILENAME = "cards.json"
+CARD_MANIFEST = json.loads(
+    (ROOT / "custom_components/wiser/frontend/cards.json").read_text("utf-8")
+)
 CARD_REPOSITORIES = {
-    "schedule": "andyblac/wiser-schedule-card",
-    "zigbee": "andyblac/wiser-zigbee-card",
+    card["id"]: card["repository"] for card in CARD_MANIFEST
 }
+CARD_DEFINITIONS = {card["id"]: card for card in CARD_MANIFEST}
+
+
+def validate_card_manifest(manifest):
+    """Validate an externally maintained frontend card registry."""
+    if not isinstance(manifest, list) or not manifest:
+        raise ValueError("cards.json must contain at least one card")
+    ids = set()
+    filenames = set()
+    required = {"id", "name", "filename", "repository", "component", "panel"}
+    for index, card in enumerate(manifest):
+        if not isinstance(card, dict) or not required.issubset(card):
+            raise ValueError(f"Card {index} is missing required fields")
+        for field in ("id", "name", "filename", "repository", "component"):
+            if not isinstance(card[field], str) or not card[field].strip():
+                raise ValueError(f"Card {index} has invalid {field}")
+        if not re.fullmatch(r"[a-z0-9-]+", card["id"]):
+            raise ValueError(f"Invalid card id: {card['id']}")
+        if not re.fullmatch(r"wiser-[a-z0-9-]+-card\.js", card["filename"]):
+            raise ValueError(f"Invalid card filename: {card['filename']}")
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", card["repository"]):
+            raise ValueError(f"Invalid repository: {card['repository']}")
+        if not re.fullmatch(r"wiser-[a-z0-9-]+", card["component"]):
+            raise ValueError(f"Invalid component: {card['component']}")
+        if card["panel"] is not None and not re.fullmatch(
+            r"wiser-[a-z0-9-]+-panel", card["panel"]
+        ):
+            raise ValueError(f"Invalid panel component for {card['id']}")
+        if card["id"] in ids:
+            raise ValueError(f"Duplicate card id: {card['id']}")
+        if card["filename"] in filenames:
+            raise ValueError(f"Duplicate card filename: {card['filename']}")
+        ids.add(card["id"])
+        filenames.add(card["filename"])
+    return manifest
+
+
+def fetch_panel_config(
+    channel,
+    packaged_path,
+    local_root=None,
+    release=False,
+    repository=PANEL_CONFIG_REPOSITORY,
+):
+    """Load the panel registry from a local build, package snapshot, or release."""
+    local = (
+        Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / PANEL_CONFIG_FILENAME
+        if local_root is not None and not release
+        else None
+    )
+    if local is not None and local.is_file():
+        contents = local.read_bytes()
+        record = {
+            "repository": repository,
+            "source": "local",
+            "asset": PANEL_CONFIG_FILENAME,
+            "path": str(local.resolve()),
+            "digest": "sha256:" + sha256(contents).hexdigest(),
+        }
+    elif not release and Path(packaged_path).is_file():
+        path = Path(packaged_path)
+        contents = path.read_bytes()
+        record = {
+            "repository": repository,
+            "source": "packaged",
+            "asset": PANEL_CONFIG_FILENAME,
+            "path": str(path.resolve()),
+            "digest": "sha256:" + sha256(contents).hexdigest(),
+        }
+    else:
+        selected = select_release(list_releases(repository), channel)
+        asset = select_asset(selected, PANEL_CONFIG_FILENAME)
+        contents, digest = download_asset(repository, asset)
+        record = {
+            "repository": repository,
+            "source": "release",
+            "tag": selected["tag_name"],
+            "prerelease": selected["prerelease"],
+            "asset": PANEL_CONFIG_FILENAME,
+            "asset_id": asset["id"],
+            "url": asset["browser_download_url"],
+            "digest": digest,
+        }
+    try:
+        manifest = json.loads(contents)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise ValueError("Invalid cards.json") from error
+    return validate_card_manifest(manifest), record
 
 
 def list_releases(repository):
@@ -71,12 +164,21 @@ def download_asset(repository, asset):
     return contents, digest
 
 
-def fetch_cards(channel, output_dir, repositories, plan=False, local_root=None):
+def fetch_cards(
+    channel,
+    output_dir,
+    repositories,
+    plan=False,
+    local_root=None,
+    definitions=None,
+):
+    definitions = CARD_DEFINITIONS if definitions is None else definitions
     report = []
     payloads = {}
     # Resolve and validate every source before replacing any staged assets.
     for card, repository in repositories.items():
-        filename = f"wiser-{card}-card.js"
+        definition = definitions[card]
+        filename = definition["filename"]
         local = (
             Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / filename
             if local_root is not None else None
@@ -102,11 +204,11 @@ def fetch_cards(channel, output_dir, repositories, plan=False, local_root=None):
         if not plan:
             if not contents or contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
                 raise ValueError(f"Invalid JavaScript bundle: {filename}")
-            panel_file, component = {
-                "schedule": ("schedules_sidebar.py", b"wiser-schedules-panel"),
-                "zigbee": ("zigbee_sidebar.py", b"wiser-zigbee-panel"),
-            }[card]
-            if (output_dir / panel_file).exists() and component not in contents:
+            if definition["component"].encode() not in contents:
+                raise ValueError(
+                    f"Selected {card} card does not include {definition['component']}"
+                )
+            if definition.get("panel") and definition["panel"].encode() not in contents:
                 raise ValueError(f"Selected {card} card does not include the sidebar panel required by this integration")
             payloads[filename] = contents
         report.append(record)
@@ -126,12 +228,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel", choices=["dev", "stable"], required=True)
     parser.add_argument("--output-dir", type=Path, default=Path("dist/wiser/frontend"))
-    parser.add_argument("--card", choices=["schedule", "zigbee", "all"], default="all")
+    parser.add_argument("--card", choices=[*CARD_REPOSITORIES, "all"], default="all")
     parser.add_argument("--schedule-repository", default=CARD_REPOSITORIES["schedule"])
     parser.add_argument("--zigbee-repository", default=CARD_REPOSITORIES["zigbee"])
+    parser.add_argument("--rooms-repository", default=CARD_REPOSITORIES["rooms"])
     parser.add_argument("--plan", action="store_true", help="Show selected releases without downloading or writing files")
     args = parser.parse_args()
-    repositories = {"schedule": args.schedule_repository, "zigbee": args.zigbee_repository}
+    repositories = {
+        **CARD_REPOSITORIES,
+        "schedule": args.schedule_repository,
+        "zigbee": args.zigbee_repository,
+        "rooms": args.rooms_repository,
+    }
     if args.card != "all":
         repositories = {args.card: repositories[args.card]}
     try:

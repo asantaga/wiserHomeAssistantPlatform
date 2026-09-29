@@ -17,18 +17,20 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import CARD_MANIFEST, DOMAIN
 from .frontend import JSModuleRegistration, async_card_resource
 from .frontend.card_files import newer_version, prune_card_cache, store_card
-from .frontend.schedules_sidebar import async_update_schedules_panel
-from .frontend.zigbee_sidebar import async_update_zigbee_panel
+from .frontend.wiser_sidebar import async_update_wiser_panel
 
 _LOGGER = logging.getLogger(__name__)
 _MANAGER = "wiser_card_updates"
 _MAX_DOWNLOAD = 20 * 1024 * 1024
 _CARDS = {
-    "schedule": ("andyblac/wiser-schedule-card", "wiser-schedule-card.js", "wiser-schedules-panel"),
-    "zigbee": ("andyblac/wiser-zigbee-card", "wiser-zigbee-card.js", "wiser-zigbee-panel"),
+    card["id"]: (card["repository"], card["filename"], card["component"])
+    for card in CARD_MANIFEST
+}
+_PANEL_COMPONENTS = {
+    card["id"]: card["panel"] for card in CARD_MANIFEST if card.get("panel")
 }
 
 
@@ -84,7 +86,13 @@ def _validate_download(card, release, contents):
     marker = re.search(
         rf"/\*!\s*WISER-CARD-VERSION {re.escape(filename[:-3])}\s+(\S+)\s*\*/", source
     )
-    if not marker or marker[1] != release["version"] or component not in source:
+    panel_component = _PANEL_COMPONENTS.get(card)
+    if (
+        not marker
+        or marker[1] != release["version"]
+        or component not in source
+        or (panel_component and panel_component not in source)
+    ):
         raise ValueError("Card version or sidebar component does not match the release")
 
 
@@ -209,8 +217,7 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
                     self.pending_refresh.setdefault(card, (installed, active_path))
                 registration = JSModuleRegistration(self.hass)
                 await registration.async_register()
-                await async_update_schedules_panel(self.hass)
-                await async_update_zigbee_panel(self.hass)
+                await async_update_wiser_panel(self.hass)
                 active_path, _, installed = await async_card_resource(self.hass, filename)
                 _, previous_path = self.pending_refresh.pop(card)
                 state["installed"] = installed

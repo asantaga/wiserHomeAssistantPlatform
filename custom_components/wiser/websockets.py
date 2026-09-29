@@ -10,8 +10,12 @@ from aioWiserHeatAPI.exceptions import WiserScheduleError
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import DATA, DOMAIN
-from .frontend.schedules_sidebar import save_schedules_panel_config
-from .frontend.zigbee_sidebar import save_zigbee_panel_config
+from .frontend.wiser_sidebar import (
+    save_rooms_panel_config,
+    save_schedules_panel_config,
+    save_wiser_panel_tabs,
+    save_zigbee_panel_config,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,6 +107,41 @@ async def async_register_websockets(hass, data):
         """Save shared panel preferences in the Wiser config entries."""
         try:
             save_zigbee_panel_config(hass, msg["configs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/rooms_panel/configure",
+        vol.Required("configs"): {str: dict},
+    })
+    @websocket_api.require_admin
+    def websocket_configure_rooms_panel(hass, connection, msg):
+        """Save Rooms panel preferences in the generic panel registry option."""
+        try:
+            save_rooms_panel_config(hass, msg["configs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/panel/configure_tabs",
+        vol.Required("tabs"): [
+            {
+                vol.Required("id"): str,
+                vol.Required("title"): str,
+            }
+        ],
+    })
+    @websocket_api.require_admin
+    def websocket_configure_wiser_panel_tabs(hass, connection, msg):
+        """Save the unified Wiser panel tab order and custom titles."""
+        try:
+            save_wiser_panel_tabs(hass, msg["tabs"])
         except ValueError as err:
             connection.send_error(msg["id"], "invalid_config", str(err))
             return
@@ -574,6 +613,8 @@ async def async_register_websockets(hass, data):
 
     async_register_command(hass, websocket_configure_schedules_panel)
     async_register_command(hass, websocket_configure_zigbee_panel)
+    async_register_command(hass, websocket_configure_rooms_panel)
+    async_register_command(hass, websocket_configure_wiser_panel_tabs)
     async_register_command(hass, websocket_get_hubs)
     async_register_command(hass, websocket_get_suntimes)
     async_register_command(hass, websocket_get_schedules)

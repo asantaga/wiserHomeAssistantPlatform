@@ -46,7 +46,7 @@ from .device import (
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
 from .frontend.entry_updates import async_handle_entry_update, integration_reload_settings
-from .frontend.schedules_sidebar import async_update_schedules_panel
+from .frontend.wiser_sidebar import async_update_wiser_panel
 from .helpers import (
     build_light_unique_id_migration,
     get_device_name,
@@ -56,7 +56,6 @@ from .helpers import (
     get_legacy_room_identifier,
 )
 from .services import async_setup_services
-from .frontend.zigbee_sidebar import async_update_zigbee_panel
 from .websockets import async_register_websockets
 from .update import async_unload_card_updates
 
@@ -234,8 +233,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Register custom cards
     moodule_register = JSModuleRegistration(hass)
     await moodule_register.async_register()
-    await async_update_schedules_panel(hass)
-    await async_update_zigbee_panel(hass)
+    await async_update_wiser_panel(hass)
 
     _LOGGER.info(
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
@@ -394,8 +392,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     if unload_ok:
         await async_unload_card_updates(hass, config_entry)
         hass.data[DOMAIN].pop(config_entry.entry_id)
-        await async_update_schedules_panel(hass)
+        await async_update_wiser_panel(hass)
         update_hub_device_names(hass)
-        await async_update_zigbee_panel(hass)
 
     return unload_ok

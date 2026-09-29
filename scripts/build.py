@@ -7,12 +7,25 @@ import shutil
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from fetch_card_releases import CARD_REPOSITORIES, fetch_cards
+from fetch_card_releases import (
+    CARD_REPOSITORIES,
+    PANEL_CONFIG_REPOSITORY,
+    fetch_cards,
+    fetch_panel_config,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(source, output, local_root, channel, repositories, release=False):
+def build(
+    source,
+    output,
+    local_root,
+    channel,
+    repositories,
+    release=False,
+    panel_config_repository=PANEL_CONFIG_REPOSITORY,
+):
     """Stage a fresh integration and replace the ZIP only after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
     if release or channel == "stable":
@@ -24,8 +37,30 @@ def build(source, output, local_root, channel, repositories, release=False):
             source, staging,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
         )
+        manifest, config_record = fetch_panel_config(
+            channel,
+            source / "frontend/cards.json",
+            local_root=local_root,
+            release=release,
+            repository=panel_config_repository,
+        )
+        (staging / "frontend/cards.json").write_text(
+            json.dumps(manifest, indent=2) + "\n"
+        )
+        definitions = {card["id"]: card for card in manifest}
+        selected_repositories = {
+            card_id: repositories.get(card_id, card["repository"])
+            for card_id, card in definitions.items()
+        }
         report = fetch_cards(
-            channel, staging / "frontend", repositories, local_root=local_root
+            channel,
+            staging / "frontend",
+            selected_repositories,
+            local_root=local_root,
+            definitions=definitions,
+        )
+        (staging / "frontend/panel-config-release.json").write_text(
+            json.dumps(config_record, indent=2) + "\n"
         )
         archive_path = Path(temporary) / "wiser.zip"
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
@@ -40,6 +75,10 @@ def build(source, output, local_root, channel, repositories, release=False):
             staging / "frontend/card-releases.json",
             output.parent / "card-releases.json",
         )
+        shutil.copyfile(
+            staging / "frontend/panel-config-release.json",
+            output.parent / "panel-config-release.json",
+        )
     return report
 
 
@@ -53,13 +92,23 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
     parser.add_argument("--schedule-repository", default=CARD_REPOSITORIES["schedule"])
     parser.add_argument("--zigbee-repository", default=CARD_REPOSITORIES["zigbee"])
+    parser.add_argument("--rooms-repository", default=CARD_REPOSITORIES["rooms"])
+    parser.add_argument(
+        "--panel-config-repository", default=PANEL_CONFIG_REPOSITORY
+    )
     args = parser.parse_args()
     try:
         report = build(
             ROOT / "custom_components/wiser", args.output, args.local_root,
             args.channel,
-            {"schedule": args.schedule_repository, "zigbee": args.zigbee_repository},
+            {
+                **CARD_REPOSITORIES,
+                "schedule": args.schedule_repository,
+                "zigbee": args.zigbee_repository,
+                "rooms": args.rooms_repository,
+            },
             release=args.release,
+            panel_config_repository=args.panel_config_repository,
         )
     except Exception as error:
         parser.exit(1, f"Build failed: {error}\n")
