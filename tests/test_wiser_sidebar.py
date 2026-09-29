@@ -116,7 +116,7 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
 
         self.custom.async_register_panel.assert_awaited_once()
         args = self.custom.async_register_panel.call_args.kwargs
-        self.assertEqual(args["frontend_url_path"], "wiser")
+        self.assertEqual(args["frontend_url_path"], "wiser-panel")
         self.assertEqual(args["webcomponent_name"], "wiser-panel")
         self.assertEqual(args["sidebar_icon"], "wiser:wiser")
         self.assertEqual(
@@ -136,6 +136,26 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             zigbee["config"]["card_configs"]["hub-one"],
             {"orientation": "pie"},
+        )
+
+    async def test_panel_route_stays_outside_static_resources_on_register_and_update(self):
+        self.add_hub("hub", {})
+        await self.sidebar.async_update_wiser_panel(self.hass)
+        registered = self.custom.async_register_panel.call_args.kwargs
+        route = "/" + registered["frontend_url_path"]
+        static_root = self.sidebar.URL_BASE.rstrip("/")
+        self.assertNotEqual(route, static_root)
+        self.assertFalse(route.startswith(static_root + "/"))
+        self.assertTrue(registered["module_url"].startswith(static_root + "/"))
+
+        # Changing enabled hubs refreshes the same UI route, with static URLs intact.
+        self.add_hub("another-hub", {})
+        await self.sidebar.async_update_wiser_panel(self.hass)
+        updated = self.frontend.async_register_built_in_panel.call_args.kwargs
+        self.assertEqual(updated["frontend_url_path"], registered["frontend_url_path"])
+        self.assertTrue(updated["update"])
+        self.assertEqual(
+            updated["config"]["_panel_custom"]["module_url"], registered["module_url"]
         )
 
     async def test_sidebar_is_enabled_by_default(self):
@@ -194,7 +214,7 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.hass.data[self.sidebar.PANEL_STATE] = {"panels": []}
         self.add_hub("hub", {"show_wiser_sidebar": False})
         await self.sidebar.async_update_wiser_panel(self.hass)
-        self.frontend.async_remove_panel.assert_called_once_with(self.hass, "wiser")
+        self.frontend.async_remove_panel.assert_called_once_with(self.hass, "wiser-panel")
         self.assertNotIn(self.sidebar.PANEL_STATE, self.hass.data)
 
     def test_shell_owns_panel_tabs_and_embeds_each_child_panel(self):

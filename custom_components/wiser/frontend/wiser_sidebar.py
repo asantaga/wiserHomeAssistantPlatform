@@ -20,7 +20,9 @@ from ..const import (
     URL_BASE,
 )
 
-PANEL_PATH = "wiser"
+# Keep the UI route outside URL_BASE: a direct request to the static-file
+# directory returns 403 instead of loading the Home Assistant frontend.
+PANEL_PATH = "wiser-panel"
 PANEL_STATE = "wiser_sidebar_panel"
 PANEL_COMPONENT = "wiser-panel"
 PANEL_FILENAME = "wiser-panel.js"
