@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-panel 1.0.4 */
+/*! WISER-CARD-VERSION wiser-panel 1.0.5 */
 
 const WISER_ACTIVE_PANEL_KEY = "wiser-active-panel";
 
@@ -225,8 +225,8 @@ class WiserPanel extends HTMLElement {
     const finish = (save) => {
       if (finished) return;
       finished = true;
-      const title = input.value.trim();
-      if (!save || !title || title === panel.title) {
+      const title = input.value.trim() || panel.default_title || panel.title;
+      if (!save || title === panel.title) {
         tab.textContent = panel.title;
         this._syncTabEditing();
         return;

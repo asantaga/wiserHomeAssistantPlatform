@@ -130,6 +130,8 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
             ["schedule", "zigbee", "rooms"],
         )
         schedule, zigbee, rooms = args["config"]["panels"]
+        self.assertEqual(schedule["default_title"], "Schedules")
+        self.assertEqual(rooms["default_title"], "Rooms")
         self.assertEqual(schedule["config"]["hubs"], ["hub-one", "hub-two"])
         self.assertEqual(
             rooms["config"]["hub_ids"],
@@ -184,10 +186,50 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         await self.sidebar.async_update_wiser_panel(self.hass)
 
         panels = self.custom.async_register_panel.call_args.kwargs["config"]["panels"]
+        self.assertEqual(panels[0]["default_title"], "Rooms")
         self.assertEqual(
             [(panel["id"], panel["title"]) for panel in panels],
             [
                 ("rooms", "Heating"),
+                ("schedule", "Programmes"),
+                ("zigbee", "Zigbee"),
+            ],
+        )
+
+    async def test_renamed_panel_replaces_stored_legacy_default_title(self):
+        rooms = next(card for card in self.manifest if card["id"] == "rooms")
+        rooms.update(
+            {
+                "filename": "wiser-controls-card.js",
+                "component": "wiser-controls-card",
+                "panel": "wiser-controls-panel",
+                "legacy_filenames": ["wiser-rooms-card.js"],
+            }
+        )
+        (Path(self.temporary.name) / "wiser-controls-card.js").write_text(
+            'customElements.define("wiser-controls-card", class extends HTMLElement {});'
+            'customElements.define("wiser-controls-panel", class extends HTMLElement {})'
+        )
+        self.add_hub(
+            "hub",
+            {
+                "wiser_panel_config": {
+                    "_panel_tabs": [
+                        {"id": "rooms", "title": "Rooms"},
+                        {"id": "schedule", "title": "Programmes"},
+                    ]
+                }
+            },
+        )
+
+        await self.sidebar.async_update_wiser_panel(self.hass)
+
+        panels = self.custom.async_register_panel.call_args.kwargs["config"]["panels"]
+        self.assertEqual(panels[0]["default_title"], "Controls")
+        self.assertEqual(
+            [(panel["id"], panel["title"]) for panel in panels],
+            [
+                ("rooms", "Controls"),
                 ("schedule", "Programmes"),
                 ("zigbee", "Zigbee"),
             ],
@@ -232,6 +274,9 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn('tab.addEventListener("dblclick"', source)
         self.assertIn('type: "wiser/panel/configure_tabs"', source)
         self.assertIn("_mergeTabPreferences(panel.config)", source)
+        self.assertIn(
+            "input.value.trim() || panel.default_title || panel.title", source
+        )
 
     def test_new_panel_websocket_commands_are_registered(self):
         source = (ROOT / "websockets.py").read_text()

@@ -49,6 +49,15 @@ def _panel_title(component):
     return name.replace("-", " ").title()
 
 
+def _legacy_panel_titles(module):
+    """Return former default titles derived from renamed card bundles."""
+    titles = set()
+    for filename in module.get("legacy_filenames", []):
+        name = filename.removeprefix("wiser-").removesuffix("-card.js")
+        titles.add(name.replace("-", " ").title())
+    return titles
+
+
 def _stored_config(entry, panel_id):
     """Return settings from the shared container for any panel."""
     generic = entry.options.get(CONF_WISER_PANEL_CONFIG, {})
@@ -61,7 +70,9 @@ async def _discover_panels(hass, entries):
     """Find installed panel components from the active frontend registry."""
     panels = []
     hubs = [hub for hub, _ in entries]
-    for module in get_manifest(hass):
+    manifest = get_manifest(hass)
+    definitions = {module["id"]: module for module in manifest}
+    for module in manifest:
         component = module.get("panel")
         if not component:
             continue
@@ -74,10 +85,12 @@ async def _discover_panels(hass, entries):
         if component not in source:
             continue
         panel_id = module["id"]
+        default_title = _panel_title(component)
         panels.append(
             {
                 "id": panel_id,
-                "title": _panel_title(component),
+                "title": default_title,
+                "default_title": default_title,
                 "component": component,
                 "module_url": module_url,
                 "config": {
@@ -114,7 +127,9 @@ async def _discover_panels(hass, entries):
     for panel in panels:
         title = preferences.get(panel["id"], {}).get("title")
         if isinstance(title, str) and title.strip():
-            panel["title"] = title.strip()
+            stored_title = title.strip()
+            if stored_title not in _legacy_panel_titles(definitions[panel["id"]]):
+                panel["title"] = stored_title
 
     order = {item["id"]: index for index, item in enumerate(stored_tabs)}
     discovered_order = {panel["id"]: index for index, panel in enumerate(panels)}
