@@ -101,8 +101,16 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         )
         self.coordinator = self.updates.CardUpdateCoordinator(self.hass)
         self.manifest = list(self.coordinator.cards.values())
-        self.updates.async_refresh_registry = AsyncMock(
-            side_effect=lambda hass, _prerelease: self.updates.get_manifest(hass)
+        self.updates.async_load_registry = AsyncMock(
+            side_effect=lambda hass: self.updates.get_manifest(hass)
+        )
+        self.updates.get_registry_version = Mock(return_value="1.0.0")
+        self.updates.async_check_registry_release = AsyncMock(
+            return_value={
+                "version": "1.0.0",
+                "asset": {},
+                "release_url": "https://github.com/andyblac/WiserFrontendPanelConfig/releases/tag/v1.0.0",
+            }
         )
 
     def payload(self, card="zigbee", version="2.0.0"):
@@ -149,6 +157,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         contents = json.dumps(manifest).encode()
         registry = sys.modules["card_update_test.frontend.registry"]
         release = {
+            "tag_name": "v1.0.0",
             "published_at": "2026-09-29", "draft": False, "prerelease": False,
             "assets": [{"name": "cards.json", "state": "uploaded", "size": len(contents),
                         "digest": "sha256:" + sha256(contents).hexdigest(),
@@ -159,44 +168,73 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_runtime_registry_adds_card_and_survives_restart_offline(self):
         registry = self.registry_response([*self.manifest, self.extra_card()])
-        manifest = await registry.async_refresh_registry(self.hass)
+        release = await registry.async_check_registry_release(self.hass)
+        manifest = await registry.async_install_registry_release(self.hass, release)
         self.assertEqual(manifest[-1], self.extra_card())
+        installed = self.directory / "custom_components/wiser/frontend"
+        self.assertEqual(
+            json.loads((installed / "cards.json").read_text())["cards"], manifest
+        )
+        self.assertEqual(
+            json.loads((installed / "panel-config-release.json").read_text())[
+                "version"
+            ],
+            "1.0.0",
+        )
         self.hass.data.clear()
         restored = await registry.async_load_registry(self.hass)
         self.assertEqual(restored, manifest)
         import aiohttp
         self.session.get.side_effect = aiohttp.ClientError("offline")
-        with self.assertLogs(registry.__name__, level="WARNING"):
-            self.assertEqual(await registry.async_refresh_registry(self.hass), manifest)
+        with self.assertRaises(aiohttp.ClientError):
+            await registry.async_check_registry_release(self.hass)
+
+    async def test_loaded_registry_version_does_not_read_bundled_metadata(self):
+        registry = sys.modules["card_update_test.frontend.registry"]
+        self.hass.data[registry.REGISTRY_VERSION_DATA] = "1.0.2"
+        with patch.object(
+            registry, "_bundled_version", side_effect=AssertionError("file read")
+        ):
+            self.assertEqual(registry.get_registry_version(self.hass), "1.0.2")
 
     async def test_invalid_registry_does_not_replace_last_good_cache(self):
         registry = self.registry_response([*self.manifest, self.extra_card()])
-        original = await registry.async_refresh_registry(self.hass)
+        release = await registry.async_check_registry_release(self.hass)
+        original = await registry.async_install_registry_release(self.hass, release)
         cache = self.directory / registry.REGISTRY_CACHE
         previous = cache.read_bytes()
         self.registry_response([self.extra_card() | {"filename": "../unsafe.js"}])
-        with self.assertLogs(registry.__name__, level="WARNING"):
-            self.assertEqual(await registry.async_refresh_registry(self.hass), original)
+        release = await registry.async_check_registry_release(self.hass)
+        with self.assertRaises(ValueError):
+            await registry.async_install_registry_release(self.hass, release)
+        self.assertEqual(registry.get_manifest(self.hass), original)
         self.assertEqual(cache.read_bytes(), previous)
 
     async def test_registry_checksum_failure_preserves_bundled_fallback(self):
         registry = sys.modules["card_update_test.frontend.registry"]
         contents = json.dumps([self.extra_card()]).encode()
-        metadata = {"published_at": "2026-09-29", "assets": [{
+        metadata = {"tag_name": "v1.0.0", "published_at": "2026-09-29", "assets": [{
             "name": "cards.json", "state": "uploaded", "size": len(contents),
             "digest": "sha256:" + "0" * 64,
             "browser_download_url": f"https://github.com/{registry.REGISTRY_REPOSITORY}/releases/download/v1/cards.json",
         }]}
         self.session.get.side_effect = [self.response(json_data=metadata), self.response(contents=contents)]
-        with self.assertLogs(registry.__name__, level="WARNING"):
-            self.assertEqual(await registry.async_refresh_registry(self.hass), self.manifest)
+        release = await registry.async_check_registry_release(self.hass)
+        with self.assertRaises(ValueError):
+            await registry.async_install_registry_release(self.hass, release)
+        self.assertEqual(registry.get_manifest(self.hass), self.manifest)
         self.assertFalse((self.directory / registry.REGISTRY_CACHE).exists())
 
-    async def test_registry_rejects_identity_changes_and_duplicate_components(self):
+    async def test_registry_accepts_identity_changes_and_rejects_duplicates(self):
         registry = sys.modules["card_update_test.frontend.registry"]
-        changed = self.manifest[0] | {"repository": "other/repository"}
-        with self.assertRaises(ValueError):
-            registry._merge_manifest(self.manifest, [changed])
+        changed = self.manifest[0] | {
+            "filename": "wiser-renamed-card.js",
+            "legacy_filenames": [self.manifest[0]["filename"]],
+            "repository": "other/repository",
+            "component": "wiser-renamed-card",
+            "panel": "wiser-renamed-panel",
+        }
+        self.assertEqual(registry._merge_manifest(self.manifest, [changed])[0], changed)
         with self.assertRaises(ValueError):
             registry.validate_manifest([self.extra_card(), self.extra_card() | {
                 "id": "other", "filename": "wiser-other-card.js"
@@ -208,11 +246,11 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         # Use an explicit release from another host.
         self.session.get.side_effect = None
         self.session.get.return_value = self.response(json_data={
-            "published_at": "2026-09-29", "assets": [{"name": "cards.json", "state": "uploaded",
+            "tag_name": "v1.0.0", "published_at": "2026-09-29", "assets": [{"name": "cards.json", "state": "uploaded",
             "size": 123, "browser_download_url": "https://example.com/cards.json"}],
         })
-        with self.assertLogs(registry.__name__, level="WARNING"):
-            await registry.async_refresh_registry(self.hass)
+        with self.assertRaises(ValueError):
+            await registry.async_check_registry_release(self.hass)
         self.session.get.assert_called_once()
 
     async def test_new_card_entity_is_discovered_once_and_installed_without_bundle(self):
@@ -228,7 +266,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         add.assert_called_once()
         entities = add.call_args.args[0]
         self.assertEqual([entity.card for entity in entities], ["energy"])
-        self.assertEqual(entities[0]._attr_name, definition["name"])
+        self.assertEqual(entities[0].name, definition["name"])
         add.reset_mock()
         await self.coordinator.async_refresh()
         add.assert_not_called()
@@ -483,12 +521,12 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         await self.updates.async_setup_entry(self.hass, SimpleNamespace(entry_id="first"), first)
         await self.updates.async_setup_entry(self.hass, SimpleNamespace(entry_id="second"), second)
         self.coordinator.async_refresh.assert_awaited_once()
-        self.assertEqual(len(first.call_args.args[0]), 3)
+        self.assertEqual(len(first.call_args.args[0]), 4)
         second.assert_not_called()
         self.registry.async_get_entity_id.side_effect = lambda domain, platform, unique_id: f"update.{unique_id}"
         await self.updates.async_unload_card_updates(self.hass, SimpleNamespace(entry_id="first"))
         self.assertEqual(self.coordinator.owner, "second")
-        self.assertEqual(len(second.call_args.args[0]), 3)
+        self.assertEqual(len(second.call_args.args[0]), 4)
         self.assertEqual(self.registry.async_update_entity.call_args.kwargs["config_entry_id"], "second")
         await self.updates.async_unload_card_updates(self.hass, SimpleNamespace(entry_id="second"))
         self.coordinator.async_shutdown.assert_awaited_once()
@@ -498,12 +536,56 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.coordinator.data["zigbee"] = {"installed": "1.0.0", "release": self.updates._validate_release(self.coordinator.cards["zigbee"], self.metadata())}
         entity = self.updates.WiserCardUpdate(self.coordinator, "zigbee")
         self.assertTrue(entity.available)
+        self.assertEqual(entity.name, "Wiser Zigbee Card")
+        self.coordinator.cards["zigbee"] = {
+            **self.coordinator.cards["zigbee"], "name": "Renamed Zigbee Card"
+        }
+        self.assertEqual(entity.name, "Renamed Zigbee Card")
         self.assertEqual(entity.installed_version, "1.0.0")
         self.assertEqual(entity.latest_version, "2.0.0")
         self.assertIn("/releases/tag/v2.0.0", entity.release_url)
         self.coordinator.install = AsyncMock()
         await entity.async_install(None, False)
         self.coordinator.install.assert_awaited_once_with("zigbee")
+
+    async def test_registry_update_entity_installs_only_when_requested(self):
+        release = {
+            "version": "1.1.0",
+            "asset": {},
+            "release_url": "https://github.com/andyblac/WiserFrontendPanelConfig/releases/tag/v1.1.0",
+        }
+        self.coordinator.data["_registry"] = {
+            "installed": "1.0.0", "release": release
+        }
+        entity = self.updates.WiserFrontendRegistryUpdate(self.coordinator)
+        self.assertEqual(entity.installed_version, "1.0.0")
+        self.assertEqual(entity.latest_version, "1.1.0")
+        self.coordinator.install_registry = AsyncMock()
+        await entity.async_install(None, False)
+        self.coordinator.install_registry.assert_awaited_once()
+
+    async def test_registry_install_discovers_new_cards(self):
+        release = {
+            "version": "1.1.0",
+            "asset": {},
+            "release_url": "https://github.com/andyblac/WiserFrontendPanelConfig/releases/tag/v1.1.0",
+        }
+        manifest = [*self.manifest, self.extra_card()]
+        self.coordinator.data["_registry"] = {
+            "installed": "1.0.0", "release": release
+        }
+        self.updates.async_install_registry_release = AsyncMock(
+            return_value=manifest
+        )
+        self.coordinator._check_card = AsyncMock(
+            return_value={"installed": "0.0.0", "release": None, "error": None}
+        )
+        await self.coordinator.install_registry()
+        self.updates.async_install_registry_release.assert_awaited_once_with(
+            self.hass, release
+        )
+        self.assertIn("energy", self.coordinator.cards)
+        self.assertEqual(self.coordinator.data["_registry"]["installed"], "1.1.0")
 
     async def test_lovelace_resource_moves_to_cached_url_without_duplicate(self):
         tree = ast.parse((ROOT / "frontend/__init__.py").read_text())
@@ -516,6 +598,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         )
         self.hass.data["lovelace"] = SimpleNamespace(mode="storage", resources=resources)
         namespace = {
+            "asyncio": __import__("asyncio"),
             "HomeAssistant": object, "LovelaceData": object, "Path": Path,
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
@@ -536,6 +619,69 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         resources.async_create_item.assert_not_awaited()
         await registration.async_unregister()
         resources.async_delete_item.assert_awaited_once_with("card")
+
+    async def test_duplicate_lovelace_resources_are_removed(self):
+        tree = ast.parse((ROOT / "frontend/__init__.py").read_text())
+        cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "JSModuleRegistration")
+        active = "/wiser/cards/wiser-controls-card-abc.js?v=1.0.0"
+        resources = SimpleNamespace(
+            async_items=lambda: [
+                {"id": "older", "url": active},
+                {"id": "newer", "url": active},
+            ],
+            async_update_item=AsyncMock(), async_create_item=AsyncMock(),
+            async_delete_item=AsyncMock(),
+        )
+        self.hass.data["lovelace"] = SimpleNamespace(mode="storage", resources=resources)
+        namespace = {
+            "asyncio": __import__("asyncio"),
+            "HomeAssistant": object, "LovelaceData": object, "Path": Path,
+            "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
+            "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
+            "get_manifest": lambda hass: [{
+                "filename": "wiser-controls-card.js", "name": "Controls",
+            }],
+            "async_card_resource": AsyncMock(return_value=(None, active, "1.0.0")),
+        }
+        exec(compile(ast.Module(body=[cls], type_ignores=[]), "frontend/__init__.py", "exec"), namespace)
+        registration = namespace["JSModuleRegistration"](self.hass)
+        await registration._async_register_modules()
+        resources.async_delete_item.assert_awaited_once_with("older")
+        resources.async_update_item.assert_not_awaited()
+        resources.async_create_item.assert_not_awaited()
+
+    async def test_renamed_card_reuses_legacy_lovelace_resource(self):
+        tree = ast.parse((ROOT / "frontend/__init__.py").read_text())
+        cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "JSModuleRegistration")
+        active = "/wiser/cards/wiser-controls-card-abc.js?v=1.0.0"
+        resource = {"id": "card", "url": "/wiser/cards/wiser-rooms-card-old.js?v=0.9.0"}
+        resources = SimpleNamespace(
+            async_items=lambda: [resource], async_update_item=AsyncMock(),
+            async_create_item=AsyncMock(), async_delete_item=AsyncMock(),
+        )
+        self.hass.data["lovelace"] = SimpleNamespace(mode="storage", resources=resources)
+        namespace = {
+            "asyncio": __import__("asyncio"),
+            "HomeAssistant": object, "LovelaceData": object, "Path": Path,
+            "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
+            "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
+            "get_manifest": lambda hass: [{
+                "filename": "wiser-controls-card.js",
+                "legacy_filenames": ["wiser-rooms-card.js"],
+                "name": "Controls",
+            }],
+            "async_card_resource": AsyncMock(return_value=(None, active, "1.0.0")),
+        }
+        exec(compile(ast.Module(body=[cls], type_ignores=[]), "frontend/__init__.py", "exec"), namespace)
+        registration = namespace["JSModuleRegistration"](self.hass)
+        registration.async_remove_gzip_files = AsyncMock()
+        await registration._async_register_modules()
+        resources.async_update_item.assert_awaited_once_with(
+            "card", {"res_type": "module", "url": active}
+        )
+        resources.async_create_item.assert_not_awaited()
 
     async def test_older_stable_release_is_not_installed_over_development_card(self):
         self.version_reader.return_value = "3.0.0-dev.84"

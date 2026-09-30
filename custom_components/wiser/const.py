@@ -21,9 +21,10 @@ CONF_WISER_PANEL_CONFIG = "wiser_panel_config"
 def _load_card_manifest():
     """Load the shared card registry used by packaging and runtime setup."""
     try:
-        return json.loads(
+        registry = json.loads(
             (Path(__file__).parent / "frontend/cards.json").read_text("utf-8")
         )
+        return registry.get("cards", []) if isinstance(registry, dict) else registry
     except FileNotFoundError:
         # Source checkouts have no card definitions; builds inject the registry.
         return []

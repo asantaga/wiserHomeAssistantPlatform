@@ -41,6 +41,9 @@ class BuildTest(unittest.TestCase):
         registry.write_text(
             json.dumps(CARD_MANIFEST), encoding="utf-8"
         )
+        registry.with_name("build-info.json").write_text(
+            json.dumps({"version": "1.0.1"}), encoding="utf-8"
+        )
         for card, panel in (("schedule", "schedules"), ("zigbee", "zigbee")):
             (frontend / f"{panel}_sidebar.py").touch()
             (frontend / f"wiser-{card}-card.js").write_bytes(b"old tracked bundle")
@@ -72,6 +75,14 @@ class BuildTest(unittest.TestCase):
                     b"old tracked bundle",
                 )
             self.assertEqual(json.loads(archive.read("frontend/card-releases.json")), report)
+            self.assertEqual(
+                json.loads(archive.read("frontend/cards.json")),
+                {"schema_version": 1, "cards": CARD_MANIFEST},
+            )
+            self.assertEqual(
+                json.loads(archive.read("frontend/panel-config-release.json"))["version"],
+                "1.0.1",
+            )
             self.assertFalse(any("__pycache__" in name for name in archive.namelist()))
 
     def test_missing_local_bundle_falls_back_independently(self):
@@ -116,7 +127,10 @@ class BuildTest(unittest.TestCase):
         releases.assert_not_called()
         self.assertEqual(report[-1]["repository"], "example/monitoring")
         with ZipFile(self.output) as archive:
-            self.assertEqual(json.loads(archive.read("frontend/cards.json")), manifest)
+            self.assertEqual(
+                json.loads(archive.read("frontend/cards.json")),
+                {"schema_version": 1, "cards": manifest},
+            )
             self.assertEqual(archive.read("frontend/wiser-electricity-card.js"), bundle.read_bytes())
 
     def test_build_rejects_bundle_using_removed_settings_endpoint(self):
@@ -177,7 +191,7 @@ class BuildTest(unittest.TestCase):
                     )
                     self.assertEqual(
                         json.loads(archive.read("frontend/cards.json")),
-                        CARD_MANIFEST,
+                        {"schema_version": 1, "cards": CARD_MANIFEST},
                     )
                     self.assertEqual(
                         json.loads(archive.read("frontend/panel-config-release.json"))["source"],

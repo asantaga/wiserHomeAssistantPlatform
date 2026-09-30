@@ -25,6 +25,7 @@ if _SPEC is None or _SPEC.loader is None:
 _MANIFEST = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_MANIFEST)
 validate_card_manifest = _MANIFEST.validate_manifest
+validate_registry = _MANIFEST.validate_registry
 
 
 def fetch_panel_config(
@@ -41,6 +42,10 @@ def fetch_panel_config(
     )
     if local is not None and local.is_file():
         contents = local.read_bytes()
+        build_info = local.with_name("build-info.json")
+        version = None
+        if build_info.is_file():
+            version = json.loads(build_info.read_text()).get("version")
         record = {
             "repository": repository,
             "source": "local",
@@ -48,6 +53,8 @@ def fetch_panel_config(
             "path": str(local.resolve()),
             "digest": "sha256:" + sha256(contents).hexdigest(),
         }
+        if version:
+            record["version"] = version
     else:
         selected = select_release(list_releases(repository), channel)
         asset = select_asset(selected, PANEL_CONFIG_FILENAME)
@@ -66,7 +73,7 @@ def fetch_panel_config(
         manifest = json.loads(contents)
     except (TypeError, json.JSONDecodeError) as error:
         raise ValueError("Invalid cards.json") from error
-    return validate_card_manifest(manifest), record
+    return validate_registry(manifest), record
 
 
 def list_releases(repository):

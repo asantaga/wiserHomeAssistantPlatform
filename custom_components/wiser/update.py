@@ -1,4 +1,4 @@
-"""Offer independent, manually installed updates for the shared frontend cards."""
+"""Offer independent, manually installed Wiser frontend updates."""
 
 from __future__ import annotations
 
@@ -21,12 +21,19 @@ from .const import DOMAIN
 from .frontend import JSModuleRegistration, async_card_resource
 from .frontend.card_files import newer_version, prune_card_cache, store_card
 from .frontend.wiser_sidebar import async_update_wiser_panel
-from .frontend.registry import async_refresh_registry, get_manifest
+from .frontend.registry import (
+    async_check_registry_release,
+    async_install_registry_release,
+    async_load_registry,
+    get_manifest,
+    get_registry_version,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _MANAGER = "wiser_card_updates"
 _MAX_DOWNLOAD = 20 * 1024 * 1024
 _HACS_REPOSITORY_ID = "159080189"
+_REGISTRY = "_registry"
 
 
 def _release_version(tag, allow_prerelease=False):
@@ -173,11 +180,13 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
         self.data = {}
         self.cards = {card["id"]: card for card in get_manifest(hass)}
         self.added_cards = set()
+        self.registry_added = False
 
     def add_entities(self, entry_id):
         """Transfer registry ownership before attaching the shared entities."""
         self.owner = entry_id
         self.added_cards = set()
+        self.registry_added = False
         self._add_discovered_entities()
 
     def _add_discovered_entities(self):
@@ -186,26 +195,58 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
             return
         registry = er.async_get(self.hass)
         cards = self.cards.keys() - self.added_cards
+        entities = []
+        if not self.registry_added:
+            entity_id = registry.async_get_entity_id(
+                "update", DOMAIN, "wiser_frontend_registry_update"
+            )
+            if entity_id:
+                registry.async_update_entity(entity_id, config_entry_id=self.owner)
+            entities.append(WiserFrontendRegistryUpdate(self))
+            self.registry_added = True
         for card in sorted(cards):
             entity_id = registry.async_get_entity_id("update", DOMAIN, f"wiser_{card}_card_update")
             if entity_id:
                 registry.async_update_entity(entity_id, config_entry_id=self.owner)
-        if cards:
-            self.entries[self.owner]([WiserCardUpdate(self, card) for card in sorted(cards)])
+        entities.extend(WiserCardUpdate(self, card) for card in sorted(cards))
+        if entities:
+            self.entries[self.owner](entities)
             self.added_cards.update(cards)
 
     async def _async_update_data(self):
         async with self.install_lock:
-            manifest = await async_refresh_registry(self.hass, _prereleases_enabled(self.hass))
+            await async_load_registry(self.hass)
+            registry = await self._check_registry()
+            manifest = get_manifest(self.hass)
             self.cards = {card["id"]: card for card in manifest}
             results = await asyncio.gather(*(self._check_card(card) for card in self.cards))
             self._add_discovered_entities()
-            return dict(zip(self.cards, results))
+            return {_REGISTRY: registry, **dict(zip(self.cards, results))}
+
+    async def _check_registry(self):
+        """Check registry releases without silently installing them."""
+        installed = get_registry_version(self.hass)
+        try:
+            release = await async_check_registry_release(
+                self.hass, _prereleases_enabled(self.hass)
+            )
+            return {"installed": installed, "release": release, "error": None}
+        except (aiohttp.ClientError, TimeoutError, ValueError, KeyError, TypeError) as err:
+            _LOGGER.warning("Unable to check Wiser frontend registry releases: %s", err)
+            return {"installed": installed, "release": None, "error": str(err)}
 
     async def _check_card(self, card):
         definition = self.cards[card]
         repository, filename = definition["repository"], definition["filename"]
         _, _, installed = await async_card_resource(self.hass, filename)
+        if installed == "missing":
+            for legacy_filename in definition.get("legacy_filenames", []):
+                _, _, legacy_version = await async_card_resource(
+                    self.hass, legacy_filename
+                )
+                if legacy_version != "missing":
+                    installed = legacy_version
+                    break
         if card in self.pending_refresh:
             installed = self.pending_refresh[card][0]
         try:
@@ -289,6 +330,89 @@ class CardUpdateCoordinator(DataUpdateCoordinator):
                 self.installing.discard(card)
                 self.async_update_listeners()
 
+    async def install_registry(self):
+        """Install the offered frontend registry after an explicit update action."""
+        async with self.install_lock:
+            state = self.data.get(_REGISTRY, {})
+            release = state.get("release")
+            if not release:
+                raise HomeAssistantError(
+                    "No verified frontend registry release is available"
+                )
+            if not newer_version(
+                release["version"], state.get("installed", "0.0.0")
+            ):
+                return
+            self.installing.add(_REGISTRY)
+            self.async_update_listeners()
+            try:
+                manifest = await async_install_registry_release(self.hass, release)
+                self.cards = {card["id"]: card for card in manifest}
+                state["installed"] = release["version"]
+                results = await asyncio.gather(
+                    *(self._check_card(card) for card in self.cards)
+                )
+                self.data.update(dict(zip(self.cards, results)))
+                self._add_discovered_entities()
+            except (
+                aiohttp.ClientError,
+                TimeoutError,
+                OSError,
+                ValueError,
+                RuntimeError,
+            ) as err:
+                raise HomeAssistantError(
+                    f"Unable to install frontend registry update: {err}"
+                ) from err
+            finally:
+                self.installing.discard(_REGISTRY)
+                self.async_update_listeners()
+
+
+class WiserFrontendRegistryUpdate(CoordinatorEntity, UpdateEntity):
+    """A user-installed update for WiserFrontendPanelConfig."""
+
+    _attr_supported_features = UpdateEntityFeature.INSTALL
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_has_entity_name = True
+    _attr_name = "Wiser Frontend Panel Config"
+    _attr_unique_id = "wiser_frontend_registry_update"
+    _attr_release_summary = (
+        "Updates the card and panel definitions used by the Wiser integration."
+    )
+
+    @property
+    def available(self):
+        return (
+            super().available
+            and self.coordinator.data.get(_REGISTRY, {}).get("release") is not None
+        )
+
+    @property
+    def installed_version(self):
+        return self.coordinator.data.get(_REGISTRY, {}).get("installed")
+
+    @property
+    def latest_version(self):
+        release = self.coordinator.data.get(_REGISTRY, {}).get("release")
+        return release["version"] if release else None
+
+    @property
+    def release_url(self):
+        release = self.coordinator.data.get(_REGISTRY, {}).get("release")
+        return release["release_url"] if release else None
+
+    @property
+    def in_progress(self):
+        return _REGISTRY in self.coordinator.installing
+
+    def version_is_newer(self, latest_version, installed_version):
+        return newer_version(latest_version, installed_version)
+
+    async def async_install(self, version, backup, **kwargs):
+        """Install only after an explicit Home Assistant update action."""
+        await self.coordinator.install_registry()
+
 
 class WiserCardUpdate(CoordinatorEntity, UpdateEntity):
     """A user-installed frontend card update, separate from hub firmware."""
@@ -302,8 +426,11 @@ class WiserCardUpdate(CoordinatorEntity, UpdateEntity):
         super().__init__(coordinator)
         self.card = card
         self._attr_unique_id = f"wiser_{card}_card_update"
-        # Registry-defined cards must not require new integration translations.
-        self._attr_name = coordinator.cards[card]["name"]
+
+    @property
+    def name(self):
+        """Follow registry name changes without recreating the update entity."""
+        return self.coordinator.cards[self.card]["name"]
 
     @property
     def available(self):

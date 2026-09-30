@@ -3,6 +3,20 @@
 import re
 
 
+REGISTRY_SCHEMA_VERSION = 1
+
+
+def validate_registry(value):
+    """Validate the versioned registry while accepting legacy card arrays."""
+    if isinstance(value, list):
+        return validate_manifest(value)
+    if not isinstance(value, dict):
+        raise ValueError("Invalid frontend registry document")
+    if value.get("schema_version") != REGISTRY_SCHEMA_VERSION:
+        raise ValueError("Unsupported frontend registry schema version")
+    return validate_manifest(value.get("cards"))
+
+
 def validate_manifest(value):
     """Validate names and paths before using a remotely supplied registry."""
     if not isinstance(value, list) or not 1 <= len(value) <= 100:
@@ -32,7 +46,19 @@ def validate_manifest(value):
                 if item in seen[key]:
                     raise ValueError(f"Duplicate frontend card {key}")
                 seen[key].add(item)
-        result.append({key: card.get(key) for key in ("name", *patterns)})
+        legacy_filenames = card.get("legacy_filenames", [])
+        if not isinstance(legacy_filenames, list):
+            raise ValueError("Invalid frontend card legacy filenames")
+        for filename in legacy_filenames:
+            if (
+                not isinstance(filename, str)
+                or not re.fullmatch(patterns["filename"], filename)
+                or filename in seen["filename"]
+            ):
+                raise ValueError("Invalid or duplicate frontend legacy filename")
+            seen["filename"].add(filename)
+        definition = {key: card.get(key) for key in ("name", *patterns)}
+        if legacy_filenames:
+            definition["legacy_filenames"] = legacy_filenames
+        result.append(definition)
     return result
-
-

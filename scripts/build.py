@@ -45,7 +45,7 @@ def build(
             repository=panel_config_repository,
         )
         (staging / "frontend/cards.json").write_text(
-            json.dumps(manifest, indent=2) + "\n"
+            json.dumps({"schema_version": 1, "cards": manifest}, indent=2) + "\n"
         )
         definitions = {card["id"]: card for card in manifest}
         selected_repositories = select_repositories(definitions, repositories or {})
