@@ -24,7 +24,7 @@ def validate_manifest(value):
     seen = {key: set() for key in ("id", "filename", "component", "panel")}
     patterns = {
         "id": r"[a-z0-9-]+",
-        "filename": r"wiser-[a-z0-9-]+-card\.js",
+        "filename": r"wiser-[a-z0-9-]+-(?:card|panel)\.js",
         "repository": r"[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+",
         "component": r"wiser-[a-z0-9-]+",
         "panel": r"wiser-[a-z0-9-]+-panel",
@@ -58,6 +58,11 @@ def validate_manifest(value):
                 raise ValueError("Invalid or duplicate frontend legacy filename")
             seen["filename"].add(filename)
         definition = {key: card.get(key) for key in ("name", *patterns)}
+        is_card = card.get("card", True)
+        if type(is_card) is not bool:
+            raise ValueError("Invalid frontend card flag")
+        if not is_card:
+            definition["card"] = False
         if legacy_filenames:
             definition["legacy_filenames"] = legacy_filenames
         result.append(definition)

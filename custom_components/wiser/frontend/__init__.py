@@ -134,6 +134,8 @@ class JSModuleRegistration:
         ]
 
         for module in get_manifest(self.hass):
+            if not module.get("card", True):
+                continue
             url = f"{URL_BASE}/{module.get('filename')}"
             filenames = [module["filename"], *module.get("legacy_filenames", [])]
 
@@ -216,6 +218,8 @@ class JSModuleRegistration:
         """Unload lovelace module resource."""
         if self.resource_mode == MODE_STORAGE:
             for module in get_manifest(self.hass):
+                if not module.get("card", True):
+                    continue
                 filenames = [module["filename"], *module.get("legacy_filenames", [])]
                 wiser_resources = [
                     resource

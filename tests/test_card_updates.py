@@ -620,6 +620,34 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         await registration.async_unregister()
         resources.async_delete_item.assert_awaited_once_with("card")
 
+    async def test_panel_only_bundle_is_not_registered_as_lovelace_card(self):
+        tree = ast.parse((ROOT / "frontend/__init__.py").read_text())
+        cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "JSModuleRegistration")
+        resources = SimpleNamespace(
+            async_items=lambda: [], async_update_item=AsyncMock(),
+            async_create_item=AsyncMock(), async_delete_item=AsyncMock(),
+        )
+        self.hass.data["lovelace"] = SimpleNamespace(mode="storage", resources=resources)
+        resolve = AsyncMock()
+        namespace = {
+            "asyncio": __import__("asyncio"),
+            "HomeAssistant": object, "LovelaceData": object, "Path": Path,
+            "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
+            "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
+            "get_manifest": lambda hass: [{
+                "filename": "wiser-hub-panel.js", "name": "Hub", "card": False,
+            }],
+            "async_card_resource": resolve,
+        }
+        exec(compile(ast.Module(body=[cls], type_ignores=[]), "frontend/__init__.py", "exec"), namespace)
+        registration = namespace["JSModuleRegistration"](self.hass)
+        await registration._async_register_modules()
+        resolve.assert_not_awaited()
+        resources.async_create_item.assert_not_awaited()
+        await registration.async_unregister()
+        resources.async_delete_item.assert_not_awaited()
+
     async def test_duplicate_lovelace_resources_are_removed(self):
         tree = ast.parse((ROOT / "frontend/__init__.py").read_text())
         cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "JSModuleRegistration")

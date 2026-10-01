@@ -90,6 +90,23 @@ class CardReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Invalid frontend card"):
                 FETCH.fetch_panel_config("dev", local_root=Path(directory))
 
+    def test_external_registry_accepts_panel_only_bundle_definition(self):
+        definition = {
+            "id": "hub",
+            "name": "Wiser Hub Panel",
+            "filename": "wiser-hub-panel.js",
+            "repository": "andyblac/wiser-hub-panel",
+            "component": "wiser-hub-panel",
+            "panel": "wiser-hub-panel",
+            "card": False,
+        }
+        self.assertEqual(FETCH.validate_card_manifest([definition]), [definition])
+
+    def test_external_registry_rejects_invalid_card_flag(self):
+        definition = CARD_MANIFEST[0] | {"card": "false"}
+        with self.assertRaisesRegex(ValueError, "card flag"):
+            FETCH.validate_card_manifest([definition])
+
     def test_release_build_fetches_published_panel_config(self):
         published = {
             "tag_name": "v1.0.0-beta.1",
