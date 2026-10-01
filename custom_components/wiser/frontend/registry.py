@@ -82,8 +82,12 @@ def get_registry_version(hass):
 
 
 def _store_registry(config_dir, manifest, version):
-    document = json.dumps(
-        {"schema_version": REGISTRY_SCHEMA_VERSION, "cards": manifest}
+    document = (
+        json.dumps(
+            {"schema_version": REGISTRY_SCHEMA_VERSION, "cards": manifest},
+            indent=2,
+        )
+        + "\n"
     ).encode()
     integration = Path(config_dir) / "custom_components/wiser/frontend"
     integration.mkdir(parents=True, exist_ok=True)

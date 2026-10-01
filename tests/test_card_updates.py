@@ -172,8 +172,11 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         manifest = await registry.async_install_registry_release(self.hass, release)
         self.assertEqual(manifest[-1], self.extra_card())
         installed = self.directory / "custom_components/wiser/frontend"
+        installed_registry = (installed / "cards.json").read_text()
+        self.assertTrue(installed_registry.startswith('{\n  "schema_version": 1,'))
+        self.assertTrue(installed_registry.endswith("\n"))
         self.assertEqual(
-            json.loads((installed / "cards.json").read_text())["cards"], manifest
+            json.loads(installed_registry)["cards"], manifest
         )
         self.assertEqual(
             json.loads((installed / "panel-config-release.json").read_text())[
