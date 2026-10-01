@@ -546,7 +546,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         attrs["manual_state"] = self._device.manual_state
         attrs["mode"] = self._device.mode
         attrs["name"] = self._device.name
-        attrs["output_state"] = "On" if self._device.is_on else "Off"
+        attrs["output_state"] = "On" if self.is_on else "Off"
         # Switches could be not allocated to room (issue:209)
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
             attrs["room"] = self._data.wiserhub.rooms.get_by_id(
@@ -569,6 +569,11 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         await self._device.turn_on()
+        # Publish the accepted command immediately. The hub takes a few seconds
+        # to report the new value, so waiting for the refresh leaves every HA
+        # dashboard card showing the previous state in the meantime.
+        self._is_on = True
+        self.async_write_ha_state()
         await self.async_force_update(2)
         return True
 
@@ -576,6 +581,8 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self._device.turn_off()
+        self._is_on = False
+        self.async_write_ha_state()
         await self.async_force_update(2)
         return True
 
@@ -1118,4 +1125,3 @@ class WiserHotWaterSwitch(WiserSwitch):
         """Turn hot water off."""
         await self._data.wiserhub.hotwater.override_state("Off")
         await self.async_force_update()
-
