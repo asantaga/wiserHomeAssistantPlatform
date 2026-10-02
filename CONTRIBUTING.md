@@ -39,7 +39,7 @@ Please include:
 | Integration source | `custom_components/wiser/` |
 | Hub communication | the separate `aioWiserHeatAPI` library, pinned in `manifest.json` |
 | Frontend panel/card plumbing | `custom_components/wiser/frontend/` |
-| Schedules and Zigbee cards | separate repositories ([wiser-schedule-card](https://github.com/andyblac/wiser-schedule-card), [wiser-zigbee-card](https://github.com/andyblac/wiser-zigbee-card)) |
+| Frontend cards and panels | repositories declared in `custom_components/wiser/frontend/cards.json` |
 | Tests | `tests/` |
 | Packaging scripts | `scripts/` |
 
@@ -50,6 +50,8 @@ Two things that trip people up:
 - **Card bundles are not committed to this repository.** They are downloaded
   from the card repositories' GitHub releases at build time. Do not add built
   `.js` card assets to `custom_components/wiser/frontend/`.
+- Follow [Adding Wiser frontend cards and panels](docs/frontend-registry.md) to
+  register a new frontend repository and test its independent update entity.
 
 ## Branching and pull requests
 
@@ -116,10 +118,11 @@ python3 scripts/build.py --release --channel dev
 
 The output is `dist/wiser.zip`, with `dist/card-releases.json` recording the
 card releases and checksums included. Stable builds use stable card releases;
-prerelease builds use the newest prerelease of each card, falling back to its
-newest stable release. Missing or invalid card assets fail the build.
+prerelease builds use the most recently published stable or prerelease of each
+card. Missing or invalid card assets fail the build.
 
-To see which card releases would be selected without downloading anything:
+To see which card releases would be selected without downloading card bundles
+(the registry metadata is still fetched):
 
 ```sh
 python3 scripts/fetch_card_releases.py --channel dev --plan

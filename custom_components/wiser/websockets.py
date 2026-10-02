@@ -10,8 +10,10 @@ from aioWiserHeatAPI.exceptions import WiserScheduleError
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import DATA, DOMAIN
-from .frontend.schedules_sidebar import save_schedules_panel_config
-from .frontend.zigbee_sidebar import save_zigbee_panel_config
+from .frontend.wiser_sidebar import (
+    save_panel_config,
+    save_wiser_panel_tabs,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,14 +82,15 @@ async def async_register_websockets(hass, data):
 
     @callback
     @websocket_api.websocket_command({
-        vol.Required("type"): "wiser/schedules_panel/configure",
+        vol.Required("type"): "wiser/panel/configure",
+        vol.Required("panel_id"): str,
         vol.Required("configs"): {str: dict},
     })
     @websocket_api.require_admin
-    def websocket_configure_schedules_panel(hass, connection, msg):
-        """Save shared panel preferences in the Wiser config entries."""
+    def websocket_configure_panel(hass, connection, msg):
+        """Save settings for any panel supplied by the frontend registry."""
         try:
-            save_schedules_panel_config(hass, msg["configs"])
+            save_panel_config(hass, msg["panel_id"], msg["configs"])
         except ValueError as err:
             connection.send_error(msg["id"], "invalid_config", str(err))
             return
@@ -95,14 +98,19 @@ async def async_register_websockets(hass, data):
 
     @callback
     @websocket_api.websocket_command({
-        vol.Required("type"): "wiser/zigbee_panel/configure",
-        vol.Required("configs"): {str: dict},
+        vol.Required("type"): "wiser/panel/configure_tabs",
+        vol.Required("tabs"): [
+            {
+                vol.Required("id"): str,
+                vol.Required("title"): str,
+            }
+        ],
     })
     @websocket_api.require_admin
-    def websocket_configure_zigbee_panel(hass, connection, msg):
-        """Save shared panel preferences in the Wiser config entries."""
+    def websocket_configure_wiser_panel_tabs(hass, connection, msg):
+        """Save the unified Wiser panel tab order and custom titles."""
         try:
-            save_zigbee_panel_config(hass, msg["configs"])
+            save_wiser_panel_tabs(hass, msg["tabs"])
         except ValueError as err:
             connection.send_error(msg["id"], "invalid_config", str(err))
             return
@@ -572,8 +580,8 @@ async def async_register_websockets(hass, data):
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
-    async_register_command(hass, websocket_configure_schedules_panel)
-    async_register_command(hass, websocket_configure_zigbee_panel)
+    async_register_command(hass, websocket_configure_panel)
+    async_register_command(hass, websocket_configure_wiser_panel_tabs)
     async_register_command(hass, websocket_get_hubs)
     async_register_command(hass, websocket_get_suntimes)
     async_register_command(hass, websocket_get_schedules)

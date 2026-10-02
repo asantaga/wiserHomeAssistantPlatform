@@ -7,12 +7,25 @@ import shutil
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from fetch_card_releases import CARD_REPOSITORIES, fetch_cards
+from fetch_card_releases import (
+    fetch_cards,
+    repository_overrides,
+    select_repositories,
+    validate_registry,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(source, output, local_root, channel, repositories, release=False):
+def build(
+    source,
+    output,
+    local_root,
+    channel,
+    repositories=None,
+    release=False,
+    without_frontend=False,
+):
     """Stage a fresh integration and replace the ZIP only after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
     if release or channel == "stable":
@@ -24,8 +37,19 @@ def build(source, output, local_root, channel, repositories, release=False):
             source, staging,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
         )
+        manifest = validate_registry(
+            json.loads((staging / "frontend/cards.json").read_text("utf-8"))
+        )
+        definitions = {card["id"]: card for card in manifest}
+        selected_repositories = select_repositories(definitions, repositories or {})
         report = fetch_cards(
-            channel, staging / "frontend", repositories, local_root=local_root
+            channel,
+            staging / "frontend",
+            selected_repositories,
+            local_root=local_root,
+            definitions=definitions,
+            skip_unavailable=True,
+            omit=without_frontend,
         )
         archive_path = Path(temporary) / "wiser.zip"
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
@@ -40,6 +64,7 @@ def build(source, output, local_root, channel, repositories, release=False):
             staging / "frontend/card-releases.json",
             output.parent / "card-releases.json",
         )
+        (output.parent / "panel-config-release.json").unlink(missing_ok=True)
     return report
 
 
@@ -51,15 +76,20 @@ def main():
     parser.add_argument("--local-root", type=Path, default=ROOT.parent,
                         help="Directory containing sibling card repositories")
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
-    parser.add_argument("--schedule-repository", default=CARD_REPOSITORIES["schedule"])
-    parser.add_argument("--zigbee-repository", default=CARD_REPOSITORIES["zigbee"])
+    parser.add_argument("--repository", action="append", default=[], metavar="ID=OWNER/REPO")
+    parser.add_argument(
+        "--without-frontend",
+        action="store_true",
+        help="Package cards.json without any card or panel JavaScript bundles",
+    )
     args = parser.parse_args()
     try:
         report = build(
             ROOT / "custom_components/wiser", args.output, args.local_root,
             args.channel,
-            {"schedule": args.schedule_repository, "zigbee": args.zigbee_repository},
+            repository_overrides(args.repository),
             release=args.release,
+            without_frontend=args.without_frontend,
         )
     except Exception as error:
         parser.exit(1, f"Build failed: {error}\n")

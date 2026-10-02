@@ -22,7 +22,18 @@ def load_functions(filename, names, namespace):
     ]
     for node in functions:
         node.decorator_list = []
-    module = ast.Module(body=functions, type_ignores=[])
+    module = ast.Module(
+        body=[
+            ast.ImportFrom(
+                module="__future__",
+                names=[ast.alias(name="annotations")],
+                level=0,
+            ),
+            *functions,
+        ],
+        type_ignores=[],
+    )
+    ast.fix_missing_locations(module)
     exec(compile(module, filename, "exec", dont_inherit=True), namespace)
     return SimpleNamespace(**namespace)
 
@@ -31,8 +42,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_LEGACY_NAMING": "legacy_naming",
-            "CONF_SHOW_SCHEDULES_SIDEBAR": "show_schedules_sidebar",
-            "CONF_SHOW_ZIGBEE_SIDEBAR": "show_zigbee_sidebar",
+            "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_NAME": "name",
             "HomeAssistant": object,
             "ConfigEntry": object,
@@ -69,7 +79,10 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             hass = SimpleNamespace(config_entries=SimpleNamespace(async_update_entry=update))
             self.assertTrue(await functions.async_migrate_entry(hass, entry))
             saved = update.call_args.kwargs
-            self.assertEqual(saved["options"], options | {"legacy_naming": expected})
+            self.assertEqual(
+                saved["options"],
+                options | {"legacy_naming": expected},
+            )
             self.assertEqual(saved["minor_version"], 5)
 
     async def test_menu_available_without_opentherm(self):
@@ -87,8 +100,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             )
             preferences = {
                 "legacy_naming": enabled,
-                "show_schedules_sidebar": enabled,
-                "show_zigbee_sidebar": not enabled,
+                "show_wiser_sidebar": enabled,
             }
             result = await functions.async_step_ui_options(flow, preferences)
             self.assertEqual(result["data"], {"scan_interval": 30} | preferences)
@@ -103,12 +115,10 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             flow = SimpleNamespace(
                 config_entry=SimpleNamespace(options={
                     "legacy_naming": enabled,
-                    "show_schedules_sidebar": enabled,
-                    "show_zigbee_sidebar": not enabled,
+                    **({} if enabled else {"show_wiser_sidebar": False}),
                 }),
                 async_show_form=lambda **kwargs: kwargs,
             )
             result = await functions.async_step_ui_options(flow)
             self.assertIn(("legacy_naming", enabled), result["data_schema"])
-            self.assertIn(("show_schedules_sidebar", enabled), result["data_schema"])
-            self.assertIn(("show_zigbee_sidebar", not enabled), result["data_schema"])
+            self.assertIn(("show_wiser_sidebar", enabled), result["data_schema"])

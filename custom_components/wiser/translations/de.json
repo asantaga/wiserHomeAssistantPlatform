@@ -49,8 +49,7 @@
         "title": "UI-Optionen",
         "data": {
           "legacy_naming": "Bisherige Namensgebung",
-          "show_schedules_sidebar": "Wiser-Zeitpläne in der Seitenleiste anzeigen",
-          "show_zigbee_sidebar": "Wiser Zigbee in der Seitenleiste anzeigen"
+          "show_wiser_sidebar": "Wiser in der Seitenleiste anzeigen"
         },
         "data_description": {
           "legacy_naming": "Raumnamen in Wiser-Gerätenamen aufnehmen. Wenn diese Option aktiviert ist, werden Bereichsnamen beim Neuerstellen der Entitäts-IDs mit dem Standardformat unter Einstellungen → System → Entitäts-ID-Format (Home Assistant 2026.8 und neuer) doppelt verwendet, wenn Bereichs- und Wiser-Raumname übereinstimmen. Diese Option ändert keine bestehenden Entitäts-IDs."
@@ -224,10 +223,6 @@
     "opentherm_notification_title": { "message": "Wiser-OpenTherm-Befehl" }
   },
   "entity": {
-    "update": {
-      "schedule_card": { "name": "Wiser-Zeitplankarte" },
-      "zigbee_card": { "name": "Wiser-Zigbee-Karte" }
-    },
     "climate": {
       "heating": {
         "name": "Heizung"

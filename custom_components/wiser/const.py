@@ -6,27 +6,32 @@ Angelosantagata@gmail.com
 """
 
 from enum import StrEnum
+import json
+from pathlib import Path
 
 VERSION = "4.0.0-rc1"
 DOMAIN = "wiser"
 CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
-CONF_SHOW_SCHEDULES_SIDEBAR = "show_schedules_sidebar"
-CONF_SCHEDULES_PANEL_CONFIG = "schedules_panel_config"
-CONF_SHOW_ZIGBEE_SIDEBAR = "show_zigbee_sidebar"
-CONF_ZIGBEE_PANEL_CONFIG = "zigbee_panel_config"
+CONF_SHOW_WISER_SIDEBAR = "show_wiser_sidebar"
+CONF_WISER_PANEL_CONFIG = "wiser_panel_config"
 
-JSMODULES = [
-    {
-        "name": "Wiser Schedule Card",
-        "filename": "wiser-schedule-card.js",
-    },
-    {
-        "name": "Wiser Zigbee Card",
-        "filename": "wiser-zigbee-card.js",
-    },
-]
+
+def _load_card_manifest():
+    """Load the shared card registry used by packaging and runtime setup."""
+    try:
+        registry = json.loads(
+            (Path(__file__).parent / "frontend/cards.json").read_text("utf-8")
+        )
+        return registry.get("cards", []) if isinstance(registry, dict) else registry
+    except FileNotFoundError:
+        # Keep setup resilient if an incomplete installation omits the registry.
+        return []
+
+
+CARD_MANIFEST = _load_card_manifest()
+
 
 WISER_PLATFORMS = [
     "binary_sensor",

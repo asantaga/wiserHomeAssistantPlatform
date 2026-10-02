@@ -9,6 +9,12 @@ ROOT = Path(__file__).resolve().parents[1] / "custom_components/wiser/frontend"
 
 
 class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
+    def test_icons_include_official_wiser_w(self):
+        source = (ROOT / "wiser-icons.js").read_text()
+        self.assertIn('wiser: {', source)
+        self.assertIn('viewBox: "0 0 877 768"', source)
+        self.assertIn('{ name: "wiser", keywords:', source)
+
     async def test_icons_register_after_static_path_without_lovelace(self):
         tree = ast.parse((ROOT / "__init__.py").read_text())
         cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "JSModuleRegistration")
@@ -18,6 +24,7 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
         namespace = {
             "__file__": str(ROOT / "__init__.py"), "Path": Path,
             "card_version": version, "add_extra_js_url": register,
+            "async_load_registry": AsyncMock(),
             "URL_BASE": "/wiser", "MODE_STORAGE": "storage",
         }
         exec(compile(ast.Module(body=[method], type_ignores=[]), str(ROOT / "__init__.py"), "exec"), namespace)

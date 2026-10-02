@@ -44,7 +44,7 @@ def resolve_card(config_dir, filename, version_reader):
             or any(c not in "0123456789abcdef" for c in digest)
         ):
             return fallback
-        if not newer_version(record["version"], version):
+        if version != "missing" and not newer_version(record["version"], version):
             return fallback
         if sha256(cached.read_bytes()).hexdigest() != digest:
             return fallback

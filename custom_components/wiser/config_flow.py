@@ -39,7 +39,6 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
-    CONF_SHOW_ZIGBEE_SIDEBAR,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -56,7 +55,7 @@ from .const import (
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
-    CONF_SHOW_SCHEDULES_SIDEBAR,
+    CONF_SHOW_WISER_SIDEBAR,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -294,12 +293,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     ): BooleanSelector(),
                     vol.Optional(
-                        CONF_SHOW_SCHEDULES_SIDEBAR,
-                        default=self.config_entry.options.get(CONF_SHOW_SCHEDULES_SIDEBAR, False),
-                    ): BooleanSelector(),
-                    vol.Optional(
-                        CONF_SHOW_ZIGBEE_SIDEBAR,
-                        default=self.config_entry.options.get(CONF_SHOW_ZIGBEE_SIDEBAR, False),
+                        CONF_SHOW_WISER_SIDEBAR,
+                        default=self.config_entry.options.get(
+                            CONF_SHOW_WISER_SIDEBAR,
+                            True,
+                        ),
                     ): BooleanSelector(),
                 }
             ),
