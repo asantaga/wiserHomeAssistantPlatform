@@ -1,30 +1,42 @@
-# Adding frontend cards and panels
+# Adding Wiser frontend cards and panels
 
-After installing an integration version with runtime registry support, adding a
-card or panel that uses the existing Wiser APIs requires no integration PR.
+Wiser cards and panels are developed and released from their own repositories. The integration keeps only their definitions in `custom_components/wiser/frontend/cards.json`; compiled JavaScript bundles must not be committed to this repository.
 
-1. Publish a release in the card repository with the JavaScript bundle attached.
-2. Add its definition to `src/cards.json` in
-   [WiserFrontendPanelConfig](https://github.com/andyblac/WiserFrontendPanelConfig).
-3. Build and publish a registry release with `cards.json` attached.
-4. Home Assistant discovers the definition on its next daily card-update check.
-   To check sooner, run `homeassistant.update_entity` on an existing Wiser card
-   update entity. The registry and card checks follow the integration's HACS
-   prerelease switch.
-5. Install the new card using its update entity, then refresh the browser. Its
-   Lovelace resource and any panel tab are registered automatically. A new card
-   without an installed version is offered with version `0.0.0`.
+Adding a new definition requires an integration pull request and release. After that initial registration, new versions of the card or panel are released and updated independently through its Home Assistant update entity.
 
-Discovery downloads registry metadata only. JavaScript is downloaded when the
-user installs the card. The integration retains the last valid registry and
-installed bundles under `.storage/wiser_cards` across restarts and upgrades.
-A missing or invalid registry release leaves the existing definitions in use.
-Omitting a card from a later registry does not uninstall it or erase its settings.
-Existing IDs, filenames, repositories and component names are treated as stable
-identities; changing them requires an explicit migration rather than silently
-redirecting an existing installation.
+## Choose the frontend type
 
-## Registry definition
+The registry supports three types of frontend bundle:
+
+| Type | `component` | `panel` | `card` |
+| --- | --- | --- | --- |
+| Lovelace card only | Card custom element | `null` | Omit or `true` |
+| Sidebar panel only | Panel custom element | Panel custom element | `false` |
+| Card and sidebar panel | Card custom element | Panel custom element | Omit or `true` |
+
+A panel-only bundle is not added to the Lovelace resources list. The integration loads it only for its Wiser sidebar tab.
+
+## Prepare the frontend repository
+
+The repository must publish a GitHub release containing one compiled JavaScript asset whose name exactly matches the registry `filename`. The asset must:
+
+- Be at least 100 bytes and contain JavaScript rather than an HTML error page.
+- Define the custom element named by `component`.
+- Define the custom element named by `panel` when one is configured.
+- Use the shared `wiser/panel/configure` API instead of a panel-specific settings endpoint.
+- Begin with a version marker matching the asset filename and release version.
+
+For `wiser-energy-card.js` version `1.0.0`, the marker is:
+
+```js
+/*! WISER-CARD-VERSION wiser-energy-card 1.0.0 */
+```
+
+Use semantic release tags such as `v1.0.0` or `v1.1.0-beta.1`. Stable update checks ignore prereleases. When the HACS **Pre-release** switch is enabled for the integration, update checks consider stable and prerelease versions.
+
+## Add the registry definition
+
+Add an entry to the `cards` array in `custom_components/wiser/frontend/cards.json`:
 
 ```json
 {
@@ -37,26 +49,93 @@ redirecting an existing installation.
 }
 ```
 
-`cards.json` contains an array of these objects. The `id` is a stable registry
-identifier independent of the filename. Use `null` for `panel` for a card with no
-sidebar view. IDs, filenames, card components and non-null panel components must
-be unique.
-The runtime registry accepts up to 100 definitions and a 256 KiB registry asset.
+The fields are:
 
-The JavaScript release must include a matching version marker, for example:
+| Field | Purpose |
+| --- | --- |
+| `id` | Stable internal identifier used for settings and the update entity. |
+| `name` | Name displayed by the Home Assistant update entity. |
+| `filename` | Exact JavaScript filename attached to every GitHub release. |
+| `repository` | GitHub repository in `owner/repository` form. |
+| `component` | Custom element defined by the JavaScript bundle. |
+| `panel` | Sidebar panel custom element, or `null` for a card without a panel. |
+| `card` | Set to `false` for a panel-only bundle; otherwise omit it. |
+| `legacy_filenames` | Previous filenames retained only when migrating a renamed card. |
 
-```js
-/*! WISER-CARD-VERSION wiser-energy-card 1.0.0 */
+A card without a sidebar panel uses `"panel": null`. A panel-only definition uses the panel custom element for both `component` and `panel`:
+
+```json
+{
+  "id": "hub",
+  "name": "Wiser Hub Panel",
+  "filename": "wiser-hub-panel.js",
+  "repository": "andyblac/wiser-hub-panel",
+  "component": "wiser-hub-panel",
+  "panel": "wiser-hub-panel",
+  "card": false
+}
 ```
 
-It must define the declared card and optional panel custom elements. The existing
-card repositories demonstrate the panel contract. Each panel receives `hass` and
-`panel.config`, including `panel_id`, `hubs`, `hub_ids`, per-hub `card_configs`,
-and `card_url`. Always use the supplied `panel_id` when saving settings.
+IDs, filenames, component names and non-null panel names must be unique. Treat them as permanent identities after release. Renaming one requires an explicit migration so existing resources, settings and entity history are preserved. The versioned registry document supports up to 100 definitions:
 
-## Shared settings endpoint
+```json
+{
+  "schema_version": 1,
+  "cards": []
+}
+```
 
-New panels save preferences using this administrator-only WebSocket command:
+## Test registration locally
+
+For the normal development layout, place the frontend repository beside this integration repository and build its `dist/<filename>` output. A development integration build automatically prefers that local bundle:
+
+```text
+GitHub/
+├── wiserHomeAssistantPlatform/
+└── wiser-energy-card/
+    └── dist/
+        └── wiser-energy-card.js
+```
+
+```sh
+python3 scripts/build.py --channel dev
+```
+
+To test installation through Home Assistant instead, edit the installed `custom_components/wiser/frontend/cards.json` and run **Check for updates** on any Wiser frontend update entity. The shared coordinator reloads and validates the file, creates an update entity for the new definition, and offers it as installed version `0.0.0`. This does not require an integration rebuild or Home Assistant restart.
+
+To build a package containing the definitions but none of the JavaScript bundles, run:
+
+```sh
+python3 scripts/build.py --channel dev --without-frontend
+```
+
+This is useful for testing initial installation through all frontend update entities. The build does not contact any card or panel repository.
+
+You can override a repository during development without changing the registry:
+
+```sh
+python3 scripts/build.py --channel dev \
+  --repository energy=example/wiser-energy-card
+```
+
+## Submit the integration pull request
+
+The pull request for a new card or panel should contain:
+
+- Its entry in `custom_components/wiser/frontend/cards.json`.
+- Any integration backend, WebSocket or shared-shell changes it requires.
+- Tests for new integration behavior.
+- A changelog entry when required by the integration contribution guidelines.
+
+Publish a usable frontend release before the integration release is built. If the frontend repository or release asset is unavailable during packaging, the integration build continues and omits that bundle. Its definition remains in `cards.json`, so Home Assistant can install it later through the update entity.
+
+After the definition has shipped, normal frontend releases require no further integration pull request. Publish the correctly named and versioned JavaScript asset in the frontend repository; Home Assistant will offer it through the existing update entity.
+
+## Sidebar panel contract
+
+Each registered panel receives `hass` and `panel.config`. The configuration includes `panel_id`, `hubs`, `hub_ids`, per-hub `card_configs`, and `card_url`. Use the supplied `panel_id` when saving settings.
+
+Panel preferences use the administrator-only shared WebSocket command:
 
 ```js
 await hass.callWS({
@@ -68,29 +147,6 @@ await hass.callWS({
 });
 ```
 
-The integration stores these settings under
-`wiser_panel_config.energy` in each selected hub's options and refreshes the panel
-without reloading the hub. All panels, including the existing ones, use this
-command. The former per-panel
-commands have been removed; deploy the rebuilt card bundles with this integration
-bridge. There are no separate per-panel settings options or reload exclusions.
-Tab ordering and custom titles continue to use
-`wiser/panel/configure_tabs`.
+The integration stores this example under `wiser_panel_config.energy` in each selected hub's options and refreshes the panel without reloading the hub. Tab ordering and custom titles continue to use `wiser/panel/configure_tabs`.
 
-The shared panel shell and backend APIs still ship with the integration. New
-backend commands, new hub data or changes to the shared shell require an
-integration release; adding a card or panel using the existing contract does not.
-
-## Packaging and source ownership
-
-The integration repository contains no maintained card list. Builds read the
-external registry's `dist/cards.json` for local development, or its published
-release asset for release builds, and generate the package's offline snapshot.
-The build loops over every definition, including new IDs and repositories.
-Optional local overrides use `--repository ID=OWNER/REPOSITORY`; there are no
-card-specific build flags. Publish the generic-API card bundles before building
-an integration release with the bridge.
-
-Source checkouts without a generated snapshot start with an empty card list and
-can discover definitions from the external registry. Normal ZIP installs include
-the validated registry snapshot and card bundles for offline setup.
+The shared panel shell and backend APIs ship with the integration. A panel that needs new backend commands, hub data or shared-shell behavior must include those changes in its integration pull request.

@@ -12,8 +12,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
-PANEL_CONFIG_REPOSITORY = "andyblac/WiserFrontendPanelConfig"
-PANEL_CONFIG_FILENAME = "cards.json"
+REGISTRY_PATH = ROOT / "custom_components/wiser/frontend/cards.json"
 
 
 # Load the dependency-free schema without importing the Home Assistant package.
@@ -26,54 +25,6 @@ _MANIFEST = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_MANIFEST)
 validate_card_manifest = _MANIFEST.validate_manifest
 validate_registry = _MANIFEST.validate_registry
-
-
-def fetch_panel_config(
-    channel,
-    local_root=None,
-    release=False,
-    repository=PANEL_CONFIG_REPOSITORY,
-):
-    """Load definitions exclusively from the external registry build or release."""
-    local = (
-        Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / PANEL_CONFIG_FILENAME
-        if local_root is not None and not release
-        else None
-    )
-    if local is not None and local.is_file():
-        contents = local.read_bytes()
-        build_info = local.with_name("build-info.json")
-        version = None
-        if build_info.is_file():
-            version = json.loads(build_info.read_text()).get("version")
-        record = {
-            "repository": repository,
-            "source": "local",
-            "asset": PANEL_CONFIG_FILENAME,
-            "path": str(local.resolve()),
-            "digest": "sha256:" + sha256(contents).hexdigest(),
-        }
-        if version:
-            record["version"] = version
-    else:
-        selected = select_release(list_releases(repository), channel)
-        asset = select_asset(selected, PANEL_CONFIG_FILENAME)
-        contents, digest = download_asset(repository, asset)
-        record = {
-            "repository": repository,
-            "source": "release",
-            "tag": selected["tag_name"],
-            "prerelease": selected["prerelease"],
-            "asset": PANEL_CONFIG_FILENAME,
-            "asset_id": asset["id"],
-            "url": asset["browser_download_url"],
-            "digest": digest,
-        }
-    try:
-        manifest = json.loads(contents)
-    except (TypeError, json.JSONDecodeError) as error:
-        raise ValueError("Invalid cards.json") from error
-    return validate_registry(manifest), record
 
 
 def list_releases(repository):
@@ -139,6 +90,7 @@ def fetch_cards(
     plan=False,
     local_root=None,
     skip_unavailable=False,
+    omit=False,
 ):
     report = []
     payloads = {}
@@ -147,6 +99,14 @@ def fetch_cards(
     for card, repository in repositories.items():
         definition = definitions[card]
         filename = definition["filename"]
+        if omit:
+            omitted.update((filename, *definition.get("legacy_filenames", [])))
+            report.append({
+                "repository": repository,
+                "source": "omitted",
+                "asset": filename,
+            })
+            continue
         local = (
             Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / filename
             if local_root is not None else None
@@ -240,11 +200,10 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=Path("dist/wiser/frontend"))
     parser.add_argument("--card", default="all", help="Registry card ID, or all")
     parser.add_argument("--repository", action="append", default=[], metavar="ID=OWNER/REPO")
-    parser.add_argument("--panel-config-repository", default=PANEL_CONFIG_REPOSITORY)
     parser.add_argument("--plan", action="store_true", help="Resolve registry and releases without downloading card bundles")
     args = parser.parse_args()
     try:
-        manifest, _ = fetch_panel_config(args.channel, release=True, repository=args.panel_config_repository)
+        manifest = validate_registry(json.loads(REGISTRY_PATH.read_text("utf-8")))
         definitions = {card["id"]: card for card in manifest}
         repositories = select_repositories(definitions, repository_overrides(args.repository))
         if args.card != "all":

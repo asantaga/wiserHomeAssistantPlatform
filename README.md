@@ -62,26 +62,28 @@ To build a stable release package, run:
 python3 scripts/build.py --release --channel stable
 ```
 
-For a prerelease package, use `--channel dev` instead. The build downloads every card defined by the external frontend registry from GitHub. Stable builds use stable card releases; prerelease builds use the most recently published stable or prerelease card release. In a running installation, card update entities follow the HACS **Pre-release** switch for this integration; without that option they offer stable card releases only.
+For a prerelease package, use `--channel dev` instead. The build downloads every
+card and panel declared in `custom_components/wiser/frontend/cards.json` from
+its own GitHub repository. Stable builds use stable frontend releases;
+prerelease builds use the most recently published stable or prerelease release.
+In a running installation, each frontend update entity follows the HACS
+**Pre-release** switch for this integration; without that option it offers stable
+releases only. See [Adding frontend cards and panels](docs/frontend-registry.md)
+for the registry format and shared panel API.
 
-The frontend card registry is maintained separately in
-[`andyblac/WiserFrontendPanelConfig`](https://github.com/andyblac/WiserFrontendPanelConfig).
-Local development builds prefer that sibling repository's validated
-`dist/cards.json`; release builds download its published `cards.json` asset. A
-snapshot is generated as `frontend/cards.json` in the package; no card list is
-maintained in this integration repository. At runtime the integration checks
-published registry releases daily and caches the last valid registry. New cards
-appear as independent update entities and can be installed without updating the
-integration. Installed cards and the cached registry remain available offline.
-See [Adding frontend cards and panels](docs/frontend-registry.md) for the release
-workflow and shared panel API.
+For an integration-only test package that retains the registry but deliberately
+omits every card and panel bundle, run:
 
-The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` and
-`dist/panel-config-release.json` files record the card and registry artifacts
-included in the package. If an individual published card or panel repository is
-temporarily unavailable, its bundle is omitted and the integration still
-builds; its Home Assistant update entity can install it later. Invalid local
-development bundles and an unavailable registry still fail the build.
+```sh
+python3 scripts/build.py --channel dev --without-frontend
+```
+
+The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` file
+records the frontend artifacts included in the package. If an individual card
+or panel repository is temporarily unavailable, its bundle is omitted and the
+integration still builds; its Home Assistant update entity can install it later.
+Invalid local development bundles and an invalid bundled registry still fail the
+build.
 
 The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.zip` when an integration release is published. Preview runs provide a downloadable **wiser-package** artifact without publishing a release.
 

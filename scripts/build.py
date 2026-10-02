@@ -8,11 +8,10 @@ import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from fetch_card_releases import (
-    PANEL_CONFIG_REPOSITORY,
     fetch_cards,
-    fetch_panel_config,
     repository_overrides,
     select_repositories,
+    validate_registry,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +24,7 @@ def build(
     channel,
     repositories=None,
     release=False,
-    panel_config_repository=PANEL_CONFIG_REPOSITORY,
+    without_frontend=False,
 ):
     """Stage a fresh integration and replace the ZIP only after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
@@ -38,14 +37,8 @@ def build(
             source, staging,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
         )
-        manifest, config_record = fetch_panel_config(
-            channel,
-            local_root=local_root,
-            release=release,
-            repository=panel_config_repository,
-        )
-        (staging / "frontend/cards.json").write_text(
-            json.dumps({"schema_version": 1, "cards": manifest}, indent=2) + "\n"
+        manifest = validate_registry(
+            json.loads((staging / "frontend/cards.json").read_text("utf-8"))
         )
         definitions = {card["id"]: card for card in manifest}
         selected_repositories = select_repositories(definitions, repositories or {})
@@ -56,9 +49,7 @@ def build(
             local_root=local_root,
             definitions=definitions,
             skip_unavailable=True,
-        )
-        (staging / "frontend/panel-config-release.json").write_text(
-            json.dumps(config_record, indent=2) + "\n"
+            omit=without_frontend,
         )
         archive_path = Path(temporary) / "wiser.zip"
         with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
@@ -73,10 +64,7 @@ def build(
             staging / "frontend/card-releases.json",
             output.parent / "card-releases.json",
         )
-        shutil.copyfile(
-            staging / "frontend/panel-config-release.json",
-            output.parent / "panel-config-release.json",
-        )
+        (output.parent / "panel-config-release.json").unlink(missing_ok=True)
     return report
 
 
@@ -90,7 +78,9 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
     parser.add_argument("--repository", action="append", default=[], metavar="ID=OWNER/REPO")
     parser.add_argument(
-        "--panel-config-repository", default=PANEL_CONFIG_REPOSITORY
+        "--without-frontend",
+        action="store_true",
+        help="Package cards.json without any card or panel JavaScript bundles",
     )
     args = parser.parse_args()
     try:
@@ -99,7 +89,7 @@ def main():
             args.channel,
             repository_overrides(args.repository),
             release=args.release,
-            panel_config_repository=args.panel_config_repository,
+            without_frontend=args.without_frontend,
         )
     except Exception as error:
         parser.exit(1, f"Build failed: {error}\n")

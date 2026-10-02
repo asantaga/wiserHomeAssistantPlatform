@@ -26,7 +26,7 @@ def _load_card_manifest():
         )
         return registry.get("cards", []) if isinstance(registry, dict) else registry
     except FileNotFoundError:
-        # Source checkouts have no card definitions; builds inject the registry.
+        # Keep setup resilient if an incomplete installation omits the registry.
         return []
 
 

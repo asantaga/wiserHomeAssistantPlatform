@@ -11,16 +11,24 @@ FETCH = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FETCH)
 
 
-CARD_MANIFEST = json.loads((Path(__file__).parent / "fixtures/frontend_cards.json").read_text())
+CARD_MANIFEST = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "custom_components/wiser/frontend/cards.json"
+    ).read_text()
+)["cards"]
 CARD_REPOSITORIES = {card["id"]: card["repository"] for card in CARD_MANIFEST}
 CARD_DEFINITIONS = {card["id"]: card for card in CARD_MANIFEST}
 
 
 def release(tag, date, prerelease=False, card="zigbee", draft=False, asset=True):
+    definition = CARD_DEFINITIONS[card]
+    filename = definition["filename"]
+    repository = definition["repository"]
     return {
         "tag_name": tag, "published_at": date, "prerelease": prerelease, "draft": draft,
-        "assets": [{"id": 1, "name": f"wiser-{card}-card.js", "state": "uploaded", "size": 200,
-                    "browser_download_url": f"https://github.com/andyblac/wiser-{card}-card/releases/download/{tag}/wiser-{card}-card.js"}] if asset else [],
+        "assets": [{"id": 1, "name": filename, "state": "uploaded", "size": 200,
+                    "browser_download_url": f"https://github.com/{repository}/releases/download/{tag}/{filename}"}] if asset else [],
     }
 
 
@@ -68,29 +76,7 @@ class CardReleaseTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must have one"):
             FETCH.select_asset(release("missing", "2026", asset=False), "wiser-zigbee-card.js")
 
-    def test_external_panel_config_prefers_local_build(self):
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            built = root / "WiserFrontendPanelConfig/dist/cards.json"
-            built.parent.mkdir(parents=True)
-            built.write_text(json.dumps(CARD_MANIFEST))
-            with patch.object(FETCH, "list_releases") as releases:
-                manifest, record = FETCH.fetch_panel_config(
-                    "dev", local_root=root
-                )
-            releases.assert_not_called()
-            self.assertEqual(manifest, CARD_MANIFEST)
-            self.assertEqual(record["source"], "local")
-
-    def test_external_panel_config_rejects_invalid_registry(self):
-        with TemporaryDirectory() as directory:
-            packaged = Path(directory) / "WiserFrontendPanelConfig/dist/cards.json"
-            packaged.parent.mkdir(parents=True)
-            packaged.write_text('[{"id":"bad"}]')
-            with self.assertRaisesRegex(ValueError, "Invalid frontend card"):
-                FETCH.fetch_panel_config("dev", local_root=Path(directory))
-
-    def test_external_registry_accepts_panel_only_bundle_definition(self):
+    def test_registry_accepts_panel_only_bundle_definition(self):
         definition = {
             "id": "hub",
             "name": "Wiser Hub Panel",
@@ -102,41 +88,10 @@ class CardReleaseTest(unittest.TestCase):
         }
         self.assertEqual(FETCH.validate_card_manifest([definition]), [definition])
 
-    def test_external_registry_rejects_invalid_card_flag(self):
+    def test_registry_rejects_invalid_card_flag(self):
         definition = CARD_MANIFEST[0] | {"card": "false"}
         with self.assertRaisesRegex(ValueError, "card flag"):
             FETCH.validate_card_manifest([definition])
-
-    def test_release_build_fetches_published_panel_config(self):
-        published = {
-            "tag_name": "v1.0.0-beta.1",
-            "published_at": "2026-09-29T00:00:00Z",
-            "prerelease": True,
-            "draft": False,
-            "assets": [{
-                "id": 42,
-                "name": "cards.json",
-                "state": "uploaded",
-                "size": 661,
-                "browser_download_url": (
-                    "https://github.com/andyblac/WiserFrontendPanelConfig/"
-                    "releases/download/v1.0.0-beta.1/cards.json"
-                ),
-            }],
-        }
-        payload = json.dumps(CARD_MANIFEST).encode()
-        with patch.object(FETCH, "list_releases", return_value=[published]), patch.object(
-            FETCH, "download_asset", return_value=(payload, "sha256:registry")
-        ) as download:
-            manifest, record = FETCH.fetch_panel_config(
-                "dev", release=True
-            )
-        download.assert_called_once_with(
-            FETCH.PANEL_CONFIG_REPOSITORY, published["assets"][0]
-        )
-        self.assertEqual(manifest, CARD_MANIFEST)
-        self.assertEqual(record["tag"], "v1.0.0-beta.1")
-        self.assertEqual(record["digest"], "sha256:registry")
 
     def test_plan_does_not_download_or_write(self):
         with TemporaryDirectory() as directory:

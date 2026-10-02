@@ -39,7 +39,7 @@ Please include:
 | Integration source | `custom_components/wiser/` |
 | Hub communication | the separate `aioWiserHeatAPI` library, pinned in `manifest.json` |
 | Frontend panel/card plumbing | `custom_components/wiser/frontend/` |
-| Frontend cards and panels | repositories declared in [WiserFrontendPanelConfig](https://github.com/andyblac/WiserFrontendPanelConfig) |
+| Frontend cards and panels | repositories declared in `custom_components/wiser/frontend/cards.json` |
 | Tests | `tests/` |
 | Packaging scripts | `scripts/` |
 
@@ -50,6 +50,8 @@ Two things that trip people up:
 - **Card bundles are not committed to this repository.** They are downloaded
   from the card repositories' GitHub releases at build time. Do not add built
   `.js` card assets to `custom_components/wiser/frontend/`.
+- Follow [Adding Wiser frontend cards and panels](docs/frontend-registry.md) to
+  register a new frontend repository and test its independent update entity.
 
 ## Branching and pull requests
 
