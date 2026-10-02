@@ -42,6 +42,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
 from .const import (
+    CONF_EQUIPMENT_SENSORS,
     CONF_OPENTHERM_SENSORS,
     DATA,
     DOMAIN,
@@ -117,6 +118,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     """Initialize the entry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
     wiser_sensors = []
+    equipment_sensors_enabled = config_entry.options.get(
+        CONF_EQUIPMENT_SENSORS, False
+    )
 
     # Add signal sensors for all devices
     _LOGGER.debug("Setting up Device sensors")
@@ -275,9 +279,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for smartplug in data.wiserhub.devices.smartplugs.all:
             # Hub V2 equipment telemetry
             if smartplug.equipment_id > 0:
-                wiser_sensors.append(
-                    WiserEquipmentSensor(data, smartplug.id, )
-                )
+                if equipment_sensors_enabled:
+                    wiser_sensors.append(WiserEquipmentSensor(data, smartplug.id))
                 wiser_sensors.extend(
                     [
                         WiserLTSPowerSensor(
@@ -341,11 +344,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ),
                 ]
             )
-            # Add a sensor equipment for powertags         
-            if hasattr(power_tag, "equipment"):
-                wiser_sensors.append(
-                    WiserEquipmentSensor(data, power_tag.id, )
-                )
+            # Add an equipment sensor for PowerTags
+            if equipment_sensors_enabled and power_tag.equipment is not None:
+                wiser_sensors.append(WiserEquipmentSensor(data, power_tag.id))
 
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
@@ -392,9 +393,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
             # Hub V2 equipment telemetry
             if heating_actuator.equipment_id > 0:
-                wiser_sensors.append(
-                    WiserEquipmentSensor(data, heating_actuator.id, )
-                )
+                if equipment_sensors_enabled:
+                    wiser_sensors.append(
+                        WiserEquipmentSensor(data, heating_actuator.id)
+                    )
 
                 wiser_sensors.extend(
                     [
