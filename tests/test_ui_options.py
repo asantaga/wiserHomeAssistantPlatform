@@ -31,9 +31,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_LEGACY_NAMING": "legacy_naming",
+            "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
             "CONF_SHOW_SCHEDULES_SIDEBAR": "show_schedules_sidebar",
             "CONF_SHOW_ZIGBEE_SIDEBAR": "show_zigbee_sidebar",
             "CONF_NAME": "name",
+            "DATA": "data",
+            "DOMAIN": "wiser",
             "HomeAssistant": object,
             "ConfigEntry": object,
             "FlowResult": dict,
@@ -74,9 +77,105 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_menu_available_without_opentherm(self):
         functions = load_functions("config_flow.py", {"async_step_init"}, self.namespace)
-        flow = SimpleNamespace(_opentherm=lambda: None, async_show_menu=lambda **kw: kw)
+        flow = SimpleNamespace(
+            _opentherm=lambda: None,
+            _equipment_available=lambda: False,
+            async_show_menu=lambda **kw: kw,
+        )
         result = await functions.async_step_init(flow)
         self.assertIn("ui_options", result["menu_options"])
+        self.assertNotIn("equipment_sensors", result["menu_options"])
+
+    async def test_equipment_menu_is_below_opentherm(self):
+        functions = load_functions(
+            "config_flow.py", {"async_step_init"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _opentherm=lambda: object(),
+            _equipment_available=lambda: True,
+            async_show_menu=lambda **kw: kw,
+        )
+        result = await functions.async_step_init(flow)
+        self.assertLess(
+            result["menu_options"].index("opentherm_sensors"),
+            result["menu_options"].index("equipment_sensors"),
+        )
+
+    async def test_equipment_menu_does_not_require_opentherm(self):
+        functions = load_functions(
+            "config_flow.py", {"async_step_init"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _opentherm=lambda: None,
+            _equipment_available=lambda: True,
+            async_show_menu=lambda **kw: kw,
+        )
+        result = await functions.async_step_init(flow)
+        self.assertIn("equipment_sensors", result["menu_options"])
+        self.assertNotIn("opentherm_sensors", result["menu_options"])
+
+    def test_equipment_menu_requires_a_compatible_device(self):
+        functions = load_functions(
+            "config_flow.py", {"_equipment_available"}, self.namespace
+        )
+
+        def flow_with_devices(*, smartplugs=(), power_tags=(), actuators=()):
+            devices = SimpleNamespace(
+                smartplugs=SimpleNamespace(all=smartplugs),
+                power_tags=SimpleNamespace(all=power_tags),
+                heating_actuators=SimpleNamespace(all=actuators),
+            )
+            return SimpleNamespace(
+                config_entry=SimpleNamespace(entry_id="entry"),
+                hass=SimpleNamespace(
+                    data={
+                        "wiser": {
+                            "entry": {
+                                "data": SimpleNamespace(
+                                    wiserhub=SimpleNamespace(devices=devices)
+                                )
+                            }
+                        }
+                    }
+                ),
+            )
+
+        self.assertFalse(functions._equipment_available(flow_with_devices()))
+        self.assertTrue(
+            functions._equipment_available(
+                flow_with_devices(
+                    power_tags=(SimpleNamespace(equipment=object()),)
+                )
+            )
+        )
+
+    async def test_equipment_option_defaults_off_and_preserves_options(self):
+        self.namespace.update(
+            vol=SimpleNamespace(
+                Optional=lambda key, default: (key, default),
+                Schema=lambda data: data,
+            ),
+            BooleanSelector=lambda: bool,
+        )
+        functions = load_functions(
+            "config_flow.py", {"async_step_equipment_sensors"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _equipment_available=lambda: True,
+            config_entry=SimpleNamespace(options={"scan_interval": 30}),
+            async_show_form=lambda **kwargs: kwargs,
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+        form = await functions.async_step_equipment_sensors(flow)
+        self.assertIn(("equipment_sensors", False), form["data_schema"])
+
+        saved = await functions.async_step_equipment_sensors(
+            flow, {"equipment_sensors": True}
+        )
+        self.assertEqual(
+            saved["data"],
+            {"scan_interval": 30, "equipment_sensors": True},
+        )
 
     async def test_saving_ui_options_preserves_other_options(self):
         functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)

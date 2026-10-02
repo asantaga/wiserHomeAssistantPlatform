@@ -91,6 +91,7 @@ def _load_sensor_module() -> ModuleType:
     _module(
         "wiser.const",
         DATA="data",
+        CONF_EQUIPMENT_SENSORS="equipment_sensors",
         CONF_OPENTHERM_SENSORS="opentherm_sensors",
         DOMAIN="wiser",
         ENTITY_PREFIX="Wiser",
@@ -371,9 +372,14 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
 
         self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
 
-    def test_hub_v2_setup_does_not_create_duplicate_equipment_readings(self) -> None:
+    def test_detailed_equipment_readings_are_opt_in(self) -> None:
         setup_source = SOURCE_PATH.read_text().split("class WiserSensor", 1)[0]
-        self.assertNotIn("WiserEquipmentSensor(", setup_source)
+        self.assertIn(
+            'config_entry.options.get(\n        CONF_EQUIPMENT_SENSORS, False',
+            setup_source,
+        )
+        self.assertEqual(setup_source.count("WiserEquipmentSensor("), 3)
+        self.assertEqual(setup_source.count("if equipment_sensors_enabled"), 3)
         self.assertNotIn('legacy_name="Equipment Energy Delivered"', setup_source)
 
     def test_power_display_name_does_not_change_historical_unique_id_input(
