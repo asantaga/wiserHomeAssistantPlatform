@@ -47,6 +47,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_EQUIPMENT_SENSORS,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
@@ -265,14 +266,64 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return None
         return getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
 
+    def _equipment_available(self):
+        """Return whether the loaded entry has equipment data available."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return False
+        devices = entry_data[DATA].wiserhub.devices
+
+        def all_devices(collection_name):
+            collection = getattr(devices, collection_name, None)
+            return getattr(collection, "all", ())
+
+        return (
+            any(
+                getattr(device, "equipment_id", 0) > 0
+                for device in all_devices("smartplugs")
+            )
+            or any(
+                device.equipment is not None
+                for device in all_devices("power_tags")
+            )
+            or any(
+                getattr(device, "equipment_id", 0) > 0
+                for device in all_devices("heating_actuators")
+            )
+        )
+
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
         menu_options = ["main_params", "automation_params", "ui_options"]
         if self._opentherm() is not None:
             menu_options.append("opentherm_sensors")
+        if self._equipment_available():
+            menu_options.append("equipment_sensors")
         return self.async_show_menu(
             step_id="init",
             menu_options=menu_options,
+        )
+
+    async def async_step_equipment_sensors(self, user_input=None):
+        """Configure detailed equipment data sensors."""
+        if not self._equipment_available():
+            return self.async_abort(reason="equipment_not_available")
+        if user_input is not None:
+            return self.async_create_entry(
+                data=self.config_entry.options | user_input
+            )
+        return self.async_show_form(
+            step_id="equipment_sensors",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_EQUIPMENT_SENSORS,
+                        default=self.config_entry.options.get(
+                            CONF_EQUIPMENT_SENSORS, False
+                        ),
+                    ): BooleanSelector(),
+                }
+            ),
         )
 
     async def async_step_ui_options(self, user_input=None):
