@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import __future__
 import asyncio
 import importlib.util
 from pathlib import Path
@@ -95,7 +96,17 @@ def _load_switch_module() -> ModuleType:
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    # The integration targets Home Assistant's newer Python runtime. Compile
+    # annotations lazily so this lightweight regression test also runs with the
+    # older system Python available in the local development environment.
+    source = SOURCE_PATH.read_text(encoding="utf-8")
+    code = compile(
+        source,
+        SOURCE_PATH,
+        "exec",
+        flags=__future__.annotations.compiler_flag,
+    )
+    exec(code, module.__dict__)
     return module
 
 
@@ -151,6 +162,73 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
         asyncio.run(switch.async_turn_off())
 
         self.assertEqual(self._override_calls, ["Off"])
+
+
+class _FakeSmartPlug:
+    def __init__(self, *, is_on: bool) -> None:
+        self.is_on = is_on
+        self.schedule = None
+        self.control_source = "Manual"
+        self.manual_state = "On" if is_on else "Off"
+        self.mode = "Manual"
+        self.name = "Test Plug"
+        self.room_id = 0
+        self.away_mode_action = "Off"
+        self.scheduled_state = "Off"
+        self.schedule_id = 0
+        self.commands = []
+
+    async def turn_on(self) -> None:
+        # The real API object is not updated until the follow-up hub refresh.
+        self.commands.append("turn_on")
+
+    async def turn_off(self) -> None:
+        self.commands.append("turn_off")
+
+
+class WiserSmartPlugImmediateStateTest(unittest.TestCase):
+    """Tests that smart-plug commands update the HA entity before refresh."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def _switch(self, *, is_on: bool):
+        plug = _FakeSmartPlug(is_on=is_on)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat045XXX"),
+                devices=SimpleNamespace(get_by_id=lambda _id: plug),
+                rooms=SimpleNamespace(get_by_id=lambda _id: None),
+            )
+        )
+        switch = self.switch_module.WiserSmartPlugSwitch(data, 1, "Wiser Test Plug")
+        events = []
+        switch.async_write_ha_state = lambda: events.append(
+            ("write", switch.is_on, switch.extra_state_attributes["output_state"])
+        )
+
+        async def refresh(delay=0):
+            events.append(("refresh", delay, switch.is_on))
+
+        switch.async_force_update = refresh
+        return switch, plug, events
+
+    def test_turn_on_publishes_on_before_delayed_refresh(self) -> None:
+        switch, plug, events = self._switch(is_on=False)
+
+        asyncio.run(switch.async_turn_on())
+
+        self.assertEqual(plug.commands, ["turn_on"])
+        self.assertEqual(events, [("write", True, "On"), ("refresh", 2, True)])
+
+    def test_turn_off_publishes_off_before_delayed_refresh(self) -> None:
+        switch, plug, events = self._switch(is_on=True)
+
+        asyncio.run(switch.async_turn_off())
+
+        self.assertEqual(plug.commands, ["turn_off"])
+        self.assertEqual(events, [("write", False, "Off"), ("refresh", 2, False)])
 
 
 if __name__ == "__main__":
