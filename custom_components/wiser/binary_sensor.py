@@ -17,6 +17,7 @@ from .helpers import (
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_light_binary_sensor_unique_id,
     get_unique_id,
 )
 from .opentherm import (
@@ -486,6 +487,13 @@ class WiserStateIsDimmable(BaseBinarySensor):
     def name(self):
         """Return the name of the sensor."""
         return f"{ENTITY_PREFIX} {self._light.name} {self._sensor_type}"
+
+    @property
+    def unique_id(self):
+        """Return the per-channel light capability sensor unique ID."""
+        return get_light_binary_sensor_unique_id(
+            self._data, self._light, self._sensor_type
+        )
 
 
 class WiserStateIsTiltSupported(BaseBinarySensor):

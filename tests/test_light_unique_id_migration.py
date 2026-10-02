@@ -143,6 +143,8 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
 
     def test_capability_binary_sensors_map_name(self) -> None:
         mapping = self._mapping()
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[0]
         old = self._unique_id(
             "binary_sensor",
             "Is Dimmable",
@@ -152,6 +154,12 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "binary_sensor", "Is Dimmable", "Wiser Diele Is Dimmable"
         )
         self.assertEqual(mapping[old], new)
+        self.assertEqual(
+            self.helpers.get_light_binary_sensor_unique_id(
+                data, light, "Is Dimmable"
+            ),
+            new,
+        )
 
     def test_no_room_light_uses_type_and_name(self) -> None:
         mapping = self._mapping()
