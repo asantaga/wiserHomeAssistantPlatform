@@ -78,7 +78,10 @@ workflow and shared panel API.
 
 The output is `dist/wiser.zip`. The accompanying `dist/card-releases.json` and
 `dist/panel-config-release.json` files record the card and registry artifacts
-included in the package. Missing or invalid assets fail the build.
+included in the package. If an individual published card or panel repository is
+temporarily unavailable, its bundle is omitted and the integration still
+builds; its Home Assistant update entity can install it later. Invalid local
+development bundles and an unavailable registry still fail the build.
 
 The **Publish** GitHub Actions workflow runs the same build and attaches `wiser.zip` when an integration release is published. Preview runs provide a downloadable **wiser-package** artifact without publishing a release.
 

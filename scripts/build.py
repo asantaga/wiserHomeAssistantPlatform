@@ -55,6 +55,7 @@ def build(
             selected_repositories,
             local_root=local_root,
             definitions=definitions,
+            skip_unavailable=True,
         )
         (staging / "frontend/panel-config-release.json").write_text(
             json.dumps(config_record, indent=2) + "\n"

@@ -139,15 +139,32 @@ class BuildTest(unittest.TestCase):
             self.build()
         self.assertFalse(self.output.exists())
 
-    def test_failed_fallback_keeps_previous_package(self):
+    def test_failed_fallback_omits_only_the_unavailable_bundle(self):
         self.local("schedule")
         self.local("rooms")
         self.output.parent.mkdir()
         self.output.write_bytes(b"previous package")
         with patch.object(FETCH, "list_releases", side_effect=ValueError("unavailable")):
-            with self.assertRaisesRegex(ValueError, "unavailable"):
-                self.build()
-        self.assertEqual(self.output.read_bytes(), b"previous package")
+            report = self.build()
+        self.assertEqual(
+            [record["source"] for record in report],
+            ["local", "unavailable", "local"],
+        )
+        self.assertEqual(report[1]["error"], "unavailable")
+        with ZipFile(self.output) as archive:
+            self.assertNotIn("frontend/wiser-zigbee-card.js", archive.namelist())
+            self.assertEqual(
+                archive.read("frontend/wiser-schedule-card.js"),
+                self.payloads["schedule"],
+            )
+            self.assertEqual(
+                archive.read("frontend/wiser-rooms-card.js"),
+                self.payloads["rooms"],
+            )
+            self.assertEqual(
+                json.loads(archive.read("frontend/cards.json")),
+                {"schema_version": 1, "cards": CARD_MANIFEST},
+            )
 
     def test_invalid_local_bundle_fails_instead_of_using_old_tracked_card(self):
         self.local("schedule").write_bytes(b"wiser-schedule-card without panel")
@@ -197,6 +214,35 @@ class BuildTest(unittest.TestCase):
                         json.loads(archive.read("frontend/panel-config-release.json"))["source"],
                         "release",
                     )
+
+    def test_stable_build_omits_an_unavailable_published_bundle(self):
+        with patch.object(BUILD, "fetch_panel_config", return_value=(
+            CARD_MANIFEST,
+            {"repository": FETCH.PANEL_CONFIG_REPOSITORY, "source": "release"},
+        )), patch.object(FETCH, "list_releases", side_effect=[
+            [release("v1", "2026", card="schedule")],
+            ValueError("repository unavailable"),
+            [release("v3", "2026", card="rooms")],
+        ]), patch.object(FETCH, "download_asset", side_effect=[
+            (self.payloads["schedule"], "sha256:schedule"),
+            (self.payloads["rooms"], "sha256:rooms"),
+        ]):
+            report = BUILD.build(
+                self.source, self.output, self.root, "stable", CARD_REPOSITORIES,
+            )
+
+        self.assertEqual(
+            [record["source"] for record in report],
+            ["release", "unavailable", "release"],
+        )
+        with ZipFile(self.output) as archive:
+            self.assertIn("frontend/wiser-schedule-card.js", archive.namelist())
+            self.assertNotIn("frontend/wiser-zigbee-card.js", archive.namelist())
+            self.assertIn("frontend/wiser-rooms-card.js", archive.namelist())
+            self.assertEqual(
+                json.loads(archive.read("frontend/cards.json")),
+                {"schema_version": 1, "cards": CARD_MANIFEST},
+            )
 
     def test_release_failure_does_not_fall_back_to_local_bundles(self):
         for card in self.payloads:

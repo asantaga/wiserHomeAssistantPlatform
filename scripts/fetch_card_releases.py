@@ -138,9 +138,11 @@ def fetch_cards(
     definitions,
     plan=False,
     local_root=None,
+    skip_unavailable=False,
 ):
     report = []
     payloads = {}
+    omitted = set()
     # Resolve and validate every source before replacing any staged assets.
     for card, repository in repositories.items():
         definition = definitions[card]
@@ -149,39 +151,56 @@ def fetch_cards(
             Path(local_root) / repository.rsplit("/", 1)[-1] / "dist" / filename
             if local_root is not None else None
         )
-        if local is not None and local.is_file():
-            contents = local.read_bytes()
-            record = {
-                "repository": repository, "source": "local", "asset": filename,
-                "path": str(local.resolve()),
-                "digest": "sha256:" + sha256(contents).hexdigest(),
-            }
-        else:
-            release = select_release(list_releases(repository), channel)
-            asset = select_asset(release, filename)
-            record = {
-                "repository": repository, "source": "release",
-                "tag": release["tag_name"], "prerelease": release["prerelease"],
-                "asset": filename, "asset_id": asset["id"],
-                "url": asset["browser_download_url"],
-            }
+        local_selected = local is not None and local.is_file()
+        try:
+            if local_selected:
+                contents = local.read_bytes()
+                record = {
+                    "repository": repository, "source": "local", "asset": filename,
+                    "path": str(local.resolve()),
+                    "digest": "sha256:" + sha256(contents).hexdigest(),
+                }
+            else:
+                release = select_release(list_releases(repository), channel)
+                asset = select_asset(release, filename)
+                record = {
+                    "repository": repository, "source": "release",
+                    "tag": release["tag_name"], "prerelease": release["prerelease"],
+                    "asset": filename, "asset_id": asset["id"],
+                    "url": asset["browser_download_url"],
+                }
+                if not plan:
+                    contents, record["digest"] = download_asset(repository, asset)
             if not plan:
-                contents, record["digest"] = download_asset(repository, asset)
-        if not plan:
-            if not contents or contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
-                raise ValueError(f"Invalid JavaScript bundle: {filename}")
-            if re.search(rb"wiser/[a-z0-9_-]+_panel/configure", contents):
-                raise ValueError("Panel bundle must use the generic settings API")
-            if definition["component"].encode() not in contents:
-                raise ValueError(
-                    f"Selected {card} card does not include {definition['component']}"
-                )
-            if definition.get("panel") and definition["panel"].encode() not in contents:
-                raise ValueError(f"Selected {card} card does not include the sidebar panel required by this integration")
-            payloads[filename] = contents
-        report.append(record)
+                if not contents or contents.lstrip().lower().startswith((b"<!doctype html", b"<html")):
+                    raise ValueError(f"Invalid JavaScript bundle: {filename}")
+                if re.search(rb"wiser/[a-z0-9_-]+_panel/configure", contents):
+                    raise ValueError("Panel bundle must use the generic settings API")
+                if definition["component"].encode() not in contents:
+                    raise ValueError(
+                        f"Selected {card} card does not include {definition['component']}"
+                    )
+                if definition.get("panel") and definition["panel"].encode() not in contents:
+                    raise ValueError(f"Selected {card} card does not include the sidebar panel required by this integration")
+                payloads[filename] = contents
+            report.append(record)
+        except Exception as error:
+            # A local bundle is deliberate development input and remains strict.
+            # Published frontend bundles are optional: the runtime update entity
+            # can install a missing card or panel after the integration loads.
+            if not skip_unavailable or local_selected:
+                raise
+            omitted.update((filename, *definition.get("legacy_filenames", [])))
+            report.append({
+                "repository": repository,
+                "source": "unavailable",
+                "asset": filename,
+                "error": str(error),
+            })
     if not plan:
         output_dir.mkdir(parents=True, exist_ok=True)
+        for filename in omitted:
+            (output_dir / filename).unlink(missing_ok=True)
         with tempfile.TemporaryDirectory(dir=output_dir) as temporary:
             for filename, contents in payloads.items():
                 staged = Path(temporary) / filename
