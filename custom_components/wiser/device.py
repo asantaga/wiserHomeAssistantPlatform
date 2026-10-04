@@ -287,8 +287,9 @@ def migrate_room_device(
     identifier,
     legacy_identifier,
     name,
+    via_device=None,
 ):
-    """Migrate a name-derived Wiser room device to its stable identifier."""
+    """Migrate or create a Wiser room device with its stable identifier."""
     get_by_identifier = getattr(
         device_registry, "async_get_device_by_identifier", None
     )
@@ -326,7 +327,15 @@ def migrate_room_device(
             name=name,
         )
 
-    return None
+    create_info = {}
+    if via_device is not None:
+        create_info["via_device"] = via_device
+    return device_registry.async_get_or_create(
+        config_entry_id=config_entry_id,
+        identifiers={identifier},
+        name=name,
+        **create_info,
+    )
 
 
 def remove_room_devices(

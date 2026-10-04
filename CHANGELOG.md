@@ -32,6 +32,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed newly added or previously removed Wiser rooms retaining an orphaned Home Assistant device without an area assignment.
 - Reintroduced the previous Power and Energy entities, corrected equipment data naming on v2 hubs, and added an active state for the window/door sensor - issue [#677](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/677), PR [#690](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/690).
 - Fixed multi-gang dimmer lights breaking select, binary_sensor, switch, and sensor entities - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681), PR [#683](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/683).
 - Preserved light entities across the multi-gang unique_id migration - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681), PR [#683](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/683).

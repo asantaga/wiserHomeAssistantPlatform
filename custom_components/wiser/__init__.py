@@ -611,6 +611,7 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
             (DOMAIN, get_identifier(data, room.id, "room")),
             (DOMAIN, get_legacy_room_identifier(data, room.id)),
             get_device_name(data, room.id, "room"),
+            via_device=(DOMAIN, data.wiserhub.system.name),
         )
         assign_device_area_if_unset(
             device_registry, area_registry, device_entry, room.name
