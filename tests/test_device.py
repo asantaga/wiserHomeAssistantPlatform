@@ -305,6 +305,38 @@ class MigrateRoomDeviceTest(unittest.TestCase):
     legacy_identifier = ("wiser", "WiserHeat123456 Wiser Andys Bedroom")
     config_entry_id = "entry-id"
 
+    def test_creates_missing_room_device_before_entity_setup(self) -> None:
+        registry = DeviceRegistry()
+
+        result = DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Room",
+            manufacturer="Drayton Wiser",
+            model="Room",
+            suggested_area="Test",
+            via_device_id="physical-hub-id",
+        )
+
+        self.assertEqual(result.id, "new-hub")
+        self.assertEqual(
+            registry.created,
+            [
+                {
+                    "config_entry_id": self.config_entry_id,
+                    "identifiers": {self.identifier},
+                    "name": "Wiser Room",
+                    "manufacturer": "Drayton Wiser",
+                    "model": "Room",
+                    "suggested_area": "Test",
+                    "via_device_id": "physical-hub-id",
+                }
+            ],
+        )
+
     def test_migrates_legacy_room_identifier_and_name(self) -> None:
         registry = DeviceRegistry(
             {

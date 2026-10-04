@@ -30,6 +30,7 @@ from .const import (
     DATA,
     DOMAIN,
     MANUFACTURER,
+    ROOM,
     UPDATE_LISTENER,
     WISER_PLATFORMS,
     WISER_SERVICES,
@@ -331,6 +332,10 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
             (DOMAIN, get_identifier(data, room.id, "room")),
             (DOMAIN, get_legacy_room_identifier(data, room.id)),
             get_device_name(data, room.id, "room"),
+            manufacturer=MANUFACTURER,
+            model=ROOM.title(),
+            suggested_area=room.name,
+            via_device_id=data.hub_device_id,
         )
         assign_device_area_if_unset(
             device_registry, area_registry, device_entry, room.name
