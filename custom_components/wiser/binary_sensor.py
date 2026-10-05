@@ -8,6 +8,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
@@ -31,10 +32,32 @@ from .opentherm import (
 
 _LOGGER = logging.getLogger(__name__)
 
+V2_SYSTEM_BINARY_SENSOR_TYPES = (
+    "Summer Discomfort Prevention",
+    "Summer Comfort Available",
+    "PCM Device Limit Reached",
+)
+
 
 def _entity_translation_key(name: str) -> str:
     """Return the stable translation key for a fixed Wiser entity label."""
     return name.lower().replace(" ", "_")
+
+
+def _remove_unsupported_v2_entities(hass: HomeAssistant, data) -> None:
+    """Remove V2-only registry entries previously created for a V1 hub."""
+    registry = er.async_get(hass)
+    legacy_hub_name = data.wiserhub.system.name.replace("WiserHeat", "HeatHub")
+    for sensor_type in V2_SYSTEM_BINARY_SENSOR_TYPES:
+        unique_id = get_unique_id(
+            data,
+            "sensor",
+            sensor_type,
+            f"{legacy_hub_name} {sensor_type}",
+        )
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if entity_id is not None:
+            registry.async_remove(entity_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -61,15 +84,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         )
 
-    # System sensors
-    if data.wiserhub.system:
+    # Summer comfort and PCM are available only on second-generation hubs.
+    if data.hub_version == 2:
         binary_sensors.extend(
             [
-                WiserSummerDiscomfortPrevention(data, 0, "Summer Discomfort Prevention"),
+                WiserSummerDiscomfortPrevention(
+                    data, 0, "Summer Discomfort Prevention"
+                ),
                 WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
-                WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
+                WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached"),
             ]
-        ) 
+        )
+    else:
+        _remove_unsupported_v2_entities(hass, data)
 
     # Smoke alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:

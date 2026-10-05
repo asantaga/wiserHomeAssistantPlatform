@@ -292,6 +292,50 @@ def _load_binary_sensor_module() -> ModuleType:
     return module
 
 
+class WiserSummerComfortSetupTest(unittest.TestCase):
+    """Tests for second-generation hub system sensor setup."""
+
+    def test_summer_comfort_sensors_are_guarded_by_hub_version(self) -> None:
+        setup_source = BINARY_SENSOR_SOURCE_PATH.read_text().split(
+            "class BaseBinarySensor", 1
+        )[0]
+        tree = ast.parse(setup_source)
+        setup = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_setup_entry"
+        )
+        v2_guard = next(
+            node
+            for node in ast.walk(setup)
+            if isinstance(node, ast.If)
+            and ast.unparse(node.test) == "data.hub_version == 2"
+        )
+        guarded_calls = {
+            node.func.id
+            for node in ast.walk(v2_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+
+        self.assertTrue(
+            {
+                "WiserSummerDiscomfortPrevention",
+                "WiserSummerComfortAvailable",
+                "WiserPCMDeviceLimitReached",
+            }.issubset(guarded_calls)
+        )
+
+        cleanup_call = next(
+            node
+            for node in ast.walk(setup)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_remove_unsupported_v2_entities"
+        )
+        self.assertIsNotNone(cleanup_call)
+
+
 class WiserDeviceSignalSensorNameTest(unittest.TestCase):
     """Tests for controller and device signal sensor names."""
 
