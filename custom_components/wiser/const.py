@@ -103,6 +103,7 @@ CONF_AUTOMATIONS_HW_HEAT_MODE = "hotwater_heat_mode"
 CONF_AUTOMATIONS_HW_BOOST_MODE = "hotwater_boost_mode"
 CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
 CONF_DEPRECATED_HW_TARGET_TEMP = "hotwater_target_temperature"
+CONF_OPENTHERM_EVER_CONNECTED = "opentherm_ever_connected"
 CONF_OPENTHERM_SENSORS = "opentherm_sensors"
 CONF_EQUIPMENT_SENSORS = "equipment_sensors"
 

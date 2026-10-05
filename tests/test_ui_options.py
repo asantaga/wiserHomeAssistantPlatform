@@ -43,6 +43,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.namespace = {
             "CONF_LEGACY_NAMING": "legacy_naming",
             "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
+            "CONF_OPENTHERM_EVER_CONNECTED": "opentherm_ever_connected",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_NAME": "name",
             "DATA": "data",
@@ -56,6 +57,104 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "MAJOR_VERSION": 2026,
             "MINOR_VERSION": 8,
         }
+
+    def test_opentherm_detection_uses_live_or_remembered_connection(self):
+        functions = load_functions(
+            "opentherm_detection.py", {"opentherm_is_detected"}, self.namespace
+        )
+        disconnected = SimpleNamespace(
+            enabled=True, connection_status="Disconnected"
+        )
+        connected = SimpleNamespace(enabled=True, connection_status="Connected")
+
+        self.assertFalse(
+            functions.opentherm_is_detected(
+                SimpleNamespace(data={}), disconnected
+            )
+        )
+        self.assertTrue(
+            functions.opentherm_is_detected(SimpleNamespace(data={}), connected)
+        )
+        self.assertTrue(
+            functions.opentherm_is_detected(
+                SimpleNamespace(data={"opentherm_ever_connected": True}),
+                disconnected,
+            )
+        )
+        self.assertFalse(
+            functions.opentherm_is_detected(SimpleNamespace(data={}), None)
+        )
+
+    def test_first_opentherm_connection_is_remembered_once(self):
+        functions = load_functions(
+            "__init__.py", {"_remember_opentherm_connection"}, self.namespace
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+        entry = SimpleNamespace(data={"host": "wiser.local"})
+        opentherm = SimpleNamespace(connection_status="Disconnected")
+        coordinator = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(opentherm=opentherm)
+            )
+        )
+
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+        update.assert_not_called()
+
+        opentherm.connection_status = "Connected"
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+        update.assert_called_once_with(
+            entry,
+            data={"host": "wiser.local", "opentherm_ever_connected": True},
+        )
+
+        update.reset_mock()
+        entry.data = {"host": "wiser.local", "opentherm_ever_connected": True}
+        opentherm.connection_status = "Disconnected"
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+        update.assert_not_called()
+
+    def test_options_hide_opentherm_until_detected(self):
+        detection = load_functions(
+            "opentherm_detection.py", {"opentherm_is_detected"}, self.namespace
+        )
+        self.namespace["opentherm_is_detected"] = detection.opentherm_is_detected
+        self.namespace.update(DATA="data", DOMAIN="wiser")
+        functions = load_functions("config_flow.py", {"_opentherm"}, self.namespace)
+        opentherm = SimpleNamespace(
+            enabled=True, connection_status="Disconnected"
+        )
+        coordinator = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(opentherm=opentherm))
+        )
+        flow = SimpleNamespace(
+            config_entry=SimpleNamespace(entry_id="entry", data={}),
+            hass=SimpleNamespace(data={"wiser": {"entry": {"data": coordinator}}}),
+        )
+
+        self.assertIsNone(functions._opentherm(flow))
+        flow.config_entry.data["opentherm_ever_connected"] = True
+        self.assertIs(functions._opentherm(flow), opentherm)
+
+    def test_sensor_setup_requires_detected_opentherm(self):
+        for filename, marker in (
+            (
+                "sensor.py",
+                "opentherm_is_detected(config_entry, data.wiserhub.system.opentherm)",
+            ),
+            (
+                "binary_sensor.py",
+                "opentherm_is_detected(config_entry, opentherm)",
+            ),
+        ):
+            with self.subTest(filename=filename):
+                setup = (COMPONENT / filename).read_text().split(
+                    "class Wiser", 1
+                )[0]
+                self.assertIn(marker, setup)
 
     async def test_new_manual_and_discovered_install_defaults(self):
         for method in ("async_step_user", "async_step_zeroconf_confirm"):

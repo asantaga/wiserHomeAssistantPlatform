@@ -5,6 +5,7 @@ msparker@sky.com
 """
 
 import asyncio
+from functools import partial
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -27,6 +28,7 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
     CONF_LEGACY_NAMING,
+    CONF_OPENTHERM_EVER_CONNECTED,
     DATA,
     DOMAIN,
     MANUFACTURER,
@@ -207,6 +209,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
 
+    # Remember a confirmed connection before platform setup. This prevents a
+    # standard boiler's dormant OpenTherm endpoint from creating entities,
+    # while allowing a real OpenTherm installation to survive later outages.
+    _remember_opentherm_connection(hass, config_entry, coordinator)
+
     # Update listener for config option changes
     update_listener = config_entry.add_update_listener(_async_update_listener)
 
@@ -215,6 +222,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         UPDATE_LISTENER: update_listener,
         "reload_settings": integration_reload_settings(config_entry),
     }
+
+    # If OpenTherm connects for the first time after startup, saving the flag
+    # causes one integration reload so its entities are added. Future outages
+    # retain those entities and their registry/history records.
+    config_entry.async_on_unload(
+        coordinator.async_add_listener(
+            partial(
+                _remember_opentherm_connection,
+                hass,
+                config_entry,
+                coordinator,
+            )
+        )
+    )
 
     update_hub_device_names(hass)
 
@@ -255,6 +276,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
     )
     return True
+
+
+@callback
+def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
+    """Persist the first confirmed OpenTherm connection."""
+    if config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False):
+        return
+
+    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    if getattr(opentherm, "connection_status", None) != "Connected":
+        return
+
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
+    )
 
 
 async def async_update_device_registry(hass: HomeAssistant, config_entry):

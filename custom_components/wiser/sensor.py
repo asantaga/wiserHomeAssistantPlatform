@@ -72,6 +72,7 @@ from .opentherm import (
     opentherm_sensor_is_enabled,
     relative_modulation_level as _relative_modulation_level,
 )
+from .opentherm_detection import opentherm_is_detected
 from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
@@ -202,10 +203,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add enabled OpenTherm sensors. Flow and return temperatures retain their
     # historical default; every additional attribute is opt-in.
-    if (
-        data.wiserhub.system.opentherm is not None
-        and data.wiserhub.system.opentherm.enabled
-    ):
+    if opentherm_is_detected(config_entry, data.wiserhub.system.opentherm):
         _LOGGER.debug("Setting up Opentherm sensors")
         opentherm = data.wiserhub.system.opentherm
         configured_sensors = config_entry.options.get(CONF_OPENTHERM_SENSORS)
