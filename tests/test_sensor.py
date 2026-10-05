@@ -295,14 +295,55 @@ def _load_binary_sensor_module() -> ModuleType:
 class WiserSummerComfortSetupTest(unittest.TestCase):
     """Tests for second-generation hub system sensor setup."""
 
-    def test_summer_comfort_sensors_are_guarded_by_hub_version(self) -> None:
+    @classmethod
+    def setUpClass(cls) -> None:
         setup_source = BINARY_SENSOR_SOURCE_PATH.read_text().split(
             "class BaseBinarySensor", 1
         )[0]
-        tree = ast.parse(setup_source)
+        cls.tree = ast.parse(setup_source)
+        support_function = next(
+            node
+            for node in cls.tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "_supports_v2_system_binary_sensors"
+        )
+        namespace = {}
+        exec(
+            compile(
+                ast.Module(body=[support_function], type_ignores=[]),
+                BINARY_SENSOR_SOURCE_PATH.name,
+                "exec",
+            ),
+            namespace,
+        )
+        cls.supports_v2_sensors = staticmethod(
+            namespace["_supports_v2_system_binary_sensors"]
+        )
+
+    def test_v1_does_not_support_v2_system_sensors(self) -> None:
+        data = SimpleNamespace(hub_version=1)
+        self.assertFalse(self.supports_v2_sensors(data))
+
+    def test_v2_without_summer_comfort_data_is_not_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace()),
+        )
+        self.assertFalse(self.supports_v2_sensors(data))
+
+    def test_v2_with_summer_comfort_data_is_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(summer_comfort_available=False)
+            ),
+        )
+        self.assertTrue(self.supports_v2_sensors(data))
+
+    def test_summer_comfort_sensors_use_capability_guard(self) -> None:
         setup = next(
             node
-            for node in tree.body
+            for node in self.tree.body
             if isinstance(node, ast.AsyncFunctionDef)
             and node.name == "async_setup_entry"
         )
@@ -310,7 +351,8 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             node
             for node in ast.walk(setup)
             if isinstance(node, ast.If)
-            and ast.unparse(node.test) == "data.hub_version == 2"
+            and ast.unparse(node.test)
+            == "_supports_v2_system_binary_sensors(data)"
         )
         guarded_calls = {
             node.func.id

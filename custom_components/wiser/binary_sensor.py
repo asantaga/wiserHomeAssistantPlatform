@@ -18,8 +18,10 @@ from .helpers import (
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_legacy_unique_id,
     get_light_binary_sensor_unique_id,
     get_unique_id,
+    get_uuid_unique_id,
 )
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
@@ -44,20 +46,45 @@ def _entity_translation_key(name: str) -> str:
     return name.lower().replace(" ", "_")
 
 
-def _remove_unsupported_v2_entities(hass: HomeAssistant, data) -> None:
-    """Remove V2-only registry entries previously created for a V1 hub."""
+def _supports_v2_system_binary_sensors(data) -> bool:
+    """Return whether the hub supplies second-generation system data."""
+    if data.hub_version != 2:
+        return False
+    system = data.wiserhub.system
+    return any(
+        getattr(system, attribute, None) is not None
+        for attribute in (
+            "summer_comfort_available",
+            "summer_discomfort_prevention",
+        )
+    )
+
+
+def _remove_unsupported_v2_entities(
+    hass: HomeAssistant, config_entry_id: str, data
+) -> None:
+    """Remove V2-only registry entries from an unsupported hub."""
     registry = er.async_get(hass)
     legacy_hub_name = data.wiserhub.system.name.replace("WiserHeat", "HeatHub")
     for sensor_type in V2_SYSTEM_BINARY_SENSOR_TYPES:
-        unique_id = get_unique_id(
+        legacy_unique_id = get_legacy_unique_id(
             data,
             "sensor",
             sensor_type,
             f"{legacy_hub_name} {sensor_type}",
         )
-        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-        if entity_id is not None:
-            registry.async_remove(entity_id)
+        unique_ids = {
+            legacy_unique_id,
+            get_uuid_unique_id(legacy_unique_id),
+        }
+        for unique_id in unique_ids:
+            entity_id = registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, unique_id
+            )
+            if entity_id is not None:
+                entry = registry.async_get(entity_id)
+                if entry and entry.config_entry_id == config_entry_id:
+                    registry.async_remove(entity_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -84,8 +111,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         )
 
-    # Summer comfort and PCM are available only on second-generation hubs.
-    if data.hub_version == 2:
+    # Summer comfort and PCM require second-generation system data.
+    if _supports_v2_system_binary_sensors(data):
         binary_sensors.extend(
             [
                 WiserSummerDiscomfortPrevention(
@@ -96,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
     else:
-        _remove_unsupported_v2_entities(hass, data)
+        _remove_unsupported_v2_entities(hass, config_entry.entry_id, data)
 
     # Smoke alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
