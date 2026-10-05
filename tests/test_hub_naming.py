@@ -300,14 +300,19 @@ class HubNamingTest(unittest.TestCase):
         )
         self.assertEqual(self.helpers.get_identifier(self.data, 31), identifier)
 
-    def test_itrv_temperature_unique_id_does_not_use_room_name(self):
-        before = self.helpers.get_itrv_temperature_unique_id(self.data, 31)
+    def test_physical_entity_unique_id_does_not_use_room_name(self):
+        before = self.helpers.get_physical_entity_unique_id(
+            self.data, "sensor", 31, "smartvalve_temp"
+        )
         self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: SimpleNamespace(
             id=7,
             name="Renamed Room",
         )
         self.assertEqual(
-            self.helpers.get_itrv_temperature_unique_id(self.data, 31), before
+            self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 31, "smartvalve_temp"
+            ),
+            before,
         )
 
     def test_all_physical_device_identifiers_use_immutable_device_id(self):
@@ -322,6 +327,31 @@ class HubNamingTest(unittest.TestCase):
         self.assertEqual(
             self.helpers.get_identifier(self.data, 42),
             "WiserHeatNOTUSED device 42",
+        )
+
+    def test_physical_entity_migration_replaces_name_based_ids(self):
+        device = SimpleNamespace(
+            id=42,
+            name="Bedroom Blind",
+            product_type="Shutter",
+        )
+        self.data.wiserhub.devices = SimpleNamespace(
+            all=[device],
+            get_by_id=lambda _device_id: device,
+        )
+
+        mapping = self.helpers.build_physical_entity_unique_id_migration(
+            self.data
+        )
+        old_cover_id = self.helpers.get_uuid_unique_id(
+            "WiserHeatNOTUSED-Wisershutter-42-"
+            "Wiser Shutter Andys Bedroom Bedroom Blind Control"
+        )
+        self.assertEqual(
+            mapping[old_cover_id],
+            self.helpers.get_physical_entity_unique_id(
+                self.data, "cover", 42, "control"
+            ),
         )
 
     def test_room_entity_unique_id_does_not_use_room_name(self):

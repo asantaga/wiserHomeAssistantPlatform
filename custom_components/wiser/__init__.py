@@ -58,13 +58,14 @@ from .frontend.entry_updates import async_handle_entry_update, integration_reloa
 from .frontend.wiser_sidebar import async_update_wiser_panel
 from .helpers import (
     build_light_unique_id_migration,
+    build_physical_entity_unique_id_migration,
     get_device_name,
     get_hub_device_name,
     get_identifier,
     get_instance_count,
-    get_itrv_temperature_unique_id,
     get_legacy_device_identifier,
     get_legacy_room_identifier,
+    get_physical_entity_unique_id,
     get_room_entity_unique_id,
     get_unique_id,
 )
@@ -155,18 +156,20 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     return True
 
 
-async def async_migrate_light_unique_ids(hass: HomeAssistant, config_entry, data) -> None:
-    """Preserve light entities across the multi-gang dimmer fix (#681/#683).
+async def async_migrate_physical_entity_unique_ids(
+    hass: HomeAssistant, config_entry, data
+) -> None:
+    """Preserve physical entities while adopting stable unique IDs.
 
-    The fix keys every light-derived entity on the per-channel ``light_id``
-    instead of the physical device ``id`` (see build_light_unique_id_migration),
-    which changes the unique_ids of the light, its mode/LED/power-on selects,
-    its away-mode switch and its four capability binary_sensors. Without this
-    the pre-fix entities orphan on update, losing their history and dashboard
-    references. This renames the matching registry entries to the new scheme so
-    their entity_ids survive the update untouched.
+    This includes the multi-gang light migration and physical entities whose
+    historical unique IDs included mutable device or room names.
     """
-    mapping = build_light_unique_id_migration(data)
+    mapping = {
+        **build_physical_entity_unique_id_migration(data),
+        # Light channels need the more specific per-channel migration when a
+        # physical device exposes more than one light.
+        **build_light_unique_id_migration(data),
+    }
     if not mapping:
         return
 
@@ -204,7 +207,7 @@ async def async_migrate_light_unique_ids(hass: HomeAssistant, config_entry, data
             )
             return None
         _LOGGER.info(
-            "Wiser: migrating light unique_id %s -> %s",
+            "Wiser: migrating entity unique_id %s -> %s",
             entry.unique_id,
             new_unique_id,
         )
@@ -291,10 +294,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         )
     )
 
-    # Remap light entity unique_ids from the pre-#683 scheme before the
-    # platforms create entities, so existing light entities are preserved
-    # instead of orphaned (see async_migrate_light_unique_ids).
-    await async_migrate_light_unique_ids(hass, config_entry, coordinator)
+    # Remap historical name-based entity IDs before platform setup so existing
+    # entities, history, and dashboard references are retained.
+    await async_migrate_physical_entity_unique_ids(
+        hass, config_entry, coordinator
+    )
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(config_entry, WISER_PLATFORMS)
@@ -477,8 +481,11 @@ def migrate_physical_device_registry(
             or legacy_identifier in entry.identifiers
         ]
         room = data.wiserhub.rooms.get_by_device_id(device.id)
+        temperature_type = None
+        old_temperature_names = set()
 
         if device.product_type == "iTRV":
+            temperature_type = "smartvalve_temp"
             possible_room_names = set()
             if room is not None:
                 possible_room_names.add(room.name)
@@ -493,18 +500,39 @@ def migrate_physical_device_registry(
                     suffix = value[len(itrv_identifier_prefix):]
                     possible_room_names.add(suffix)
                     possible_room_names.add(re.sub(r"-\d+$", "", suffix))
-
-            old_temperature_ids = {
-                get_unique_id(
-                    data,
-                    "sensor",
-                    f"LTS Temperature iTRV {room_name}",
-                    device.id,
-                )
+            old_temperature_names.update(
+                f"LTS Temperature iTRV {room_name}"
                 for room_name in possible_room_names
+            )
+        elif device.product_type == "SmokeAlarmDevice":
+            temperature_type = "smokealarm_temp"
+            if room is not None:
+                old_temperature_names.add(
+                    f"{room.name} {device.name}  Temperature"
+                )
+            else:
+                old_temperature_names.add(
+                    f"{device.name} {device.id} Temperature"
+                )
+        elif device.product_type == "UnderFloorHeating":
+            temperature_type = "ufh_measured_temp"
+            old_temperature_names.add(f"{device.name} Measured Temperature")
+        elif device.product_type in {"HeatingActuator", "CFMT"} and getattr(
+            device, "floor_temperature_sensor", None
+        ):
+            temperature_type = "floor_current_temp"
+            old_temperature_names.add(
+                f"LTS Floor Temperature "
+                f"{room.name if room is not None else device.name}"
+            )
+
+        if temperature_type is not None:
+            old_temperature_ids = {
+                get_unique_id(data, "sensor", name, device.id)
+                for name in old_temperature_names
             }
-            stable_temperature_id = get_itrv_temperature_unique_id(
-                data, device.id
+            stable_temperature_id = get_physical_entity_unique_id(
+                data, "sensor", device.id, temperature_type
             )
             matching_temperature_entries = [
                 entry
@@ -520,18 +548,19 @@ def migrate_physical_device_registry(
                 if entry.device_id is not None
             }
 
-            # Signal and battery IDs have always used the immutable device ID,
-            # so they locate the record if temperature is disabled or removed.
-            stable_entity_ids = {
-                get_unique_id(data, "sensor", device.product_type, device.id),
-                get_unique_id(data, "sensor", "Battery", device.id),
-            }
-            matching_device_ids.update(
-                entry.device_id
-                for entry in registry_entities
-                if entry.unique_id in stable_entity_ids
-                and entry.device_id is not None
-            )
+            if device.product_type == "iTRV":
+                # Signal and battery IDs have always used the immutable device
+                # ID, so they locate an iTRV whose temperature was removed.
+                stable_entity_ids = {
+                    get_unique_id(data, "sensor", device.product_type, device.id),
+                    get_unique_id(data, "sensor", "Battery", device.id),
+                }
+                matching_device_ids.update(
+                    entry.device_id
+                    for entry in registry_entities
+                    if entry.unique_id in stable_entity_ids
+                    and entry.device_id is not None
+                )
             possible_devices.extend(
                 entry
                 for entry in registry_devices

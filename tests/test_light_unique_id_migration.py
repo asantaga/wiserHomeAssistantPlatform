@@ -136,9 +136,7 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Wiser DimmableLight Diele Diele Away Mode Turns Off",
             101,
         )
-        new = self._unique_id(
-            "DimmableLight", "Wiser Diele Away Mode Turns Off", 1
-        )
+        new = self._unique_id("switch", "away_mode_turns_off", 1)
         self.assertEqual(mapping[old], new)
 
     def test_capability_binary_sensors_map_name(self) -> None:
@@ -150,9 +148,7 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Is Dimmable",
             "Wiser DimmableLight Diele Diele Is Dimmable",
         )
-        new = self._unique_id(
-            "binary_sensor", "Is Dimmable", "Wiser Diele Is Dimmable"
-        )
+        new = self._unique_id("binary_sensor", "Is Dimmable", 1)
         self.assertEqual(mapping[old], new)
         self.assertEqual(
             self.helpers.get_light_binary_sensor_unique_id(
@@ -181,8 +177,8 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
         mapping = self._mapping()
         # Every entry is a real rename.
         self.assertTrue(all(old != new for old, new in mapping.items()))
-        # 2 single-gang lights x (1 light + 3 selects + 1 away + 4 binary) = 18.
-        self.assertEqual(len(mapping), 18)
+        # 2 lights x (1 light + 3 selects + 2 away aliases + 4 binary) = 20.
+        self.assertEqual(len(mapping), 20)
 
 
 if __name__ == "__main__":

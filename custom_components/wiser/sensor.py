@@ -58,7 +58,7 @@ from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
-    get_itrv_temperature_unique_id,
+    get_physical_entity_unique_id,
     get_identifier,
     get_room_entity_unique_id,
     get_unique_id,
@@ -1243,9 +1243,19 @@ class WiserLTSTempSensor(WiserSensor):
 
     @property
     def unique_id(self):
-        """Return a stable ID when an iTRV is moved or its room is renamed."""
-        if self._lts_sensor_type == "smartvalve_temp":
-            return get_itrv_temperature_unique_id(self._data, self._device_id)
+        """Return a stable ID when a device or room is renamed."""
+        if self._lts_sensor_type in {
+            "floor_current_temp",
+            "smokealarm_temp",
+            "smartvalve_temp",
+            "ufh_measured_temp",
+        }:
+            return get_physical_entity_unique_id(
+                self._data,
+                "sensor",
+                self._device_id,
+                self._lts_sensor_type,
+            )
         if self._lts_sensor_type in {"current_temp", "current_target_temp"}:
             return get_room_entity_unique_id(
                 self._data, self._device_id, self._lts_sensor_type

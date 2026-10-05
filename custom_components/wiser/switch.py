@@ -23,11 +23,9 @@ from .helpers import (
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
-    get_legacy_device_name,
-    get_legacy_unique_id,
+    get_physical_entity_unique_id,
     get_room_entity_unique_id,
     get_unique_id,
-    get_uuid_unique_id,
     hub_error_handler,
 )
 from custom_components.wiser.schedules import WiserScheduleEntity
@@ -522,10 +520,9 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = f"{get_device_name(self._data, self._device_id)} Switch"
-        return get_unique_id(
-            self._data, self._device.product_type, legacy_name, self._device_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, "outlet"
         )
 
     @property
@@ -611,15 +608,12 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
-        )
-        return get_unique_id(
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
             self._data,
-            self._smartplug.product_type,
-            legacy_name,
+            "switch",
             self._smart_plug_id,
+            "away_mode_turns_off",
         )
 
     @property
@@ -683,12 +677,9 @@ class WiserLightAwayActionSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
-        )
-        return get_unique_id(
-            self._data, self._light.product_type, legacy_name, self._light_id
+        """Return a name-independent per-channel unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._light_id, "away_mode_turns_off"
         )
 
     @property
@@ -740,12 +731,9 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._shutter_id)} Away Mode Closes"
-        )
-        return get_unique_id(
-            self._data, self._shutter.product_type, legacy_name, self._shutter_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._shutter_id, "away_mode_closes"
         )
 
     @property
@@ -866,12 +854,12 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._shutter_id)} Respect Summer Comfort"
-        )
-        return get_unique_id(
-            self._data, self._shutter.product_type, legacy_name, self._shutter_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "switch",
+            self._shutter_id,
+            "respect_summer_comfort",
         )
 
     @property
@@ -952,19 +940,16 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        suffix = "Interacts With Room Climate"
+        """Return a name-independent unique ID."""
+        entity_type = "interacts_with_room_climate"
         if self._ancillary_sensor_type:
-            suffix = f"{self._ancillary_sensor_type} {suffix}"
-        legacy_name = (
-            f"{get_legacy_device_name(self._data, self._device_id)} {suffix}"
+            entity_type = (
+                f"{self._ancillary_sensor_type.lower()}_"
+                f"interacts_with_room_climate_{self._ancillary_sensor_id}"
+            )
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, entity_type
         )
-        legacy_unique_id = get_legacy_unique_id(
-            self._data, self._device.product_type, legacy_name, self._device_id
-        )
-        if self._ancillary_sensor_id:
-            legacy_unique_id = f"{legacy_unique_id}_{self._ancillary_sensor_id}"
-        return get_uuid_unique_id(legacy_unique_id)
 
     @property
     def is_on(self) -> bool:

@@ -22,6 +22,7 @@ from .helpers import (
     get_identifier,
     get_legacy_unique_id,
     get_light_binary_sensor_unique_id,
+    get_physical_entity_unique_id,
     get_unique_id,
     get_uuid_unique_id,
 )
@@ -289,12 +290,9 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
 
     @property
     def unique_id(self):
-        """Return uniqueid."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
-        )
-        return get_unique_id(
-            self._data, "binary_sensor", self._sensor_type, legacy_name
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "binary_sensor", self._device_id, self._sensor_type
         )
 
     @property

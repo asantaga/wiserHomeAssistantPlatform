@@ -275,9 +275,9 @@ def get_unique_id(data, device_type, entity_type, device_id):
     )
 
 
-def get_itrv_temperature_unique_id(data, device_id):
-    """Return the room-independent unique ID for an iTRV temperature."""
-    return get_unique_id(data, "sensor", "smartvalve_temp", device_id)
+def get_physical_entity_unique_id(data, domain, device_id, entity_type):
+    """Return a name-independent unique ID for a physical-device entity."""
+    return get_unique_id(data, domain, entity_type, device_id)
 
 
 def get_room_entity_unique_id(data, room_id, entity_type):
@@ -286,14 +286,138 @@ def get_room_entity_unique_id(data, room_id, entity_type):
 
 
 def get_light_binary_sensor_unique_id(data, light, sensor_type):
-    """Return the per-channel unique ID for a light capability sensor."""
-    light_name = f"{ENTITY_PREFIX} {light.name}"
+    """Return the stable per-channel ID for a light capability sensor."""
     return get_unique_id(
         data,
         "binary_sensor",
         sensor_type,
-        f"{light_name} {sensor_type}",
+        light.light_id,
     )
+
+
+def build_physical_entity_unique_id_migration(data) -> dict:
+    """Map mutable-name physical entity IDs to immutable device-based IDs."""
+    mapping = {}
+    binary_sensor_types = (
+        "Smoke Alarm",
+        "Heat Alarm",
+        "Tamper Alarm",
+        "Fault Warning",
+        "Remote Alarm",
+        "Battery Defect",
+        "Controllable",
+        "PCM Mode",
+        "Is Tilt Supported",
+        "Is Open",
+        "Is Closed",
+        "Active",
+    )
+
+    for device in data.wiserhub.devices.all:
+        device_name = get_device_name(data, device.id)
+        product_type = device.product_type
+
+        # Light capability sensors are keyed by channel ``light_id`` and have
+        # their own migration below. A multi-gang dimmer shares one physical
+        # device ID, so treating these as ordinary physical-device sensors
+        # would merge distinct channels.
+        if product_type not in {"DimmableLight", "OnOffLight"}:
+            for sensor_type in binary_sensor_types:
+                old_name = f"{device_name} {sensor_type}"
+                mapping[
+                    get_unique_id(data, "binary_sensor", sensor_type, old_name)
+                ] = get_physical_entity_unique_id(
+                    data, "binary_sensor", device.id, sensor_type
+                )
+
+        if product_type == "Shutter":
+            old_cover_id = get_uuid_unique_id(
+                f"{data.wiserhub.system.name}-Wisershutter-"
+                f"{device.id}-{device_name} Control"
+            )
+            mapping[old_cover_id] = get_physical_entity_unique_id(
+                data, "cover", device.id, "control"
+            )
+            for label, entity_type in (
+                ("Away Mode Closes", "away_mode_closes"),
+                ("Respect Summer Comfort", "respect_summer_comfort"),
+            ):
+                mapping[
+                    get_unique_id(
+                        data,
+                        product_type,
+                        f"{device_name} {label}",
+                        device.id,
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "switch", device.id, entity_type
+                )
+
+        if product_type in {"HeatingActuator", "CFMT"}:
+            mapping[
+                get_unique_id(
+                    data,
+                    "system",
+                    "number",
+                    f"{device_name} Floor Temp Offset",
+                )
+            ] = get_physical_entity_unique_id(
+                data, "number", device.id, "floor_temperature_offset"
+            )
+
+        if product_type in {"SmartPlug", "PowerTagC"}:
+            mapping[
+                get_unique_id(
+                    data,
+                    product_type,
+                    f"{device_name} Switch",
+                    device.id,
+                )
+            ] = get_physical_entity_unique_id(
+                data, "switch", device.id, "outlet"
+            )
+            mapping[
+                get_unique_id(
+                    data,
+                    product_type,
+                    f"{device_name} Away Mode Turns Off",
+                    device.id,
+                )
+            ] = get_physical_entity_unique_id(
+                data, "switch", device.id, "away_mode_turns_off"
+            )
+
+        if hasattr(device, "interacts_with_room_climate"):
+            suffix = "Interacts With Room Climate"
+            old_id = get_legacy_unique_id(
+                data,
+                product_type,
+                f"{get_legacy_device_name(data, device.id)} {suffix}",
+                device.id,
+            )
+            mapping[get_uuid_unique_id(old_id)] = get_physical_entity_unique_id(
+                data, "switch", device.id, "interacts_with_room_climate"
+            )
+
+        for ancillary in getattr(device, "threshold_sensors", ()):
+            suffix = f"{ancillary.quantity} Interacts With Room Climate"
+            old_id = get_legacy_unique_id(
+                data,
+                product_type,
+                f"{get_legacy_device_name(data, device.id)} {suffix}",
+                device.id,
+            )
+            mapping[get_uuid_unique_id(f"{old_id}_{ancillary.id}")] = (
+                get_physical_entity_unique_id(
+                    data,
+                    "switch",
+                    device.id,
+                    f"{ancillary.quantity.lower()}_interacts_with_room_climate_"
+                    f"{ancillary.id}",
+                )
+            )
+
+    return mapping
 
 
 def build_light_unique_id_migration(data) -> dict:
@@ -343,7 +467,14 @@ def build_light_unique_id_migration(data) -> dict:
         # away-mode switch (both name and id embedded in the unique_id)
         mapping[
             get_unique_id(data, ptype, f"{old_name} Away Mode Turns Off", old_id)
-        ] = get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
+        ] = get_physical_entity_unique_id(
+            data, "switch", new_id, "away_mode_turns_off"
+        )
+        mapping[
+            get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
+        ] = get_physical_entity_unique_id(
+            data, "switch", new_id, "away_mode_turns_off"
+        )
 
         # capability binary_sensors (name-based)
         for stype in LIGHT_BINARY_SENSOR_TYPES:

@@ -115,6 +115,7 @@ def _load_sensor_module() -> ModuleType:
         get_hub_via_device_info=lambda _data: {},
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
         get_itrv_temperature_unique_id=lambda *_args: "itrv-temperature-id",
+        get_physical_entity_unique_id=lambda *_args: "physical-entity-id",
         get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",
         get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
