@@ -191,6 +191,10 @@ class HubNamingTest(unittest.TestCase):
         )
         self.assertEqual(
             self.helpers.get_identifier(self.data, 21),
+            "WiserHeatNOTUSED device 21",
+        )
+        self.assertEqual(
+            self.helpers.get_legacy_device_identifier(self.data, 21),
             "WiserHeatNOTUSED Wiser RoomStat Andys Bedroom",
         )
 
@@ -259,6 +263,10 @@ class HubNamingTest(unittest.TestCase):
         )
         self.assertEqual(
             self.helpers.get_identifier(self.data, 31),
+            "WiserHeatNOTUSED device 31",
+        )
+        self.assertEqual(
+            self.helpers.get_legacy_device_identifier(self.data, 31),
             "WiserHeatNOTUSED Wiser TemperatureHumiditySensor "
             "Andys Bedroom Kitchen Temperature Sensor",
         )
@@ -266,6 +274,69 @@ class HubNamingTest(unittest.TestCase):
             self.helpers.get_legacy_device_name(self.data, 31),
             "Wiser TemperatureHumiditySensor "
             "Andys Bedroom Kitchen Temperature Sensor",
+        )
+
+    def test_itrv_name_respects_legacy_option_without_changing_identity(self):
+        self.data.wiserhub.devices.get_by_id = lambda device_id: SimpleNamespace(
+            id=device_id,
+            product_type="iTRV",
+        )
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: SimpleNamespace(
+            id=7,
+            name="Andys Bedroom",
+            number_of_smartvalves=1,
+            smartvalve_ids=[31],
+        )
+
+        self.data.legacy_naming = False
+        self.assertEqual(self.helpers.get_device_name(self.data, 31), "Wiser iTRV")
+        identifier = self.helpers.get_identifier(self.data, 31)
+        self.assertEqual(identifier, "WiserHeatNOTUSED device 31")
+
+        self.data.legacy_naming = True
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser iTRV Andys Bedroom",
+        )
+        self.assertEqual(self.helpers.get_identifier(self.data, 31), identifier)
+
+    def test_itrv_temperature_unique_id_does_not_use_room_name(self):
+        before = self.helpers.get_itrv_temperature_unique_id(self.data, 31)
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: SimpleNamespace(
+            id=7,
+            name="Renamed Room",
+        )
+        self.assertEqual(
+            self.helpers.get_itrv_temperature_unique_id(self.data, 31), before
+        )
+
+    def test_all_physical_device_identifiers_use_immutable_device_id(self):
+        self.data.wiserhub.devices.get_by_id = lambda _device_id: (
+            _ for _ in ()
+        ).throw(
+            AssertionError(
+                "physical identifiers must not inspect mutable device data"
+            )
+        )
+
+        self.assertEqual(
+            self.helpers.get_identifier(self.data, 42),
+            "WiserHeatNOTUSED device 42",
+        )
+
+    def test_room_entity_unique_id_does_not_use_room_name(self):
+        before = self.helpers.get_room_entity_unique_id(
+            self.data, 7, "current_temp"
+        )
+        self.data.wiserhub.rooms.get_by_id = lambda room_id: SimpleNamespace(
+            id=room_id,
+            name="Renamed Room",
+        )
+        self.assertEqual(
+            self.helpers.get_room_entity_unique_id(
+                self.data, 7, "current_temp"
+            ),
+            before,
         )
 
 

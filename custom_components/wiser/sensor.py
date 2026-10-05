@@ -58,7 +58,9 @@ from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
+    get_itrv_temperature_unique_id,
     get_identifier,
+    get_room_entity_unique_id,
     get_unique_id,
 )
 from .opentherm import (
@@ -1239,6 +1241,17 @@ class WiserLTSTempSensor(WiserSensor):
                 translation_key="target_temperature",
             )
 
+    @property
+    def unique_id(self):
+        """Return a stable ID when an iTRV is moved or its room is renamed."""
+        if self._lts_sensor_type == "smartvalve_temp":
+            return get_itrv_temperature_unique_id(self._data, self._device_id)
+        if self._lts_sensor_type in {"current_temp", "current_target_temp"}:
+            return get_room_entity_unique_id(
+                self._data, self._device_id, self._lts_sensor_type
+            )
+        return super().unique_id
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
@@ -1752,6 +1765,15 @@ class WiserLTSDemandSensor(WiserSensor):
                 f"LTS Heating Demand {data.wiserhub.rooms.get_by_id(device_id).name}",
                 translation_key="heating_demand",
             )
+
+    @property
+    def unique_id(self):
+        """Return a stable ID for room demand across room renames."""
+        if self._lts_sensor_type == "room":
+            return get_room_entity_unique_id(
+                self._data, self._device_id, "heating_demand"
+            )
+        return super().unique_id
 
     @callback
     def _handle_coordinator_update(self) -> None:

@@ -7,6 +7,7 @@ msparker@sky.com
 import asyncio
 from functools import partial
 import logging
+import re
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
@@ -29,8 +30,10 @@ from .const import (
     CONF_DEPRECATED_HW_TARGET_TEMP,
     CONF_LEGACY_NAMING,
     CONF_OPENTHERM_EVER_CONNECTED,
+    CONF_WISER_ROOM_NAMES,
     DATA,
     DOMAIN,
+    ENTITY_PREFIX,
     MANUFACTURER,
     UPDATE_LISTENER,
     WISER_PLATFORMS,
@@ -41,7 +44,11 @@ from .coordinator import WiserUpdateCoordinator
 from .device import (
     assign_device_area_if_unset,
     merge_legacy_hub_device,
+    migrate_entity_unique_id_duplicates,
+    migrate_physical_device,
+    migrate_room_entities,
     migrate_room_device,
+    move_devices_from_managed_area,
     register_hub_device,
     register_room_assigned_device,
 )
@@ -55,7 +62,11 @@ from .helpers import (
     get_hub_device_name,
     get_identifier,
     get_instance_count,
+    get_itrv_temperature_unique_id,
+    get_legacy_device_identifier,
     get_legacy_room_identifier,
+    get_room_entity_unique_id,
+    get_unique_id,
 )
 from .opentherm_detection import (
     opentherm_entity_unique_ids,
@@ -219,14 +230,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # This prevents a standard boiler's dormant OpenTherm endpoint from creating
     # entities while allowing a real installation to survive temporary outages.
     _remember_opentherm_connection(hass, config_entry, coordinator)
-
-    # Update listener for config option changes
-    update_listener = config_entry.add_update_listener(_async_update_listener)
-
     hass.data[DOMAIN][config_entry.entry_id] = {
         DATA: coordinator,
-        UPDATE_LISTENER: update_listener,
-        "reload_settings": integration_reload_settings(config_entry),
     }
 
     # If OpenTherm connects for the first time after startup, saving the flag
@@ -249,8 +254,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     hub_device = await async_update_device_registry(hass, config_entry)
     coordinator.hub_device_id = hub_device.id
 
-    # Create physical devices with their Wiser room as Home Assistant's initial
-    # area. The registry keeps any area the user chooses later.
+    # Physical device identifiers used to contain mutable room or device names.
+    # Migrate them before platform setup so renames cannot duplicate devices.
+    migrate_physical_device_registry(hass, config_entry, hub_device.id)
+
+    # Create physical devices in their Wiser room's Home Assistant area. Later
+    # room renames move devices only while they remain in that managed area.
     register_room_assigned_devices(hass, config_entry, hub_device.id)
 
     # Move existing hub entities off the old virtual Controller record.
@@ -258,6 +267,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Give logical room devices stable IDs and concise device names.
     migrate_room_device_registry(hass, config_entry)
+
+    previous_room_names = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    sync_wiser_room_areas(hass, config_entry, previous_room_names)
+    _store_wiser_room_names(hass, config_entry, coordinator)
+
+    # Register listeners only after setup-time registry and config migrations.
+    update_listener = config_entry.add_update_listener(_async_update_listener)
+    hass.data[DOMAIN][config_entry.entry_id].update(
+        {
+            UPDATE_LISTENER: update_listener,
+            "reload_settings": integration_reload_settings(config_entry),
+        }
+    )
+    config_entry.async_on_unload(
+        coordinator.async_add_listener(
+            partial(
+                _sync_wiser_room_names,
+                hass,
+                config_entry,
+                coordinator,
+            )
+        )
+    )
 
     # Remap light entity unique_ids from the pre-#683 scheme before the
     # platforms create entities, so existing light entities are preserved
@@ -412,6 +444,127 @@ def register_room_assigned_devices(
         )
 
 
+def migrate_physical_device_registry(
+    hass: HomeAssistant, config_entry, hub_device_id: str
+):
+    """Migrate physical devices from name-derived to stable identifiers."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
+    registry_devices = list(
+        dr.async_entries_for_config_entry(
+            device_registry, config_entry.entry_id
+        )
+    )
+    registry_entities = list(
+        er.async_entries_for_config_entry(
+            entity_registry, config_entry.entry_id
+        )
+    )
+    itrv_identifier_prefix = (
+        f"{data.wiserhub.system.name} {ENTITY_PREFIX} iTRV "
+    )
+    for device in data.wiserhub.devices.all:
+        stable_identifier = (DOMAIN, get_identifier(data, device.id))
+        legacy_identifier = (
+            DOMAIN,
+            get_legacy_device_identifier(data, device.id),
+        )
+        possible_devices = [
+            entry
+            for entry in registry_devices
+            if stable_identifier in entry.identifiers
+            or legacy_identifier in entry.identifiers
+        ]
+        room = data.wiserhub.rooms.get_by_device_id(device.id)
+
+        if device.product_type == "iTRV":
+            possible_room_names = set()
+            if room is not None:
+                possible_room_names.add(room.name)
+            for entry in registry_devices:
+                if entry.model != "iTRV":
+                    continue
+                for domain, value in entry.identifiers:
+                    if domain != DOMAIN or not value.startswith(
+                        itrv_identifier_prefix
+                    ):
+                        continue
+                    suffix = value[len(itrv_identifier_prefix):]
+                    possible_room_names.add(suffix)
+                    possible_room_names.add(re.sub(r"-\d+$", "", suffix))
+
+            old_temperature_ids = {
+                get_unique_id(
+                    data,
+                    "sensor",
+                    f"LTS Temperature iTRV {room_name}",
+                    device.id,
+                )
+                for room_name in possible_room_names
+            }
+            stable_temperature_id = get_itrv_temperature_unique_id(
+                data, device.id
+            )
+            matching_temperature_entries = [
+                entry
+                for entry in registry_entities
+                if entry.domain == "sensor"
+                and entry.platform == DOMAIN
+                and entry.unique_id
+                in old_temperature_ids | {stable_temperature_id}
+            ]
+            matching_device_ids = {
+                entry.device_id
+                for entry in matching_temperature_entries
+                if entry.device_id is not None
+            }
+
+            # Signal and battery IDs have always used the immutable device ID,
+            # so they locate the record if temperature is disabled or removed.
+            stable_entity_ids = {
+                get_unique_id(data, "sensor", device.product_type, device.id),
+                get_unique_id(data, "sensor", "Battery", device.id),
+            }
+            matching_device_ids.update(
+                entry.device_id
+                for entry in registry_entities
+                if entry.unique_id in stable_entity_ids
+                and entry.device_id is not None
+            )
+            possible_devices.extend(
+                entry
+                for entry in registry_devices
+                if entry.id in matching_device_ids
+            )
+
+            migrate_entity_unique_id_duplicates(
+                entity_registry,
+                matching_temperature_entries,
+                stable_temperature_id,
+            )
+
+        device_entry = migrate_physical_device(
+            device_registry,
+            entity_registry,
+            config_entry.entry_id,
+            stable_identifier,
+            possible_devices,
+            get_device_name(data, device.id),
+            manufacturer=MANUFACTURER,
+            model=device.product_type,
+            sw_version=device.firmware_version,
+            via_device_id=hub_device_id,
+        )
+        if room is not None:
+            assign_device_area_if_unset(
+                device_registry,
+                ar.async_get(hass),
+                device_entry,
+                room.name,
+            )
+
+
 def migrate_room_device_registry(hass: HomeAssistant, config_entry):
     """Migrate all logical room devices away from name-derived identifiers."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
@@ -431,6 +584,97 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
         assign_device_area_if_unset(
             device_registry, area_registry, device_entry, room.name
         )
+        migrate_room_entities(
+            entity_registry,
+            device_entry.id,
+            lambda entity_type: get_room_entity_unique_id(
+                data, room.id, entity_type
+            ),
+        )
+
+
+def _current_wiser_room_names(coordinator):
+    """Return Wiser room names keyed by their stable room IDs."""
+    return {
+        str(room.id): room.name for room in coordinator.wiserhub.rooms.all
+    }
+
+
+def _store_wiser_room_names(hass, config_entry, coordinator) -> None:
+    """Persist room names before the config-entry update listener is registered."""
+    current = _current_wiser_room_names(coordinator)
+    if config_entry.data.get(CONF_WISER_ROOM_NAMES, {}) == current:
+        return
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={**config_entry.data, CONF_WISER_ROOM_NAMES: current},
+    )
+
+
+def _device_by_identifier(device_registry, config_entry_id, identifier):
+    """Return a device registry entry using current and older HA APIs."""
+    get_by_identifier = getattr(
+        device_registry, "async_get_device_by_identifier", None
+    )
+    if get_by_identifier:
+        return get_by_identifier(identifier, config_entry_id)
+    return device_registry.async_get_device(identifiers={identifier})
+
+
+def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
+    """Move Wiser devices when their integration-managed room is renamed."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    device_registry = dr.async_get(hass)
+    area_registry = ar.async_get(hass)
+    moved = 0
+
+    for room in data.wiserhub.rooms.all:
+        room_device = _device_by_identifier(
+            device_registry,
+            config_entry.entry_id,
+            (DOMAIN, get_identifier(data, room.id, "room")),
+        )
+        previous_name = previous_room_names.get(str(room.id))
+        if previous_name is None and room_device and room_device.area_id:
+            previous_area = area_registry.async_get_area(room_device.area_id)
+            if previous_area is not None:
+                previous_name = previous_area.name
+
+        room_devices = [room_device]
+        for device in data.wiserhub.devices.all:
+            device_room = data.wiserhub.rooms.get_by_device_id(device.id)
+            if device_room is None or device_room.id != room.id:
+                continue
+            room_devices.append(
+                _device_by_identifier(
+                    device_registry,
+                    config_entry.entry_id,
+                    (DOMAIN, get_identifier(data, device.id)),
+                )
+            )
+
+        moved += move_devices_from_managed_area(
+            device_registry,
+            area_registry,
+            room_devices,
+            previous_name,
+            room.name,
+        )
+
+    return moved
+
+
+def _sync_wiser_room_names(hass, config_entry, coordinator) -> None:
+    """Apply Wiser room renames after a coordinator refresh."""
+    previous = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    current = _current_wiser_room_names(coordinator)
+    if previous == current:
+        return
+    sync_wiser_room_areas(hass, config_entry, previous)
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={**config_entry.data, CONF_WISER_ROOM_NAMES: current},
+    )
 
 
 def update_hub_device_names(hass: HomeAssistant):

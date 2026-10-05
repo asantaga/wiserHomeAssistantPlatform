@@ -12,6 +12,31 @@ def assign_device_area_if_unset(
     return device_registry.async_update_device(device.id, area_id=area.id)
 
 
+def move_devices_from_managed_area(
+    device_registry,
+    area_registry,
+    devices,
+    previous_area_name,
+    new_area_name,
+):
+    """Move Wiser devices that remain in their previous managed area."""
+    if not previous_area_name or previous_area_name == new_area_name:
+        return 0
+
+    previous_area = area_registry.async_get_area_by_name(previous_area_name)
+    if previous_area is None:
+        return 0
+
+    new_area = area_registry.async_get_or_create(new_area_name)
+    moved = 0
+    for device in {device.id: device for device in devices if device}.values():
+        if device.area_id != previous_area.id:
+            continue
+        device_registry.async_update_device(device.id, area_id=new_area.id)
+        moved += 1
+    return moved
+
+
 def register_room_assigned_device(
     device_registry,
     config_entry_id,
@@ -28,6 +53,150 @@ def register_room_assigned_device(
         via_device_id=parent_device_id,
         **device_info,
     )
+
+
+def migrate_physical_device(
+    device_registry,
+    entity_registry,
+    config_entry_id,
+    identifier,
+    candidates,
+    name,
+    **device_info,
+):
+    """Give a physical device a stable ID and merge duplicate registry rows."""
+    get_by_identifier = getattr(
+        device_registry, "async_get_device_by_identifier", None
+    )
+    stable_device = (
+        get_by_identifier(identifier, config_entry_id)
+        if get_by_identifier
+        else device_registry.async_get_device(identifiers={identifier})
+    )
+
+    candidates = list({device.id: device for device in candidates}.values())
+    if stable_device is not None and all(
+        device.id != stable_device.id for device in candidates
+    ):
+        candidates.append(stable_device)
+    if candidates:
+        canonical = min(
+            candidates,
+            key=lambda device: (
+                getattr(device, "created_at", None) is None,
+                getattr(device, "created_at", None),
+                device.id,
+            ),
+        )
+    else:
+        canonical = None
+
+    if canonical is None:
+        return device_registry.async_get_or_create(
+            config_entry_id=config_entry_id,
+            identifiers={identifier},
+            name=name,
+            **device_info,
+        )
+
+    for duplicate in candidates:
+        if duplicate.id == canonical.id:
+            continue
+        for entity in list(entity_registry.entities.values()):
+            if entity.device_id == duplicate.id:
+                entity_registry.async_update_entity(
+                    entity.entity_id, device_id=canonical.id
+                )
+        device_registry.async_remove_device(duplicate.id)
+    return device_registry.async_update_device(
+        canonical.id,
+        new_identifiers={identifier},
+        name=name,
+        **device_info,
+    )
+
+
+def migrate_entity_unique_id_duplicates(
+    entity_registry,
+    entries,
+    new_unique_id,
+):
+    """Keep the oldest entity while replacing duplicate historical IDs."""
+    entries = list({entry.entity_id: entry for entry in entries}.values())
+    if not entries:
+        return None
+
+    existing_entity_id = entity_registry.async_get_entity_id(
+        entries[0].domain, entries[0].platform, new_unique_id
+    )
+    existing = (
+        entity_registry.async_get(existing_entity_id)
+        if existing_entity_id is not None
+        else None
+    )
+    if existing is not None and all(
+        entry.entity_id != existing.entity_id for entry in entries
+    ):
+        entries.append(existing)
+    canonical = min(
+        entries,
+        key=lambda entry: (
+            getattr(entry, "created_at", None) is None,
+            getattr(entry, "created_at", None),
+            entry.entity_id,
+        ),
+    )
+    for duplicate in entries:
+        if duplicate.entity_id != canonical.entity_id:
+            entity_registry.async_remove(duplicate.entity_id)
+    if canonical.unique_id != new_unique_id:
+        entity_registry.async_update_entity(
+            canonical.entity_id, new_unique_id=new_unique_id
+        )
+    return canonical
+
+
+def migrate_room_entities(
+    entity_registry,
+    room_device_id,
+    unique_id_for_type,
+):
+    """Migrate room-name-derived entities and remove their duplicates."""
+    groups = {}
+    for entry in list(entity_registry.entities.values()):
+        if entry.device_id != room_device_id or entry.platform != "wiser":
+            continue
+
+        entity_type = None
+        translation_key = getattr(entry, "translation_key", None)
+        if entry.domain == "climate":
+            entity_type = "climate"
+        elif entry.domain == "switch" and translation_key:
+            entity_type = f"switch_{translation_key}"
+        elif entry.domain == "sensor":
+            if translation_key == "heating_demand":
+                entity_type = "heating_demand"
+            elif translation_key == "target_temperature":
+                entity_type = "current_target_temp"
+            elif (
+                translation_key is None
+                and "temperature"
+                in {
+                    str(getattr(entry, "device_class", None)),
+                    str(getattr(entry, "original_device_class", None)),
+                }
+            ):
+                entity_type = "current_temp"
+
+        if entity_type is not None:
+            groups.setdefault(entity_type, []).append(entry)
+
+    for entity_type, entries in groups.items():
+        migrate_entity_unique_id_duplicates(
+            entity_registry,
+            entries,
+            unique_id_for_type(entity_type),
+        )
 
 
 def register_hub_device(

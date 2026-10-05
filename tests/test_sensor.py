@@ -114,6 +114,8 @@ def _load_sensor_module() -> ModuleType:
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_hub_via_device_info=lambda _data: {},
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
+        get_itrv_temperature_unique_id=lambda *_args: "itrv-temperature-id",
+        get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",
         get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
     )
@@ -121,6 +123,10 @@ def _load_sensor_module() -> ModuleType:
         pass
 
     _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
+    _module(
+        "wiser.opentherm_detection",
+        opentherm_is_detected=lambda *_args: True,
+    )
     def relative_modulation_level(opentherm):
         raw = opentherm.operational_data.json_data.get("RelativeModulationLevel")
         if isinstance(raw, bool) or not isinstance(raw, (int, float)):

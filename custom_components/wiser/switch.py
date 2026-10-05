@@ -25,7 +25,7 @@ from .helpers import (
     get_identifier,
     get_legacy_device_name,
     get_legacy_unique_id,
-    get_room_name,
+    get_room_entity_unique_id,
     get_unique_id,
     get_uuid_unique_id,
     hub_error_handler,
@@ -300,11 +300,13 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
     @property
     def unique_id(self):
         if self._type == "room":
-            legacy_name = (
-                f"{get_room_name(self._data, self._room_id)} {self._name}"
+            entity_key = self._attr_translation_key or self._key
+            return get_room_entity_unique_id(
+                self._data,
+                self._room_id,
+                f"switch_{entity_key}",
             )
-        else:
-            legacy_name = get_device_name(self._data, 0, self._name)
+        legacy_name = get_device_name(self._data, 0, self._name)
         return get_unique_id(self._data, self._type, "switch", legacy_name)
 
     @property
@@ -799,11 +801,10 @@ class WiserPassiveModeSwitch(WiserSwitch):
     @property
     def unique_id(self):
         """Return unique Id."""
-        legacy_name = (
-            f"{get_room_name(self._data, self._room_id)} Passive Mode"
-        )
-        return get_unique_id(
-            self._data, "passive-mode-switch", legacy_name, self._room_id
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            "switch_passive_mode",
         )
 
     @property
