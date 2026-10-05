@@ -57,6 +57,10 @@ from .helpers import (
     get_instance_count,
     get_legacy_room_identifier,
 )
+from .opentherm_detection import (
+    opentherm_entity_unique_ids,
+    opentherm_is_detected,
+)
 from .services import async_setup_services
 from .websockets import async_register_websockets
 from .update import async_unload_card_updates
@@ -281,6 +285,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 @callback
 def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
     """Persist the first confirmed OpenTherm connection."""
+    _sync_opentherm_entity_registry(hass, config_entry, coordinator)
+
     if config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False):
         return
 
@@ -292,6 +298,26 @@ def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
         config_entry,
         data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
     )
+
+
+@callback
+def _sync_opentherm_entity_registry(hass, config_entry, coordinator) -> None:
+    """Hide false OpenTherm entities while preserving their registry data."""
+    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    detected = opentherm_is_detected(config_entry, opentherm)
+    unique_ids = opentherm_entity_unique_ids(coordinator)
+    registry = er.async_get(hass)
+
+    for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+        if (entry.domain, entry.unique_id) not in unique_ids:
+            continue
+        if not detected and entry.disabled_by is None:
+            registry.async_update_entity(
+                entry.entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+        elif detected and entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            registry.async_update_entity(entry.entity_id, disabled_by=None)
 
 
 async def async_update_device_registry(hass: HomeAssistant, config_entry):

@@ -86,6 +86,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_first_opentherm_connection_is_remembered_once(self):
+        sync_registry = Mock()
+        self.namespace["_sync_opentherm_entity_registry"] = sync_registry
         functions = load_functions(
             "__init__.py", {"_remember_opentherm_connection"}, self.namespace
         )
@@ -103,6 +105,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
+        sync_registry.assert_called_once_with(hass, entry, coordinator)
 
         opentherm.connection_status = "Connected"
         functions._remember_opentherm_connection(hass, entry, coordinator)
@@ -112,10 +115,80 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
 
         update.reset_mock()
+        sync_registry.reset_mock()
         entry.data = {"host": "wiser.local", "opentherm_ever_connected": True}
         opentherm.connection_status = "Disconnected"
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
+        sync_registry.assert_called_once_with(hass, entry, coordinator)
+
+    def test_opentherm_registry_entries_are_disabled_without_detection(self):
+        integration = "integration"
+        registry = SimpleNamespace(async_update_entity=Mock())
+        entries = [
+            SimpleNamespace(
+                domain="sensor",
+                unique_id="flow",
+                entity_id="sensor.boiler_flow_temperature",
+                disabled_by=None,
+            ),
+            SimpleNamespace(
+                domain="sensor",
+                unique_id="return",
+                entity_id="sensor.boiler_return_temperature",
+                disabled_by="user",
+            ),
+            SimpleNamespace(
+                domain="sensor",
+                unique_id="cloud",
+                entity_id="sensor.cloud",
+                disabled_by=None,
+            ),
+        ]
+        fake_er = SimpleNamespace(
+            RegistryEntryDisabler=SimpleNamespace(INTEGRATION=integration),
+            async_get=lambda _hass: registry,
+            async_entries_for_config_entry=lambda _registry, _entry_id: entries,
+        )
+        self.namespace.update(
+            er=fake_er,
+            opentherm_entity_unique_ids=lambda _data: {
+                ("sensor", "flow"),
+                ("sensor", "return"),
+            },
+            opentherm_is_detected=lambda entry, opentherm: bool(
+                entry.data.get("opentherm_ever_connected")
+                or opentherm.connection_status == "Connected"
+            ),
+        )
+        functions = load_functions(
+            "__init__.py", {"_sync_opentherm_entity_registry"}, self.namespace
+        )
+        config_entry = SimpleNamespace(entry_id="entry", data={})
+        coordinator = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    opentherm=SimpleNamespace(connection_status="Disconnected")
+                )
+            )
+        )
+
+        functions._sync_opentherm_entity_registry(
+            object(), config_entry, coordinator
+        )
+        registry.async_update_entity.assert_called_once_with(
+            "sensor.boiler_flow_temperature", disabled_by=integration
+        )
+
+        registry.async_update_entity.reset_mock()
+        entries[0].disabled_by = integration
+        config_entry.data["opentherm_ever_connected"] = True
+        functions._sync_opentherm_entity_registry(
+            object(), config_entry, coordinator
+        )
+        registry.async_update_entity.assert_called_once_with(
+            "sensor.boiler_flow_temperature", disabled_by=None
+        )
 
     def test_options_hide_opentherm_until_detected(self):
         detection = load_functions(
