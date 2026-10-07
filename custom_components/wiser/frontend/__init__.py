@@ -1,10 +1,11 @@
 """Register Wiser frontend resources and independently updated card bundles."""
 
+import asyncio
 from hashlib import sha256
-import re
 import logging
 import os
 from pathlib import Path
+import re
 from urllib.parse import parse_qs, urlsplit
 
 from homeassistant.components.frontend import add_extra_js_url
@@ -15,49 +16,28 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
 from .card_files import CARD_CACHE, CARD_CACHE_URL, resolve_card
+from .registry import async_load_registry, get_manifest
 
-from ..const import JSMODULES, URL_BASE  # noqa: TID252
+from ..const import URL_BASE  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def card_version(path: Path) -> str:
-    """Resolve the card's banner variable, ignoring bundled library versions."""
+    """Read the standard version marker or hash an unversioned static asset."""
     version_pattern = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
     try:
         contents = path.read_bytes()
     except OSError:
         return "missing"
     source = contents.decode("utf-8", errors="replace")
-    # Explicit build metadata is authoritative; legacy parsing remains below.
+    # Every registry-provided bundle uses the same build metadata contract.
     marker = re.search(
         rf"/\*!\s*WISER-CARD-VERSION {re.escape(path.stem)}\s+({version_pattern})\s*\*/",
         source,
     )
     if marker:
         return marker[1]
-    # New builds inline CARD_VERSION into the editor's version footer and
-    # no longer emit the legacy startup banner.
-    footer = re.search(
-        rf'class=["\']version["\'][^`]*?common\.version["\']\)\}}:\s*'
-        rf'\$\{{["\']({version_pattern})["\']\}}',
-        source,
-    )
-    if path.stem == "wiser-zigbee-card" and footer:
-        return footer[1]
-
-    banner_name = "WISER-ZIGBEE(?:-NETWORK)?-CARD" if path.stem == "wiser-zigbee-card" else re.escape(path.stem.upper())
-    banner = re.search(
-        banner_name + r'[^`]*?common\.version[\"\']\)\}\s*\$\{([\w$]+)\}',
-        source,
-    )
-    if banner:
-        assignment = re.search(
-            rf'(?<![\w$]){re.escape(banner[1])}\s*=\s*[\"\']({version_pattern})[\"\']',
-            source,
-        )
-        if assignment:
-            return assignment[1]
     # Still refresh caches for unfamiliar builds rather than advertise a stale
     # version from const.py. This is a content identifier, not a release number.
     return f"sha256-{sha256(contents).hexdigest()[:16]}"
@@ -89,6 +69,7 @@ class JSModuleRegistration:
 
     async def async_register(self):
         """Register Wiser static paths, icons, and card resources."""
+        await async_load_registry(self.hass)
         await self._async_register_path()
         icon_version = await self.hass.async_add_executor_job(
             card_version, Path(__file__).parent / "wiser-icons.js"
@@ -137,6 +118,12 @@ class JSModuleRegistration:
 
     async def _async_register_modules(self):
         """Register modules if not already registered."""
+        lock = self.hass.data.setdefault("wiser_card_resource_lock", asyncio.Lock())
+        async with lock:
+            await self._async_register_modules_locked()
+
+    async def _async_register_modules_locked(self):
+        """Register modules while holding the shared resource lock."""
         _LOGGER.debug("Installing javascript modules")
 
         # Get resources already registered
@@ -146,46 +133,72 @@ class JSModuleRegistration:
             if resource["url"].startswith(URL_BASE)
         ]
 
-        for module in JSMODULES:
+        for module in get_manifest(self.hass):
+            if not module.get("card", True):
+                continue
             url = f"{URL_BASE}/{module.get('filename')}"
+            filenames = [module["filename"], *module.get("legacy_filenames", [])]
 
             _, active_url, version = await async_card_resource(self.hass, module["filename"])
+            if version == "missing":
+                # Newly discovered cards become resources only after installation.
+                continue
 
-            card_registered = False
-
-            for resource in resources:
+            matching_resources = [
+                resource
+                for resource in resources
                 if (
-                    self._get_resource_path(resource["url"]) == url
-                    or self._get_resource_path(resource["url"]).startswith(
-                        f"{CARD_CACHE_URL}/{Path(module['filename']).stem}-"
+                    self._get_resource_path(resource["url"])
+                    in {f"{URL_BASE}/{filename}" for filename in filenames}
+                    or any(
+                        self._get_resource_path(resource["url"]).startswith(
+                            f"{CARD_CACHE_URL}/{Path(filename).stem}-"
+                        )
+                        for filename in filenames
                     )
-                ):
-                    card_registered = True
-                    # check version
-                    if resource["url"] != active_url:
-                        # Update card version
-                        _LOGGER.debug(
-                            "Updating %s to version %s",
-                            module.get("name"),
-                            version,
-                        )
-                        await self.lovelace.resources.async_update_item(
-                            resource.get("id"),
-                            {
-                                "res_type": "module",
-                                "url": active_url,
-                            },
-                        )
-                        # Remove old gzipped files
-                        await self.async_remove_gzip_files()
-                    else:
-                        _LOGGER.debug(
-                            "%s already registered as version %s",
-                            module.get("name"),
-                            version,
-                        )
+                )
+            ]
 
-            if not card_registered:
+            if matching_resources:
+                # Prefer the most recently listed active resource, otherwise
+                # migrate the most recently listed legacy resource in place.
+                active_resources = [
+                    resource
+                    for resource in matching_resources
+                    if resource["url"] == active_url
+                ]
+                retained = (active_resources or matching_resources)[-1]
+
+                if retained["url"] != active_url:
+                    _LOGGER.debug(
+                        "Updating %s to version %s",
+                        module.get("name"),
+                        version,
+                    )
+                    await self.lovelace.resources.async_update_item(
+                        retained.get("id"),
+                        {"res_type": "module", "url": active_url},
+                    )
+                    await self.async_remove_gzip_files()
+                else:
+                    _LOGGER.debug(
+                        "%s already registered as version %s",
+                        module.get("name"),
+                        version,
+                    )
+
+                for duplicate in matching_resources:
+                    if duplicate is retained:
+                        continue
+                    _LOGGER.debug(
+                        "Removing duplicate %s resource %s",
+                        module.get("name"),
+                        duplicate.get("id"),
+                    )
+                    await self.lovelace.resources.async_delete_item(
+                        duplicate.get("id")
+                    )
+            else:
                 _LOGGER.debug(
                     "Registering %s as version %s",
                     module.get("name"),
@@ -204,14 +217,19 @@ class JSModuleRegistration:
     async def async_unregister(self):
         """Unload lovelace module resource."""
         if self.resource_mode == MODE_STORAGE:
-            for module in JSMODULES:
-                url = f"{URL_BASE}/{module.get('filename')}"
+            for module in get_manifest(self.hass):
+                if not module.get("card", True):
+                    continue
+                filenames = [module["filename"], *module.get("legacy_filenames", [])]
                 wiser_resources = [
                     resource
                     for resource in self.lovelace.resources.async_items()
-                    if str(resource["url"]).startswith(url)
-                    or str(resource["url"]).startswith(
-                        f"{CARD_CACHE_URL}/{Path(module['filename']).stem}-"
+                    if any(
+                        str(resource["url"]).startswith(f"{URL_BASE}/{filename}")
+                        or str(resource["url"]).startswith(
+                            f"{CARD_CACHE_URL}/{Path(filename).stem}-"
+                        )
+                        for filename in filenames
                     )
                 ]
                 for resource in wiser_resources:

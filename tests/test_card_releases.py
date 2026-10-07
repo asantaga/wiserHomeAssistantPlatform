@@ -11,22 +11,50 @@ FETCH = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FETCH)
 
 
+CARD_MANIFEST = json.loads(
+    (
+        Path(__file__).resolve().parents[1]
+        / "custom_components/wiser/frontend/cards.json"
+    ).read_text()
+)["cards"]
+CARD_REPOSITORIES = {card["id"]: card["repository"] for card in CARD_MANIFEST}
+CARD_DEFINITIONS = {card["id"]: card for card in CARD_MANIFEST}
+
+
 def release(tag, date, prerelease=False, card="zigbee", draft=False, asset=True):
+    definition = CARD_DEFINITIONS[card]
+    filename = definition["filename"]
+    repository = definition["repository"]
     return {
         "tag_name": tag, "published_at": date, "prerelease": prerelease, "draft": draft,
-        "assets": [{"id": 1, "name": f"wiser-{card}-card.js", "state": "uploaded", "size": 200,
-                    "browser_download_url": f"https://github.com/andyblac/wiser-{card}-card/releases/download/{tag}/wiser-{card}-card.js"}] if asset else [],
+        "assets": [{"id": 1, "name": filename, "state": "uploaded", "size": 200,
+                    "browser_download_url": f"https://github.com/{repository}/releases/download/{tag}/{filename}"}] if asset else [],
     }
 
 
 class CardReleaseTest(unittest.TestCase):
     def setUp(self):
-        self.beta = release("v3-beta", "2026-09-01T00:00:00Z", True)
-        self.stable = release("v2", "2026-09-02T00:00:00Z")
+        self.beta = release("v2.0.0-beta.1", "2026-09-01T00:00:00Z", True)
+        self.stable = release("v2.0.1", "2026-09-02T00:00:00Z")
         self.releases = [self.stable, self.beta, release("draft", "2026-09-03T00:00:00Z", True, draft=True)]
 
-    def test_dev_prefers_latest_prerelease_even_if_stable_is_newer(self):
-        self.assertEqual(FETCH.select_release(self.releases, "dev"), self.beta)
+    def test_dev_selects_newer_stable_over_older_prerelease(self):
+        self.assertEqual(FETCH.select_release(self.releases, "dev"), self.stable)
+
+    def test_dev_selects_newer_prerelease_over_older_stable(self):
+        newer_beta = release("v2.1.0-beta.1", "2026-09-04T00:00:00Z", True)
+        releases = [newer_beta, *self.releases]
+        self.assertEqual(FETCH.select_release(releases, "dev"), newer_beta)
+        self.assertEqual(FETCH.select_release(releases, "stable"), self.stable)
+
+    def test_unpublished_releases_are_excluded(self):
+        unpublished = release("v4.0.0", None)
+        for channel in ("dev", "stable"):
+            with self.subTest(channel=channel):
+                self.assertEqual(
+                    FETCH.select_release([unpublished, *self.releases], channel),
+                    self.stable,
+                )
 
     def test_stable_excludes_prereleases_and_drafts(self):
         self.assertEqual(FETCH.select_release(self.releases, "stable"), self.stable)
@@ -48,38 +76,63 @@ class CardReleaseTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must have one"):
             FETCH.select_asset(release("missing", "2026", asset=False), "wiser-zigbee-card.js")
 
+    def test_registry_accepts_panel_only_bundle_definition(self):
+        definition = {
+            "id": "hub",
+            "name": "Wiser Hub Panel",
+            "filename": "wiser-hub-panel.js",
+            "repository": "andyblac/wiser-hub-panel",
+            "component": "wiser-hub-panel",
+            "panel": "wiser-hub-panel",
+            "card": False,
+        }
+        self.assertEqual(FETCH.validate_card_manifest([definition]), [definition])
+
+    def test_registry_rejects_invalid_card_flag(self):
+        definition = CARD_MANIFEST[0] | {"card": "false"}
+        with self.assertRaisesRegex(ValueError, "card flag"):
+            FETCH.validate_card_manifest([definition])
+
     def test_plan_does_not_download_or_write(self):
         with TemporaryDirectory() as directory:
             out = Path(directory) / "not-created"
             with patch.object(FETCH, "list_releases", return_value=self.releases), patch.object(FETCH, "download_asset") as download:
-                report = FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, plan=True)
+                report = FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, definitions=CARD_DEFINITIONS, plan=True)
             download.assert_not_called()
             self.assertFalse(out.exists())
-            self.assertEqual(report[0]["tag"], "v3-beta")
+            self.assertEqual(report[0]["tag"], "v2.0.1")
 
     def test_download_failure_does_not_replace_either_card(self):
         with TemporaryDirectory() as directory:
             out = Path(directory)
             (out / "wiser-schedule-card.js").write_bytes(b"old")
             releases = [[release("schedule", "2026", True, card="schedule")], [self.beta]]
-            with patch.object(FETCH, "list_releases", side_effect=releases), patch.object(FETCH, "download_asset", side_effect=[(b"new", "sha256:test"), ValueError("download failed")]):
+            schedule = (
+                b'customElements.define("wiser-schedule-card",class{});'
+                b'customElements.define("wiser-schedules-panel",class{})'
+            )
+            with patch.object(FETCH, "list_releases", side_effect=releases), patch.object(FETCH, "download_asset", side_effect=[(schedule, "sha256:test"), ValueError("download failed")]):
                 with self.assertRaises(ValueError):
-                    FETCH.fetch_cards("dev", out, FETCH.CARD_REPOSITORIES)
+                    FETCH.fetch_cards("dev", out, CARD_REPOSITORIES, CARD_DEFINITIONS)
             self.assertEqual((out / "wiser-schedule-card.js").read_bytes(), b"old")
             self.assertFalse((out / "card-releases.json").exists())
 
     def test_download_written_to_correct_filename_with_provenance(self):
         with TemporaryDirectory() as directory:
             out = Path(directory)
-            with patch.object(FETCH, "list_releases", return_value=self.releases), patch.object(FETCH, "download_asset", return_value=(b"new card", "sha256:test")):
-                FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"})
-            self.assertEqual((out / "wiser-zigbee-card.js").read_bytes(), b"new card")
+            card = (
+                b'customElements.define("wiser-zigbee-card",class{});'
+                b'customElements.define("wiser-zigbee-panel",class{})'
+            )
+            with patch.object(FETCH, "list_releases", return_value=self.releases), patch.object(FETCH, "download_asset", return_value=(card, "sha256:test")):
+                FETCH.fetch_cards("dev", out, {"zigbee": "andyblac/wiser-zigbee-card"}, CARD_DEFINITIONS)
+            self.assertEqual((out / "wiser-zigbee-card.js").read_bytes(), card)
             self.assertEqual(json.loads((out / "card-releases.json").read_text())[0]["digest"], "sha256:test")
 
-    def test_panel_integration_rejects_old_schedule_card(self):
+    def test_panel_card_rejects_bundle_without_panel_component(self):
         with TemporaryDirectory() as directory:
             out = Path(directory)
-            (out / "schedules_sidebar.py").touch()
-            with patch.object(FETCH, "list_releases", return_value=[release("old", "2026", card="schedule")]), patch.object(FETCH, "download_asset", return_value=(b"old card", "sha256:test")):
+            old_card = b'customElements.define("wiser-schedule-card",class{})'
+            with patch.object(FETCH, "list_releases", return_value=[release("old", "2026", card="schedule")]), patch.object(FETCH, "download_asset", return_value=(old_card, "sha256:test")):
                 with self.assertRaisesRegex(ValueError, "does not include the sidebar panel"):
-                    FETCH.fetch_cards("stable", out, {"schedule": "andyblac/wiser-schedule-card"})
+                    FETCH.fetch_cards("stable", out, {"schedule": "andyblac/wiser-schedule-card"}, CARD_DEFINITIONS)

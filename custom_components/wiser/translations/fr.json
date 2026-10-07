@@ -49,8 +49,7 @@
         "title": "Options de l’interface",
         "data": {
           "legacy_naming": "Nommage historique",
-          "show_schedules_sidebar": "Afficher les programmes Wiser dans la barre latérale",
-          "show_zigbee_sidebar": "Afficher Wiser Zigbee dans la barre latérale"
+          "show_wiser_sidebar": "Afficher Wiser dans la barre latérale"
         },
         "data_description": {
           "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants."
@@ -224,10 +223,6 @@
     "opentherm_notification_title": { "message": "Commande OpenTherm Wiser" }
   },
   "entity": {
-    "update": {
-      "schedule_card": { "name": "Carte des programmes Wiser" },
-      "zigbee_card": { "name": "Carte Zigbee Wiser" }
-    },
     "climate": {
       "heating": {
         "name": "Chauffage"
