@@ -51,6 +51,7 @@ from .device import (
     move_devices_from_managed_area,
     register_hub_device,
     register_room_assigned_device,
+    remove_room_devices,
 )
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
@@ -272,6 +273,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     migrate_room_device_registry(hass, config_entry)
 
     previous_room_names = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    remove_deleted_room_devices(hass, config_entry, previous_room_names)
     sync_wiser_room_areas(hass, config_entry, previous_room_names)
     _store_wiser_room_names(hass, config_entry, coordinator)
 
@@ -650,6 +652,36 @@ def _device_by_identifier(device_registry, config_entry_id, identifier):
     return device_registry.async_get_device(identifiers={identifier})
 
 
+def remove_deleted_room_devices(hass, config_entry, previous_room_names) -> int:
+    """Remove registry records for rooms deleted from the Wiser system."""
+    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
+    current_room_ids = {str(room.id) for room in data.wiserhub.rooms.all}
+    deleted_room_ids = set(previous_room_names) - current_room_ids
+    identifiers = []
+
+    for room_id in deleted_room_ids:
+        identifiers.extend(
+            (
+                (DOMAIN, get_identifier(data, room_id, "room")),
+                (
+                    DOMAIN,
+                    f"{data.wiserhub.system.name} {ENTITY_PREFIX} "
+                    f"{previous_room_names[room_id]}",
+                ),
+            )
+        )
+
+    removed = remove_room_devices(
+        dr.async_get(hass),
+        er.async_get(hass),
+        config_entry.entry_id,
+        identifiers,
+    )
+    if removed:
+        _LOGGER.info("Removed %s deleted Wiser room device(s)", removed)
+    return removed
+
+
 def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
     """Move Wiser devices when their integration-managed room is renamed."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
@@ -699,6 +731,7 @@ def _sync_wiser_room_names(hass, config_entry, coordinator) -> None:
     current = _current_wiser_room_names(coordinator)
     if previous == current:
         return
+    remove_deleted_room_devices(hass, config_entry, previous)
     sync_wiser_room_areas(hass, config_entry, previous)
     hass.config_entries.async_update_entry(
         config_entry,
@@ -732,13 +765,16 @@ async def _async_update_listener(hass: HomeAssistant, config_entry):
 async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry, device_entry
 ) -> bool:
-    """Delete device if not entities."""
-    if device_entry.model == "Controller" or (
-        DOMAIN,
-        config_entry.data.get(CONF_NAME),
-    ) in device_entry.identifiers:
+    """Allow device removal while protecting the physical HeatHub."""
+    data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {}).get(DATA)
+    hub_name = (
+        data.wiserhub.system.name
+        if data is not None
+        else config_entry.data.get(CONF_NAME)
+    )
+    if (DOMAIN, hub_name) in device_entry.identifiers:
         _LOGGER.error(
-            "You cannot delete the Wiser HeatHub using device delete.  Please remove the integration instead"
+            "You cannot delete the Wiser HeatHub using device delete. Please remove the integration instead"
         )
         return False
     return True

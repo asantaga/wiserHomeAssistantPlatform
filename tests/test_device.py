@@ -458,6 +458,55 @@ class MigrateRoomDeviceTest(unittest.TestCase):
         self.assertEqual(registry.updated[0][1]["area_id"], "custom_area")
 
 
+class RemoveRoomDevicesTest(unittest.TestCase):
+    """Test cleanup of rooms removed from the Wiser system."""
+
+    config_entry_id = "entry-id"
+    stable_identifier = ("wiser", "WiserHeat123456 room 7")
+    legacy_identifier = ("wiser", "WiserHeat123456 Wiser Test")
+
+    def test_removes_room_device_and_its_entities(self) -> None:
+        room = DeviceEntry("room-device")
+        registry = DeviceRegistry(
+            {
+                (self.stable_identifier, self.config_entry_id): room,
+                (self.legacy_identifier, self.config_entry_id): room,
+            }
+        )
+        entities = EntityRegistry(
+            {
+                "climate.test": EntityEntry("climate.test", "room-device"),
+                "sensor.other": EntityEntry("sensor.other", "other-device"),
+            }
+        )
+
+        removed = DEVICE.remove_room_devices(
+            registry,
+            entities,
+            self.config_entry_id,
+            (self.stable_identifier, self.legacy_identifier),
+        )
+
+        self.assertEqual(removed, 1)
+        self.assertEqual(entities.removed, ["climate.test"])
+        self.assertEqual(registry.removed, ["room-device"])
+
+    def test_ignores_unknown_room_identifiers(self) -> None:
+        registry = DeviceRegistry()
+        entities = EntityRegistry()
+
+        removed = DEVICE.remove_room_devices(
+            registry,
+            entities,
+            self.config_entry_id,
+            (self.stable_identifier,),
+        )
+
+        self.assertEqual(removed, 0)
+        self.assertEqual(entities.removed, [])
+        self.assertEqual(registry.removed, [])
+
+
 class MigratePhysicalDeviceTest(unittest.TestCase):
     """Test migration of room-derived physical device records."""
 

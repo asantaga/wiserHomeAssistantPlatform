@@ -327,3 +327,34 @@ def migrate_room_device(
         )
 
     return None
+
+
+def remove_room_devices(
+    device_registry,
+    entity_registry,
+    config_entry_id,
+    identifiers,
+):
+    """Remove deleted logical room devices and their registry entities."""
+    get_by_identifier = getattr(
+        device_registry, "async_get_device_by_identifier", None
+    )
+    removed_device_ids = set()
+
+    for identifier in identifiers:
+        device = (
+            get_by_identifier(identifier, config_entry_id)
+            if get_by_identifier
+            else device_registry.async_get_device(identifiers={identifier})
+        )
+        if device is None or device.id in removed_device_ids:
+            continue
+
+        for entity in list(entity_registry.entities.values()):
+            if entity.device_id == device.id:
+                entity_registry.async_remove(entity.entity_id)
+
+        device_registry.async_remove_device(device.id)
+        removed_device_ids.add(device.id)
+
+    return len(removed_device_ids)
