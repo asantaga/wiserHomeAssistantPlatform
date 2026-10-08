@@ -45,6 +45,7 @@ from .device import (
     assign_device_area_if_unset,
     confirmed_deleted_room_ids,
     find_physical_device_candidates,
+    known_wiser_room_area_name,
     merge_legacy_hub_device,
     migrate_entity_unique_id_duplicates,
     migrate_physical_device,
@@ -722,6 +723,9 @@ def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     device_registry = dr.async_get(hass)
     area_registry = ar.async_get(hass)
+    current_room_names = {
+        room.name for room in data.wiserhub.rooms.all
+    }
     moved = 0
 
     for room in data.wiserhub.rooms.all:
@@ -732,9 +736,11 @@ def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
         )
         previous_name = previous_room_names.get(str(room.id))
         if previous_name is None and room_device and room_device.area_id:
-            previous_area = area_registry.async_get_area(room_device.area_id)
-            if previous_area is not None:
-                previous_name = previous_area.name
+            previous_name = known_wiser_room_area_name(
+                area_registry,
+                room_device.area_id,
+                current_room_names,
+            )
 
         room_devices = [room_device]
         for device in data.wiserhub.devices.all:

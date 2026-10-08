@@ -37,6 +37,17 @@ def move_devices_from_managed_area(
     return moved
 
 
+def known_wiser_room_area_name(area_registry, area_id, room_names):
+    """Return an area's name only when it matches a current Wiser room."""
+    if not area_id:
+        return None
+
+    area = area_registry.async_get_area(area_id)
+    if area is None or area.name not in set(room_names):
+        return None
+    return area.name
+
+
 def confirmed_deleted_room_ids(
     previous_room_ids,
     current_room_ids,

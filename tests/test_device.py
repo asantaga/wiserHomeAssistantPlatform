@@ -419,6 +419,32 @@ class AssignDeviceAreaIfUnsetTest(unittest.TestCase):
             ],
         )
 
+    def test_recognises_area_matching_a_current_wiser_room(self) -> None:
+        area_registry = AreaRegistry()
+        area_registry.areas["test"] = AreaEntry("test", "Test")
+
+        result = DEVICE.known_wiser_room_area_name(
+            area_registry,
+            "test",
+            {"Kitchen", "Test"},
+        )
+
+        self.assertEqual(result, "Test")
+
+    def test_rejects_user_selected_area_on_first_upgrade(self) -> None:
+        area_registry = AreaRegistry()
+        area_registry.areas["living_room"] = AreaEntry(
+            "living_room", "Living Room"
+        )
+
+        result = DEVICE.known_wiser_room_area_name(
+            area_registry,
+            "living_room",
+            {"Kitchen", "Lounge"},
+        )
+
+        self.assertIsNone(result)
+
 
 class MigrateRoomDeviceTest(unittest.TestCase):
     """Test migration of logical Wiser room devices."""
