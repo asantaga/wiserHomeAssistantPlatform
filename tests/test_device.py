@@ -857,6 +857,12 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         entities = {}
         definitions = (
             ("climate", None, None, "climate"),
+            (
+                "binary_sensor",
+                "window_detection_active",
+                None,
+                "binary_sensor_window_detection_active",
+            ),
             ("switch", "window_detection", None, "switch_window_detection"),
             ("sensor", "heating_demand", None, "heating_demand"),
             ("sensor", "target_temperature", "temperature", "current_target_temp"),
@@ -894,6 +900,12 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
 
     def test_migrates_room_entities_created_before_translation_keys(self) -> None:
         definitions = (
+            (
+                "binary_sensor.window_detection_active",
+                "binary_sensor",
+                "legacy-room-window-detection-active",
+                "binary_sensor_window_detection_active",
+            ),
             (
                 "switch.window_detection",
                 "switch",

@@ -23,6 +23,7 @@ from .helpers import (
     get_legacy_unique_id,
     get_light_binary_sensor_unique_id,
     get_physical_entity_unique_id,
+    get_room_entity_unique_id,
     get_unique_id,
     get_uuid_unique_id,
 )
@@ -464,7 +465,11 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self._room_id)
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            f"binary_sensor_{self._attr_translation_key}",
+        )
 
     @property
     def device_info(self):

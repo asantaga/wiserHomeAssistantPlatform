@@ -269,6 +269,12 @@ def migrate_room_entities(
         unique_id = str(getattr(entry, "unique_id", "")).casefold()
         if entry.domain == "climate":
             entity_type = "climate"
+        elif entry.domain == "binary_sensor":
+            if (
+                translation_key == "window_detection_active"
+                or translation_key is None
+            ):
+                entity_type = "binary_sensor_window_detection_active"
         elif entry.domain == "switch":
             if translation_key:
                 entity_type = f"switch_{translation_key}"
