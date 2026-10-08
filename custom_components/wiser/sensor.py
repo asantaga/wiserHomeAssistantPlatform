@@ -2138,7 +2138,19 @@ class WiserEquipmentSensor(WiserSensor):
     def native_value(self) -> float | None:
         """Return the native power value."""
         equipment = getattr(self._device, "equipment", None)
-        return equipment.power.total_active_power if equipment is not None else None
+        if equipment is None:
+            return None
+
+        power = equipment.power
+        for value in (
+            getattr(power, "total_active_power", None),
+            getattr(power, "active_power", None),
+            getattr(self._device, "instantaneous_power", None),
+        ):
+            if value is not None:
+                return value
+
+        return None
 
     @property
     def native_unit_of_measurement(self) -> str:

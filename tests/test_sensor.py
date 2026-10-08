@@ -468,8 +468,9 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
     def test_equipment_power_uses_native_measurement_metadata(self) -> None:
         device = SimpleNamespace(
             id=9,
+            instantaneous_power=45.6,
             equipment=SimpleNamespace(
-                power=SimpleNamespace(total_active_power=123.4)
+                power=SimpleNamespace(total_active_power=123.4, active_power=78.9)
             ),
         )
         data = SimpleNamespace(
@@ -488,6 +489,15 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(sensor._attr_state_class, "measurement")
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
         self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
+
+        device.equipment.power.total_active_power = None
+        self.assertEqual(sensor.native_value, 78.9)
+
+        device.equipment.power.active_power = None
+        self.assertEqual(sensor.native_value, 45.6)
+
+        device.instantaneous_power = 0
+        self.assertEqual(sensor.native_value, 0)
 
     def test_equipment_sensor_recovers_from_missing_runtime_data(self) -> None:
         equipment = SimpleNamespace(
