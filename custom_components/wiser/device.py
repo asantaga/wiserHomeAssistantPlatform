@@ -189,9 +189,15 @@ def migrate_physical_device(
                     entity.entity_id, device_id=canonical.id
                 )
         device_registry.async_remove_device(duplicate.id)
+    preserved_identifiers = {
+        candidate_identifier
+        for candidate in candidates
+        for candidate_identifier in candidate.identifiers
+        if candidate_identifier[0] != identifier[0]
+    }
     return device_registry.async_update_device(
         canonical.id,
-        new_identifiers={identifier},
+        new_identifiers=preserved_identifiers | {identifier},
         name=name,
         **device_info,
     )

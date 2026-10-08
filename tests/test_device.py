@@ -696,10 +696,18 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         old = DeviceEntry(
             "old-device",
             created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            identifiers={
+                ("wiser", "WiserHeat123456 Wiser iTRV Bedroom"),
+                ("matter", "matter-device-31"),
+            },
         )
         renamed = DeviceEntry(
             "renamed-device",
             created_at=datetime(2026, 10, 1, tzinfo=timezone.utc),
+            identifiers={
+                ("wiser", "WiserHeat123456 Wiser iTRV Lounge"),
+                ("zigbee", "zigbee-device-31"),
+            },
         )
         registry = DeviceRegistry()
         entities = EntityRegistry(
@@ -727,7 +735,11 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         self.assertEqual(registry.updated[0][0], "old-device")
         self.assertEqual(
             registry.updated[0][1]["new_identifiers"],
-            {("wiser", "WiserHeat123456 device 31")},
+            {
+                ("wiser", "WiserHeat123456 device 31"),
+                ("matter", "matter-device-31"),
+                ("zigbee", "zigbee-device-31"),
+            },
         )
         self.assertEqual(
             registry.updated[0][1]["via_device_id"], "physical-hub-id"
