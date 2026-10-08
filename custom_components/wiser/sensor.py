@@ -2076,6 +2076,17 @@ class WiserEquipmentSensor(WiserSensor):
     _attr_device_class = SensorDeviceClass.POWER
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _unrecorded_attributes = frozenset(
+        {
+            "active_power",
+            "energy",
+            "energy_delivered",
+            "energy_received",
+            "rms_current",
+            "rms_voltage",
+            "total_active_power",
+        }
+    )
 
     def __init__(self, data, device_id=0, sensor_type="") -> None:
         """Initialise the device sensor."""

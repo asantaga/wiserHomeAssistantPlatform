@@ -481,6 +481,20 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
         self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
 
+    def test_live_equipment_attributes_are_excluded_from_recorder(self) -> None:
+        self.assertEqual(
+            self.sensor_module.WiserEquipmentSensor._unrecorded_attributes,
+            {
+                "active_power",
+                "energy",
+                "energy_delivered",
+                "energy_received",
+                "rms_current",
+                "rms_voltage",
+                "total_active_power",
+            },
+        )
+
 
 class WiserSystemCircuitStateTest(unittest.TestCase):
     """Tests for normalized heating and hot-water circuit states."""
