@@ -52,7 +52,7 @@ def _entity_translation_key(name: str) -> str:
 
 def _supports_summer_comfort_binary_sensors(data) -> bool:
     """Return whether the hub supplies summer-comfort system data."""
-    if data.hub_version != 2:
+    if data.hub_version < 2:
         return False
     system = data.wiserhub.system
     return any(
@@ -66,7 +66,7 @@ def _supports_summer_comfort_binary_sensors(data) -> bool:
 
 def _supports_pcm_binary_sensor(data) -> bool:
     """Return whether the hub supplies PCM system data."""
-    if data.hub_version != 2:
+    if data.hub_version < 2:
         return False
     return getattr(data.wiserhub.system, "pcm_version", TEXT_UNKNOWN) not in (
         None,

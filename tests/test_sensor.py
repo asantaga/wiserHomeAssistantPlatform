@@ -367,6 +367,19 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
         )
         self.assertTrue(self.supports_pcm(data))
 
+    def test_future_hub_versions_can_support_v2_system_sensors(self) -> None:
+        data = SimpleNamespace(
+            hub_version=3,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    summer_comfort_available=False,
+                    pcm_version="1.0",
+                )
+            ),
+        )
+        self.assertTrue(self.supports_summer_comfort(data))
+        self.assertTrue(self.supports_pcm(data))
+
     def test_cleanup_is_limited_to_v1_hubs(self) -> None:
         self.assertTrue(self.requires_cleanup(SimpleNamespace(hub_version=1)))
         self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=2)))
