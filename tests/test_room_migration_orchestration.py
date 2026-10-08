@@ -250,7 +250,12 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
         )
         physical_device = SimpleNamespace(
             id="physical-device",
-            identifiers={("wiser", "legacy-device")},
+            identifiers={
+                (
+                    "wiser",
+                    "WiserHeat123456 Wiser HeatingActuator Living Room",
+                )
+            },
         )
         power = SimpleNamespace(
             entity_id="sensor.power",
@@ -328,6 +333,19 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
                 "stable-power-42": {"sensor.power"},
                 "stable-energy-42": {"sensor.energy"},
             },
+        )
+        self.assertTrue(
+            any(
+                call.args[2]
+                == {
+                    42: {
+                        "Wiser HeatingActuator Living Room",
+                    }
+                }
+                and call.args[3] == {42}
+                for call in self.wiser.build_physical_entity_unique_id_migration.call_args_list
+                if len(call.args) == 4
+            )
         )
         self.wiser.migrate_physical_device.assert_called_once()
 

@@ -390,6 +390,48 @@ class HubNamingTest(unittest.TestCase):
             ),
         )
 
+    def test_physical_entity_migration_uses_registry_device_names(self):
+        device = SimpleNamespace(
+            id=42,
+            name="Bedroom Blind",
+            product_type="Shutter",
+        )
+        self.data.wiserhub.devices = SimpleNamespace(
+            all=[device],
+            get_by_id=lambda _device_id: device,
+        )
+
+        mapping = self.helpers.build_physical_entity_unique_id_migration(
+            self.data,
+            legacy_device_names_by_id={
+                42: {"Wiser Shutter Previous Bedroom Bedroom Blind"}
+            },
+            device_ids={42},
+        )
+        old_binary_id = self.helpers.get_unique_id(
+            self.data,
+            "binary_sensor",
+            "Is Open",
+            "Wiser Shutter Previous Bedroom Bedroom Blind Is Open",
+        )
+        old_cover_id = self.helpers.get_uuid_unique_id(
+            "WiserHeatNOTUSED-Wisershutter-42-"
+            "Wiser Shutter Previous Bedroom Bedroom Blind Control"
+        )
+
+        self.assertEqual(
+            mapping[old_binary_id],
+            self.helpers.get_physical_entity_unique_id(
+                self.data, "binary_sensor", 42, "Is Open"
+            ),
+        )
+        self.assertEqual(
+            mapping[old_cover_id],
+            self.helpers.get_physical_entity_unique_id(
+                self.data, "cover", 42, "control"
+            ),
+        )
+
     def test_physical_sensor_migration_covers_humidity_power_and_energy(self):
         room = SimpleNamespace(
             id=7,

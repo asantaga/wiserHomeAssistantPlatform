@@ -567,6 +567,33 @@ def migrate_physical_device_registry(
             {stable_identifier, legacy_identifier},
             stable_entity_ids,
         )
+        identifier_prefix = f"{data.wiserhub.system.name} "
+        historical_device_names = {
+            value[len(identifier_prefix):]
+            for candidate in possible_devices
+            for domain, value in candidate.identifiers
+            if domain == DOMAIN and value.startswith(identifier_prefix)
+        }
+        historical_entity_migration = (
+            build_physical_entity_unique_id_migration(
+                data,
+                previous_room_names,
+                {device.id: historical_device_names},
+                {device.id},
+            )
+        )
+        for old_unique_id, new_unique_id in historical_entity_migration.items():
+            matching_entries = [
+                entry
+                for entry in registry_entities
+                if entry.platform == DOMAIN
+                and entry.unique_id in {old_unique_id, new_unique_id}
+            ]
+            migrate_entity_unique_id_duplicates(
+                entity_registry,
+                matching_entries,
+                new_unique_id,
+            )
         room = data.wiserhub.rooms.get_by_device_id(device.id)
         temperature_type = None
         old_temperature_names = set()
