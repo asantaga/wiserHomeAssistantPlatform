@@ -213,9 +213,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
 
-    # Remember a confirmed connection before platform setup. This prevents a
-    # standard boiler's dormant OpenTherm endpoint from creating entities,
-    # while allowing a real OpenTherm installation to survive later outages.
+    # This must run before both the update listener and reload-settings snapshot.
+    # A setup-time flag change is then included in the initial snapshot without
+    # scheduling a reload; a later change is observed and reloads exactly once.
+    # This prevents a standard boiler's dormant OpenTherm endpoint from creating
+    # entities while allowing a real installation to survive temporary outages.
     _remember_opentherm_connection(hass, config_entry, coordinator)
 
     # Update listener for config option changes
@@ -284,7 +286,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
 @callback
 def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
-    """Persist a confirmed OpenTherm connection until it is disabled."""
+    """Persist a confirmed OpenTherm connection until it is disabled.
+
+    The flag intentionally lives in config-entry data so the existing entry
+    update listener reloads platforms when runtime detection changes. A Store
+    would persist the state but would not trigger that reload.
+    """
     opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
     remembered = config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False)
 
