@@ -9,7 +9,12 @@ from .opentherm import (
 
 
 def opentherm_is_detected(config_entry, opentherm) -> bool:
-    """Return whether OpenTherm is connected now or has connected before."""
+    """Return whether OpenTherm is connected now or has connected before.
+
+    This sticky predicate controls entity creation and registry visibility so a
+    temporary outage does not discard entities or history. Entity availability
+    deliberately continues to require live OpenTherm data.
+    """
     return bool(
         opentherm
         and (

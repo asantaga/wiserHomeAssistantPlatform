@@ -255,6 +255,7 @@ class WiserOpenThermAttributeBinarySensor(
 
     @property
     def available(self):
+        # Keep the entity during outages without exposing stale boiler state.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available

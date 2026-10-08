@@ -1352,6 +1352,8 @@ class WiserOpenThermAttributeSensor(WiserSensor):
 
     @property
     def available(self):
+        # Detection is sticky for registry continuity, but values are available
+        # only while the hub reports usable live OpenTherm data.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available
@@ -1565,6 +1567,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
 
     @property
     def available(self):
+        # Keep the entity during outages without exposing a stale temperature.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available
