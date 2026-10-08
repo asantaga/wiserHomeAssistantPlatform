@@ -86,24 +86,19 @@ def _remove_unsupported_v2_entities(
     registry = er.async_get(hass)
     legacy_hub_name = data.wiserhub.system.name.replace("WiserHeat", "HeatHub")
     for sensor_type in sensor_types:
-        legacy_unique_id = get_legacy_unique_id(
-            data,
-            "sensor",
-            sensor_type,
-            f"{legacy_hub_name} {sensor_type}",
-        )
-        unique_ids = {
-            legacy_unique_id,
-            get_uuid_unique_id(legacy_unique_id),
-        }
-        for unique_id in unique_ids:
-            entity_id = registry.async_get_entity_id(
-                "binary_sensor", DOMAIN, unique_id
+        unique_id = get_uuid_unique_id(
+            get_legacy_unique_id(
+                data,
+                "sensor",
+                sensor_type,
+                f"{legacy_hub_name} {sensor_type}",
             )
-            if entity_id is not None:
-                entry = registry.async_get(entity_id)
-                if entry and entry.config_entry_id == config_entry_id:
-                    registry.async_remove(entity_id)
+        )
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if entity_id is not None:
+            entry = registry.async_get(entity_id)
+            if entry and entry.config_entry_id == config_entry_id:
+                registry.async_remove(entity_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
