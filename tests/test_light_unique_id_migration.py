@@ -136,8 +136,18 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Wiser DimmableLight Diele Diele Away Mode Turns Off",
             101,
         )
-        new = self._unique_id("switch", "away_mode_turns_off", 1)
+        new = self._unique_id("switch", "light_away_mode_turns_off", 1)
         self.assertEqual(mapping[old], new)
+
+    def test_light_and_smart_plug_away_switch_ids_cannot_collide(self) -> None:
+        light_id = self._unique_id(
+            "switch", "light_away_mode_turns_off", 2
+        )
+        smart_plug_id = self._unique_id(
+            "switch", "away_mode_turns_off", 2
+        )
+
+        self.assertNotEqual(light_id, smart_plug_id)
 
     def test_capability_binary_sensors_map_name(self) -> None:
         mapping = self._mapping()

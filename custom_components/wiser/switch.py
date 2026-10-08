@@ -679,7 +679,10 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     def unique_id(self):
         """Return a name-independent per-channel unique ID."""
         return get_physical_entity_unique_id(
-            self._data, "switch", self._light_id, "away_mode_turns_off"
+            self._data,
+            "switch",
+            self._light_id,
+            "light_away_mode_turns_off",
         )
 
     @property

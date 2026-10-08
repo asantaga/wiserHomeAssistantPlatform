@@ -468,12 +468,12 @@ def build_light_unique_id_migration(data) -> dict:
         mapping[
             get_unique_id(data, ptype, f"{old_name} Away Mode Turns Off", old_id)
         ] = get_physical_entity_unique_id(
-            data, "switch", new_id, "away_mode_turns_off"
+            data, "switch", new_id, "light_away_mode_turns_off"
         )
         mapping[
             get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
         ] = get_physical_entity_unique_id(
-            data, "switch", new_id, "away_mode_turns_off"
+            data, "switch", new_id, "light_away_mode_turns_off"
         )
 
         # capability binary_sensors (name-based)
