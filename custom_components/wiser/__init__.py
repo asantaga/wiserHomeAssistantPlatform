@@ -19,6 +19,7 @@ from homeassistant.helpers import (
     entity_registry as er,
 )
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.storage import Store
 
 from .const import (
     CONF_AUTOMATIONS_HW_AUTO_MODE,
@@ -79,8 +80,12 @@ from .opentherm_detection import (
     opentherm_is_detected,
 )
 from .services import async_setup_services
-from .websockets import async_register_websockets
 from .update import async_unload_card_updates
+from .websockets import async_register_websockets
+
+ROOM_NAMES_STORAGE_VERSION = 1
+ROOM_NAMES_STORAGE_KEY = f"{DOMAIN}.{{}}.room_names"
+ROOM_NAMES_STORE = "room_names_store"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -232,14 +237,31 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
 
+    room_names_store = Store(
+        hass,
+        ROOM_NAMES_STORAGE_VERSION,
+        ROOM_NAMES_STORAGE_KEY.format(config_entry.entry_id),
+    )
+    stored_room_names = await room_names_store.async_load()
+    previous_room_names = (
+        stored_room_names
+        if isinstance(stored_room_names, dict)
+        else config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    )
+
     # This must run before both the update listener and reload-settings snapshot.
     # A setup-time flag change is then included in the initial snapshot without
     # scheduling a reload; a later change is observed and reloads exactly once.
     # This prevents a standard boiler's dormant OpenTherm endpoint from creating
     # entities while allowing a real installation to survive temporary outages.
     _remember_opentherm_connection(hass, config_entry, coordinator)
+
     hass.data[DOMAIN][config_entry.entry_id] = {
         DATA: coordinator,
+        CONF_WISER_ROOM_NAMES: (
+            previous_room_names if stored_room_names is not None else None
+        ),
+        ROOM_NAMES_STORE: room_names_store,
     }
 
     # If OpenTherm connects for the first time after startup, saving the flag
@@ -276,7 +298,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Give logical room devices stable IDs and concise device names.
     migrate_room_device_registry(hass, config_entry)
 
-    previous_room_names = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
     current_room_names = _current_wiser_room_names(coordinator)
     confirmed_deleted_ids = _confirmed_deleted_room_ids(
         hass,
@@ -649,12 +670,15 @@ def _current_wiser_room_names(coordinator):
 
 
 def _store_wiser_room_names(hass, config_entry, room_names) -> None:
-    """Persist room names before the config-entry update listener is registered."""
-    if config_entry.data.get(CONF_WISER_ROOM_NAMES, {}) == room_names:
+    """Persist room names without triggering a config-entry reload."""
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    if entry_data.get(CONF_WISER_ROOM_NAMES) == room_names:
         return
-    hass.config_entries.async_update_entry(
-        config_entry,
-        data={**config_entry.data, CONF_WISER_ROOM_NAMES: room_names},
+    room_names = dict(room_names)
+    entry_data[CONF_WISER_ROOM_NAMES] = room_names
+    entry_data[ROOM_NAMES_STORE].async_delay_save(
+        lambda: room_names,
+        1,
     )
 
 
@@ -768,7 +792,9 @@ def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
 
 def _sync_wiser_room_names(hass, config_entry, coordinator) -> None:
     """Apply Wiser room renames after a coordinator refresh."""
-    previous = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    previous = hass.data[DOMAIN][config_entry.entry_id].get(
+        CONF_WISER_ROOM_NAMES, {}
+    )
     current = _current_wiser_room_names(coordinator)
     if previous == current:
         hass.data[DOMAIN][config_entry.entry_id].setdefault(
@@ -795,10 +821,7 @@ def _sync_wiser_room_names(hass, config_entry, coordinator) -> None:
     )
     if stored_room_names == previous:
         return
-    hass.config_entries.async_update_entry(
-        config_entry,
-        data={**config_entry.data, CONF_WISER_ROOM_NAMES: stored_room_names},
-    )
+    _store_wiser_room_names(hass, config_entry, stored_room_names)
 
 
 def update_hub_device_names(hass: HomeAssistant):
