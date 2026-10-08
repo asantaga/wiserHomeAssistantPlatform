@@ -244,6 +244,16 @@ def _load_sensor_module() -> ModuleType:
         relative_modulation_level=relative_modulation_level,
     )
     _module(
+        "wiser.opentherm_detection",
+        opentherm_is_detected=lambda config_entry, opentherm: bool(
+            opentherm
+            and (
+                config_entry.data.get("opentherm_ever_connected", False)
+                or getattr(opentherm, "connection_status", None) == "Connected"
+            )
+        ),
+    )
+    _module(
         "wiser.temperature",
         room_target_temperature=lambda room, frost_temp, off_temp: (
             frost_temp
@@ -566,8 +576,13 @@ class WiserSystemCircuitStateTest(unittest.TestCase):
         heating_state="Off",
         demand_state="Off",
         hot_water_state="Off",
+        system=None,
     ):
         heating_channel = SimpleNamespace(
+            name="Channel 1",
+            percentage_demand=0,
+            room_ids=[],
+            is_smart_valve_preventing_demand=False,
             heating_relay_status=heating_state,
             demand_on_off_output=demand_state,
         )
@@ -580,6 +595,7 @@ class WiserSystemCircuitStateTest(unittest.TestCase):
                     get_by_id=lambda _device_id: heating_channel
                 ),
                 hotwater=SimpleNamespace(current_state=hot_water_state),
+                system=system,
             )
         )
         sensor.async_write_ha_state = Mock()
@@ -614,6 +630,29 @@ class WiserSystemCircuitStateTest(unittest.TestCase):
         sensor._handle_coordinator_update()
 
         self.assertIsNone(sensor.native_value)
+
+    def test_heating_attributes_handle_missing_opentherm_data(self) -> None:
+        for system in (
+            None,
+            SimpleNamespace(opentherm=None),
+            SimpleNamespace(
+                opentherm=SimpleNamespace(
+                    connection_status="Connected",
+                    operational_data=None,
+                )
+            ),
+        ):
+            with self.subTest(system=system):
+                sensor = self._sensor("Heating", system=system)
+
+                self.assertEqual(
+                    sensor.extra_state_attributes,
+                    {
+                        "percentage_demand_Channel 1": 0,
+                        "room_ids_Channel 1": [],
+                        "is_smartvalve_preventing_demand_Channel 1": False,
+                    },
+                )
 
     def test_circuit_states_have_translations(self) -> None:
         files = [

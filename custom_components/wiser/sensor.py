@@ -920,15 +920,22 @@ class WiserSystemCircuitState(WiserSensor):
             attrs[f"is_smartvalve_preventing_demand_{heating_channel.name}"] = (
                 heating_channel.is_smart_valve_preventing_demand
             )
-            if self._data.wiserhub.system.opentherm.connection_status == "Connected":
-                opentherm = self._data.wiserhub.system.opentherm.operational_data
-                attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
-                attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
-                attrs["ch_return_temperature"] = opentherm.ch_return_temperature
-                attrs["relative_modulation_level"] = _relative_modulation_level(
-                    self._data.wiserhub.system.opentherm
+            system = getattr(self._data.wiserhub, "system", None)
+            opentherm = getattr(system, "opentherm", None)
+            operational_data = getattr(opentherm, "operational_data", None)
+            if (
+                getattr(opentherm, "connection_status", None) == "Connected"
+                and operational_data is not None
+            ):
+                attrs["ch_flow_temperature"] = operational_data.ch_flow_temperature
+                attrs["ch_pressure_bar"] = operational_data.ch_pressure_bar
+                attrs["ch_return_temperature"] = (
+                    operational_data.ch_return_temperature
                 )
-                attrs["hw_temperature"] = opentherm.hw_temperature
+                attrs["relative_modulation_level"] = _relative_modulation_level(
+                    opentherm
+                )
+                attrs["hw_temperature"] = operational_data.hw_temperature
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
