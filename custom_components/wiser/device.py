@@ -98,7 +98,7 @@ def register_room_assigned_device(
     device_registry,
     config_entry_id,
     identifier,
-    parent_device_id,
+    parent_identifier,
     suggested_area,
     **device_info,
 ):
@@ -107,7 +107,7 @@ def register_room_assigned_device(
         config_entry_id=config_entry_id,
         identifiers={identifier},
         suggested_area=suggested_area,
-        via_device_id=parent_device_id,
+        via_device=parent_identifier,
         **device_info,
     )
 

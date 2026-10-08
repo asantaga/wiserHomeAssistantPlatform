@@ -295,7 +295,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Register the physical hub before its entities and connected devices.
     hub_device = await async_update_device_registry(hass, config_entry)
-    coordinator.hub_device_id = hub_device.id
 
     # Physical device identifiers used to contain mutable room or device names.
     # Migrate them before platform setup so renames cannot duplicate devices.
@@ -308,7 +307,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Create physical devices in their Wiser room's Home Assistant area. Later
     # room renames move devices only while they remain in that managed area.
-    register_room_assigned_devices(hass, config_entry, hub_device.id)
+    register_room_assigned_devices(hass, config_entry)
 
     # Move existing hub entities off the old virtual Controller record.
     merge_legacy_hub_device_registry(hass, config_entry)
@@ -488,9 +487,7 @@ def merge_legacy_hub_device_registry(hass: HomeAssistant, config_entry):
     )
 
 
-def register_room_assigned_devices(
-    hass: HomeAssistant, config_entry, hub_device_id: str
-):
+def register_room_assigned_devices(hass: HomeAssistant, config_entry):
     """Register physical Wiser devices in their matching Wiser room."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     area_registry = ar.async_get(hass)
@@ -504,7 +501,7 @@ def register_room_assigned_devices(
             device_registry,
             config_entry.entry_id,
             (DOMAIN, get_identifier(data, device.id)),
-            hub_device_id,
+            (DOMAIN, data.wiserhub.system.name),
             room.name,
             manufacturer=MANUFACTURER,
             name=get_device_name(data, device.id),

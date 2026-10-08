@@ -291,7 +291,7 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
             registry,
             "entry-id",
             ("wiser", "WiserHeat123456 Wiser Thermostat"),
-            "physical-hub-id",
+            ("wiser", "WiserHeat123456"),
             "Andys Bedroom",
             manufacturer="Drayton Wiser",
             name="Wiser Thermostat",
@@ -301,7 +301,9 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
 
         created = registry.created[0]
         self.assertEqual(created["suggested_area"], "Andys Bedroom")
-        self.assertEqual(created["via_device_id"], "physical-hub-id")
+        self.assertEqual(
+            created["via_device"], ("wiser", "WiserHeat123456")
+        )
         self.assertEqual(
             created["identifiers"],
             {("wiser", "WiserHeat123456 Wiser Thermostat")},
