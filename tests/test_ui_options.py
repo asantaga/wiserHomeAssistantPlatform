@@ -96,7 +96,9 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             config_entries=SimpleNamespace(async_update_entry=update)
         )
         entry = SimpleNamespace(data={"host": "wiser.local"})
-        opentherm = SimpleNamespace(connection_status="Disconnected")
+        opentherm = SimpleNamespace(
+            enabled=True, connection_status="Disconnected"
+        )
         coordinator = SimpleNamespace(
             wiserhub=SimpleNamespace(
                 system=SimpleNamespace(opentherm=opentherm)
@@ -120,6 +122,41 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         opentherm.connection_status = "Disconnected"
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
+        sync_registry.assert_called_once_with(hass, entry, coordinator)
+
+    def test_disabling_opentherm_clears_remembered_connection(self):
+        sync_registry = Mock()
+        self.namespace["_sync_opentherm_entity_registry"] = sync_registry
+        functions = load_functions(
+            "__init__.py", {"_remember_opentherm_connection"}, self.namespace
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+        entry = SimpleNamespace(
+            data={
+                "host": "wiser.local",
+                "opentherm_ever_connected": True,
+            }
+        )
+        coordinator = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    opentherm=SimpleNamespace(
+                        enabled=False,
+                        connection_status="Disconnected",
+                    )
+                )
+            )
+        )
+
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+
+        update.assert_called_once_with(
+            entry,
+            data={"host": "wiser.local"},
+        )
         sync_registry.assert_called_once_with(hass, entry, coordinator)
 
     def test_opentherm_registry_entries_are_disabled_without_detection(self):

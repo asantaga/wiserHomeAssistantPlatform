@@ -284,13 +284,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
 @callback
 def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
-    """Persist the first confirmed OpenTherm connection."""
-    _sync_opentherm_entity_registry(hass, config_entry, coordinator)
+    """Persist a confirmed OpenTherm connection until it is disabled."""
+    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    remembered = config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False)
 
-    if config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False):
+    if getattr(opentherm, "enabled", None) is False:
+        if remembered:
+            entry_data = dict(config_entry.data)
+            entry_data.pop(CONF_OPENTHERM_EVER_CONNECTED, None)
+            hass.config_entries.async_update_entry(config_entry, data=entry_data)
+        _sync_opentherm_entity_registry(hass, config_entry, coordinator)
         return
 
-    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    _sync_opentherm_entity_registry(hass, config_entry, coordinator)
+
+    if remembered:
+        return
+
     if getattr(opentherm, "connection_status", None) != "Connected":
         return
 
