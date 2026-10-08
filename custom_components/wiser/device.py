@@ -62,6 +62,7 @@ def migrate_physical_device(
     identifier,
     candidates,
     name,
+    via_device=None,
     **device_info,
 ):
     """Give a physical device a stable ID and merge duplicate registry rows."""
@@ -92,11 +93,18 @@ def migrate_physical_device(
         canonical = None
 
     if canonical is None:
+        create_info = {
+            key: value
+            for key, value in device_info.items()
+            if key != "via_device_id"
+        }
+        if via_device is not None:
+            create_info["via_device"] = via_device
         return device_registry.async_get_or_create(
             config_entry_id=config_entry_id,
             identifiers={identifier},
             name=name,
-            **device_info,
+            **create_info,
         )
 
     for duplicate in candidates:

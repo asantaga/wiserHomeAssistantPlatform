@@ -545,6 +545,37 @@ class RemoveRoomDevicesTest(unittest.TestCase):
 class MigratePhysicalDeviceTest(unittest.TestCase):
     """Test migration of room-derived physical device records."""
 
+    def test_uses_identifier_parent_only_when_creating_device(self) -> None:
+        registry = DeviceRegistry()
+
+        result = DEVICE.migrate_physical_device(
+            registry,
+            EntityRegistry(),
+            "entry-id",
+            ("wiser", "WiserHeat123456 device 31"),
+            [],
+            "Wiser iTRV",
+            via_device=("wiser", "WiserHeat123456"),
+            via_device_id="physical-hub-id",
+            model="iTRV",
+        )
+
+        self.assertEqual(result.id, "new-hub")
+        self.assertEqual(
+            registry.created,
+            [
+                {
+                    "config_entry_id": "entry-id",
+                    "identifiers": {
+                        ("wiser", "WiserHeat123456 device 31")
+                    },
+                    "name": "Wiser iTRV",
+                    "via_device": ("wiser", "WiserHeat123456"),
+                    "model": "iTRV",
+                }
+            ],
+        )
+
     def test_keeps_oldest_device_and_merges_renamed_duplicate(self) -> None:
         old = DeviceEntry(
             "old-device",
@@ -571,6 +602,8 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             ("wiser", "WiserHeat123456 device 31"),
             [renamed, old],
             "Wiser iTRV",
+            via_device=("wiser", "WiserHeat123456"),
+            via_device_id="physical-hub-id",
             model="iTRV",
         )
 
@@ -580,6 +613,10 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             registry.updated[0][1]["new_identifiers"],
             {("wiser", "WiserHeat123456 device 31")},
         )
+        self.assertEqual(
+            registry.updated[0][1]["via_device_id"], "physical-hub-id"
+        )
+        self.assertNotIn("via_device", registry.updated[0][1])
         self.assertEqual(
             entities.updated,
             [("sensor.signal", {"device_id": "old-device"})],

@@ -585,6 +585,7 @@ def migrate_physical_device_registry(
             manufacturer=MANUFACTURER,
             model=device.product_type,
             sw_version=device.firmware_version,
+            via_device=(DOMAIN, data.wiserhub.system.name),
             via_device_id=hub_device_id,
         )
         if room is not None:
