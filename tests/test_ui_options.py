@@ -93,6 +93,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         flow = SimpleNamespace(
             _opentherm=lambda: None,
             _equipment_available=lambda: False,
+            config_entry=SimpleNamespace(options={}),
             async_show_menu=lambda **kw: kw,
         )
         result = await functions.async_step_init(flow)
@@ -106,6 +107,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         flow = SimpleNamespace(
             _opentherm=lambda: object(),
             _equipment_available=lambda: True,
+            config_entry=SimpleNamespace(options={}),
             async_show_menu=lambda **kw: kw,
         )
         result = await functions.async_step_init(flow)
@@ -121,11 +123,58 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         flow = SimpleNamespace(
             _opentherm=lambda: None,
             _equipment_available=lambda: True,
+            config_entry=SimpleNamespace(options={}),
             async_show_menu=lambda **kw: kw,
         )
         result = await functions.async_step_init(flow)
         self.assertIn("equipment_sensors", result["menu_options"])
         self.assertNotIn("opentherm_sensors", result["menu_options"])
+
+    async def test_enabled_equipment_option_remains_available_during_data_gap(self):
+        self.namespace.update(
+            vol=SimpleNamespace(
+                Optional=lambda key, default: (key, default),
+                Schema=lambda data: data,
+            ),
+            BooleanSelector=lambda: bool,
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {"async_step_init", "async_step_equipment_sensors"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _opentherm=lambda: None,
+            _equipment_available=lambda: False,
+            config_entry=SimpleNamespace(options={"equipment_sensors": True}),
+            async_show_menu=lambda **kwargs: kwargs,
+            async_show_form=lambda **kwargs: kwargs,
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+
+        menu = await functions.async_step_init(flow)
+        self.assertIn("equipment_sensors", menu["menu_options"])
+
+        form = await functions.async_step_equipment_sensors(flow)
+        self.assertIn(("equipment_sensors", True), form["data_schema"])
+
+        saved = await functions.async_step_equipment_sensors(
+            flow, {"equipment_sensors": False}
+        )
+        self.assertEqual(saved["data"], {"equipment_sensors": False})
+
+    async def test_unconfigured_equipment_option_aborts_without_data(self):
+        functions = load_functions(
+            "config_flow.py", {"async_step_equipment_sensors"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _equipment_available=lambda: False,
+            config_entry=SimpleNamespace(options={}),
+            async_abort=lambda **kwargs: kwargs,
+        )
+
+        result = await functions.async_step_equipment_sensors(flow)
+        self.assertEqual(result["reason"], "equipment_not_available")
 
     def test_equipment_menu_requires_a_compatible_device(self):
         functions = load_functions(

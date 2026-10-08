@@ -293,7 +293,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         menu_options = ["main_params", "automation_params", "ui_options"]
         if self._opentherm() is not None:
             menu_options.append("opentherm_sensors")
-        if self._equipment_available():
+        if self._equipment_available() or self.config_entry.options.get(
+            CONF_EQUIPMENT_SENSORS, False
+        ):
             menu_options.append("equipment_sensors")
         return self.async_show_menu(
             step_id="init",
@@ -302,7 +304,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_equipment_sensors(self, user_input=None):
         """Configure detailed equipment data sensors."""
-        if not self._equipment_available():
+        if not self._equipment_available() and not self.config_entry.options.get(
+            CONF_EQUIPMENT_SENSORS, False
+        ):
             return self.async_abort(reason="equipment_not_available")
         if user_input is not None:
             return self.async_create_entry(
