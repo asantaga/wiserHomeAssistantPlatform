@@ -2073,6 +2073,10 @@ class WiserThresholdHumiditySensor(WiserThresholdSensor):
 class WiserEquipmentSensor(WiserSensor):
     """Definition of Wiser Equipment Sensor."""
 
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
     def __init__(self, data, device_id=0, sensor_type="") -> None:
         """Initialise the device sensor."""
         super().__init__(
@@ -2091,7 +2095,6 @@ class WiserEquipmentSensor(WiserSensor):
             self._device = self._data.wiserhub.system
         else:
             self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._state = self._device.equipment.power.total_active_power
         self.async_write_ha_state()
 
     async def async_update(self) -> None:
@@ -2104,8 +2107,8 @@ class WiserEquipmentSensor(WiserSensor):
         return "mdi:home-lightning-bolt"
 
     @property
-    def state(self) -> float:
-        """Return the state of the entity."""
+    def native_value(self) -> float | None:
+        """Return the native power value."""
         return self._device.equipment.power.total_active_power
 
     @property

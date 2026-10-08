@@ -66,7 +66,7 @@ def _load_sensor_module() -> ModuleType:
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
         PERCENTAGE="%",
-        UnitOfPower=SimpleNamespace(KILO_WATT="kW"),
+        UnitOfPower=SimpleNamespace(KILO_WATT="kW", WATT="W"),
         UnitOfEnergy=SimpleNamespace(),
         UnitOfPressure=SimpleNamespace(BAR="bar"),
         UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
@@ -456,6 +456,30 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(sensor._sensor_type, "")
         self.assertEqual(sensor._attr_translation_key, "equipment_power")
         self.assertNotIn("name", self.sensor_module.WiserEquipmentSensor.__dict__)
+
+    def test_equipment_power_uses_native_measurement_metadata(self) -> None:
+        device = SimpleNamespace(
+            id=9,
+            equipment=SimpleNamespace(
+                power=SimpleNamespace(total_active_power=123.4)
+            ),
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+
+        self.assertEqual(sensor.native_value, 123.4)
+        self.assertEqual(sensor.native_unit_of_measurement, "W")
+        self.assertEqual(sensor._attr_device_class, "power")
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
 
 
 class WiserSystemCircuitStateTest(unittest.TestCase):
