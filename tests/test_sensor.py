@@ -489,6 +489,39 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
         self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
 
+    def test_equipment_sensor_recovers_from_missing_runtime_data(self) -> None:
+        equipment = SimpleNamespace(
+            power=SimpleNamespace(total_active_power=123.4)
+        )
+        device = SimpleNamespace(id=9, equipment=equipment)
+        data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+
+        self.assertTrue(sensor.available)
+        self.assertEqual(sensor.native_value, 123.4)
+
+        device.equipment = None
+        self.assertFalse(sensor.available)
+        self.assertIsNone(sensor.native_value)
+        self.assertEqual(sensor.extra_state_attributes, {})
+
+        sensor._device = None
+        self.assertFalse(sensor.available)
+        self.assertIsNone(sensor.native_value)
+        self.assertEqual(sensor.extra_state_attributes, {})
+
+        sensor._device = device
+        device.equipment = equipment
+        self.assertTrue(sensor.available)
+        self.assertEqual(sensor.native_value, 123.4)
+
     def test_live_equipment_attributes_are_excluded_from_recorder(self) -> None:
         self.assertEqual(
             self.sensor_module.WiserEquipmentSensor._unrecorded_attributes,

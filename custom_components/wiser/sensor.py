@@ -2126,9 +2126,19 @@ class WiserEquipmentSensor(WiserSensor):
         return "mdi:home-lightning-bolt"
 
     @property
+    def available(self) -> bool:
+        """Return whether equipment data is currently available."""
+        return (
+            super().available
+            and self._device is not None
+            and getattr(self._device, "equipment", None) is not None
+        )
+
+    @property
     def native_value(self) -> float | None:
         """Return the native power value."""
-        return self._device.equipment.power.total_active_power
+        equipment = getattr(self._device, "equipment", None)
+        return equipment.power.total_active_power if equipment is not None else None
 
     @property
     def native_unit_of_measurement(self) -> str:
@@ -2149,6 +2159,9 @@ class WiserEquipmentSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return device state attributes."""
+        if self._device is None or self._device.equipment is None:
+            return {}
+
         attrs = {} 
         
         # common attributes
