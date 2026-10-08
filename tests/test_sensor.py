@@ -455,13 +455,18 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             if isinstance(node, ast.AsyncFunctionDef)
             and node.name == "async_setup_entry"
         )
-        summer_guard = next(
-            node
-            for node in ast.walk(setup)
-            if isinstance(node, ast.If)
-            and ast.unparse(node.test)
-            == "_supports_summer_comfort_binary_sensors(data)"
-        )
+
+        def guard_for(function_name: str) -> ast.If:
+            return next(
+                node
+                for node in ast.walk(setup)
+                if isinstance(node, ast.If)
+                and isinstance(node.test, ast.Call)
+                and isinstance(node.test.func, ast.Name)
+                and node.test.func.id == function_name
+            )
+
+        summer_guard = guard_for("_supports_summer_comfort_binary_sensors")
         summer_calls = {
             node.func.id
             for node in ast.walk(summer_guard)
@@ -474,12 +479,7 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             }.issubset(summer_calls)
         )
 
-        pcm_guard = next(
-            node
-            for node in ast.walk(setup)
-            if isinstance(node, ast.If)
-            and ast.unparse(node.test) == "_supports_pcm_binary_sensor(data)"
-        )
+        pcm_guard = guard_for("_supports_pcm_binary_sensor")
         pcm_calls = {
             node.func.id
             for node in ast.walk(pcm_guard)
