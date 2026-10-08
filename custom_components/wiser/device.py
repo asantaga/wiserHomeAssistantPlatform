@@ -27,14 +27,18 @@ def move_devices_from_managed_area(
     if previous_area is None:
         return 0
 
+    devices_to_move = [
+        device
+        for device in {device.id: device for device in devices if device}.values()
+        if device.area_id == previous_area.id
+    ]
+    if not devices_to_move:
+        return 0
+
     new_area = area_registry.async_get_or_create(new_area_name)
-    moved = 0
-    for device in {device.id: device for device in devices if device}.values():
-        if device.area_id != previous_area.id:
-            continue
+    for device in devices_to_move:
         device_registry.async_update_device(device.id, area_id=new_area.id)
-        moved += 1
-    return moved
+    return len(devices_to_move)
 
 
 def known_wiser_room_area_name(area_registry, area_id, room_names):

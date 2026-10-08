@@ -419,6 +419,23 @@ class AssignDeviceAreaIfUnsetTest(unittest.TestCase):
             ],
         )
 
+    def test_does_not_create_area_when_no_device_qualifies(self) -> None:
+        device_registry = DeviceRegistry()
+        area_registry = AreaRegistry()
+        area_registry.areas["test"] = AreaEntry("test", "Test")
+
+        moved = DEVICE.move_devices_from_managed_area(
+            device_registry,
+            area_registry,
+            [DeviceEntry("manually-moved", area_id="upstairs")],
+            "Test",
+            "Test2",
+        )
+
+        self.assertEqual(moved, 0)
+        self.assertEqual(area_registry.requested, [])
+        self.assertEqual(device_registry.updated, [])
+
     def test_recognises_area_matching_a_current_wiser_room(self) -> None:
         area_registry = AreaRegistry()
         area_registry.areas["test"] = AreaEntry("test", "Test")
