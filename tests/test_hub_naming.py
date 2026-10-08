@@ -290,6 +290,10 @@ class HubNamingTest(unittest.TestCase):
 
         self.data.legacy_naming = False
         self.assertEqual(self.helpers.get_device_name(self.data, 31), "Wiser iTRV")
+        self.assertEqual(
+            self.helpers.get_legacy_device_name(self.data, 31),
+            "Wiser iTRV Andys Bedroom",
+        )
         identifier = self.helpers.get_identifier(self.data, 31)
         self.assertEqual(identifier, "WiserHeatNOTUSED device 31")
 
@@ -299,6 +303,38 @@ class HubNamingTest(unittest.TestCase):
             "Wiser iTRV Andys Bedroom",
         )
         self.assertEqual(self.helpers.get_identifier(self.data, 31), identifier)
+
+    def test_physical_entity_migration_uses_historical_itrv_name(self):
+        device = SimpleNamespace(id=31, product_type="iTRV")
+        room = SimpleNamespace(
+            id=7,
+            name="Andys Bedroom",
+            number_of_smartvalves=1,
+            smartvalve_ids=[31],
+        )
+        self.data.legacy_naming = False
+        self.data.wiserhub.devices = SimpleNamespace(
+            all=[device],
+            get_by_id=lambda _device_id: device,
+        )
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: room
+
+        mapping = self.helpers.build_physical_entity_unique_id_migration(
+            self.data
+        )
+        old_unique_id = self.helpers.get_unique_id(
+            self.data,
+            "binary_sensor",
+            "Controllable",
+            "Wiser iTRV Andys Bedroom Controllable",
+        )
+
+        self.assertEqual(
+            mapping[old_unique_id],
+            self.helpers.get_physical_entity_unique_id(
+                self.data, "binary_sensor", 31, "Controllable"
+            ),
+        )
 
     def test_physical_entity_unique_id_does_not_use_room_name(self):
         before = self.helpers.get_physical_entity_unique_id(

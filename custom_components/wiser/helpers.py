@@ -167,10 +167,27 @@ def get_device_name(data, device_id, device_type="device"):
 def get_legacy_device_name(data, device_id):
     """Return a physical device name used by historical entity unique IDs."""
     device = data.wiserhub.devices.get_by_id(device_id)
+    device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+
+    if device.product_type == "iTRV":
+        if device_room:
+            if device_room.number_of_smartvalves > 1:
+                index = device_room.smartvalve_ids.index(device.id) + 1
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} "
+                    f"{device_room.name}-{index}"
+                )
+            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+        return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
+
+    if device.product_type == "RoomStat":
+        if device_room:
+            return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
+        return f"{ENTITY_PREFIX} Thermostat {device.id}"
+
     if device.product_type != "TemperatureHumiditySensor":
         return get_device_name(data, device_id)
 
-    device_room = data.wiserhub.rooms.get_by_device_id(device_id)
     if device_room:
         return (
             f"{ENTITY_PREFIX} {device.product_type} "
@@ -317,7 +334,7 @@ def build_physical_entity_unique_id_migration(
     )
 
     for device in data.wiserhub.devices.all:
-        device_name = get_device_name(data, device.id)
+        device_name = get_legacy_device_name(data, device.id)
         product_type = device.product_type
         room = data.wiserhub.rooms.get_by_device_id(device.id)
         possible_room_names = {room.name} if room is not None else set()
