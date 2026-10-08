@@ -2159,78 +2159,67 @@ class WiserEquipmentSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return device state attributes."""
-        if self._device is None or self._device.equipment is None:
+        equipment = getattr(self._device, "equipment", None)
+        if equipment is None:
             return {}
 
-        attrs = {} 
-        
-        # common attributes
-        attrs["product_identifier"] = self._device.product_identifier
+        power = equipment.power
+        attrs = {
+            "product_identifier": self._device.product_identifier,
+            "equipment_name": equipment.equipment_name,
+            "device_type": equipment.device_type,
+            "family": equipment.equipment_family,
+            "installation_type": equipment.installation_type,
+            "equipment_id": equipment.id,
+            "equipment_device_id": equipment.device_id,
+            # Retain the existing key spelling for attribute compatibility.
+            "equipment_UUID": equipment.uuid,
+            "controllable": equipment.controllable,
+            "cloud_managed": equipment.cloud_managed,
+            "monitored": equipment.monitored,
+            "smart_compatible": equipment.smart_compatible,
+            "smart_supported": equipment.smart_supported,
+            "can_be_scheduled": equipment.can_be_scheduled,
+            "onoff_green_schedule_supported": (
+                equipment.onoff_green_schedule_supported
+            ),
+            "onoff_cost_schedule_supported": equipment.onoff_cost_schedule_supported,
+            "functional_control_mode": equipment.functional_control_mode,
+            "current_control_mode": equipment.current_control_mode,
+            "pcm_mode": equipment.pcm_mode,
+            "pcm_supported": equipment.pcm_supported,
+            "pcm_priority": equipment.pcm_priority,
+            "number_of_phases": equipment.number_of_phases,
+            "direction": equipment.direction,
+            "operating_status": equipment.operating_status,
+            "fault_status": equipment.fault_status,
+            "load_state_status": equipment.load_state_status,
+            "load_state_command_optimized": equipment.load_state_command_optimized,
+            "load_shedding_status": equipment.load_shedding_status,
+            "load_state_command_prio": equipment.load_state_command_prio,
+            "load_setpoint_command_prio": equipment.load_setpoint_command_prio,
+            "active_power": power.active_power,
+            "total_active_power": power.total_active_power,
+        }
 
-        attrs["equipment_name"] = self._device.equipment.equipment_name
-        attrs["device_type"] = self._device.equipment.device_type 
-        attrs["family"] = self._device.equipment.equipment_family
-        attrs["installation_type"] = self._device.equipment.installation_type
-
-        attrs["equipment_id"] = self._device.equipment.id
-        attrs["equipment_device_id"] = self._device.equipment.device_id
-        attrs["equipment_UUID"] = self._device.equipment.uuid
-        # more info 2024 06
-        attrs["controllable"] = self._device.equipment.controllable        
-        attrs["cloud_managed"] = self._device.equipment.cloud_managed        
-        attrs["monitored"] = self._device.equipment.monitored        
-        attrs["smart_compatible"] = self._device.equipment.smart_compatible
-        attrs["smart_supported"] = self._device.equipment.smart_supported
-        attrs["can_be_scheduled"] = self._device.equipment.can_be_scheduled        
-        attrs["onoff_green_schedule_supported"] = self._device.equipment.onoff_green_schedule_supported
-        attrs["onoff_cost_schedule_supported"] = self._device.equipment.onoff_cost_schedule_supported        
-        attrs["controllable"] = self._device.equipment.controllable        
-
-        attrs["functional_control_mode"] = self._device.equipment.functional_control_mode
-        attrs["current_control_mode"] = self._device.equipment.current_control_mode
-        #PCM
-        attrs["pcm_mode"] = self._device.equipment.pcm_mode
-        attrs["pcm_supported"] = self._device.equipment.pcm_supported
-        attrs["pcm_priority"] = self._device.equipment.pcm_priority
-
-        attrs["number_of_phases"] = self._device.equipment.number_of_phases        
-        attrs["direction"] = self._device.equipment.direction
-        attrs["operating_status"] = self._device.equipment.operating_status
-        attrs["fault_status"] = self._device.equipment.fault_status
-        #Load
-        attrs["load_state_status"] = self._device.equipment.load_state_status
-        attrs["load_state_command_optimized"] = self._device.equipment.load_state_command_optimized
-        attrs["load_shedding_status"] = self._device.equipment.load_shedding_status
-        attrs["load_state_command_prio"] = self._device.equipment.load_state_command_prio
-        attrs["load_setpoint_command_prio"] = self._device.equipment.load_setpoint_command_prio
-
-        attrs["active_power"] = self._device.equipment.power.active_power    
-        attrs["total_active_power"] = self._device.equipment.power.total_active_power    
-        delivered_energy = (
-            self._device.equipment.power.current_summation_delivered
-        )
+        delivered_energy = power.current_summation_delivered
         if delivered_energy is not None:
             attrs["energy"] = round(delivered_energy / 1000, 2)
 
         # PowerTagE attributes
-        if self._device.equipment.device_type in ["PTE","PowerTagE",]:
+        if equipment.device_type in ("PTE", "PowerTagE"):
             attrs["grid_limit"] = self._device.grid_limit
+            # Retain the existing key spelling for attribute compatibility.
             attrs["grid_limit_Uom"] = self._device.grid_limit_uom
             attrs["energy_export"] = self._device.energy_export
             attrs["self_consumption"] = self._device.self_consumption
-        
-            attrs["rms_current"] = self._device.equipment.power.rms_current    
-            attrs["rms_voltage"] = self._device.equipment.power.rms_voltage    
-            attrs["energy_received"] = self._device.equipment.power.current_summation_received  
 
-        #  SmartPlug attributes
-        if self._device.equipment.device_type in ["SmartPlug"]:
-            attrs["functional_control_mode"] = self._device.equipment.functional_control_mode      
+            attrs["rms_current"] = power.rms_current
+            attrs["rms_voltage"] = power.rms_voltage
+            attrs["energy_received"] = power.current_summation_received
 
         # PowerTagE and SmartPlug attributes
-        if self._device.equipment.device_type in ["PTE","PowerTagE","SmartPlug"]:
-            attrs["energy_delivered"] = self._device.equipment.power.current_summation_delivered      
-            attrs["pcm_mode"] = self._device.equipment.pcm_mode
+        if equipment.device_type in ("PTE", "PowerTagE", "SmartPlug"):
+            attrs["energy_delivered"] = power.current_summation_delivered
 
-
-        return attrs       
+        return attrs
