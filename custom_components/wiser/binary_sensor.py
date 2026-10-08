@@ -74,6 +74,11 @@ def _supports_pcm_binary_sensor(data) -> bool:
     )
 
 
+def _requires_v2_entity_cleanup(data) -> bool:
+    """Return whether the hub is definitively unable to support V2 entities."""
+    return data.hub_version < 2
+
+
 def _remove_unsupported_v2_entities(
     hass: HomeAssistant, config_entry_id: str, data, sensor_types
 ) -> None:
@@ -134,24 +139,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
             ]
         )
-    else:
-        _remove_unsupported_v2_entities(
-            hass,
-            config_entry.entry_id,
-            data,
-            SUMMER_COMFORT_BINARY_SENSOR_TYPES,
-        )
 
     if _supports_pcm_binary_sensor(data):
         binary_sensors.append(
             WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
         )
-    else:
+    if _requires_v2_entity_cleanup(data):
         _remove_unsupported_v2_entities(
             hass,
             config_entry.entry_id,
             data,
-            PCM_BINARY_SENSOR_TYPES,
+            SUMMER_COMFORT_BINARY_SENSOR_TYPES + PCM_BINARY_SENSOR_TYPES,
         )
 
     # Smoke alarm sensors

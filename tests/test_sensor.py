@@ -312,6 +312,7 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             in {
                 "_supports_summer_comfort_binary_sensors",
                 "_supports_pcm_binary_sensor",
+                "_requires_v2_entity_cleanup",
             }
         ]
         namespace = {"TEXT_UNKNOWN": "Unknown"}
@@ -327,6 +328,9 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             namespace["_supports_summer_comfort_binary_sensors"]
         )
         cls.supports_pcm = staticmethod(namespace["_supports_pcm_binary_sensor"])
+        cls.requires_cleanup = staticmethod(
+            namespace["_requires_v2_entity_cleanup"]
+        )
 
     def test_v1_does_not_support_v2_system_sensors(self) -> None:
         data = SimpleNamespace(hub_version=1)
@@ -362,6 +366,11 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             wiserhub=SimpleNamespace(system=SimpleNamespace(pcm_version="1.0")),
         )
         self.assertTrue(self.supports_pcm(data))
+
+    def test_cleanup_is_limited_to_v1_hubs(self) -> None:
+        self.assertTrue(self.requires_cleanup(SimpleNamespace(hub_version=1)))
+        self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=2)))
+        self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=3)))
 
     def test_summer_comfort_sensors_use_capability_guard(self) -> None:
         setup = next(
