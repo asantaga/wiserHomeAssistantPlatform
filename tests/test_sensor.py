@@ -1019,3 +1019,54 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
         )
 
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
+
+
+class WiserEquipmentBinarySensorTest(unittest.TestCase):
+    """Tests for binary sensors backed by optional equipment data."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.binary_sensor_module = _load_binary_sensor_module()
+
+    def setUp(self):
+        self.equipment = SimpleNamespace(controllable=True, pcm_mode=False)
+        self.device = SimpleNamespace(
+            id=9,
+            equipment=self.equipment,
+            product_type="SmartPlug",
+            firmware_version="1.0",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: self.device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+        self.sensor = self.binary_sensor_module.WiserEquipment(
+            self.data, 9, "Controllable", "equipment"
+        )
+        self.sensor.async_write_ha_state = Mock()
+
+    def test_becomes_unavailable_and_recovers_with_equipment_data(self):
+        self.assertTrue(self.sensor.available)
+        self.assertTrue(self.sensor.is_on)
+
+        self.device.equipment = None
+        self.sensor._handle_coordinator_update()
+        self.assertFalse(self.sensor.available)
+        self.assertIsNone(self.sensor.is_on)
+
+        self.device.equipment = self.equipment
+        self.sensor._handle_coordinator_update()
+        self.assertTrue(self.sensor.available)
+        self.assertTrue(self.sensor.is_on)
+
+    def test_handles_device_temporarily_disappearing(self):
+        self.device = None
+
+        self.sensor._handle_coordinator_update()
+
+        self.assertFalse(self.sensor.available)
+        self.assertIsNone(self.sensor.is_on)
