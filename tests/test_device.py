@@ -881,3 +881,66 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             {update[1]["new_unique_id"] for update in registry.updated},
             {f"stable-{definition[3]}" for definition in definitions},
         )
+
+    def test_migrates_room_entities_created_before_translation_keys(self) -> None:
+        definitions = (
+            (
+                "switch.window_detection",
+                "switch",
+                "WiserHeat-room-switch-Wiser Lounge Window Detection",
+                "switch_window_detection",
+            ),
+            (
+                "switch.summer_comfort",
+                "switch",
+                "WiserHeat-room-switch-Wiser Lounge Include In Summer Comfort",
+                "switch_include_in_summer_comfort",
+            ),
+            (
+                "switch.passive_mode",
+                "switch",
+                "WiserHeat-passive-mode-switch-Wiser Lounge Passive Mode-1",
+                "switch_passive_mode",
+            ),
+            (
+                "sensor.temperature",
+                "sensor",
+                "WiserHeat-sensor-current_temp-1",
+                "current_temp",
+            ),
+            (
+                "sensor.target_temperature",
+                "sensor",
+                "WiserHeat-sensor-current_target_temp-1",
+                "current_target_temp",
+            ),
+            (
+                "sensor.heating_demand",
+                "sensor",
+                "WiserHeat-sensor-room-1",
+                "heating_demand",
+            ),
+        )
+        registry = EntityRegistry(
+            {
+                entity_id: EntityEntry(
+                    entity_id,
+                    "room-device",
+                    domain=domain,
+                    unique_id=unique_id,
+                    device_class="temperature" if domain == "sensor" else None,
+                )
+                for entity_id, domain, unique_id, _entity_type in definitions
+            }
+        )
+
+        DEVICE.migrate_room_entities(
+            registry,
+            "room-device",
+            lambda entity_type: f"stable-{entity_type}",
+        )
+
+        self.assertEqual(
+            {update[1]["new_unique_id"] for update in registry.updated},
+            {f"stable-{definition[3]}" for definition in definitions},
+        )

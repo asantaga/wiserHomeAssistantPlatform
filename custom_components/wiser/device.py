@@ -259,15 +259,30 @@ def migrate_room_entities(
 
         entity_type = None
         translation_key = getattr(entry, "translation_key", None)
+        unique_id = str(getattr(entry, "unique_id", "")).casefold()
         if entry.domain == "climate":
             entity_type = "climate"
-        elif entry.domain == "switch" and translation_key:
-            entity_type = f"switch_{translation_key}"
+        elif entry.domain == "switch":
+            if translation_key:
+                entity_type = f"switch_{translation_key}"
+            elif "-passive-mode-switch-" in unique_id:
+                entity_type = "switch_passive_mode"
+            elif "-room-switch-" in unique_id:
+                if unique_id.endswith(" window detection"):
+                    entity_type = "switch_window_detection"
+                elif unique_id.endswith(" include in summer comfort"):
+                    entity_type = "switch_include_in_summer_comfort"
         elif entry.domain == "sensor":
             if translation_key == "heating_demand":
                 entity_type = "heating_demand"
             elif translation_key == "target_temperature":
                 entity_type = "current_target_temp"
+            elif "-sensor-current_target_temp-" in unique_id:
+                entity_type = "current_target_temp"
+            elif "-sensor-current_temp-" in unique_id:
+                entity_type = "current_temp"
+            elif "-sensor-room-" in unique_id:
+                entity_type = "heating_demand"
             elif (
                 translation_key is None
                 and "temperature"
