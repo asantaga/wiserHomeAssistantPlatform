@@ -2154,7 +2154,7 @@ class WiserEquipmentSensor(WiserSensor):
         # common attributes
         attrs["product_identifier"] = self._device.product_identifier
 
-        attrs["name"] = self._device.equipment.equipment_name
+        attrs["equipment_name"] = self._device.equipment.equipment_name
         attrs["device_type"] = self._device.equipment.device_type 
         attrs["family"] = self._device.equipment.equipment_family
         attrs["installation_type"] = self._device.equipment.installation_type

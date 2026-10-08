@@ -430,14 +430,21 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             total_active_power=20,
             current_summation_delivered=None,
         )
-        equipment = OptionalAttributes(device_type="Other", power=power)
+        equipment = OptionalAttributes(
+            device_type="Other",
+            equipment_name="Test equipment",
+            power=power,
+        )
         sensor = object.__new__(self.sensor_module.WiserEquipmentSensor)
         sensor._device = OptionalAttributes(
             product_identifier="product",
             equipment=equipment,
         )
 
-        self.assertNotIn("energy", sensor.extra_state_attributes)
+        attributes = sensor.extra_state_attributes
+        self.assertEqual(attributes["equipment_name"], "Test equipment")
+        self.assertNotIn("name", attributes)
+        self.assertNotIn("energy", attributes)
 
         power.current_summation_delivered = 0
         self.assertEqual(sensor.extra_state_attributes["energy"], 0)
