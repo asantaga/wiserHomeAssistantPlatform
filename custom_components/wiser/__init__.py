@@ -90,6 +90,17 @@ ROOM_NAMES_STORE = "room_names_store"
 _LOGGER = logging.getLogger(__name__)
 
 
+def _initial_room_names(stored_room_names, config_entry_room_names):
+    """Return validated migration and runtime room-name state."""
+    if isinstance(stored_room_names, dict):
+        room_names = dict(stored_room_names)
+        return room_names, room_names
+    if isinstance(config_entry_room_names, dict):
+        room_names = dict(config_entry_room_names)
+        return room_names, room_names
+    return {}, None
+
+
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
@@ -247,10 +258,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         ROOM_NAMES_STORAGE_KEY.format(config_entry.entry_id),
     )
     stored_room_names = await room_names_store.async_load()
-    previous_room_names = (
-        stored_room_names
-        if isinstance(stored_room_names, dict)
-        else config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
+    previous_room_names, runtime_room_names = _initial_room_names(
+        stored_room_names,
+        config_entry.data.get(CONF_WISER_ROOM_NAMES),
     )
 
     # This must run before both the update listener and reload-settings snapshot.
@@ -262,9 +272,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     hass.data[DOMAIN][config_entry.entry_id] = {
         DATA: coordinator,
-        CONF_WISER_ROOM_NAMES: (
-            previous_room_names if stored_room_names is not None else None
-        ),
+        CONF_WISER_ROOM_NAMES: runtime_room_names,
         ROOM_NAMES_STORE: room_names_store,
     }
 

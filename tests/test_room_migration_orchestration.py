@@ -186,6 +186,24 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
             ),
         )
 
+    def test_invalid_storage_falls_back_to_config_entry_room_names(self) -> None:
+        previous, runtime = self.wiser._initial_room_names(
+            ["invalid-storage"],
+            {"7": "Living Room"},
+        )
+
+        self.assertEqual(previous, {"7": "Living Room"})
+        self.assertEqual(runtime, {"7": "Living Room"})
+
+    def test_invalid_storage_without_fallback_starts_uninitialised(self) -> None:
+        previous, runtime = self.wiser._initial_room_names(
+            ["invalid-storage"],
+            None,
+        )
+
+        self.assertEqual(previous, {})
+        self.assertIsNone(runtime)
+
     def test_refresh_moves_areas_and_saves_names_without_config_reload(self) -> None:
         self.wiser._confirmed_deleted_room_ids = Mock(return_value=set())
         self.wiser.remove_deleted_room_devices = Mock()
