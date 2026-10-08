@@ -42,6 +42,7 @@
           "main_params": "Paramètres principaux",
           "automation_params": "Paramètres d'automatisation",
           "opentherm_sensors": "Capteurs OpenTherm",
+          "equipment_sensors": "Capteurs d’équipement",
           "ui_options": "Options de l’interface"
         }
       },
@@ -93,6 +94,16 @@
               "hotwater_sensor_entity_id": "Capteur de température de l’eau chaude"
             }
           }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Capteurs d’équipement",
+        "description": "Configurez les entités de données détaillées des équipements compatibles.",
+        "data": {
+          "equipment_sensors": "Activer les capteurs de données des équipements"
+        },
+        "data_description": {
+          "equipment_sensors": "Expose un capteur supplémentaire contenant les attributs détaillés de l’équipement pour chaque prise intelligente, PowerTag et actionneur de chauffage compatible."
         }
       },
       "opentherm_sensors": {
@@ -176,7 +187,8 @@
       }
     },
     "abort": {
-      "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser."
+      "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser.",
+      "equipment_not_available": "Les données des équipements ne sont pas disponibles pour cette passerelle Wiser."
     }
   },
   "services": {
@@ -374,7 +386,7 @@
       "total_energy": { "name": "Énergie totale" },
       "energy_delivered": { "name": "Énergie fournie" },
       "energy_received": { "name": "Énergie reçue" },
-      "equipment_power": { "name": "Puissance de l’équipement" }
+      "equipment_power": { "name": "Équipement" }
     }
   },
   "device_automation": {

@@ -42,6 +42,7 @@
           "main_params": "Hauptparameter",
           "automation_params": "Automatisierungsparameter",
           "opentherm_sensors": "OpenTherm-Sensoren",
+          "equipment_sensors": "Gerätesensoren",
           "ui_options": "UI-Optionen"
         }
       },
@@ -93,6 +94,16 @@
               "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
             }
           }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Gerätesensoren",
+        "description": "Detaillierte Gerätedatenentitäten für kompatible Geräte konfigurieren.",
+        "data": {
+          "equipment_sensors": "Gerätedatensensoren aktivieren"
+        },
+        "data_description": {
+          "equipment_sensors": "Stellt für jede kompatible intelligente Steckdose, jedes PowerTag und jeden Heizungsaktor einen zusätzlichen Sensor mit detaillierten Geräteattributen bereit."
         }
       },
       "opentherm_sensors": {
@@ -176,7 +187,8 @@
       }
     },
     "abort": {
-      "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar."
+      "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
+      "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar."
     }
   },
   "services": {
@@ -374,7 +386,7 @@
       "total_energy": { "name": "Gesamtenergie" },
       "energy_delivered": { "name": "Gelieferte Energie" },
       "energy_received": { "name": "Empfangene Energie" },
-      "equipment_power": { "name": "Geräteleistung" }
+      "equipment_power": { "name": "Gerät" }
     }
   },
   "device_automation": {

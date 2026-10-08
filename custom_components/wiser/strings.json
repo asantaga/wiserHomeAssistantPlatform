@@ -42,6 +42,7 @@
           "main_params": "Main Parameters",
           "automation_params": "Automation Parameters",
           "opentherm_sensors": "OpenTherm sensors",
+          "equipment_sensors": "Equipment sensors",
           "ui_options": "UI options"
         }
       },
@@ -93,6 +94,16 @@
               "hotwater_sensor_entity_id": "Hot Water Temperature Sensor"
             }
           }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Equipment sensors",
+        "description": "Configure detailed equipment data entities for compatible devices.",
+        "data": {
+          "equipment_sensors": "Enable equipment data sensors"
+        },
+        "data_description": {
+          "equipment_sensors": "Expose an additional sensor containing detailed equipment attributes for each compatible smart plug, PowerTag, and heating actuator."
         }
       },
       "opentherm_sensors": {
@@ -176,7 +187,8 @@
       }
     },
     "abort": {
-      "opentherm_not_available": "OpenTherm data is not available for this Wiser hub."
+      "opentherm_not_available": "OpenTherm data is not available for this Wiser hub.",
+      "equipment_not_available": "Equipment data is not available for this Wiser hub."
     }
   },
   "services": {
@@ -376,7 +388,7 @@
       "total_energy": { "name": "Total energy" },
       "energy_delivered": { "name": "Energy delivered" },
       "energy_received": { "name": "Energy received" },
-      "equipment_power": { "name": "Equipment power" }
+      "equipment_power": { "name": "Equipment" }
     }
   },
   "device_automation": {

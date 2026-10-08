@@ -66,7 +66,7 @@ def _load_sensor_module() -> ModuleType:
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
         PERCENTAGE="%",
-        UnitOfPower=SimpleNamespace(KILO_WATT="kW"),
+        UnitOfPower=SimpleNamespace(KILO_WATT="kW", WATT="W"),
         UnitOfEnergy=SimpleNamespace(),
         UnitOfPressure=SimpleNamespace(BAR="bar"),
         UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
@@ -91,6 +91,7 @@ def _load_sensor_module() -> ModuleType:
     _module(
         "wiser.const",
         DATA="data",
+        CONF_EQUIPMENT_SENSORS="equipment_sensors",
         CONF_OPENTHERM_SENSORS="opentherm_sensors",
         DOMAIN="wiser",
         ENTITY_PREFIX="Wiser",
@@ -371,9 +372,16 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
 
         self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
 
-    def test_hub_v2_setup_does_not_create_duplicate_equipment_readings(self) -> None:
+    def test_detailed_equipment_readings_are_opt_in(self) -> None:
         setup_source = SOURCE_PATH.read_text().split("class WiserSensor", 1)[0]
-        self.assertNotIn("WiserEquipmentSensor(", setup_source)
+        self.assertIn(
+            'config_entry.options.get(\n        CONF_EQUIPMENT_SENSORS, False',
+            setup_source,
+        )
+        self.assertEqual(setup_source.count("WiserEquipmentSensor("), 4)
+        self.assertEqual(setup_source.count("if equipment_sensors_enabled"), 4)
+        self.assertNotIn("equipment_id > 0", setup_source)
+        self.assertIn("power_tags_c", setup_source)
         self.assertNotIn('legacy_name="Equipment Energy Delivered"', setup_source)
 
     def test_power_display_name_does_not_change_historical_unique_id_input(
@@ -411,6 +419,137 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
         self.assertEqual(energy._attr_translation_key, "total_energy")
         self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
+
+    def test_equipment_attributes_handle_missing_delivered_energy(self) -> None:
+        class OptionalAttributes(SimpleNamespace):
+            def __getattr__(self, _name):
+                return None
+
+        power = OptionalAttributes(
+            active_power=10,
+            total_active_power=20,
+            current_summation_delivered=None,
+        )
+        equipment = OptionalAttributes(
+            device_type="Other",
+            equipment_name="Test equipment",
+            power=power,
+        )
+        sensor = object.__new__(self.sensor_module.WiserEquipmentSensor)
+        sensor._device = OptionalAttributes(
+            product_identifier="product",
+            equipment=equipment,
+        )
+
+        attributes = sensor.extra_state_attributes
+        self.assertEqual(attributes["equipment_name"], "Test equipment")
+        self.assertNotIn("name", attributes)
+        self.assertNotIn("energy", attributes)
+
+        power.current_summation_delivered = 0
+        self.assertEqual(sensor.extra_state_attributes["energy"], 0)
+
+    def test_equipment_name_uses_translation_without_changing_unique_id(self) -> None:
+        device = SimpleNamespace(id=9)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+
+        self.assertEqual(sensor._sensor_type, "")
+        self.assertEqual(sensor._attr_translation_key, "equipment_power")
+        self.assertNotIn("name", self.sensor_module.WiserEquipmentSensor.__dict__)
+
+    def test_equipment_power_uses_native_measurement_metadata(self) -> None:
+        device = SimpleNamespace(
+            id=9,
+            instantaneous_power=45.6,
+            equipment=SimpleNamespace(
+                power=SimpleNamespace(total_active_power=123.4, active_power=78.9)
+            ),
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+        sensor.async_write_ha_state = Mock()
+
+        self.assertEqual(sensor.native_value, 123.4)
+        self.assertEqual(sensor.state, 123.4)
+        self.assertEqual(sensor.native_unit_of_measurement, "W")
+        self.assertEqual(sensor._attr_device_class, "power")
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
+
+        device.equipment.power.total_active_power = None
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 78.9)
+
+        device.equipment.power.active_power = None
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 45.6)
+
+        device.instantaneous_power = 0
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 0)
+
+    def test_equipment_sensor_recovers_from_missing_runtime_data(self) -> None:
+        equipment = SimpleNamespace(
+            power=SimpleNamespace(total_active_power=123.4)
+        )
+        device = SimpleNamespace(id=9, equipment=equipment)
+        data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+
+        self.assertTrue(sensor.available)
+        self.assertEqual(sensor.native_value, 123.4)
+
+        device.equipment = None
+        self.assertFalse(sensor.available)
+        self.assertIsNone(sensor.native_value)
+        self.assertEqual(sensor.extra_state_attributes, {})
+
+        sensor._device = None
+        self.assertFalse(sensor.available)
+        self.assertIsNone(sensor.native_value)
+        self.assertEqual(sensor.extra_state_attributes, {})
+
+        sensor._device = device
+        device.equipment = equipment
+        self.assertTrue(sensor.available)
+        self.assertEqual(sensor.native_value, 123.4)
+
+    def test_live_equipment_attributes_are_excluded_from_recorder(self) -> None:
+        self.assertEqual(
+            self.sensor_module.WiserEquipmentSensor._unrecorded_attributes,
+            {
+                "active_power",
+                "energy",
+                "energy_delivered",
+                "energy_received",
+                "rms_current",
+                "rms_voltage",
+                "total_active_power",
+            },
+        )
 
 
 class WiserSystemCircuitStateTest(unittest.TestCase):
@@ -895,3 +1034,54 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
         )
 
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
+
+
+class WiserEquipmentBinarySensorTest(unittest.TestCase):
+    """Tests for binary sensors backed by optional equipment data."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.binary_sensor_module = _load_binary_sensor_module()
+
+    def setUp(self):
+        self.equipment = SimpleNamespace(controllable=True, pcm_mode=False)
+        self.device = SimpleNamespace(
+            id=9,
+            equipment=self.equipment,
+            product_type="SmartPlug",
+            firmware_version="1.0",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: self.device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+        self.sensor = self.binary_sensor_module.WiserEquipment(
+            self.data, 9, "Controllable", "equipment"
+        )
+        self.sensor.async_write_ha_state = Mock()
+
+    def test_becomes_unavailable_and_recovers_with_equipment_data(self):
+        self.assertTrue(self.sensor.available)
+        self.assertTrue(self.sensor.is_on)
+
+        self.device.equipment = None
+        self.sensor._handle_coordinator_update()
+        self.assertFalse(self.sensor.available)
+        self.assertIsNone(self.sensor.is_on)
+
+        self.device.equipment = self.equipment
+        self.sensor._handle_coordinator_update()
+        self.assertTrue(self.sensor.available)
+        self.assertTrue(self.sensor.is_on)
+
+    def test_handles_device_temporarily_disappearing(self):
+        self.device = None
+
+        self.sensor._handle_coordinator_update()
+
+        self.assertFalse(self.sensor.available)
+        self.assertIsNone(self.sensor.is_on)

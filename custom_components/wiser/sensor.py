@@ -42,6 +42,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
 from .const import (
+    CONF_EQUIPMENT_SENSORS,
     CONF_OPENTHERM_SENSORS,
     DATA,
     DOMAIN,
@@ -117,6 +118,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     """Initialize the entry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
     wiser_sensors = []
+    equipment_sensors_enabled = config_entry.options.get(
+        CONF_EQUIPMENT_SENSORS, False
+    )
 
     # Add signal sensors for all devices
     _LOGGER.debug("Setting up Device sensors")
@@ -274,7 +278,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Smart Plug power sensors")
         for smartplug in data.wiserhub.devices.smartplugs.all:
             # Hub V2 equipment telemetry
-            if smartplug.equipment_id > 0:
+            if smartplug.equipment is not None:
+                if equipment_sensors_enabled:
+                    wiser_sensors.append(WiserEquipmentSensor(data, smartplug.id))
                 wiser_sensors.extend(
                     [
                         WiserLTSPowerSensor(
@@ -338,6 +344,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ),
                 ]
             )
+            # Add an equipment sensor for PowerTags
+            if equipment_sensors_enabled and power_tag.equipment is not None:
+                wiser_sensors.append(WiserEquipmentSensor(data, power_tag.id))
+
+    # Add equipment sensors for PowerTag Control devices
+    if equipment_sensors_enabled and data.wiserhub.devices.power_tags_c:
+        for power_tag_control in data.wiserhub.devices.power_tags_c.all:
+            if power_tag_control.equipment is not None:
+                wiser_sensors.append(
+                    WiserEquipmentSensor(data, power_tag_control.id)
+                )
 
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
@@ -383,7 +400,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Heating Actuator LTS sensors")
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
             # Hub V2 equipment telemetry
-            if heating_actuator.equipment_id > 0:
+            if heating_actuator.equipment is not None:
+                if equipment_sensors_enabled:
+                    wiser_sensors.append(
+                        WiserEquipmentSensor(data, heating_actuator.id)
+                    )
+
                 wiser_sensors.extend(
                     [
                         WiserLTSPowerSensor(
@@ -2059,6 +2081,21 @@ class WiserThresholdHumiditySensor(WiserThresholdSensor):
 class WiserEquipmentSensor(WiserSensor):
     """Definition of Wiser Equipment Sensor."""
 
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _unrecorded_attributes = frozenset(
+        {
+            "active_power",
+            "energy",
+            "energy_delivered",
+            "energy_received",
+            "rms_current",
+            "rms_voltage",
+            "total_active_power",
+        }
+    )
+
     def __init__(self, data, device_id=0, sensor_type="") -> None:
         """Initialise the device sensor."""
         super().__init__(
@@ -2068,6 +2105,7 @@ class WiserEquipmentSensor(WiserSensor):
             self._device = self._data.wiserhub.system
         else:
             self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self.native_value
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -2077,7 +2115,7 @@ class WiserEquipmentSensor(WiserSensor):
             self._device = self._data.wiserhub.system
         else:
             self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._state = self._device.equipment.power.total_active_power
+        self._state = self.native_value
         self.async_write_ha_state()
 
     async def async_update(self) -> None:
@@ -2090,9 +2128,31 @@ class WiserEquipmentSensor(WiserSensor):
         return "mdi:home-lightning-bolt"
 
     @property
-    def state(self) -> float:
-        """Return the state of the entity."""
-        return self._device.equipment.power.total_active_power
+    def available(self) -> bool:
+        """Return whether equipment data is currently available."""
+        return (
+            super().available
+            and self._device is not None
+            and getattr(self._device, "equipment", None) is not None
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the native power value."""
+        equipment = getattr(self._device, "equipment", None)
+        if equipment is None:
+            return None
+
+        power = equipment.power
+        for value in (
+            getattr(power, "total_active_power", None),
+            getattr(power, "active_power", None),
+            getattr(self._device, "instantaneous_power", None),
+        ):
+            if value is not None:
+                return value
+
+        return None
 
     @property
     def native_unit_of_measurement(self) -> str:
@@ -2113,74 +2173,67 @@ class WiserEquipmentSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return device state attributes."""
-        attrs = {} 
-        
-        # common attributes
-        attrs["product_identifier"] = self._device.product_identifier
+        equipment = getattr(self._device, "equipment", None)
+        if equipment is None:
+            return {}
 
-        attrs["name"] = self._device.equipment.equipment_name
-        attrs["device_type"] = self._device.equipment.device_type 
-        attrs["family"] = self._device.equipment.equipment_family
-        attrs["installation_type"] = self._device.equipment.installation_type
+        power = equipment.power
+        attrs = {
+            "product_identifier": self._device.product_identifier,
+            "equipment_name": equipment.equipment_name,
+            "device_type": equipment.device_type,
+            "family": equipment.equipment_family,
+            "installation_type": equipment.installation_type,
+            "equipment_id": equipment.id,
+            "equipment_device_id": equipment.device_id,
+            # Retain the existing key spelling for attribute compatibility.
+            "equipment_UUID": equipment.uuid,
+            "controllable": equipment.controllable,
+            "cloud_managed": equipment.cloud_managed,
+            "monitored": equipment.monitored,
+            "smart_compatible": equipment.smart_compatible,
+            "smart_supported": equipment.smart_supported,
+            "can_be_scheduled": equipment.can_be_scheduled,
+            "onoff_green_schedule_supported": (
+                equipment.onoff_green_schedule_supported
+            ),
+            "onoff_cost_schedule_supported": equipment.onoff_cost_schedule_supported,
+            "functional_control_mode": equipment.functional_control_mode,
+            "current_control_mode": equipment.current_control_mode,
+            "pcm_mode": equipment.pcm_mode,
+            "pcm_supported": equipment.pcm_supported,
+            "pcm_priority": equipment.pcm_priority,
+            "number_of_phases": equipment.number_of_phases,
+            "direction": equipment.direction,
+            "operating_status": equipment.operating_status,
+            "fault_status": equipment.fault_status,
+            "load_state_status": equipment.load_state_status,
+            "load_state_command_optimized": equipment.load_state_command_optimized,
+            "load_shedding_status": equipment.load_shedding_status,
+            "load_state_command_prio": equipment.load_state_command_prio,
+            "load_setpoint_command_prio": equipment.load_setpoint_command_prio,
+            "active_power": power.active_power,
+            "total_active_power": power.total_active_power,
+        }
 
-        attrs["equipment_id"] = self._device.equipment.id
-        attrs["equipment_device_id"] = self._device.equipment.device_id
-        attrs["equipment_UUID"] = self._device.equipment.uuid
-        # more info 2024 06
-        attrs["controllable"] = self._device.equipment.controllable        
-        attrs["cloud_managed"] = self._device.equipment.cloud_managed        
-        attrs["monitored"] = self._device.equipment.monitored        
-        attrs["smart_compatible"] = self._device.equipment.smart_compatible
-        attrs["smart_supported"] = self._device.equipment.smart_supported
-        attrs["can_be_scheduled"] = self._device.equipment.can_be_scheduled        
-        attrs["onoff_green_schedule_supported"] = self._device.equipment.onoff_green_schedule_supported
-        attrs["onoff_cost_schedule_supported"] = self._device.equipment.onoff_cost_schedule_supported        
-        attrs["controllable"] = self._device.equipment.controllable        
-
-        attrs["functional_control_mode"] = self._device.equipment.functional_control_mode
-        attrs["current_control_mode"] = self._device.equipment.current_control_mode
-        #PCM
-        attrs["pcm_mode"] = self._device.equipment.pcm_mode
-        attrs["pcm_supported"] = self._device.equipment.pcm_supported
-        attrs["pcm_priority"] = self._device.equipment.pcm_priority
-
-        attrs["number_of_phases"] = self._device.equipment.number_of_phases        
-        attrs["direction"] = self._device.equipment.direction
-        attrs["operating_status"] = self._device.equipment.operating_status
-        attrs["fault_status"] = self._device.equipment.fault_status
-        #Load
-        attrs["load_state_status"] = self._device.equipment.load_state_status
-        attrs["load_state_command_optimized"] = self._device.equipment.load_state_command_optimized
-        attrs["load_shedding_status"] = self._device.equipment.load_shedding_status
-        attrs["load_state_command_prio"] = self._device.equipment.load_state_command_prio
-        attrs["load_setpoint_command_prio"] = self._device.equipment.load_setpoint_command_prio
-
-        attrs["active_power"] = self._device.equipment.power.active_power    
-        attrs["total_active_power"] = self._device.equipment.power.total_active_power    
-        attrs["energy"] = round(
-            self._device.equipment.power.current_summation_delivered / 1000,
-            2,
-        )
+        delivered_energy = power.current_summation_delivered
+        if delivered_energy is not None:
+            attrs["energy"] = round(delivered_energy / 1000, 2)
 
         # PowerTagE attributes
-        if self._device.equipment.device_type in ["PTE","PowerTagE",]:
+        if equipment.device_type in ("PTE", "PowerTagE"):
             attrs["grid_limit"] = self._device.grid_limit
+            # Retain the existing key spelling for attribute compatibility.
             attrs["grid_limit_Uom"] = self._device.grid_limit_uom
             attrs["energy_export"] = self._device.energy_export
             attrs["self_consumption"] = self._device.self_consumption
-        
-            attrs["rms_current"] = self._device.equipment.power.rms_current    
-            attrs["rms_voltage"] = self._device.equipment.power.rms_voltage    
-            attrs["energy_received"] = self._device.equipment.power.current_summation_received  
 
-        #  SmartPlug attributes
-        if self._device.equipment.device_type in ["SmartPlug"]:
-            attrs["functional_control_mode"] = self._device.equipment.functional_control_mode      
+            attrs["rms_current"] = power.rms_current
+            attrs["rms_voltage"] = power.rms_voltage
+            attrs["energy_received"] = power.current_summation_received
 
         # PowerTagE and SmartPlug attributes
-        if self._device.equipment.device_type in ["PTE","PowerTagE","SmartPlug"]:
-            attrs["energy_delivered"] = self._device.equipment.power.current_summation_delivered      
-            attrs["pcm_mode"] = self._device.equipment.pcm_mode
+        if equipment.device_type in ("PTE", "PowerTagE", "SmartPlug"):
+            attrs["energy_delivered"] = power.current_summation_delivered
 
-
-        return attrs       
+        return attrs

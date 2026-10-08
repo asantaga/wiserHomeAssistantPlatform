@@ -441,7 +441,28 @@ class WiserRemoteAlarm(BaseBinarySensor):
 
 
 class WiserEquipment(BaseBinarySensor):
-    """Base binary sensor class."""
+    """Binary sensor backed by optional equipment data."""
+
+    @property
+    def available(self) -> bool:
+        """Return whether equipment data is currently available."""
+        return (
+            super().available
+            and self._device is not None
+            and getattr(self._device, "equipment", None) is not None
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh state without failing when equipment data is missing."""
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        equipment = getattr(self._device, "equipment", None)
+        self._state = (
+            getattr(equipment, self._sensor_type.replace(" ", "_").lower())
+            if equipment is not None
+            else None
+        )
+        self.async_write_ha_state()
 
 
 ## binary sensor of System
