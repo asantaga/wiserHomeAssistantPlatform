@@ -536,6 +536,66 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
         self.assertIsNotNone(cleanup_call)
 
 
+class WiserSystemBinarySensorUpdateTest(unittest.TestCase):
+    """Tests for coordinator updates to system binary sensors."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        source = BINARY_SENSOR_SOURCE_PATH.read_text().split(
+            "class RoomBinarySensor", 1
+        )[0]
+        tree = ast.parse(source)
+        system_class = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "SystemBinarySensor"
+        )
+        update_method = next(
+            node
+            for node in system_class.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "_handle_coordinator_update"
+        )
+        update_method.decorator_list = []
+        namespace = {"_LOGGER": Mock()}
+        exec(
+            compile(
+                ast.Module(body=[update_method], type_ignores=[]),
+                BINARY_SENSOR_SOURCE_PATH.name,
+                "exec",
+            ),
+            namespace,
+        )
+        cls.handle_update = staticmethod(namespace["_handle_coordinator_update"])
+
+    def setUp(self) -> None:
+        self.sensor = SimpleNamespace(
+            _data=SimpleNamespace(
+                wiserhub=SimpleNamespace(
+                    system=SimpleNamespace(summer_comfort_available=False)
+                )
+            ),
+            _sensor_type="Summer Comfort Available",
+            _state=True,
+            async_write_ha_state=Mock(),
+        )
+
+    def test_coordinator_update_refreshes_state(self) -> None:
+        self.handle_update(self.sensor)
+
+        self.assertFalse(self.sensor._state)
+        self.sensor.async_write_ha_state.assert_called_once_with()
+
+    def test_missing_property_sets_unknown_state(self) -> None:
+        self.sensor._data.wiserhub.system = SimpleNamespace()
+
+        self.handle_update(self.sensor)
+
+        self.assertIsNone(self.sensor._state)
+        self.sensor.async_write_ha_state.assert_called_once_with()
+
+
 class WiserDeviceSignalSensorNameTest(unittest.TestCase):
     """Tests for controller and device signal sensor names."""
 
