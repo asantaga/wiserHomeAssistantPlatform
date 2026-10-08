@@ -293,28 +293,38 @@ def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
             entry_data = dict(config_entry.data)
             entry_data.pop(CONF_OPENTHERM_EVER_CONNECTED, None)
             hass.config_entries.async_update_entry(config_entry, data=entry_data)
-        _sync_opentherm_entity_registry(hass, config_entry, coordinator)
+        remembered = False
+    elif (
+        not remembered
+        and getattr(opentherm, "connection_status", None) == "Connected"
+    ):
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
+        )
+        remembered = True
+
+    detected = bool(opentherm and remembered)
+    if getattr(coordinator, "_wiser_opentherm_detected", None) is detected:
         return
 
-    _sync_opentherm_entity_registry(hass, config_entry, coordinator)
-
-    if remembered:
-        return
-
-    if getattr(opentherm, "connection_status", None) != "Connected":
-        return
-
-    hass.config_entries.async_update_entry(
+    coordinator._wiser_opentherm_detected = detected
+    _sync_opentherm_entity_registry(
+        hass,
         config_entry,
-        data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
+        coordinator,
+        detected=detected,
     )
 
 
 @callback
-def _sync_opentherm_entity_registry(hass, config_entry, coordinator) -> None:
+def _sync_opentherm_entity_registry(
+    hass, config_entry, coordinator, detected=None
+) -> None:
     """Hide false OpenTherm entities while preserving their registry data."""
     opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
-    detected = opentherm_is_detected(config_entry, opentherm)
+    if detected is None:
+        detected = opentherm_is_detected(config_entry, opentherm)
     unique_ids = opentherm_entity_unique_ids(coordinator)
     registry = er.async_get(hass)
 

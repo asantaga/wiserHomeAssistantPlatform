@@ -107,13 +107,23 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
-        sync_registry.assert_called_once_with(hass, entry, coordinator)
+        sync_registry.assert_called_once_with(
+            hass, entry, coordinator, detected=False
+        )
+
+        sync_registry.reset_mock()
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+        update.assert_not_called()
+        sync_registry.assert_not_called()
 
         opentherm.connection_status = "Connected"
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_called_once_with(
             entry,
             data={"host": "wiser.local", "opentherm_ever_connected": True},
+        )
+        sync_registry.assert_called_once_with(
+            hass, entry, coordinator, detected=True
         )
 
         update.reset_mock()
@@ -122,7 +132,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         opentherm.connection_status = "Disconnected"
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
-        sync_registry.assert_called_once_with(hass, entry, coordinator)
+        sync_registry.assert_not_called()
 
     def test_disabling_opentherm_clears_remembered_connection(self):
         sync_registry = Mock()
@@ -157,7 +167,9 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             entry,
             data={"host": "wiser.local"},
         )
-        sync_registry.assert_called_once_with(hass, entry, coordinator)
+        sync_registry.assert_called_once_with(
+            hass, entry, coordinator, detected=False
+        )
 
     def test_opentherm_registry_entries_are_disabled_without_detection(self):
         integration = "integration"
