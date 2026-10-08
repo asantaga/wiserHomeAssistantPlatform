@@ -36,13 +36,14 @@ from .opentherm import (
 
 _LOGGER = logging.getLogger(__name__)
 
+SUMMER_DISCOMFORT_PREVENTION = "Summer Discomfort Prevention"
+SUMMER_COMFORT_AVAILABLE = "Summer Comfort Available"
+PCM_DEVICE_LIMIT_REACHED = "PCM Device Limit Reached"
 SUMMER_COMFORT_BINARY_SENSOR_TYPES = (
-    "Summer Discomfort Prevention",
-    "Summer Comfort Available",
+    SUMMER_DISCOMFORT_PREVENTION,
+    SUMMER_COMFORT_AVAILABLE,
 )
-PCM_BINARY_SENSOR_TYPES = (
-    "PCM Device Limit Reached",
-)
+PCM_BINARY_SENSOR_TYPES = (PCM_DEVICE_LIMIT_REACHED,)
 
 
 def _entity_translation_key(name: str) -> str:
@@ -129,15 +130,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         binary_sensors.extend(
             [
                 WiserSummerDiscomfortPrevention(
-                    data, 0, "Summer Discomfort Prevention"
+                    data, 0, SUMMER_DISCOMFORT_PREVENTION
                 ),
-                WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
+                WiserSummerComfortAvailable(data, 0, SUMMER_COMFORT_AVAILABLE),
             ]
         )
 
     if _supports_pcm_binary_sensor(data):
         binary_sensors.append(
-            WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
+            WiserPCMDeviceLimitReached(data, 0, PCM_DEVICE_LIMIT_REACHED)
         )
     if _requires_v2_entity_cleanup(data):
         _remove_unsupported_v2_entities(
