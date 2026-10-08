@@ -550,7 +550,7 @@ class WiserSummerComfortAvailable(SystemBinarySensor):
     _attr_device_class = BinarySensorDeviceClass.HEAT
 
 class WiserPCMDeviceLimitReached(SystemBinarySensor):
-    """Summer Comfort Available sensor."""
+    """PCM device limit reached sensor."""
     _attr_device_class = BinarySensorDeviceClass.POWER
 
 
