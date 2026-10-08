@@ -348,6 +348,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             if equipment_sensors_enabled and power_tag.equipment is not None:
                 wiser_sensors.append(WiserEquipmentSensor(data, power_tag.id))
 
+    # Add equipment sensors for PowerTag Control devices
+    if equipment_sensors_enabled and data.wiserhub.devices.power_tags_c:
+        for power_tag_control in data.wiserhub.devices.power_tags_c.all:
+            if power_tag_control.equipment is not None:
+                wiser_sensors.append(
+                    WiserEquipmentSensor(data, power_tag_control.id)
+                )
+
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
     for room in data.wiserhub.rooms.all:

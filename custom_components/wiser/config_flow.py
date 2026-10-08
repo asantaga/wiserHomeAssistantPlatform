@@ -282,6 +282,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             for collection_name in (
                 "smartplugs",
                 "power_tags",
+                "power_tags_c",
                 "heating_actuators",
             )
             for device in all_devices(collection_name)

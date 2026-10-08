@@ -132,10 +132,13 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "config_flow.py", {"_equipment_available"}, self.namespace
         )
 
-        def flow_with_devices(*, smartplugs=(), power_tags=(), actuators=()):
+        def flow_with_devices(
+            *, smartplugs=(), power_tags=(), power_tags_c=(), actuators=()
+        ):
             devices = SimpleNamespace(
                 smartplugs=SimpleNamespace(all=smartplugs),
                 power_tags=SimpleNamespace(all=power_tags),
+                power_tags_c=SimpleNamespace(all=power_tags_c),
                 heating_actuators=SimpleNamespace(all=actuators),
             )
             return SimpleNamespace(
@@ -166,6 +169,13 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 flow_with_devices(
                     smartplugs=(SimpleNamespace(equipment=None),),
                     actuators=(SimpleNamespace(equipment=None),),
+                )
+            )
+        )
+        self.assertTrue(
+            functions._equipment_available(
+                flow_with_devices(
+                    power_tags_c=(SimpleNamespace(equipment=object()),)
                 )
             )
         )
