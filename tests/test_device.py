@@ -25,6 +25,7 @@ class DeviceEntry:
     labels: set = field(default_factory=set)
     name_by_user: str | None = None
     created_at: datetime | None = None
+    identifiers: set = field(default_factory=set)
 
 
 @dataclass
@@ -544,6 +545,44 @@ class RemoveRoomDevicesTest(unittest.TestCase):
 
 class MigratePhysicalDeviceTest(unittest.TestCase):
     """Test migration of room-derived physical device records."""
+
+    def test_finds_previously_renamed_non_itrv_by_stable_entity(self) -> None:
+        old_device = DeviceEntry(
+            "old-roomstat",
+            identifiers={
+                ("wiser", "WiserHeat123456 Wiser RoomStat Old Room")
+            },
+        )
+        unrelated_device = DeviceEntry(
+            "unrelated",
+            identifiers={
+                ("wiser", "WiserHeat123456 Wiser RoomStat Other Room")
+            },
+        )
+        entities = [
+            EntityEntry(
+                "sensor.roomstat_signal",
+                "old-roomstat",
+                unique_id="stable-signal-id",
+            ),
+            EntityEntry(
+                "sensor.unrelated_signal",
+                "unrelated",
+                unique_id="other-signal-id",
+            ),
+        ]
+
+        candidates = DEVICE.find_physical_device_candidates(
+            [old_device, unrelated_device],
+            entities,
+            {
+                ("wiser", "WiserHeat123456 device 21"),
+                ("wiser", "WiserHeat123456 Wiser RoomStat New Room"),
+            },
+            {"stable-signal-id", "stable-battery-id"},
+        )
+
+        self.assertEqual(candidates, [old_device])
 
     def test_uses_identifier_parent_only_when_creating_device(self) -> None:
         registry = DeviceRegistry()

@@ -55,6 +55,28 @@ def register_room_assigned_device(
     )
 
 
+def find_physical_device_candidates(
+    registry_devices,
+    registry_entities,
+    identifiers,
+    stable_entity_ids,
+):
+    """Find physical devices by identifier or immutable entity identity."""
+    entity_device_ids = {
+        entry.device_id
+        for entry in registry_entities
+        if entry.platform == "wiser"
+        and entry.unique_id in stable_entity_ids
+        and entry.device_id is not None
+    }
+    return [
+        entry
+        for entry in registry_devices
+        if identifiers.intersection(entry.identifiers)
+        or entry.id in entity_device_ids
+    ]
+
+
 def migrate_physical_device(
     device_registry,
     entity_registry,

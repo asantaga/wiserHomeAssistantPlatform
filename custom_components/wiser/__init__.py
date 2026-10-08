@@ -43,6 +43,7 @@ from .const import (
 from .coordinator import WiserUpdateCoordinator
 from .device import (
     assign_device_area_if_unset,
+    find_physical_device_candidates,
     merge_legacy_hub_device,
     migrate_entity_unique_id_duplicates,
     migrate_physical_device,
@@ -476,12 +477,16 @@ def migrate_physical_device_registry(
             DOMAIN,
             get_legacy_device_identifier(data, device.id),
         )
-        possible_devices = [
-            entry
-            for entry in registry_devices
-            if stable_identifier in entry.identifiers
-            or legacy_identifier in entry.identifiers
-        ]
+        stable_entity_ids = {
+            get_unique_id(data, "sensor", device.product_type, device.id),
+            get_unique_id(data, "sensor", "Battery", device.id),
+        }
+        possible_devices = find_physical_device_candidates(
+            registry_devices,
+            registry_entities,
+            {stable_identifier, legacy_identifier},
+            stable_entity_ids,
+        )
         room = data.wiserhub.rooms.get_by_device_id(device.id)
         temperature_type = None
         old_temperature_names = set()
@@ -550,19 +555,6 @@ def migrate_physical_device_registry(
                 if entry.device_id is not None
             }
 
-            if device.product_type == "iTRV":
-                # Signal and battery IDs have always used the immutable device
-                # ID, so they locate an iTRV whose temperature was removed.
-                stable_entity_ids = {
-                    get_unique_id(data, "sensor", device.product_type, device.id),
-                    get_unique_id(data, "sensor", "Battery", device.id),
-                }
-                matching_device_ids.update(
-                    entry.device_id
-                    for entry in registry_entities
-                    if entry.unique_id in stable_entity_ids
-                    and entry.device_id is not None
-                )
             possible_devices.extend(
                 entry
                 for entry in registry_devices
