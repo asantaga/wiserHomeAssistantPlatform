@@ -105,6 +105,12 @@ class HubNamingTest(unittest.TestCase):
             "058a52_away_mode",
         )
 
+    def test_hub_parent_uses_compatible_identifier(self) -> None:
+        self.assertEqual(
+            self.helpers.get_hub_via_device_info(self.data),
+            {"via_device": ("wiser", "WiserHeatNOTUSED")},
+        )
+
     def test_hub_entity_mixin_suggests_mac_derived_object_id(self) -> None:
         class DefaultEntity:
             @property

@@ -231,11 +231,8 @@ def get_hub_device_info(data):
 
 
 def get_hub_via_device_info(data):
-    """Return the registered physical HeatHub as a parent device."""
-    hub_device_id = getattr(data, "hub_device_id", None)
-    if hub_device_id is None:
-        return {}
-    return {"via_device_id": hub_device_id}
+    """Return the physical HeatHub identifier as a parent device."""
+    return {"via_device": (DOMAIN, data.wiserhub.system.name)}
 
 
 def get_legacy_unique_id(data, device_type, entity_type, device_id):
