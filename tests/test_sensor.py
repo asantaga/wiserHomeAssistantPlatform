@@ -304,7 +304,7 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             "class BaseBinarySensor", 1
         )[0]
         cls.tree = ast.parse(setup_source)
-        support_functions = [
+        tested_functions = [
             node
             for node in cls.tree.body
             if isinstance(node, ast.FunctionDef)
@@ -313,12 +313,23 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
                 "_supports_summer_comfort_binary_sensors",
                 "_supports_pcm_binary_sensor",
                 "_requires_v2_entity_cleanup",
+                "_remove_unsupported_v2_entities",
             }
         ]
-        namespace = {"TEXT_UNKNOWN": "Unknown"}
+        cls.registry = Mock()
+        cls.get_legacy_unique_id = Mock(return_value="legacy-unique-id")
+        cls.get_uuid_unique_id = Mock(return_value="uuid-unique-id")
+        namespace = {
+            "DOMAIN": "wiser",
+            "HomeAssistant": object,
+            "TEXT_UNKNOWN": "Unknown",
+            "er": SimpleNamespace(async_get=lambda _hass: cls.registry),
+            "get_legacy_unique_id": cls.get_legacy_unique_id,
+            "get_uuid_unique_id": cls.get_uuid_unique_id,
+        }
         exec(
             compile(
-                ast.Module(body=support_functions, type_ignores=[]),
+                ast.Module(body=tested_functions, type_ignores=[]),
                 BINARY_SENSOR_SOURCE_PATH.name,
                 "exec",
             ),
@@ -331,6 +342,16 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
         cls.requires_cleanup = staticmethod(
             namespace["_requires_v2_entity_cleanup"]
         )
+        cls.remove_unsupported_entities = staticmethod(
+            namespace["_remove_unsupported_v2_entities"]
+        )
+
+    def setUp(self) -> None:
+        self.registry.reset_mock()
+        self.get_legacy_unique_id.reset_mock()
+        self.get_uuid_unique_id.reset_mock()
+        self.get_legacy_unique_id.return_value = "legacy-unique-id"
+        self.get_uuid_unique_id.return_value = "uuid-unique-id"
 
     def test_v1_does_not_support_v2_system_sensors(self) -> None:
         data = SimpleNamespace(hub_version=1)
@@ -384,6 +405,48 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
         self.assertTrue(self.requires_cleanup(SimpleNamespace(hub_version=1)))
         self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=2)))
         self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=3)))
+
+    def test_cleanup_removes_owned_migrated_entity(self) -> None:
+        self.registry.async_get_entity_id.return_value = "binary_sensor.pcm_limit"
+        self.registry.async_get.return_value = SimpleNamespace(
+            config_entry_id="entry-id"
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat123456"))
+        )
+
+        self.remove_unsupported_entities(
+            object(), "entry-id", data, ("PCM Device Limit Reached",)
+        )
+
+        self.get_legacy_unique_id.assert_called_once_with(
+            data,
+            "sensor",
+            "PCM Device Limit Reached",
+            "HeatHub123456 PCM Device Limit Reached",
+        )
+        self.get_uuid_unique_id.assert_called_once_with("legacy-unique-id")
+        self.registry.async_get_entity_id.assert_called_once_with(
+            "binary_sensor", "wiser", "uuid-unique-id"
+        )
+        self.registry.async_remove.assert_called_once_with(
+            "binary_sensor.pcm_limit"
+        )
+
+    def test_cleanup_keeps_entity_owned_by_another_entry(self) -> None:
+        self.registry.async_get_entity_id.return_value = "binary_sensor.pcm_limit"
+        self.registry.async_get.return_value = SimpleNamespace(
+            config_entry_id="other-entry"
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat123456"))
+        )
+
+        self.remove_unsupported_entities(
+            object(), "entry-id", data, ("PCM Device Limit Reached",)
+        )
+
+        self.registry.async_remove.assert_not_called()
 
     def test_summer_comfort_sensors_use_capability_guard(self) -> None:
         setup = next(
