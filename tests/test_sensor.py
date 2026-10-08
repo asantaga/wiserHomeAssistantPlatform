@@ -482,8 +482,10 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
 
         sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+        sensor.async_write_ha_state = Mock()
 
         self.assertEqual(sensor.native_value, 123.4)
+        self.assertEqual(sensor.state, 123.4)
         self.assertEqual(sensor.native_unit_of_measurement, "W")
         self.assertEqual(sensor._attr_device_class, "power")
         self.assertEqual(sensor._attr_state_class, "measurement")
@@ -491,13 +493,16 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertNotIn("state", self.sensor_module.WiserEquipmentSensor.__dict__)
 
         device.equipment.power.total_active_power = None
-        self.assertEqual(sensor.native_value, 78.9)
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 78.9)
 
         device.equipment.power.active_power = None
-        self.assertEqual(sensor.native_value, 45.6)
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 45.6)
 
         device.instantaneous_power = 0
-        self.assertEqual(sensor.native_value, 0)
+        sensor._handle_coordinator_update()
+        self.assertEqual(sensor.state, 0)
 
     def test_equipment_sensor_recovers_from_missing_runtime_data(self) -> None:
         equipment = SimpleNamespace(
