@@ -102,6 +102,8 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["HeatingActuator", "CFMT"]:
+            if not legacy_naming:
+                return f"{ENTITY_PREFIX} {device.product_type}"
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
@@ -123,7 +125,7 @@ def get_device_name(data, device_id, device_type="device"):
 
         if device.product_type in ["SmokeAlarmDevice", "ButtonPanel"]:
             device_room = data.wiserhub.rooms.get_by_id(device.room_id)
-            if device_room:
+            if legacy_naming and device_room:
                 return f"{ENTITY_PREFIX} {device_room.name} {device.name}"
             return f"{ENTITY_PREFIX} {device.name} {device.id}"
 
@@ -148,7 +150,7 @@ def get_device_name(data, device_id, device_type="device"):
         ]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
-            if device_room:
+            if legacy_naming and device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name} {device.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
@@ -185,15 +187,44 @@ def get_legacy_device_name(data, device_id):
             return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
         return f"{ENTITY_PREFIX} Thermostat {device.id}"
 
-    if device.product_type != "TemperatureHumiditySensor":
-        return get_device_name(data, device_id)
+    if device.product_type in {"HeatingActuator", "CFMT"}:
+        if device_room:
+            if device_room.number_of_heating_actuators > 1:
+                index = device_room.heating_actuator_ids.index(device.id) + 1
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} "
+                    f"{device_room.name}-{index}"
+                )
+            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+        return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
 
-    if device_room:
+    if device.product_type in {"SmokeAlarmDevice", "ButtonPanel"}:
+        if device_room:
+            return f"{ENTITY_PREFIX} {device_room.name} {device.name}"
+        return f"{ENTITY_PREFIX} {device.name} {device.id}"
+
+    if device.product_type == "TemperatureHumiditySensor" and device_room:
         return (
             f"{ENTITY_PREFIX} {device.product_type} "
             f"{device_room.name} {device.name}"
         )
-    return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+    if device.product_type in {
+        "Shutter",
+        "OnOffLight",
+        "DimmableLight",
+        "WindowDoorSensor",
+        "WaterLeakageSensor",
+        "MotionLightSensor",
+        "TemperatureHumiditySensor",
+    }:
+        if device_room:
+            return (
+                f"{ENTITY_PREFIX} {device.product_type} "
+                f"{device_room.name} {device.name}"
+            )
+        return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+
+    return get_device_name(data, device_id)
 
 
 def get_identifier(data, device_id, device_type="device"):
@@ -535,7 +566,7 @@ def build_light_unique_id_migration(data) -> dict:
         old_id = light.id
         new_id = light.light_id
         ptype = light.product_type
-        old_name = get_device_name(data, old_id)
+        old_name = get_legacy_device_name(data, old_id)
         new_name = f"{ENTITY_PREFIX} {light.name}"
 
         # light (name-based -> light_id-based)

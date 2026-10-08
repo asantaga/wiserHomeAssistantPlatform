@@ -304,6 +304,91 @@ class HubNamingTest(unittest.TestCase):
         )
         self.assertEqual(self.helpers.get_identifier(self.data, 31), identifier)
 
+    def test_room_assigned_device_names_respect_legacy_option(self):
+        room = SimpleNamespace(
+            id=7,
+            name="Andys Bedroom",
+            number_of_heating_actuators=1,
+            heating_actuator_ids=[31],
+        )
+        devices = {
+            31: SimpleNamespace(
+                id=31,
+                name="Actuator",
+                product_type="HeatingActuator",
+                room_id=7,
+            ),
+            32: SimpleNamespace(
+                id=32,
+                name="Blind",
+                product_type="Shutter",
+                room_id=7,
+            ),
+            33: SimpleNamespace(
+                id=33,
+                name="Smoke Alarm",
+                product_type="SmokeAlarmDevice",
+                room_id=7,
+            ),
+        }
+        self.data.wiserhub.devices.get_by_id = lambda device_id: devices[device_id]
+        self.data.wiserhub.rooms.get_by_id = lambda _room_id: room
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: room
+
+        self.data.legacy_naming = False
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser HeatingActuator",
+        )
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 32),
+            "Wiser Shutter Blind",
+        )
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 33),
+            "Wiser Smoke Alarm 33",
+        )
+
+        self.data.legacy_naming = True
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 31),
+            "Wiser HeatingActuator Andys Bedroom",
+        )
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 32),
+            "Wiser Shutter Andys Bedroom Blind",
+        )
+        self.assertEqual(
+            self.helpers.get_device_name(self.data, 33),
+            "Wiser Andys Bedroom Smoke Alarm",
+        )
+
+    def test_historical_device_names_ignore_legacy_option(self):
+        room = SimpleNamespace(
+            id=7,
+            name="Andys Bedroom",
+            number_of_heating_actuators=1,
+            heating_actuator_ids=[31],
+        )
+        device = SimpleNamespace(
+            id=31,
+            name="Actuator",
+            product_type="HeatingActuator",
+            room_id=7,
+        )
+        self.data.wiserhub.devices.get_by_id = lambda _device_id: device
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: room
+
+        self.data.legacy_naming = False
+        modern_name = self.helpers.get_device_name(self.data, 31)
+        historical_name = self.helpers.get_legacy_device_name(self.data, 31)
+
+        self.assertEqual(modern_name, "Wiser HeatingActuator")
+        self.assertEqual(
+            historical_name,
+            "Wiser HeatingActuator Andys Bedroom",
+        )
+
     def test_physical_entity_migration_uses_historical_itrv_name(self):
         device = SimpleNamespace(id=31, product_type="iTRV")
         room = SimpleNamespace(
