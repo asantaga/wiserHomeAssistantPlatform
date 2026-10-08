@@ -197,8 +197,8 @@ async def async_migrate_physical_entity_unique_ids(
             return None
         # The original migration could create the target entry while the
         # capability binary sensors continued to register with their old
-        # unique_id. Keep the canonical target (which retains the original
-        # entity_id and history) and remove the later legacy-ID duplicate.
+        # unique_id. Keep both registry records so history is recoverable;
+        # the legacy-ID entry becomes unavailable after platform setup.
         target_entity_id = ent_reg.async_get_entity_id(
             entry.domain, entry.platform, new_unique_id
         )
@@ -208,12 +208,11 @@ async def async_migrate_physical_entity_unique_ids(
                 target_entry
                 and target_entry.config_entry_id == config_entry.entry_id
             ):
-                _LOGGER.info(
-                    "Wiser: removing duplicate legacy entity %s; target is %s",
+                _LOGGER.warning(
+                    "Wiser: retaining duplicate legacy entity %s; target is %s",
                     entry.entity_id,
                     target_entity_id,
                 )
-                ent_reg.async_remove(entry.entity_id)
                 return None
             _LOGGER.warning(
                 "Wiser: not migrating unique_id %s -> %s, target already exists",

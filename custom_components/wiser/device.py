@@ -202,7 +202,7 @@ def migrate_entity_unique_id_duplicates(
     entries,
     new_unique_id,
 ):
-    """Keep the oldest entity while replacing duplicate historical IDs."""
+    """Migrate one entity while retaining historical duplicates."""
     entries = list({entry.entity_id: entry for entry in entries}.values())
     if not entries:
         return None
@@ -219,7 +219,7 @@ def migrate_entity_unique_id_duplicates(
         entry.entity_id != existing.entity_id for entry in entries
     ):
         entries.append(existing)
-    canonical = min(
+    canonical = existing or min(
         entries,
         key=lambda entry: (
             getattr(entry, "created_at", None) is None,
@@ -227,9 +227,6 @@ def migrate_entity_unique_id_duplicates(
             entry.entity_id,
         ),
     )
-    for duplicate in entries:
-        if duplicate.entity_id != canonical.entity_id:
-            entity_registry.async_remove(duplicate.entity_id)
     if canonical.unique_id != new_unique_id:
         entity_registry.async_update_entity(
             canonical.entity_id, new_unique_id=new_unique_id

@@ -739,7 +739,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         )
         self.assertEqual(registry.removed, ["renamed-device"])
 
-    def test_keeps_oldest_temperature_entity_and_removes_duplicate(self) -> None:
+    def test_keeps_oldest_temperature_entity_and_retains_duplicate(self) -> None:
         old = EntityEntry(
             "sensor.room_temperature",
             "old-device",
@@ -767,7 +767,34 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             entities.updated,
             [("sensor.room_temperature", {"new_unique_id": "stable-id"})],
         )
-        self.assertEqual(entities.removed, ["sensor.test_temperature"])
+        self.assertEqual(entities.removed, [])
+
+    def test_keeps_existing_stable_target_and_retains_older_duplicate(self) -> None:
+        old = EntityEntry(
+            "sensor.room_temperature",
+            "old-device",
+            unique_id="old-room-id",
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        target = EntityEntry(
+            "sensor.test_temperature",
+            "renamed-device",
+            unique_id="stable-id",
+            created_at=datetime(2026, 10, 1, tzinfo=timezone.utc),
+        )
+        entities = EntityRegistry(
+            {old.entity_id: old, target.entity_id: target}
+        )
+
+        result = DEVICE.migrate_entity_unique_id_duplicates(
+            entities,
+            [old],
+            "stable-id",
+        )
+
+        self.assertIs(result, target)
+        self.assertEqual(entities.updated, [])
+        self.assertEqual(entities.removed, [])
 
     def test_migrates_all_room_name_derived_entity_types(self) -> None:
         entities = {}
@@ -802,7 +829,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         )
 
         self.assertEqual(len(registry.updated), len(definitions))
-        self.assertEqual(len(registry.removed), len(definitions))
+        self.assertEqual(registry.removed, [])
         self.assertEqual(
             {update[1]["new_unique_id"] for update in registry.updated},
             {f"stable-{definition[3]}" for definition in definitions},
