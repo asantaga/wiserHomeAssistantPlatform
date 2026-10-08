@@ -295,6 +295,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Register the physical hub before its entities and connected devices.
     hub_device = await async_update_device_registry(hass, config_entry)
+    coordinator.hub_device_id = hub_device.id
 
     # Physical device identifiers used to contain mutable room or device names.
     # Migrate them before platform setup so renames cannot duplicate devices.
