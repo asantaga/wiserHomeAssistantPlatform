@@ -534,10 +534,6 @@ def build_light_unique_id_migration(data) -> dict:
     return {old: new for old, new in mapping.items() if old != new}
 
 
-def get_room_name(data, room_id):
-    return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
-
-
 def get_instance_count(hass: HomeAssistant) -> int:
     entries = [
         entry
