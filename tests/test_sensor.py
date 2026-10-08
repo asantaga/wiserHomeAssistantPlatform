@@ -304,35 +304,41 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             "class BaseBinarySensor", 1
         )[0]
         cls.tree = ast.parse(setup_source)
-        support_function = next(
+        support_functions = [
             node
             for node in cls.tree.body
             if isinstance(node, ast.FunctionDef)
-            and node.name == "_supports_v2_system_binary_sensors"
-        )
-        namespace = {}
+            and node.name
+            in {
+                "_supports_summer_comfort_binary_sensors",
+                "_supports_pcm_binary_sensor",
+            }
+        ]
+        namespace = {"TEXT_UNKNOWN": "Unknown"}
         exec(
             compile(
-                ast.Module(body=[support_function], type_ignores=[]),
+                ast.Module(body=support_functions, type_ignores=[]),
                 BINARY_SENSOR_SOURCE_PATH.name,
                 "exec",
             ),
             namespace,
         )
-        cls.supports_v2_sensors = staticmethod(
-            namespace["_supports_v2_system_binary_sensors"]
+        cls.supports_summer_comfort = staticmethod(
+            namespace["_supports_summer_comfort_binary_sensors"]
         )
+        cls.supports_pcm = staticmethod(namespace["_supports_pcm_binary_sensor"])
 
     def test_v1_does_not_support_v2_system_sensors(self) -> None:
         data = SimpleNamespace(hub_version=1)
-        self.assertFalse(self.supports_v2_sensors(data))
+        self.assertFalse(self.supports_summer_comfort(data))
+        self.assertFalse(self.supports_pcm(data))
 
     def test_v2_without_summer_comfort_data_is_not_supported(self) -> None:
         data = SimpleNamespace(
             hub_version=2,
             wiserhub=SimpleNamespace(system=SimpleNamespace()),
         )
-        self.assertFalse(self.supports_v2_sensors(data))
+        self.assertFalse(self.supports_summer_comfort(data))
 
     def test_v2_with_summer_comfort_data_is_supported(self) -> None:
         data = SimpleNamespace(
@@ -341,7 +347,21 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
                 system=SimpleNamespace(summer_comfort_available=False)
             ),
         )
-        self.assertTrue(self.supports_v2_sensors(data))
+        self.assertTrue(self.supports_summer_comfort(data))
+
+    def test_v2_without_pcm_data_is_not_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace()),
+        )
+        self.assertFalse(self.supports_pcm(data))
+
+    def test_v2_with_pcm_data_is_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace(pcm_version="1.0")),
+        )
+        self.assertTrue(self.supports_pcm(data))
 
     def test_summer_comfort_sensors_use_capability_guard(self) -> None:
         setup = next(
@@ -350,25 +370,39 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             if isinstance(node, ast.AsyncFunctionDef)
             and node.name == "async_setup_entry"
         )
-        v2_guard = next(
+        summer_guard = next(
             node
             for node in ast.walk(setup)
             if isinstance(node, ast.If)
             and ast.unparse(node.test)
-            == "_supports_v2_system_binary_sensors(data)"
+            == "_supports_summer_comfort_binary_sensors(data)"
         )
-        guarded_calls = {
+        summer_calls = {
             node.func.id
-            for node in ast.walk(v2_guard)
+            for node in ast.walk(summer_guard)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
         }
-
         self.assertTrue(
             {
                 "WiserSummerDiscomfortPrevention",
                 "WiserSummerComfortAvailable",
-                "WiserPCMDeviceLimitReached",
-            }.issubset(guarded_calls)
+            }.issubset(summer_calls)
+        )
+
+        pcm_guard = next(
+            node
+            for node in ast.walk(setup)
+            if isinstance(node, ast.If)
+            and ast.unparse(node.test) == "_supports_pcm_binary_sensor(data)"
+        )
+        pcm_calls = {
+            node.func.id
+            for node in ast.walk(pcm_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn(
+            "WiserPCMDeviceLimitReached",
+            pcm_calls,
         )
 
         cleanup_call = next(

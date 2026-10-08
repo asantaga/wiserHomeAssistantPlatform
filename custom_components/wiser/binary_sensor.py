@@ -2,6 +2,8 @@
 
 import logging
 
+from aioWiserHeatAPI.const import TEXT_UNKNOWN
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -34,9 +36,11 @@ from .opentherm import (
 
 _LOGGER = logging.getLogger(__name__)
 
-V2_SYSTEM_BINARY_SENSOR_TYPES = (
+SUMMER_COMFORT_BINARY_SENSOR_TYPES = (
     "Summer Discomfort Prevention",
     "Summer Comfort Available",
+)
+PCM_BINARY_SENSOR_TYPES = (
     "PCM Device Limit Reached",
 )
 
@@ -46,8 +50,8 @@ def _entity_translation_key(name: str) -> str:
     return name.lower().replace(" ", "_")
 
 
-def _supports_v2_system_binary_sensors(data) -> bool:
-    """Return whether the hub supplies second-generation system data."""
+def _supports_summer_comfort_binary_sensors(data) -> bool:
+    """Return whether the hub supplies summer-comfort system data."""
     if data.hub_version != 2:
         return False
     system = data.wiserhub.system
@@ -60,13 +64,23 @@ def _supports_v2_system_binary_sensors(data) -> bool:
     )
 
 
+def _supports_pcm_binary_sensor(data) -> bool:
+    """Return whether the hub supplies PCM system data."""
+    if data.hub_version != 2:
+        return False
+    return getattr(data.wiserhub.system, "pcm_version", TEXT_UNKNOWN) not in (
+        None,
+        TEXT_UNKNOWN,
+    )
+
+
 def _remove_unsupported_v2_entities(
-    hass: HomeAssistant, config_entry_id: str, data
+    hass: HomeAssistant, config_entry_id: str, data, sensor_types
 ) -> None:
     """Remove V2-only registry entries from an unsupported hub."""
     registry = er.async_get(hass)
     legacy_hub_name = data.wiserhub.system.name.replace("WiserHeat", "HeatHub")
-    for sensor_type in V2_SYSTEM_BINARY_SENSOR_TYPES:
+    for sensor_type in sensor_types:
         legacy_unique_id = get_legacy_unique_id(
             data,
             "sensor",
@@ -111,19 +125,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         )
 
-    # Summer comfort and PCM require second-generation system data.
-    if _supports_v2_system_binary_sensors(data):
+    if _supports_summer_comfort_binary_sensors(data):
         binary_sensors.extend(
             [
                 WiserSummerDiscomfortPrevention(
                     data, 0, "Summer Discomfort Prevention"
                 ),
                 WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
-                WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached"),
             ]
         )
     else:
-        _remove_unsupported_v2_entities(hass, config_entry.entry_id, data)
+        _remove_unsupported_v2_entities(
+            hass,
+            config_entry.entry_id,
+            data,
+            SUMMER_COMFORT_BINARY_SENSOR_TYPES,
+        )
+
+    if _supports_pcm_binary_sensor(data):
+        binary_sensors.append(
+            WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
+        )
+    else:
+        _remove_unsupported_v2_entities(
+            hass,
+            config_entry.entry_id,
+            data,
+            PCM_BINARY_SENSOR_TYPES,
+        )
 
     # Smoke alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
