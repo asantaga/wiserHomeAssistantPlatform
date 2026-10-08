@@ -51,17 +51,24 @@ def _entity_translation_key(name: str) -> str:
     return name.lower().replace(" ", "_")
 
 
-def _supports_summer_comfort_binary_sensors(data) -> bool:
-    """Return whether the hub supplies summer-comfort system data."""
+def _supports_v2_system_property(data, property_name: str) -> bool:
+    """Return whether the hub supplies a second-generation system property."""
     if data.hub_version < 2:
         return False
-    system = data.wiserhub.system
-    return any(
-        getattr(system, attribute, None) is not None
-        for attribute in (
-            "summer_comfort_available",
-            "summer_discomfort_prevention",
-        )
+    return getattr(data.wiserhub.system, property_name, None) is not None
+
+
+def _supports_summer_discomfort_prevention(data) -> bool:
+    """Return whether the hub supplies summer-discomfort data."""
+    return _supports_v2_system_property(
+        data, "summer_discomfort_prevention"
+    )
+
+
+def _supports_summer_comfort_available(data) -> bool:
+    """Return whether the hub supplies summer-comfort availability data."""
+    return _supports_v2_system_property(
+        data, "summer_comfort_available"
     )
 
 
@@ -126,14 +133,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         )
 
-    if _supports_summer_comfort_binary_sensors(data):
-        binary_sensors.extend(
-            [
-                WiserSummerDiscomfortPrevention(
-                    data, 0, SUMMER_DISCOMFORT_PREVENTION
-                ),
-                WiserSummerComfortAvailable(data, 0, SUMMER_COMFORT_AVAILABLE),
-            ]
+    if _supports_summer_discomfort_prevention(data):
+        binary_sensors.append(
+            WiserSummerDiscomfortPrevention(
+                data, 0, SUMMER_DISCOMFORT_PREVENTION
+            )
+        )
+
+    if _supports_summer_comfort_available(data):
+        binary_sensors.append(
+            WiserSummerComfortAvailable(data, 0, SUMMER_COMFORT_AVAILABLE)
         )
 
     if _supports_pcm_binary_sensor(data):

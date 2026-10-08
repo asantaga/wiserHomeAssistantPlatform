@@ -310,7 +310,9 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             if isinstance(node, ast.FunctionDef)
             and node.name
             in {
-                "_supports_summer_comfort_binary_sensors",
+                "_supports_v2_system_property",
+                "_supports_summer_discomfort_prevention",
+                "_supports_summer_comfort_available",
                 "_supports_pcm_binary_sensor",
                 "_requires_v2_entity_cleanup",
                 "_remove_unsupported_v2_entities",
@@ -335,8 +337,11 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             ),
             namespace,
         )
+        cls.supports_summer_discomfort = staticmethod(
+            namespace["_supports_summer_discomfort_prevention"]
+        )
         cls.supports_summer_comfort = staticmethod(
-            namespace["_supports_summer_comfort_binary_sensors"]
+            namespace["_supports_summer_comfort_available"]
         )
         cls.supports_pcm = staticmethod(namespace["_supports_pcm_binary_sensor"])
         cls.requires_cleanup = staticmethod(
@@ -355,6 +360,7 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
 
     def test_v1_does_not_support_v2_system_sensors(self) -> None:
         data = SimpleNamespace(hub_version=1)
+        self.assertFalse(self.supports_summer_discomfort(data))
         self.assertFalse(self.supports_summer_comfort(data))
         self.assertFalse(self.supports_pcm(data))
 
@@ -363,9 +369,10 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             hub_version=2,
             wiserhub=SimpleNamespace(system=SimpleNamespace()),
         )
+        self.assertFalse(self.supports_summer_discomfort(data))
         self.assertFalse(self.supports_summer_comfort(data))
 
-    def test_v2_with_summer_comfort_data_is_supported(self) -> None:
+    def test_v2_summer_properties_are_detected_independently(self) -> None:
         data = SimpleNamespace(
             hub_version=2,
             wiserhub=SimpleNamespace(
@@ -373,6 +380,13 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             ),
         )
         self.assertTrue(self.supports_summer_comfort(data))
+        self.assertFalse(self.supports_summer_discomfort(data))
+
+        data.wiserhub.system = SimpleNamespace(
+            summer_discomfort_prevention=False
+        )
+        self.assertTrue(self.supports_summer_discomfort(data))
+        self.assertFalse(self.supports_summer_comfort(data))
 
     def test_v2_without_pcm_data_is_not_supported(self) -> None:
         data = SimpleNamespace(
@@ -394,10 +408,12 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
             wiserhub=SimpleNamespace(
                 system=SimpleNamespace(
                     summer_comfort_available=False,
+                    summer_discomfort_prevention=False,
                     pcm_version="1.0",
                 )
             ),
         )
+        self.assertTrue(self.supports_summer_discomfort(data))
         self.assertTrue(self.supports_summer_comfort(data))
         self.assertTrue(self.supports_pcm(data))
 
@@ -466,17 +482,26 @@ class WiserSummerComfortSetupTest(unittest.TestCase):
                 and node.test.func.id == function_name
             )
 
-        summer_guard = guard_for("_supports_summer_comfort_binary_sensors")
-        summer_calls = {
+        discomfort_guard = guard_for("_supports_summer_discomfort_prevention")
+        discomfort_calls = {
             node.func.id
-            for node in ast.walk(summer_guard)
+            for node in ast.walk(discomfort_guard)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
         }
-        self.assertTrue(
-            {
-                "WiserSummerDiscomfortPrevention",
-                "WiserSummerComfortAvailable",
-            }.issubset(summer_calls)
+        self.assertIn(
+            "WiserSummerDiscomfortPrevention",
+            discomfort_calls,
+        )
+
+        comfort_guard = guard_for("_supports_summer_comfort_available")
+        comfort_calls = {
+            node.func.id
+            for node in ast.walk(comfort_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn(
+            "WiserSummerComfortAvailable",
+            comfort_calls,
         )
 
         pcm_guard = guard_for("_supports_pcm_binary_sensor")
