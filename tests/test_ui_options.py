@@ -38,6 +38,33 @@ def load_functions(filename, names, namespace):
     return SimpleNamespace(**namespace)
 
 
+def function_call_lines(filename, function_name):
+    """Return call names and line numbers from a function's syntax tree."""
+    source = (COMPONENT / filename).read_text()
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        # The local test runner can be older than the integration's supported
+        # Python version. Platform setup precedes the entity classes, so parse
+        # only that section when later syntax is unsupported by the runner.
+        tree = ast.parse(source.partition("\nclass ")[0])
+    function = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == function_name
+    )
+    calls = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name):
+            calls.append((node.func.id, node.lineno))
+        elif isinstance(node.func, ast.Attribute):
+            calls.append((node.func.attr, node.lineno))
+    return calls
+
+
 class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
@@ -262,21 +289,23 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertIs(functions._opentherm(flow), opentherm)
 
     def test_sensor_setup_requires_detected_opentherm(self):
-        for filename, marker in (
-            (
-                "sensor.py",
-                "opentherm_is_detected(config_entry, data.wiserhub.system.opentherm)",
-            ),
-            (
-                "binary_sensor.py",
-                "opentherm_is_detected(config_entry, opentherm)",
-            ),
-        ):
+        for filename in ("sensor.py", "binary_sensor.py"):
             with self.subTest(filename=filename):
-                setup = (COMPONENT / filename).read_text().split(
-                    "class Wiser", 1
-                )[0]
-                self.assertIn(marker, setup)
+                calls = function_call_lines(filename, "async_setup_entry")
+                self.assertIn("opentherm_is_detected", {name for name, _ in calls})
+
+    def test_detection_precedes_listener_and_reload_snapshot(self):
+        calls = function_call_lines("__init__.py", "async_setup_entry")
+        call_lines = {name: line for name, line in calls}
+
+        self.assertLess(
+            call_lines["_remember_opentherm_connection"],
+            call_lines["add_update_listener"],
+        )
+        self.assertLess(
+            call_lines["add_update_listener"],
+            call_lines["integration_reload_settings"],
+        )
 
     async def test_new_manual_and_discovered_install_defaults(self):
         for method in ("async_step_user", "async_step_zeroconf_confirm"):

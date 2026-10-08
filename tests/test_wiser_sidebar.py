@@ -350,6 +350,26 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
             await self.entry_updates.async_handle_entry_update(self.hass, entry)
             self.hass.config_entries.async_reload.assert_awaited_once_with(entry.entry_id)
 
+    async def test_opentherm_detection_change_reloads_once(self):
+        entry = self.add_hub("hub", {})
+        entry.data = {"host": "wiser.local"}
+        loaded = self.hass.data["wiser"][entry.entry_id]
+        loaded["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
+        self.hass.config_entries.async_reload = AsyncMock()
+
+        entry.data["opentherm_ever_connected"] = True
+        await self.entry_updates.async_handle_entry_update(self.hass, entry)
+        self.hass.config_entries.async_reload.assert_awaited_once_with(entry.entry_id)
+
+        self.hass.config_entries.async_reload.reset_mock()
+        loaded["reload_settings"] = self.entry_updates.integration_reload_settings(entry)
+        with patch.object(
+            self.entry_updates, "async_update_wiser_panel", AsyncMock()
+        ) as refresh:
+            await self.entry_updates.async_handle_entry_update(self.hass, entry)
+            self.hass.config_entries.async_reload.assert_not_awaited()
+            refresh.assert_awaited_once_with(self.hass)
+
     def test_invalid_panel_settings_do_not_partially_save(self):
         self.add_hub("first", {})
         self.add_hub("second", {})
