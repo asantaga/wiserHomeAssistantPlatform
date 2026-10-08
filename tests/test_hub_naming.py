@@ -388,6 +388,10 @@ class HubNamingTest(unittest.TestCase):
             historical_name,
             "Wiser HeatingActuator Andys Bedroom",
         )
+        self.assertEqual(
+            self.helpers.get_legacy_device_identifier(self.data, 31),
+            "WiserHeatNOTUSED Wiser HeatingActuator Andys Bedroom",
+        )
 
     def test_physical_entity_migration_uses_historical_itrv_name(self):
         device = SimpleNamespace(id=31, product_type="iTRV")

@@ -269,7 +269,7 @@ def get_legacy_device_identifier(data, device_id):
         else:
             device_name = f"{ENTITY_PREFIX} {device.product_type} {device.id}"
     else:
-        device_name = get_device_name(data, device_id)
+        device_name = get_legacy_device_name(data, device_id)
     return f"{data.wiserhub.system.name} {device_name}"
 
 
