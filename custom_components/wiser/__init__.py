@@ -292,7 +292,11 @@ def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
     update listener reloads platforms when runtime detection changes. A Store
     would persist the state but would not trigger that reload.
     """
-    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    system = getattr(coordinator.wiserhub, "system", None)
+    if system is None:
+        return
+
+    opentherm = getattr(system, "opentherm", None)
     remembered = config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False)
 
     if getattr(opentherm, "enabled", None) is False:
@@ -329,7 +333,11 @@ def _sync_opentherm_entity_registry(
     hass, config_entry, coordinator, detected=None
 ) -> None:
     """Hide false OpenTherm entities while preserving their registry data."""
-    opentherm = getattr(coordinator.wiserhub.system, "opentherm", None)
+    system = getattr(coordinator.wiserhub, "system", None)
+    if system is None:
+        return
+
+    opentherm = getattr(system, "opentherm", None)
     if detected is None:
         detected = opentherm_is_detected(config_entry, opentherm)
     unique_ids = opentherm_entity_unique_ids(coordinator)

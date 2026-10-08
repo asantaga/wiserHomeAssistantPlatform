@@ -198,6 +198,29 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             hass, entry, coordinator, detected=False
         )
 
+    def test_missing_system_preserves_remembered_connection(self):
+        sync_registry = Mock()
+        self.namespace["_sync_opentherm_entity_registry"] = sync_registry
+        functions = load_functions(
+            "__init__.py", {"_remember_opentherm_connection"}, self.namespace
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+        entry = SimpleNamespace(
+            data={
+                "host": "wiser.local",
+                "opentherm_ever_connected": True,
+            }
+        )
+        coordinator = SimpleNamespace(wiserhub=SimpleNamespace(system=None))
+
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+
+        update.assert_not_called()
+        sync_registry.assert_not_called()
+
     def test_opentherm_registry_entries_are_disabled_without_detection(self):
         integration = "integration"
         registry = SimpleNamespace(async_update_entity=Mock())
@@ -241,6 +264,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "__init__.py", {"_sync_opentherm_entity_registry"}, self.namespace
         )
         config_entry = SimpleNamespace(entry_id="entry", data={})
+
+        functions._sync_opentherm_entity_registry(
+            object(),
+            config_entry,
+            SimpleNamespace(wiserhub=SimpleNamespace(system=None)),
+        )
+        registry.async_update_entity.assert_not_called()
+
         coordinator = SimpleNamespace(
             wiserhub=SimpleNamespace(
                 system=SimpleNamespace(
