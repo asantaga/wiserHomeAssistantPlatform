@@ -105,6 +105,15 @@ class HubNamingTest(unittest.TestCase):
             "058a52_away_mode",
         )
 
+    def test_active_rooms_exclude_nothing_assigned_records(self) -> None:
+        active = SimpleNamespace(_data={}, id=1)
+        deleted = SimpleNamespace(
+            _data={"Invalid": "NothingAssigned"}, id=2
+        )
+        self.data.wiserhub.rooms.all = [active, deleted]
+
+        self.assertEqual(self.helpers.active_wiser_rooms(self.data), [active])
+
     def test_hub_entity_mixin_suggests_mac_derived_object_id(self) -> None:
         class DefaultEntity:
             @property

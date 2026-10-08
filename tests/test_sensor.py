@@ -104,6 +104,7 @@ def _load_sensor_module() -> ModuleType:
     )
     _module(
         "wiser.helpers",
+        active_wiser_rooms=lambda data: data.wiserhub.rooms.all,
         get_device_area_info=lambda _data, _device_id: {},
         get_device_name=lambda _data, device_id, device_type="device": (
             "Wiser HeatHub"

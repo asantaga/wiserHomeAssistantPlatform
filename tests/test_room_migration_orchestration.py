@@ -110,6 +110,7 @@ def _load_wiser_init() -> ModuleType:
         async_update_wiser_panel=Mock(),
     )
     helper_names = (
+        "active_wiser_rooms",
         "build_light_unique_id_migration",
         "build_physical_entity_unique_id_migration",
         "get_device_name",
@@ -122,10 +123,11 @@ def _load_wiser_init() -> ModuleType:
         "get_room_entity_unique_id",
         "get_unique_id",
     )
-    _module(
-        "wiser_init_test.helpers",
-        **{name: Mock(name=name) for name in helper_names},
+    helper_stubs = {name: Mock(name=name) for name in helper_names}
+    helper_stubs["active_wiser_rooms"] = (
+        lambda data: data.wiserhub.rooms.all
     )
+    _module("wiser_init_test.helpers", **helper_stubs)
     _module("wiser_init_test.services", async_setup_services=Mock())
     _module("wiser_init_test.update", async_unload_card_updates=Mock())
     _module("wiser_init_test.websockets", async_register_websockets=Mock())
@@ -203,6 +205,14 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
 
         self.assertEqual(previous, {})
         self.assertIsNone(runtime)
+
+    def test_current_room_names_use_only_active_rooms(self) -> None:
+        self.wiser.active_wiser_rooms = Mock(return_value=[self.room])
+
+        self.assertEqual(
+            self.wiser._current_wiser_room_names(self.coordinator),
+            {"7": "Lounge"},
+        )
 
     def test_refresh_moves_areas_and_saves_names_without_config_reload(self) -> None:
         self.wiser._confirmed_deleted_room_ids = Mock(return_value=set())

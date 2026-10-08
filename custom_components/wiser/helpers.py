@@ -28,6 +28,16 @@ LIGHT_BINARY_SENSOR_TYPES = (
 ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
 
 
+def active_wiser_rooms(data):
+    """Return rooms that still have a device or controller assigned."""
+    return [
+        room
+        for room in data.wiserhub.rooms.all
+        if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
+        != "nothingassigned"
+    ]
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address

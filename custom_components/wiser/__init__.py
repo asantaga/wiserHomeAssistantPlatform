@@ -63,6 +63,7 @@ from .frontend import JSModuleRegistration
 from .frontend.entry_updates import async_handle_entry_update, integration_reload_settings
 from .frontend.wiser_sidebar import async_update_wiser_panel
 from .helpers import (
+    active_wiser_rooms,
     build_light_unique_id_migration,
     build_physical_entity_unique_id_migration,
     get_device_name,
@@ -739,7 +740,7 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
 
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         device_entry = migrate_room_device(
             device_registry,
             entity_registry,
@@ -764,7 +765,7 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
 def _current_wiser_room_names(coordinator):
     """Return Wiser room names keyed by their stable room IDs."""
     return {
-        str(room.id): room.name for room in coordinator.wiserhub.rooms.all
+        str(room.id): room.name for room in active_wiser_rooms(coordinator)
     }
 
 
@@ -846,12 +847,11 @@ def sync_wiser_room_areas(hass, config_entry, previous_room_names) -> int:
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     device_registry = dr.async_get(hass)
     area_registry = ar.async_get(hass)
-    current_room_names = {
-        room.name for room in data.wiserhub.rooms.all
-    }
+    current_rooms = active_wiser_rooms(data)
+    current_room_names = {room.name for room in current_rooms}
     moved = 0
 
-    for room in data.wiserhub.rooms.all:
+    for room in current_rooms:
         room_device = _device_by_identifier(
             device_registry,
             config_entry.entry_id,

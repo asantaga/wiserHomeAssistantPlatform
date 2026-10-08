@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
@@ -184,7 +185,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
     # Room binary sensors
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         binary_sensors.extend(
             [
                 WiserRoomWindow(data, room.id, "Window Detection Active"),
