@@ -441,6 +441,22 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         power.current_summation_delivered = 0
         self.assertEqual(sensor.extra_state_attributes["energy"], 0)
 
+    def test_equipment_name_uses_translation_without_changing_unique_id(self) -> None:
+        device = SimpleNamespace(id=9)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserEquipmentSensor(data, 9)
+
+        self.assertEqual(sensor._sensor_type, "")
+        self.assertEqual(sensor._attr_translation_key, "equipment_power")
+        self.assertNotIn("name", self.sensor_module.WiserEquipmentSensor.__dict__)
+
 
 class WiserSystemCircuitStateTest(unittest.TestCase):
     """Tests for normalized heating and hot-water circuit states."""

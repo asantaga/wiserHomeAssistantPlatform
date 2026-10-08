@@ -386,7 +386,7 @@
       "total_energy": { "name": "Gesamtenergie" },
       "energy_delivered": { "name": "Gelieferte Energie" },
       "energy_received": { "name": "Empfangene Energie" },
-      "equipment_power": { "name": "Geräteleistung" }
+      "equipment_power": { "name": "Gerät" }
     }
   },
   "device_automation": {

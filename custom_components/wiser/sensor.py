@@ -2099,11 +2099,6 @@ class WiserEquipmentSensor(WiserSensor):
         await super().async_update()
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return f"{self._sensor_type} Equipment"
-        
-    @property
     def icon(self):
         """Return icon."""
         return "mdi:home-lightning-bolt"

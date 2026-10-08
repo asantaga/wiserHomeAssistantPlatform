@@ -386,7 +386,7 @@
       "total_energy": { "name": "Total energy" },
       "energy_delivered": { "name": "Energy delivered" },
       "energy_received": { "name": "Energy received" },
-      "equipment_power": { "name": "Equipment power" }
+      "equipment_power": { "name": "Equipment" }
     }
   },
   "device_automation": {
