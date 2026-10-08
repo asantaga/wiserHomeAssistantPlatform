@@ -43,6 +43,7 @@ from .const import (
 from .coordinator import WiserUpdateCoordinator
 from .device import (
     assign_device_area_if_unset,
+    confirmed_deleted_room_ids,
     find_physical_device_candidates,
     merge_legacy_hub_device,
     migrate_entity_unique_id_duplicates,
@@ -53,6 +54,7 @@ from .device import (
     register_hub_device,
     register_room_assigned_device,
     remove_room_devices,
+    room_names_with_pending_deletions,
 )
 from .entity_migration import migrate_entity_unique_ids
 from .frontend import JSModuleRegistration
@@ -274,9 +276,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     migrate_room_device_registry(hass, config_entry)
 
     previous_room_names = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
-    remove_deleted_room_devices(hass, config_entry, previous_room_names)
+    current_room_names = _current_wiser_room_names(coordinator)
+    confirmed_deleted_ids = _confirmed_deleted_room_ids(
+        hass,
+        config_entry,
+        previous_room_names,
+        current_room_names,
+    )
+    remove_deleted_room_devices(
+        hass,
+        config_entry,
+        previous_room_names,
+        confirmed_deleted_ids,
+    )
     sync_wiser_room_areas(hass, config_entry, previous_room_names)
-    _store_wiser_room_names(hass, config_entry, coordinator)
+    _store_wiser_room_names(
+        hass,
+        config_entry,
+        room_names_with_pending_deletions(
+            previous_room_names,
+            current_room_names,
+            confirmed_deleted_ids,
+        ),
+    )
 
     # Register listeners only after setup-time registry and config migrations.
     update_listener = config_entry.add_update_listener(_async_update_listener)
@@ -625,14 +647,30 @@ def _current_wiser_room_names(coordinator):
     }
 
 
-def _store_wiser_room_names(hass, config_entry, coordinator) -> None:
+def _store_wiser_room_names(hass, config_entry, room_names) -> None:
     """Persist room names before the config-entry update listener is registered."""
-    current = _current_wiser_room_names(coordinator)
-    if config_entry.data.get(CONF_WISER_ROOM_NAMES, {}) == current:
+    if config_entry.data.get(CONF_WISER_ROOM_NAMES, {}) == room_names:
         return
     hass.config_entries.async_update_entry(
         config_entry,
-        data={**config_entry.data, CONF_WISER_ROOM_NAMES: current},
+        data={**config_entry.data, CONF_WISER_ROOM_NAMES: room_names},
+    )
+
+
+def _confirmed_deleted_room_ids(
+    hass,
+    config_entry,
+    previous_room_names,
+    current_room_names,
+):
+    """Track missing rooms across successful coordinator refreshes."""
+    missing_counts = hass.data[DOMAIN][config_entry.entry_id].setdefault(
+        "missing_room_counts", {}
+    )
+    return confirmed_deleted_room_ids(
+        previous_room_names,
+        current_room_names,
+        missing_counts,
     )
 
 
@@ -646,11 +684,14 @@ def _device_by_identifier(device_registry, config_entry_id, identifier):
     return device_registry.async_get_device(identifiers={identifier})
 
 
-def remove_deleted_room_devices(hass, config_entry, previous_room_names) -> int:
+def remove_deleted_room_devices(
+    hass,
+    config_entry,
+    previous_room_names,
+    deleted_room_ids,
+) -> int:
     """Remove registry records for rooms deleted from the Wiser system."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
-    current_room_ids = {str(room.id) for room in data.wiserhub.rooms.all}
-    deleted_room_ids = set(previous_room_names) - current_room_ids
     identifiers = []
 
     for room_id in deleted_room_ids:
@@ -724,12 +765,33 @@ def _sync_wiser_room_names(hass, config_entry, coordinator) -> None:
     previous = config_entry.data.get(CONF_WISER_ROOM_NAMES, {})
     current = _current_wiser_room_names(coordinator)
     if previous == current:
+        hass.data[DOMAIN][config_entry.entry_id].setdefault(
+            "missing_room_counts", {}
+        ).clear()
         return
-    remove_deleted_room_devices(hass, config_entry, previous)
+    confirmed_deleted_ids = _confirmed_deleted_room_ids(
+        hass,
+        config_entry,
+        previous,
+        current,
+    )
+    remove_deleted_room_devices(
+        hass,
+        config_entry,
+        previous,
+        confirmed_deleted_ids,
+    )
     sync_wiser_room_areas(hass, config_entry, previous)
+    stored_room_names = room_names_with_pending_deletions(
+        previous,
+        current,
+        confirmed_deleted_ids,
+    )
+    if stored_room_names == previous:
+        return
     hass.config_entries.async_update_entry(
         config_entry,
-        data={**config_entry.data, CONF_WISER_ROOM_NAMES: current},
+        data={**config_entry.data, CONF_WISER_ROOM_NAMES: stored_room_names},
     )
 
 

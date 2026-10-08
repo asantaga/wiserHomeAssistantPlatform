@@ -37,6 +37,46 @@ def move_devices_from_managed_area(
     return moved
 
 
+def confirmed_deleted_room_ids(
+    previous_room_ids,
+    current_room_ids,
+    missing_counts,
+    required_observations=2,
+):
+    """Return rooms absent from consecutive non-empty hub responses."""
+    if not current_room_ids:
+        missing_counts.clear()
+        return set()
+
+    missing_room_ids = set(previous_room_ids) - set(current_room_ids)
+    for room_id in list(missing_counts):
+        if room_id not in missing_room_ids:
+            missing_counts.pop(room_id)
+    for room_id in missing_room_ids:
+        missing_counts[room_id] = missing_counts.get(room_id, 0) + 1
+
+    return {
+        room_id
+        for room_id in missing_room_ids
+        if missing_counts[room_id] >= required_observations
+    }
+
+
+def room_names_with_pending_deletions(
+    previous_room_names,
+    current_room_names,
+    confirmed_deleted_ids,
+):
+    """Retain missing room names until their deletion is confirmed."""
+    retained = {
+        room_id: name
+        for room_id, name in previous_room_names.items()
+        if room_id not in confirmed_deleted_ids
+    }
+    retained.update(current_room_names)
+    return retained
+
+
 def register_room_assigned_device(
     device_registry,
     config_entry_id,

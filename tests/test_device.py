@@ -307,6 +307,57 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
         )
 
 
+class ConfirmedDeletedRoomIdsTest(unittest.TestCase):
+    """Test protection against transient room-list data gaps."""
+
+    def test_requires_two_consecutive_missing_observations(self) -> None:
+        missing_counts = {}
+
+        first = DEVICE.confirmed_deleted_room_ids(
+            {"7", "8"}, {"8"}, missing_counts
+        )
+        second = DEVICE.confirmed_deleted_room_ids(
+            {"7", "8"}, {"8"}, missing_counts
+        )
+
+        self.assertEqual(first, set())
+        self.assertEqual(second, {"7"})
+
+    def test_empty_room_response_never_confirms_deletion(self) -> None:
+        missing_counts = {"7": 1}
+
+        confirmed = DEVICE.confirmed_deleted_room_ids(
+            {"7"}, set(), missing_counts
+        )
+
+        self.assertEqual(confirmed, set())
+        self.assertEqual(missing_counts, {})
+
+    def test_room_reappearing_clears_its_missing_count(self) -> None:
+        missing_counts = {"7": 1}
+
+        confirmed = DEVICE.confirmed_deleted_room_ids(
+            {"7"}, {"7"}, missing_counts
+        )
+
+        self.assertEqual(confirmed, set())
+        self.assertEqual(missing_counts, {})
+
+    def test_pending_room_name_is_retained_until_confirmed(self) -> None:
+        previous = {"7": "Test", "8": "Kitchen"}
+        current = {"8": "Kitchen"}
+
+        pending = DEVICE.room_names_with_pending_deletions(
+            previous, current, set()
+        )
+        confirmed = DEVICE.room_names_with_pending_deletions(
+            previous, current, {"7"}
+        )
+
+        self.assertEqual(pending, previous)
+        self.assertEqual(confirmed, current)
+
+
 class AssignDeviceAreaIfUnsetTest(unittest.TestCase):
     """Test conservative assignment of Wiser devices to areas."""
 
