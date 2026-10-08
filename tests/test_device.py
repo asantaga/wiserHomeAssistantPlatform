@@ -323,11 +323,29 @@ class ConfirmedDeletedRoomIdsTest(unittest.TestCase):
         self.assertEqual(first, set())
         self.assertEqual(second, {"7"})
 
-    def test_empty_room_response_never_confirms_deletion(self) -> None:
-        missing_counts = {"7": 1}
+    def test_empty_room_response_requires_three_observations(self) -> None:
+        missing_counts = {}
+
+        first = DEVICE.confirmed_deleted_room_ids(
+            {"7"}, set(), missing_counts
+        )
+        second = DEVICE.confirmed_deleted_room_ids(
+            {"7"}, set(), missing_counts
+        )
+        third = DEVICE.confirmed_deleted_room_ids(
+            {"7"}, set(), missing_counts
+        )
+
+        self.assertEqual(first, set())
+        self.assertEqual(second, set())
+        self.assertEqual(third, {"7"})
+        self.assertEqual(missing_counts, {"7": 3})
+
+    def test_rooms_reappearing_after_empty_response_clear_missing_counts(self):
+        missing_counts = {"7": 2}
 
         confirmed = DEVICE.confirmed_deleted_room_ids(
-            {"7"}, set(), missing_counts
+            {"7"}, {"7"}, missing_counts
         )
 
         self.assertEqual(confirmed, set())

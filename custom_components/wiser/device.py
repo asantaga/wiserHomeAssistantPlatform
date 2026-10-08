@@ -57,12 +57,9 @@ def confirmed_deleted_room_ids(
     current_room_ids,
     missing_counts,
     required_observations=2,
+    required_empty_observations=3,
 ):
-    """Return rooms absent from consecutive non-empty hub responses."""
-    if not current_room_ids:
-        missing_counts.clear()
-        return set()
-
+    """Return rooms absent from consecutive successful hub responses."""
     missing_room_ids = set(previous_room_ids) - set(current_room_ids)
     for room_id in list(missing_counts):
         if room_id not in missing_room_ids:
@@ -70,10 +67,15 @@ def confirmed_deleted_room_ids(
     for room_id in missing_room_ids:
         missing_counts[room_id] = missing_counts.get(room_id, 0) + 1
 
+    required_count = (
+        required_empty_observations
+        if not current_room_ids
+        else required_observations
+    )
     return {
         room_id
         for room_id in missing_room_ids
-        if missing_counts[room_id] >= required_observations
+        if missing_counts[room_id] >= required_count
     }
 
 
