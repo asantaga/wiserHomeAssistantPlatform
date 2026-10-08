@@ -115,7 +115,9 @@ def _load_sensor_module() -> ModuleType:
         get_hub_via_device_info=lambda _data: {},
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
         get_itrv_temperature_unique_id=lambda *_args: "itrv-temperature-id",
-        get_physical_entity_unique_id=lambda *_args: "physical-entity-id",
+        get_physical_entity_unique_id=lambda _data, domain, device_id, entity_type: (
+            f"physical-{domain}-{device_id}-{entity_type}"
+        ),
         get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",
         get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
@@ -601,6 +603,56 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(target._attr_translation_key, "target_temperature")
         self.assertIsNone(getattr(humidity, "_attr_translation_key", None))
         self.assertEqual(demand._attr_translation_key, "heating_demand")
+
+    def test_humidity_uses_physical_device_unique_id(self) -> None:
+        room = SimpleNamespace(id=1, name="Kitchen")
+        roomstat = SimpleNamespace(id=2, room_id=1)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: roomstat),
+                rooms=SimpleNamespace(
+                    get_by_id=lambda _room_id: room,
+                    get_by_device_id=lambda _device_id: room,
+                ),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        sensor = self.sensor_module.WiserLTSHumiditySensor(data, 2)
+
+        self.assertEqual(sensor.unique_id, "physical-sensor-2-humidity")
+
+    def test_power_sensors_use_physical_device_unique_ids(self) -> None:
+        room = SimpleNamespace(id=1, name="Kitchen")
+        device = SimpleNamespace(
+            id=9,
+            room_id=1,
+            product_type="HeatingActuator",
+        )
+        devices = SimpleNamespace(
+            get_by_id=lambda _device_id: device,
+            smartplugs=SimpleNamespace(get_by_id=lambda _device_id: device),
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=devices,
+                rooms=SimpleNamespace(
+                    get_by_id=lambda _room_id: room,
+                    get_by_device_id=lambda _device_id: room,
+                ),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+        smartplug = self.sensor_module.WiserSmartplugPower(
+            data, 9, sensor_type="Total Power"
+        )
+        actuator = self.sensor_module.WiserLTSPowerSensor(
+            data, 9, sensor_type="Power"
+        )
+
+        self.assertEqual(smartplug.unique_id, "physical-sensor-9-energy")
+        self.assertEqual(actuator.unique_id, "physical-sensor-9-power")
 
     def test_heating_demand_is_not_classified_as_power_factor(self) -> None:
         """A percentage heating demand is not an electrical power factor."""

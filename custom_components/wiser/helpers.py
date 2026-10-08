@@ -295,9 +295,12 @@ def get_light_binary_sensor_unique_id(data, light, sensor_type):
     )
 
 
-def build_physical_entity_unique_id_migration(data) -> dict:
+def build_physical_entity_unique_id_migration(
+    data, previous_room_names=None
+) -> dict:
     """Map mutable-name physical entity IDs to immutable device-based IDs."""
     mapping = {}
+    previous_room_names = previous_room_names or {}
     binary_sensor_types = (
         "Smoke Alarm",
         "Heat Alarm",
@@ -316,6 +319,51 @@ def build_physical_entity_unique_id_migration(data) -> dict:
     for device in data.wiserhub.devices.all:
         device_name = get_device_name(data, device.id)
         product_type = device.product_type
+        room = data.wiserhub.rooms.get_by_device_id(device.id)
+        possible_room_names = {room.name} if room is not None else set()
+        if room is not None and (
+            previous_name := previous_room_names.get(str(room.id))
+        ):
+            possible_room_names.add(previous_name)
+
+        if product_type == "RoomStat":
+            for room_name in possible_room_names:
+                mapping[
+                    get_unique_id(
+                        data,
+                        "sensor",
+                        f"LTS Humidity {room_name}",
+                        device.id,
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "sensor", device.id, "humidity"
+                )
+
+        power_device_names = possible_room_names or {
+            f"{product_type} {device.id}"
+        }
+        historical_power_types = {
+            "Power": "power",
+            "Total Power": "energy",
+            "Equipment Power ": "power",
+            "Equipment Total Energy ": "energy",
+            "Power ": "power",
+            "Energy Delivered ": "energy",
+            "Energy Received ": "energy_received",
+        }
+        for power_device_name in power_device_names:
+            historical_power_types.update(
+                {
+                    f"LTS Power {power_device_name}": "power",
+                    f"LTS Energy {power_device_name}": "energy",
+                }
+            )
+        for old_entity_type, new_entity_type in historical_power_types.items():
+            mapping[
+                get_unique_id(data, "sensor", old_entity_type, device.id)
+            ] = get_physical_entity_unique_id(
+                data, "sensor", device.id, new_entity_type
+            )
 
         # Light capability sensors are keyed by channel ``light_id`` and have
         # their own migration below. A multi-gang dimmer shares one physical

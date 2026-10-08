@@ -167,7 +167,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
 
 async def async_migrate_physical_entity_unique_ids(
-    hass: HomeAssistant, config_entry, data
+    hass: HomeAssistant,
+    config_entry,
+    data,
+    previous_room_names=None,
 ) -> None:
     """Preserve physical entities while adopting stable unique IDs.
 
@@ -175,7 +178,9 @@ async def async_migrate_physical_entity_unique_ids(
     historical unique IDs included mutable device or room names.
     """
     mapping = {
-        **build_physical_entity_unique_id_migration(data),
+        **build_physical_entity_unique_id_migration(
+            data, previous_room_names
+        ),
         # Light channels need the more specific per-channel migration when a
         # physical device exposes more than one light.
         **build_light_unique_id_migration(data),
@@ -286,7 +291,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     # Physical device identifiers used to contain mutable room or device names.
     # Migrate them before platform setup so renames cannot duplicate devices.
-    migrate_physical_device_registry(hass, config_entry, hub_device.id)
+    migrate_physical_device_registry(
+        hass,
+        config_entry,
+        hub_device.id,
+        previous_room_names,
+    )
 
     # Create physical devices in their Wiser room's Home Assistant area. Later
     # room renames move devices only while they remain in that managed area.
@@ -344,7 +354,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Remap historical name-based entity IDs before platform setup so existing
     # entities, history, and dashboard references are retained.
     await async_migrate_physical_entity_unique_ids(
-        hass, config_entry, coordinator
+        hass,
+        config_entry,
+        coordinator,
+        previous_room_names,
     )
 
     # Setup platforms
@@ -496,7 +509,10 @@ def register_room_assigned_devices(
 
 
 def migrate_physical_device_registry(
-    hass: HomeAssistant, config_entry, hub_device_id: str
+    hass: HomeAssistant,
+    config_entry,
+    hub_device_id: str,
+    previous_room_names=None,
 ):
     """Migrate physical devices from name-derived to stable identifiers."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
@@ -515,6 +531,15 @@ def migrate_physical_device_registry(
     itrv_identifier_prefix = (
         f"{data.wiserhub.system.name} {ENTITY_PREFIX} iTRV "
     )
+    previous_room_names = previous_room_names or {}
+    physical_entity_migration = build_physical_entity_unique_id_migration(
+        data, previous_room_names
+    )
+    physical_entity_ids_by_target = {}
+    for old_unique_id, new_unique_id in physical_entity_migration.items():
+        physical_entity_ids_by_target.setdefault(new_unique_id, set()).add(
+            old_unique_id
+        )
     for device in data.wiserhub.devices.all:
         stable_identifier = (DOMAIN, get_identifier(data, device.id))
         legacy_identifier = (
@@ -525,6 +550,18 @@ def migrate_physical_device_registry(
             get_unique_id(data, "sensor", device.product_type, device.id),
             get_unique_id(data, "sensor", "Battery", device.id),
         }
+        stable_entity_ids.update(
+            {
+                get_physical_entity_unique_id(
+                    data, "sensor", device.id, entity_type
+                )
+                for entity_type in (
+                    "power",
+                    "energy",
+                    "energy_received",
+                )
+            }
+        )
         possible_devices = find_physical_device_candidates(
             registry_devices,
             registry_entities,
@@ -534,12 +571,14 @@ def migrate_physical_device_registry(
         room = data.wiserhub.rooms.get_by_device_id(device.id)
         temperature_type = None
         old_temperature_names = set()
+        possible_room_names = set()
+        if room is not None:
+            possible_room_names.add(room.name)
+            if previous_name := previous_room_names.get(str(room.id)):
+                possible_room_names.add(previous_name)
 
         if device.product_type == "iTRV":
             temperature_type = "smartvalve_temp"
-            possible_room_names = set()
-            if room is not None:
-                possible_room_names.add(room.name)
             for entry in registry_devices:
                 if entry.model != "iTRV":
                     continue
@@ -577,38 +616,64 @@ def migrate_physical_device_registry(
                 f"{room.name if room is not None else device.name}"
             )
 
+        sensor_id_migrations = {}
         if temperature_type is not None:
-            old_temperature_ids = {
+            sensor_id_migrations[
+                get_physical_entity_unique_id(
+                    data, "sensor", device.id, temperature_type
+                )
+            ] = {
                 get_unique_id(data, "sensor", name, device.id)
                 for name in old_temperature_names
             }
-            stable_temperature_id = get_physical_entity_unique_id(
-                data, "sensor", device.id, temperature_type
+
+        room_attached_sensor_ids = set()
+        for entity_type in (
+            "humidity",
+            "power",
+            "energy",
+            "energy_received",
+        ):
+            stable_sensor_id = get_physical_entity_unique_id(
+                data, "sensor", device.id, entity_type
             )
-            matching_temperature_entries = [
+            old_sensor_ids = physical_entity_ids_by_target.get(
+                stable_sensor_id, set()
+            )
+            if old_sensor_ids:
+                sensor_id_migrations[stable_sensor_id] = old_sensor_ids
+            if entity_type == "humidity":
+                # Room-stat humidity is displayed on the logical room device.
+                # Its entity must not make that room device a physical-device
+                # migration candidate.
+                room_attached_sensor_ids.add(stable_sensor_id)
+
+        for stable_sensor_id, old_sensor_ids in sensor_id_migrations.items():
+            matching_sensor_entries = [
                 entry
                 for entry in registry_entities
                 if entry.domain == "sensor"
                 and entry.platform == DOMAIN
                 and entry.unique_id
-                in old_temperature_ids | {stable_temperature_id}
+                in old_sensor_ids | {stable_sensor_id}
             ]
             matching_device_ids = {
                 entry.device_id
-                for entry in matching_temperature_entries
+                for entry in matching_sensor_entries
                 if entry.device_id is not None
             }
 
-            possible_devices.extend(
-                entry
-                for entry in registry_devices
-                if entry.id in matching_device_ids
-            )
+            if stable_sensor_id not in room_attached_sensor_ids:
+                possible_devices.extend(
+                    entry
+                    for entry in registry_devices
+                    if entry.id in matching_device_ids
+                )
 
             migrate_entity_unique_id_duplicates(
                 entity_registry,
-                matching_temperature_entries,
-                stable_temperature_id,
+                matching_sensor_entries,
+                stable_sensor_id,
             )
 
         device_entry = migrate_physical_device(

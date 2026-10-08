@@ -354,6 +354,83 @@ class HubNamingTest(unittest.TestCase):
             ),
         )
 
+    def test_physical_sensor_migration_covers_humidity_power_and_energy(self):
+        room = SimpleNamespace(
+            id=7,
+            name="Andys Bedroom",
+            number_of_heating_actuators=1,
+            heating_actuator_ids=[42],
+        )
+        devices = [
+            SimpleNamespace(
+                id=41,
+                name="Roomstat",
+                product_type="RoomStat",
+            ),
+            SimpleNamespace(
+                id=42,
+                name="Actuator",
+                product_type="HeatingActuator",
+            ),
+        ]
+        self.data.wiserhub.devices = SimpleNamespace(
+            all=devices,
+            get_by_id=lambda device_id: next(
+                device for device in devices if device.id == device_id
+            ),
+        )
+        self.data.wiserhub.rooms.get_by_device_id = lambda _device_id: room
+
+        mapping = self.helpers.build_physical_entity_unique_id_migration(
+            self.data,
+            {"7": "Previous Bedroom"},
+        )
+
+        expected = {
+            self.helpers.get_unique_id(
+                self.data,
+                "sensor",
+                "LTS Humidity Andys Bedroom",
+                41,
+            ): self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 41, "humidity"
+            ),
+            self.helpers.get_unique_id(
+                self.data,
+                "sensor",
+                "LTS Power Andys Bedroom",
+                42,
+            ): self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 42, "power"
+            ),
+            self.helpers.get_unique_id(
+                self.data,
+                "sensor",
+                "LTS Energy Andys Bedroom",
+                42,
+            ): self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 42, "energy"
+            ),
+            self.helpers.get_unique_id(
+                self.data,
+                "sensor",
+                "LTS Humidity Previous Bedroom",
+                41,
+            ): self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 41, "humidity"
+            ),
+            self.helpers.get_unique_id(
+                self.data,
+                "sensor",
+                "LTS Power Previous Bedroom",
+                42,
+            ): self.helpers.get_physical_entity_unique_id(
+                self.data, "sensor", 42, "power"
+            ),
+        }
+        for old_unique_id, new_unique_id in expected.items():
+            self.assertEqual(mapping[old_unique_id], new_unique_id)
+
     def test_room_entity_unique_id_does_not_use_room_name(self):
         before = self.helpers.get_room_entity_unique_id(
             self.data, 7, "current_temp"
