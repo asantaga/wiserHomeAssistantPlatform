@@ -380,6 +380,7 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         )
         self.assertEqual(setup_source.count("WiserEquipmentSensor("), 3)
         self.assertEqual(setup_source.count("if equipment_sensors_enabled"), 3)
+        self.assertNotIn("equipment_id > 0", setup_source)
         self.assertNotIn('legacy_name="Equipment Energy Delivered"', setup_source)
 
     def test_power_display_name_does_not_change_historical_unique_id_input(

@@ -277,19 +277,14 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             collection = getattr(devices, collection_name, None)
             return getattr(collection, "all", ())
 
-        return (
-            any(
-                getattr(device, "equipment_id", 0) > 0
-                for device in all_devices("smartplugs")
+        return any(
+            getattr(device, "equipment", None) is not None
+            for collection_name in (
+                "smartplugs",
+                "power_tags",
+                "heating_actuators",
             )
-            or any(
-                device.equipment is not None
-                for device in all_devices("power_tags")
-            )
-            or any(
-                getattr(device, "equipment_id", 0) > 0
-                for device in all_devices("heating_actuators")
-            )
+            for device in all_devices(collection_name)
         )
 
     async def async_step_init(self, user_input=None):

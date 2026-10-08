@@ -278,7 +278,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Smart Plug power sensors")
         for smartplug in data.wiserhub.devices.smartplugs.all:
             # Hub V2 equipment telemetry
-            if smartplug.equipment_id > 0:
+            if smartplug.equipment is not None:
                 if equipment_sensors_enabled:
                     wiser_sensors.append(WiserEquipmentSensor(data, smartplug.id))
                 wiser_sensors.extend(
@@ -392,7 +392,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Heating Actuator LTS sensors")
         for heating_actuator in data.wiserhub.devices.heating_actuators.all:
             # Hub V2 equipment telemetry
-            if heating_actuator.equipment_id > 0:
+            if heating_actuator.equipment is not None:
                 if equipment_sensors_enabled:
                     wiser_sensors.append(
                         WiserEquipmentSensor(data, heating_actuator.id)

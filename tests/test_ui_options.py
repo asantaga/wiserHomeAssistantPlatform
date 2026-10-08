@@ -161,6 +161,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 )
             )
         )
+        self.assertFalse(
+            functions._equipment_available(
+                flow_with_devices(
+                    smartplugs=(SimpleNamespace(equipment=None),),
+                    actuators=(SimpleNamespace(equipment=None),),
+                )
+            )
+        )
 
     async def test_equipment_option_defaults_off_and_preserves_options(self):
         self.namespace.update(
