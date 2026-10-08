@@ -201,12 +201,19 @@ def migrate_physical_device(
         for candidate_identifier in candidate.identifiers
         if candidate_identifier[0] != identifier[0]
     }
-    return device_registry.async_update_device(
-        canonical.id,
-        new_identifiers=preserved_identifiers | {identifier},
-        name=name,
+    preserved_connections = {
+        connection
+        for candidate in candidates
+        for connection in getattr(candidate, "connections", set())
+    }
+    updates = {
+        "new_identifiers": preserved_identifiers | {identifier},
+        "name": name,
         **device_info,
-    )
+    }
+    if preserved_connections:
+        updates["new_connections"] = preserved_connections
+    return device_registry.async_update_device(canonical.id, **updates)
 
 
 def migrate_entity_unique_id_duplicates(

@@ -26,6 +26,7 @@ class DeviceEntry:
     name_by_user: str | None = None
     created_at: datetime | None = None
     identifiers: set = field(default_factory=set)
+    connections: set = field(default_factory=set)
 
 
 @dataclass
@@ -735,6 +736,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
                 ("wiser", "WiserHeat123456 Wiser iTRV Bedroom"),
                 ("matter", "matter-device-31"),
             },
+            connections={("mac", "aa:bb:cc:dd:ee:ff")},
         )
         renamed = DeviceEntry(
             "renamed-device",
@@ -743,6 +745,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
                 ("wiser", "WiserHeat123456 Wiser iTRV Lounge"),
                 ("zigbee", "zigbee-device-31"),
             },
+            connections={("zigbee", "00:11:22:33:44:55")},
         )
         registry = DeviceRegistry()
         entities = EntityRegistry(
@@ -778,6 +781,13 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         )
         self.assertEqual(
             registry.updated[0][1]["via_device_id"], "physical-hub-id"
+        )
+        self.assertEqual(
+            registry.updated[0][1]["new_connections"],
+            {
+                ("mac", "aa:bb:cc:dd:ee:ff"),
+                ("zigbee", "00:11:22:33:44:55"),
+            },
         )
         self.assertNotIn("via_device", registry.updated[0][1])
         self.assertEqual(
