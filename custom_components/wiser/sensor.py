@@ -2176,10 +2176,11 @@ class WiserEquipmentSensor(WiserSensor):
 
         attrs["active_power"] = self._device.equipment.power.active_power    
         attrs["total_active_power"] = self._device.equipment.power.total_active_power    
-        attrs["energy"] = round(
-            self._device.equipment.power.current_summation_delivered / 1000,
-            2,
+        delivered_energy = (
+            self._device.equipment.power.current_summation_delivered
         )
+        if delivered_energy is not None:
+            attrs["energy"] = round(delivered_energy / 1000, 2)
 
         # PowerTagE attributes
         if self._device.equipment.device_type in ["PTE","PowerTagE",]:

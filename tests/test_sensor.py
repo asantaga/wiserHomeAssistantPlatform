@@ -419,6 +419,28 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(energy._attr_translation_key, "total_energy")
         self.assertEqual(energy._sensor_type, "Equipment Total Energy ")
 
+    def test_equipment_attributes_handle_missing_delivered_energy(self) -> None:
+        class OptionalAttributes(SimpleNamespace):
+            def __getattr__(self, _name):
+                return None
+
+        power = OptionalAttributes(
+            active_power=10,
+            total_active_power=20,
+            current_summation_delivered=None,
+        )
+        equipment = OptionalAttributes(device_type="Other", power=power)
+        sensor = object.__new__(self.sensor_module.WiserEquipmentSensor)
+        sensor._device = OptionalAttributes(
+            product_identifier="product",
+            equipment=equipment,
+        )
+
+        self.assertNotIn("energy", sensor.extra_state_attributes)
+
+        power.current_summation_delivered = 0
+        self.assertEqual(sensor.extra_state_attributes["energy"], 0)
+
 
 class WiserSystemCircuitStateTest(unittest.TestCase):
     """Tests for normalized heating and hot-water circuit states."""
