@@ -72,7 +72,8 @@ def _load_sensor_module() -> ModuleType:
         UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
     )
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
-    _module("homeassistant.helpers")
+    entity_registry = _module("homeassistant.helpers.entity_registry")
+    _module("homeassistant.helpers", entity_registry=entity_registry)
 
     class CoordinatorEntity:
         def __init__(self, coordinator, *args: object) -> None:
@@ -111,7 +112,9 @@ def _load_sensor_module() -> ModuleType:
         get_identifier=lambda *_args: "identifier",
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_hub_via_device_info=lambda _data: {},
+        get_legacy_unique_id=lambda *_args: "legacy-unique-id",
         get_unique_id=lambda *_args: "unique-id",
+        get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
     )
     class WiserEntityMixin:
         pass
