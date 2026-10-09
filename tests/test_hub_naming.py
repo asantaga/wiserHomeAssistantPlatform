@@ -105,6 +105,22 @@ class HubNamingTest(unittest.TestCase):
             "058a52_away_mode",
         )
 
+    def test_hub_entity_object_id_does_not_repeat_device_mac_suffix(self) -> None:
+        self.assertEqual(
+            self.helpers.get_hub_entity_object_id(
+                self.data, "Away Mode", "Wiser HeatHub (058A52)"
+            ),
+            "away_mode",
+        )
+
+    def test_renamed_hub_entity_object_id_keeps_mac_suffix(self) -> None:
+        self.assertEqual(
+            self.helpers.get_hub_entity_object_id(
+                self.data, "Away Mode", "Test"
+            ),
+            "058a52_away_mode",
+        )
+
     def test_active_rooms_exclude_nothing_assigned_records(self) -> None:
         active = SimpleNamespace(_data={}, id=1)
         deleted = SimpleNamespace(
@@ -136,6 +152,15 @@ class HubNamingTest(unittest.TestCase):
 
         self.assertEqual(
             HubEntity(self.data).suggested_object_id,
+            "058a52_away_mode",
+        )
+
+        renamed_entity = HubEntity(self.data)
+        renamed_entity.device_entry = SimpleNamespace(
+            name="Wiser HeatHub (058A52)", name_by_user="Test"
+        )
+        self.assertEqual(
+            renamed_entity.suggested_object_id,
             "058a52_away_mode",
         )
 

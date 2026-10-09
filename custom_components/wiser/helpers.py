@@ -52,13 +52,20 @@ def get_hub_device_name(data):
     return f"{ENTITY_PREFIX} HeatHub"
 
 
-def get_hub_entity_object_id(data, entity_name):
+def get_hub_entity_object_id(data, entity_name, device_name=None):
     """Return the MAC-derived entity portion of a new hub object ID."""
     entity_slug = re.sub(r"[^a-z0-9]+", "_", str(entity_name).lower()).strip("_")
-    # Home Assistant adds the area and device portions. Supplying them here too
-    # would produce IDs such as ``wiser_heathub_wiser_heathub_...`` when users
-    # recreate entity IDs from the device page.
-    return f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
+    # Home Assistant adds the area and effective device name around this value.
+    # The integration's multi-hub device name already contains the MAC suffix,
+    # so omit it here to avoid ``..._04f8a0_04f8a0_away_mode``.
+    device_name = device_name or get_hub_device_name(data)
+    compact_device_name = re.sub(r"[^0-9A-Fa-f]", "", str(device_name))
+    mac_suffix = get_hub_mac_suffix(data)
+    if mac_suffix.casefold() in compact_device_name.casefold():
+        return entity_slug
+    # A user may rename the device and remove the visible MAC. Add it to the
+    # entity portion so resetting the entity ID still retains the hub identity.
+    return f"{mac_suffix.lower()}_{entity_slug}"
 
 
 def hub_error_handler(func):
