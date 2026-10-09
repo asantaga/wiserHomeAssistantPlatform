@@ -115,7 +115,6 @@ def _load_sensor_module() -> ModuleType:
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_hub_via_device_info=lambda _data: {},
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
-        get_itrv_temperature_unique_id=lambda *_args: "itrv-temperature-id",
         get_physical_entity_unique_id=lambda _data, domain, device_id, entity_type: (
             f"physical-{domain}-{device_id}-{entity_type}"
         ),
