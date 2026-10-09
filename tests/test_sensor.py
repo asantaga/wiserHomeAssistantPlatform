@@ -72,7 +72,8 @@ def _load_sensor_module() -> ModuleType:
         UnitOfVolumeFlowRate=SimpleNamespace(LITERS_PER_MINUTE="L/min"),
     )
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
-    _module("homeassistant.helpers")
+    entity_registry = _module("homeassistant.helpers.entity_registry")
+    _module("homeassistant.helpers", entity_registry=entity_registry)
 
     class CoordinatorEntity:
         def __init__(self, coordinator, *args: object) -> None:
@@ -112,7 +113,9 @@ def _load_sensor_module() -> ModuleType:
         get_identifier=lambda *_args: "identifier",
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_hub_via_device_info=lambda _data: {},
+        get_legacy_unique_id=lambda *_args: "legacy-unique-id",
         get_unique_id=lambda *_args: "unique-id",
+        get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
     )
     class WiserEntityMixin:
         pass
@@ -301,6 +304,236 @@ def _load_binary_sensor_module() -> ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+class WiserSummerComfortSetupTest(unittest.TestCase):
+    """Tests for second-generation hub system sensor setup."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        setup_source = BINARY_SENSOR_SOURCE_PATH.read_text().split(
+            "class BaseBinarySensor", 1
+        )[0]
+        cls.tree = ast.parse(setup_source)
+        tested_functions = [
+            node
+            for node in cls.tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            in {
+                "_supports_v2_system_property",
+                "_supports_summer_discomfort_prevention",
+                "_supports_summer_comfort_available",
+                "_supports_pcm_binary_sensor",
+                "_requires_v2_entity_cleanup",
+                "_remove_unsupported_v2_entities",
+            }
+        ]
+        cls.registry = Mock()
+        cls.get_legacy_unique_id = Mock(return_value="legacy-unique-id")
+        cls.get_uuid_unique_id = Mock(return_value="uuid-unique-id")
+        namespace = {
+            "DOMAIN": "wiser",
+            "HomeAssistant": object,
+            "TEXT_UNKNOWN": "Unknown",
+            "er": SimpleNamespace(async_get=lambda _hass: cls.registry),
+            "get_legacy_unique_id": cls.get_legacy_unique_id,
+            "get_uuid_unique_id": cls.get_uuid_unique_id,
+        }
+        exec(
+            compile(
+                ast.Module(body=tested_functions, type_ignores=[]),
+                BINARY_SENSOR_SOURCE_PATH.name,
+                "exec",
+            ),
+            namespace,
+        )
+        cls.supports_summer_discomfort = staticmethod(
+            namespace["_supports_summer_discomfort_prevention"]
+        )
+        cls.supports_summer_comfort = staticmethod(
+            namespace["_supports_summer_comfort_available"]
+        )
+        cls.supports_pcm = staticmethod(namespace["_supports_pcm_binary_sensor"])
+        cls.requires_cleanup = staticmethod(
+            namespace["_requires_v2_entity_cleanup"]
+        )
+        cls.remove_unsupported_entities = staticmethod(
+            namespace["_remove_unsupported_v2_entities"]
+        )
+
+    def setUp(self) -> None:
+        self.registry.reset_mock()
+        self.get_legacy_unique_id.reset_mock()
+        self.get_uuid_unique_id.reset_mock()
+        self.get_legacy_unique_id.return_value = "legacy-unique-id"
+        self.get_uuid_unique_id.return_value = "uuid-unique-id"
+
+    def test_v1_does_not_support_v2_system_sensors(self) -> None:
+        data = SimpleNamespace(hub_version=1)
+        self.assertFalse(self.supports_summer_discomfort(data))
+        self.assertFalse(self.supports_summer_comfort(data))
+        self.assertFalse(self.supports_pcm(data))
+
+    def test_v2_without_summer_comfort_data_is_not_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace()),
+        )
+        self.assertFalse(self.supports_summer_discomfort(data))
+        self.assertFalse(self.supports_summer_comfort(data))
+
+    def test_v2_summer_properties_are_detected_independently(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(summer_comfort_available=False)
+            ),
+        )
+        self.assertTrue(self.supports_summer_comfort(data))
+        self.assertFalse(self.supports_summer_discomfort(data))
+
+        data.wiserhub.system = SimpleNamespace(
+            summer_discomfort_prevention=False
+        )
+        self.assertTrue(self.supports_summer_discomfort(data))
+        self.assertFalse(self.supports_summer_comfort(data))
+
+    def test_v2_without_pcm_data_is_not_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace()),
+        )
+        self.assertFalse(self.supports_pcm(data))
+
+    def test_v2_with_pcm_data_is_supported(self) -> None:
+        data = SimpleNamespace(
+            hub_version=2,
+            wiserhub=SimpleNamespace(system=SimpleNamespace(pcm_version="1.0")),
+        )
+        self.assertTrue(self.supports_pcm(data))
+
+    def test_future_hub_versions_can_support_v2_system_sensors(self) -> None:
+        data = SimpleNamespace(
+            hub_version=3,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    summer_comfort_available=False,
+                    summer_discomfort_prevention=False,
+                    pcm_version="1.0",
+                )
+            ),
+        )
+        self.assertTrue(self.supports_summer_discomfort(data))
+        self.assertTrue(self.supports_summer_comfort(data))
+        self.assertTrue(self.supports_pcm(data))
+
+    def test_cleanup_is_limited_to_v1_hubs(self) -> None:
+        self.assertTrue(self.requires_cleanup(SimpleNamespace(hub_version=1)))
+        self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=2)))
+        self.assertFalse(self.requires_cleanup(SimpleNamespace(hub_version=3)))
+
+    def test_cleanup_removes_owned_migrated_entity(self) -> None:
+        self.registry.async_get_entity_id.return_value = "binary_sensor.pcm_limit"
+        self.registry.async_get.return_value = SimpleNamespace(
+            config_entry_id="entry-id"
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat123456"))
+        )
+
+        self.remove_unsupported_entities(
+            object(), "entry-id", data, ("PCM Device Limit Reached",)
+        )
+
+        self.get_legacy_unique_id.assert_called_once_with(
+            data,
+            "sensor",
+            "PCM Device Limit Reached",
+            "HeatHub123456 PCM Device Limit Reached",
+        )
+        self.get_uuid_unique_id.assert_called_once_with("legacy-unique-id")
+        self.registry.async_get_entity_id.assert_called_once_with(
+            "binary_sensor", "wiser", "uuid-unique-id"
+        )
+        self.registry.async_remove.assert_called_once_with(
+            "binary_sensor.pcm_limit"
+        )
+
+    def test_cleanup_keeps_entity_owned_by_another_entry(self) -> None:
+        self.registry.async_get_entity_id.return_value = "binary_sensor.pcm_limit"
+        self.registry.async_get.return_value = SimpleNamespace(
+            config_entry_id="other-entry"
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(name="WiserHeat123456"))
+        )
+
+        self.remove_unsupported_entities(
+            object(), "entry-id", data, ("PCM Device Limit Reached",)
+        )
+
+        self.registry.async_remove.assert_not_called()
+
+    def test_summer_comfort_sensors_use_capability_guard(self) -> None:
+        setup = next(
+            node
+            for node in self.tree.body
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_setup_entry"
+        )
+
+        def guard_for(function_name: str) -> ast.If:
+            return next(
+                node
+                for node in ast.walk(setup)
+                if isinstance(node, ast.If)
+                and isinstance(node.test, ast.Call)
+                and isinstance(node.test.func, ast.Name)
+                and node.test.func.id == function_name
+            )
+
+        discomfort_guard = guard_for("_supports_summer_discomfort_prevention")
+        discomfort_calls = {
+            node.func.id
+            for node in ast.walk(discomfort_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn(
+            "WiserSummerDiscomfortPrevention",
+            discomfort_calls,
+        )
+
+        comfort_guard = guard_for("_supports_summer_comfort_available")
+        comfort_calls = {
+            node.func.id
+            for node in ast.walk(comfort_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn(
+            "WiserSummerComfortAvailable",
+            comfort_calls,
+        )
+
+        pcm_guard = guard_for("_supports_pcm_binary_sensor")
+        pcm_calls = {
+            node.func.id
+            for node in ast.walk(pcm_guard)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn(
+            "WiserPCMDeviceLimitReached",
+            pcm_calls,
+        )
+
+        cleanup_call = next(
+            node
+            for node in ast.walk(setup)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_remove_unsupported_v2_entities"
+        )
+        self.assertIsNotNone(cleanup_call)
 
 
 class WiserDeviceSignalSensorNameTest(unittest.TestCase):
