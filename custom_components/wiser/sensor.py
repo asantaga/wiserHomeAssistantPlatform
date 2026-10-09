@@ -72,6 +72,7 @@ from .opentherm import (
     opentherm_sensor_is_enabled,
     relative_modulation_level as _relative_modulation_level,
 )
+from .opentherm_detection import opentherm_is_detected
 from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
@@ -202,10 +203,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add enabled OpenTherm sensors. Flow and return temperatures retain their
     # historical default; every additional attribute is opt-in.
-    if (
-        data.wiserhub.system.opentherm is not None
-        and data.wiserhub.system.opentherm.enabled
-    ):
+    if opentherm_is_detected(config_entry, data.wiserhub.system.opentherm):
         _LOGGER.debug("Setting up Opentherm sensors")
         opentherm = data.wiserhub.system.opentherm
         configured_sensors = config_entry.options.get(CONF_OPENTHERM_SENSORS)
@@ -922,15 +920,22 @@ class WiserSystemCircuitState(WiserSensor):
             attrs[f"is_smartvalve_preventing_demand_{heating_channel.name}"] = (
                 heating_channel.is_smart_valve_preventing_demand
             )
-            if self._data.wiserhub.system.opentherm.connection_status == "Connected":
-                opentherm = self._data.wiserhub.system.opentherm.operational_data
-                attrs["ch_flow_temperature"] = opentherm.ch_flow_temperature
-                attrs["ch_pressure_bar"] = opentherm.ch_pressure_bar
-                attrs["ch_return_temperature"] = opentherm.ch_return_temperature
-                attrs["relative_modulation_level"] = _relative_modulation_level(
-                    self._data.wiserhub.system.opentherm
+            system = getattr(self._data.wiserhub, "system", None)
+            opentherm = getattr(system, "opentherm", None)
+            operational_data = getattr(opentherm, "operational_data", None)
+            if (
+                getattr(opentherm, "connection_status", None) == "Connected"
+                and operational_data is not None
+            ):
+                attrs["ch_flow_temperature"] = operational_data.ch_flow_temperature
+                attrs["ch_pressure_bar"] = operational_data.ch_pressure_bar
+                attrs["ch_return_temperature"] = (
+                    operational_data.ch_return_temperature
                 )
-                attrs["hw_temperature"] = opentherm.hw_temperature
+                attrs["relative_modulation_level"] = _relative_modulation_level(
+                    opentherm
+                )
+                attrs["hw_temperature"] = operational_data.hw_temperature
         else:
             hw = self._data.wiserhub.hotwater
             # If boosted show boost end time
@@ -1354,6 +1359,8 @@ class WiserOpenThermAttributeSensor(WiserSensor):
 
     @property
     def available(self):
+        # Detection is sticky for registry continuity, but values are available
+        # only while the hub reports usable live OpenTherm data.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available
@@ -1567,6 +1574,7 @@ class WiserLTSOpenthermSensor(WiserSensor):
 
     @property
     def available(self):
+        # Keep the entity during outages without exposing a stale temperature.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available

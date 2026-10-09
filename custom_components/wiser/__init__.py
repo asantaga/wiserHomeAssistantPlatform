@@ -5,6 +5,7 @@ msparker@sky.com
 """
 
 import asyncio
+from functools import partial
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -27,6 +28,7 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
     CONF_LEGACY_NAMING,
+    CONF_OPENTHERM_EVER_CONNECTED,
     DATA,
     DOMAIN,
     MANUFACTURER,
@@ -54,6 +56,10 @@ from .helpers import (
     get_identifier,
     get_instance_count,
     get_legacy_room_identifier,
+)
+from .opentherm_detection import (
+    opentherm_entity_unique_ids,
+    opentherm_is_detected,
 )
 from .services import async_setup_services
 from .websockets import async_register_websockets
@@ -207,6 +213,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
 
+    # This must run before both the update listener and reload-settings snapshot.
+    # A setup-time flag change is then included in the initial snapshot without
+    # scheduling a reload; a later change is observed and reloads exactly once.
+    # This prevents a standard boiler's dormant OpenTherm endpoint from creating
+    # entities while allowing a real installation to survive temporary outages.
+    _remember_opentherm_connection(hass, config_entry, coordinator)
+
     # Update listener for config option changes
     update_listener = config_entry.add_update_listener(_async_update_listener)
 
@@ -215,6 +228,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         UPDATE_LISTENER: update_listener,
         "reload_settings": integration_reload_settings(config_entry),
     }
+
+    # If OpenTherm connects for the first time after startup, saving the flag
+    # causes one integration reload so its entities are added. Future outages
+    # retain those entities and their registry/history records.
+    config_entry.async_on_unload(
+        coordinator.async_add_listener(
+            partial(
+                _remember_opentherm_connection,
+                hass,
+                config_entry,
+                coordinator,
+            )
+        )
+    )
 
     update_hub_device_names(hass)
 
@@ -255,6 +282,77 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
     )
     return True
+
+
+@callback
+def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
+    """Persist a confirmed OpenTherm connection until it is disabled.
+
+    The flag intentionally lives in config-entry data so the existing entry
+    update listener reloads platforms when runtime detection changes. A Store
+    would persist the state but would not trigger that reload.
+    """
+    system = getattr(coordinator.wiserhub, "system", None)
+    if system is None:
+        return
+
+    opentherm = getattr(system, "opentherm", None)
+    remembered = config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False)
+
+    if getattr(opentherm, "enabled", None) is False:
+        if remembered:
+            entry_data = dict(config_entry.data)
+            entry_data.pop(CONF_OPENTHERM_EVER_CONNECTED, None)
+            hass.config_entries.async_update_entry(config_entry, data=entry_data)
+        remembered = False
+    elif (
+        not remembered
+        and getattr(opentherm, "connection_status", None) == "Connected"
+    ):
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
+        )
+        remembered = True
+
+    detected = bool(opentherm and remembered)
+    if getattr(coordinator, "_wiser_opentherm_detected", None) is detected:
+        return
+
+    coordinator._wiser_opentherm_detected = detected
+    _sync_opentherm_entity_registry(
+        hass,
+        config_entry,
+        coordinator,
+        detected=detected,
+    )
+
+
+@callback
+def _sync_opentherm_entity_registry(
+    hass, config_entry, coordinator, detected=None
+) -> None:
+    """Hide false OpenTherm entities while preserving their registry data."""
+    system = getattr(coordinator.wiserhub, "system", None)
+    if system is None:
+        return
+
+    opentherm = getattr(system, "opentherm", None)
+    if detected is None:
+        detected = opentherm_is_detected(config_entry, opentherm)
+    unique_ids = opentherm_entity_unique_ids(coordinator)
+    registry = er.async_get(hass)
+
+    for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+        if (entry.domain, entry.unique_id) not in unique_ids:
+            continue
+        if not detected and entry.disabled_by is None:
+            registry.async_update_entity(
+                entry.entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+        elif detected and entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            registry.async_update_entity(entry.entity_id, disabled_by=None)
 
 
 async def async_update_device_registry(hass: HomeAssistant, config_entry):

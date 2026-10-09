@@ -28,6 +28,7 @@ from .opentherm import (
     opentherm_sensor_value,
     opentherm_sensor_is_enabled,
 )
+from .opentherm_detection import opentherm_is_detected
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     binary_sensors = []
 
     opentherm = getattr(data.wiserhub.system, "opentherm", None)
-    if opentherm is not None and opentherm.enabled:
+    if opentherm_is_detected(config_entry, opentherm):
         configured_sensors = config_entry.options.get(CONF_OPENTHERM_SENSORS)
         binary_sensors.extend(
             WiserOpenThermAttributeBinarySensor(data, key)
@@ -254,6 +255,7 @@ class WiserOpenThermAttributeBinarySensor(
 
     @property
     def available(self):
+        # Keep the entity during outages without exposing stale boiler state.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available

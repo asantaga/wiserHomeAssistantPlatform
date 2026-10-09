@@ -75,6 +75,7 @@ from .opentherm import (
     detected_opentherm_sensor_keys,
     opentherm_sensor_is_enabled,
 )
+from .opentherm_detection import opentherm_is_detected
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -264,7 +265,12 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
         if not entry_data:
             return None
-        return getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
+        opentherm = getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
+        return (
+            opentherm
+            if opentherm_is_detected(self.config_entry, opentherm)
+            else None
+        )
 
     def _equipment_available(self):
         """Return whether the loaded entry has equipment data available."""
