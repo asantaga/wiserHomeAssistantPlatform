@@ -59,6 +59,7 @@ def _load_wiser_init() -> ModuleType:
             "CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT",
             "CONF_DEPRECATED_HW_TARGET_TEMP",
             "CONF_LEGACY_NAMING",
+            "CONF_OPENTHERM_EVER_CONNECTED",
             "CONF_WISER_ROOM_NAMES",
             "DATA",
             "UPDATE_LISTENER",
@@ -128,6 +129,11 @@ def _load_wiser_init() -> ModuleType:
         lambda data: data.wiserhub.rooms.all
     )
     _module("wiser_init_test.helpers", **helper_stubs)
+    _module(
+        "wiser_init_test.opentherm_detection",
+        opentherm_entity_unique_ids=Mock(return_value=set()),
+        opentherm_is_detected=Mock(return_value=False),
+    )
     _module("wiser_init_test.services", async_setup_services=Mock())
     _module("wiser_init_test.update", async_unload_card_updates=Mock())
     _module("wiser_init_test.websockets", async_register_websockets=Mock())
