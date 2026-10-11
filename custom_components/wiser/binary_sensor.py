@@ -16,12 +16,15 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
     get_legacy_unique_id,
     get_light_binary_sensor_unique_id,
+    get_physical_entity_unique_id,
+    get_room_entity_unique_id,
     get_unique_id,
     get_uuid_unique_id,
 )
@@ -182,7 +185,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
     # Room binary sensors
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         binary_sensors.extend(
             [
                 WiserRoomWindow(data, room.id, "Window Detection Active"),
@@ -289,12 +292,9 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
 
     @property
     def unique_id(self):
-        """Return uniqueid."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
-        )
-        return get_unique_id(
-            self._data, "binary_sensor", self._sensor_type, legacy_name
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "binary_sensor", self._device_id, self._sensor_type
         )
 
     @property
@@ -466,7 +466,11 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self._room_id)
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            f"binary_sensor_{self._attr_translation_key}",
+        )
 
     @property
     def device_info(self):

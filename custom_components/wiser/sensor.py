@@ -58,7 +58,9 @@ from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
+    get_physical_entity_unique_id,
     get_identifier,
+    get_room_entity_unique_id,
     get_unique_id,
 )
 from .opentherm import (
@@ -1095,6 +1097,14 @@ class WiserSmartplugPower(WiserSensor):
         self._device = data.wiserhub.devices.smartplugs.get_by_id(device_id)
         self._last_delivered_power = 0
 
+    @property
+    def unique_id(self):
+        """Return a stable ID across device and room renames."""
+        entity_type = "power" if self._sensor_type == "Power" else "energy"
+        return get_physical_entity_unique_id(
+            self._data, "sensor", self._device_id, entity_type
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
@@ -1238,6 +1248,27 @@ class WiserLTSTempSensor(WiserSensor):
                 f"LTS Target Temperature {data.wiserhub.rooms.get_by_id(device_id).name}",
                 translation_key="target_temperature",
             )
+
+    @property
+    def unique_id(self):
+        """Return a stable ID when a device or room is renamed."""
+        if self._lts_sensor_type in {
+            "floor_current_temp",
+            "smokealarm_temp",
+            "smartvalve_temp",
+            "ufh_measured_temp",
+        }:
+            return get_physical_entity_unique_id(
+                self._data,
+                "sensor",
+                self._device_id,
+                self._lts_sensor_type,
+            )
+        if self._lts_sensor_type in {"current_temp", "current_target_temp"}:
+            return get_room_entity_unique_id(
+                self._data, self._device_id, self._lts_sensor_type
+            )
+        return super().unique_id
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -1659,6 +1690,13 @@ class WiserLTSHumiditySensor(WiserSensor):
             use_device_class_name=True,
         )
 
+    @property
+    def unique_id(self):
+        """Return a room-name-independent humidity sensor ID."""
+        return get_physical_entity_unique_id(
+            self._data, "sensor", self._device_id, "humidity"
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
@@ -1752,6 +1790,15 @@ class WiserLTSDemandSensor(WiserSensor):
                 f"LTS Heating Demand {data.wiserhub.rooms.get_by_id(device_id).name}",
                 translation_key="heating_demand",
             )
+
+    @property
+    def unique_id(self):
+        """Return a stable ID for room demand across room renames."""
+        if self._lts_sensor_type == "room":
+            return get_room_entity_unique_id(
+                self._data, self._device_id, "heating_demand"
+            )
+        return super().unique_id
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -1885,6 +1932,18 @@ class WiserLTSPowerSensor(WiserSensor):
                     else "energy_delivered"
                 ),
             )
+
+    @property
+    def unique_id(self):
+        """Return a room-name-independent power or energy sensor ID."""
+        entity_type = {
+            "Power": "power",
+            "Energy": "energy",
+            "EnergyReceived": "energy_received",
+        }[self._lts_sensor_type]
+        return get_physical_entity_unique_id(
+            self._data, "sensor", self._device_id, entity_type
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:

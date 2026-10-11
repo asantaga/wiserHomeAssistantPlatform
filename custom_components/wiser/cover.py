@@ -25,7 +25,7 @@ from .helpers import (
     get_device_name,
     get_hub_via_device_info,
     get_identifier,
-    get_uuid_unique_id,
+    get_physical_entity_unique_id,
     hub_error_handler,
 )
 from .schedules import WiserScheduleEntity
@@ -147,13 +147,10 @@ class WiserShutter(
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = f"{get_device_name(self._data, self._device_id)} Control"
-        legacy_unique_id = (
-            f"{self._data.wiserhub.system.name}-Wisershutter-"
-            f"{self._device_id}-{legacy_name}"
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "cover", self._device_id, "control"
         )
-        return get_uuid_unique_id(legacy_unique_id)
 
     @property
     def extra_state_attributes(self):

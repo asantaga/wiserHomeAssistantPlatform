@@ -54,7 +54,7 @@ from .helpers import (
     get_device_name,
     get_hub_via_device_info,
     get_identifier,
-    get_room_name,
+    get_room_entity_unique_id,
     get_uuid_unique_id,
     hub_error_handler,
 )
@@ -707,12 +707,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def unique_id(self):
         """Return unique Id."""
-        legacy_name = get_room_name(self._data, self._room_id)
-        legacy_unique_id = (
-            f"{self._data.wiserhub.system.name}-WiserRoom-"
-            f"{self._room_id}-{legacy_name}"
-        )
-        return get_uuid_unique_id(legacy_unique_id)
+        return get_room_entity_unique_id(self._data, self._room_id, "climate")
 
     @hub_error_handler
     async def async_boost_heating(

@@ -181,7 +181,12 @@ class EntityNamingTest(unittest.TestCase):
                 )
 
     def test_all_entity_unique_ids_are_uuid_backed(self) -> None:
-        uuid_helpers = {"get_unique_id", "get_uuid_unique_id"}
+        uuid_helpers = {
+            "get_physical_entity_unique_id",
+            "get_room_entity_unique_id",
+            "get_unique_id",
+            "get_uuid_unique_id",
+        }
         for filename in ENTITY_BASE_CLASSES:
             tree = ast.parse((COMPONENT_PATH / filename).read_text())
             for node in ast.walk(tree):
