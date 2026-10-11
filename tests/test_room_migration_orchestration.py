@@ -116,6 +116,7 @@ def _load_wiser_init() -> ModuleType:
         "build_physical_entity_unique_id_migration",
         "get_device_name",
         "get_hub_device_name",
+        "get_hub_via_device_info",
         "get_identifier",
         "get_instance_count",
         "get_legacy_device_identifier",
@@ -127,6 +128,9 @@ def _load_wiser_init() -> ModuleType:
     helper_stubs = {name: Mock(name=name) for name in helper_names}
     helper_stubs["active_wiser_rooms"] = (
         lambda data: data.wiserhub.rooms.all
+    )
+    helper_stubs["get_hub_via_device_info"] = Mock(
+        return_value={"via_device_id": "hub-device"}
     )
     _module("wiser_init_test.helpers", **helper_stubs)
     _module(

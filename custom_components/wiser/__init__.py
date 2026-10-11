@@ -68,6 +68,7 @@ from .helpers import (
     build_physical_entity_unique_id_migration,
     get_device_name,
     get_hub_device_name,
+    get_hub_via_device_info,
     get_identifier,
     get_instance_count,
     get_legacy_device_identifier,
@@ -502,8 +503,8 @@ def register_room_assigned_devices(hass: HomeAssistant, config_entry):
             device_registry,
             config_entry.entry_id,
             (DOMAIN, get_identifier(data, device.id)),
-            (DOMAIN, data.wiserhub.system.name),
             room.name,
+            get_hub_via_device_info(data),
             manufacturer=MANUFACTURER,
             name=get_device_name(data, device.id),
             model=device.product_type,
@@ -719,7 +720,7 @@ def migrate_physical_device_registry(
             manufacturer=MANUFACTURER,
             model=device.product_type,
             sw_version=device.firmware_version,
-            via_device=(DOMAIN, data.wiserhub.system.name),
+            creation_parent_info=get_hub_via_device_info(data),
             via_device_id=hub_device_id,
         )
         if room is not None:
@@ -746,7 +747,7 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
             (DOMAIN, get_identifier(data, room.id, "room")),
             (DOMAIN, get_legacy_room_identifier(data, room.id)),
             get_device_name(data, room.id, "room"),
-            via_device=(DOMAIN, data.wiserhub.system.name),
+            creation_parent_info=get_hub_via_device_info(data),
         )
         assign_device_area_if_unset(
             device_registry, area_registry, device_entry, room.name

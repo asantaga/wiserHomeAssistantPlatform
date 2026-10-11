@@ -291,8 +291,8 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
             registry,
             "entry-id",
             ("wiser", "WiserHeat123456 Wiser Thermostat"),
-            ("wiser", "WiserHeat123456"),
             "Andys Bedroom",
+            {"via_device_id": "physical-hub-id"},
             manufacturer="Drayton Wiser",
             name="Wiser Thermostat",
             model="RoomStat",
@@ -302,7 +302,7 @@ class RegisterRoomAssignedDeviceTest(unittest.TestCase):
         created = registry.created[0]
         self.assertEqual(created["suggested_area"], "Andys Bedroom")
         self.assertEqual(
-            created["via_device"], ("wiser", "WiserHeat123456")
+            created["via_device_id"], "physical-hub-id"
         )
         self.assertEqual(
             created["identifiers"],
@@ -502,7 +502,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.identifier,
             self.legacy_identifier,
             "Wiser Room",
-            via_device=("wiser", "WiserHeat123456"),
+            creation_parent_info={"via_device_id": "physical-hub-id"},
         )
         result = DEVICE.assign_device_area_if_unset(
             device_registry, area_registry, result, "Test"
@@ -516,7 +516,7 @@ class MigrateRoomDeviceTest(unittest.TestCase):
                     "config_entry_id": self.config_entry_id,
                     "identifiers": {self.identifier},
                     "name": "Wiser Room",
-                    "via_device": ("wiser", "WiserHeat123456"),
+                    "via_device_id": "physical-hub-id",
                 }
             ],
         )
@@ -709,7 +709,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             ("wiser", "WiserHeat123456 device 31"),
             [],
             "Wiser iTRV",
-            via_device=("wiser", "WiserHeat123456"),
+            creation_parent_info={"via_device_id": "physical-hub-id"},
             via_device_id="physical-hub-id",
             model="iTRV",
         )
@@ -724,7 +724,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
                         ("wiser", "WiserHeat123456 device 31")
                     },
                     "name": "Wiser iTRV",
-                    "via_device": ("wiser", "WiserHeat123456"),
+                    "via_device_id": "physical-hub-id",
                     "model": "iTRV",
                 }
             ],
@@ -766,7 +766,7 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             ("wiser", "WiserHeat123456 device 31"),
             [renamed, old],
             "Wiser iTRV",
-            via_device=("wiser", "WiserHeat123456"),
+            creation_parent_info={"via_device_id": "physical-hub-id"},
             via_device_id="physical-hub-id",
             model="iTRV",
         )
