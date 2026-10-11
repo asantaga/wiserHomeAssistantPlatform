@@ -24,6 +24,10 @@ def _load_helpers_module() -> ModuleType:
     sys.modules["aioWiserHeatAPI.wiserhub"] = wiserhub
 
     sys.modules["homeassistant"] = ModuleType("homeassistant")
+    const = ModuleType("homeassistant.const")
+    const.MAJOR_VERSION = 2025
+    const.MINOR_VERSION = 5
+    sys.modules["homeassistant.const"] = const
     core = ModuleType("homeassistant.core")
     core.HomeAssistant = object
     sys.modules["homeassistant.core"] = core
@@ -89,6 +93,8 @@ class HubNamingTest(unittest.TestCase):
         self.data = SimpleNamespace(
             wiserhub=SimpleNamespace(system=system, rooms=rooms, devices=devices)
         )
+        self.helpers.MAJOR_VERSION = 2025
+        self.helpers.MINOR_VERSION = 5
 
     def test_single_hub_has_concise_device_name(self) -> None:
         self.assertEqual(self.helpers.get_hub_device_name(self.data), "Wiser HeatHub")
@@ -129,6 +135,22 @@ class HubNamingTest(unittest.TestCase):
         self.data.wiserhub.rooms.all = [active, deleted]
 
         self.assertEqual(self.helpers.active_wiser_rooms(self.data), [active])
+
+    def test_hub_parent_uses_compatible_identifier(self) -> None:
+        self.assertEqual(
+            self.helpers.get_hub_via_device_info(self.data),
+            {"via_device": ("wiser", "WiserHeatNOTUSED")},
+        )
+
+    def test_hub_parent_uses_device_id_on_current_home_assistant(self) -> None:
+        self.helpers.MAJOR_VERSION = 2026
+        self.helpers.MINOR_VERSION = 8
+        self.data.hub_device_id = "physical-hub-id"
+
+        self.assertEqual(
+            self.helpers.get_hub_via_device_info(self.data),
+            {"via_device_id": "physical-hub-id"},
+        )
 
     def test_hub_entity_mixin_suggests_mac_derived_object_id(self) -> None:
         class DefaultEntity:

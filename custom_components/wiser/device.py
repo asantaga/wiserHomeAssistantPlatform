@@ -98,8 +98,8 @@ def register_room_assigned_device(
     device_registry,
     config_entry_id,
     identifier,
-    parent_device_id,
     suggested_area,
+    parent_device_info,
     **device_info,
 ):
     """Register a physical device in its Wiser room on first creation."""
@@ -107,7 +107,7 @@ def register_room_assigned_device(
         config_entry_id=config_entry_id,
         identifiers={identifier},
         suggested_area=suggested_area,
-        via_device_id=parent_device_id,
+        **parent_device_info,
         **device_info,
     )
 
@@ -141,7 +141,8 @@ def migrate_physical_device(
     identifier,
     candidates,
     name,
-    via_device=None,
+    creation_parent_info=None,
+    via_device_id=None,
     **device_info,
 ):
     """Give a physical device a stable ID and merge duplicate registry rows."""
@@ -172,18 +173,12 @@ def migrate_physical_device(
         canonical = None
 
     if canonical is None:
-        create_info = {
-            key: value
-            for key, value in device_info.items()
-            if key != "via_device_id"
-        }
-        if via_device is not None:
-            create_info["via_device"] = via_device
         return device_registry.async_get_or_create(
             config_entry_id=config_entry_id,
             identifiers={identifier},
             name=name,
-            **create_info,
+            **(creation_parent_info or {}),
+            **device_info,
         )
 
     for duplicate in candidates:
@@ -211,6 +206,8 @@ def migrate_physical_device(
         "name": name,
         **device_info,
     }
+    if via_device_id is not None:
+        updates["via_device_id"] = via_device_id
     if preserved_connections:
         updates["new_connections"] = preserved_connections
     return device_registry.async_update_device(canonical.id, **updates)
@@ -405,7 +402,7 @@ def migrate_room_device(
     identifier,
     legacy_identifier,
     name,
-    via_device=None,
+    creation_parent_info=None,
 ):
     """Migrate or create a Wiser room device with its stable identifier."""
     get_by_identifier = getattr(
@@ -445,14 +442,11 @@ def migrate_room_device(
             name=name,
         )
 
-    create_info = {}
-    if via_device is not None:
-        create_info["via_device"] = via_device
     return device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
         identifiers={identifier},
         name=name,
-        **create_info,
+        **(creation_parent_info or {}),
     )
 
 

@@ -5,6 +5,7 @@ from aioWiserHeatAPI.wiserhub import (
     WiserHubAuthenticationError,
     WiserHubRESTError,
 )
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
@@ -316,11 +317,12 @@ def get_hub_device_info(data):
 
 
 def get_hub_via_device_info(data):
-    """Return the registered physical HeatHub as a parent device."""
-    hub_device_id = getattr(data, "hub_device_id", None)
-    if hub_device_id is None:
-        return {}
-    return {"via_device_id": hub_device_id}
+    """Return the HeatHub parent supported by this Home Assistant version."""
+    if (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8):
+        hub_device_id = getattr(data, "hub_device_id", None)
+        if hub_device_id is not None:
+            return {"via_device_id": hub_device_id}
+    return {"via_device": (DOMAIN, data.wiserhub.system.name)}
 
 
 def get_legacy_unique_id(data, device_type, entity_type, device_id):
