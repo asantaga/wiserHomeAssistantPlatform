@@ -404,10 +404,13 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self._sensor_type} device update requested")
-        HeatHub = self._data.wiserhub.system.name
-        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
-        return f"{HeatHub} {self._sensor_type}"
-        
+        self._state = getattr(
+            self._data.wiserhub.system,
+            self._sensor_type.replace(" ", "_").lower(),
+            None,
+        )
+        self.async_write_ha_state()
+
     @property
     def is_on(self):
         """Return the state of the sensor."""
