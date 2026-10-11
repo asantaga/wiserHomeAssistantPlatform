@@ -18,6 +18,7 @@ ENTITY_BASE_CLASSES = {
     "climate.py": {"WiserTempProbe", "WiserRoom", "WiserHotWater"},
     "cover.py": {"WiserShutter"},
     "light.py": {"WiserLight"},
+    "opentherm_hot_water.py": {"WiserOpenThermHotWater"},
     "number.py": {
         "WiserAwayModeTempNumber",
         "WiserFloorTempSensorNumber",
@@ -43,6 +44,7 @@ TRANSLATED_ENTITY_BASE_CLASSES = {
         "WiserDiscomfortIndoorTempNumber",
         "WiserDiscomfortOutdoorTempNumber",
     },
+    "opentherm_hot_water.py": {"WiserOpenThermHotWater"},
     "select.py": {"WiserSelectEntity"},
     "sensor.py": {"WiserSensor"},
     "switch.py": {"WiserSwitch"},

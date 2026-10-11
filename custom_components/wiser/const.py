@@ -44,6 +44,7 @@ WISER_PLATFORMS = [
     "number",
     "light",
     "cover",
+    "water_heater",
     "update",
 ]
 DATA = "data"
@@ -105,8 +106,21 @@ CONF_AUTOMATIONS_HW_BOOST_MODE = "hotwater_boost_mode"
 CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
 CONF_DEPRECATED_HW_TARGET_TEMP = "hotwater_target_temperature"
 CONF_OPENTHERM_EVER_CONNECTED = "opentherm_ever_connected"
+CONF_OPENTHERM_HOT_WATER_CAPABLE = "opentherm_hot_water_capable"
 CONF_OPENTHERM_SENSORS = "opentherm_sensors"
+CONF_OPENTHERM_HOT_WATER_CONTROL = "opentherm_hot_water_control"
+CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP = "opentherm_hot_water_manual_temperature"
+CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID = (
+    "opentherm_hot_water_sensor_entity_id"
+)
+CONF_OPENTHERM_HOT_WATER_PRESETS = "opentherm_hot_water_presets"
 CONF_EQUIPMENT_SENSORS = "equipment_sensors"
+OPENTHERM_HOT_WATER_SCHEDULE = "opentherm_hot_water_schedule"
+
+DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP = 45.0
+DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP = 55.0
+MAX_OPENTHERM_HOT_WATER_PRESETS = 10
+OPENTHERM_HOT_WATER_DEFAULT_BOOSTS = (15, 30, 45)
 
 # Custom Attributes
 ATTR_OPENTHERM_ENDPOINT = "endpoint"

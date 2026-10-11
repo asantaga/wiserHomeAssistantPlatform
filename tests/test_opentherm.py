@@ -697,7 +697,12 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
         transport = self.first.wiserhub.system.opentherm._wiser_rest_controller._do_hub_action
         self.assertEqual(transport.await_count, 2)
         self.assertEqual(self.first.async_refresh.await_count, 2)
-        self.hass.services.async_call.assert_not_awaited()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "persistent_notification",
+            "dismiss",
+            {"notification_id": "wiser_opentherm_hub_dhwFlowSetpoint"},
+            blocking=False,
+        )
         self.hass.bus.async_fire.assert_not_called()
 
     async def test_matching_feedback_is_not_retried(self):

@@ -27,6 +27,7 @@
       "not_wiser_hub": "The discovered device is not a Wiser Heat Hub."
     },
     "error": {
+      "invalid_hot_water_presets": "One or more hot-water presets are invalid.",
       "auth_failure": "Unable to authenticate with the Wiser hub. Check the secret key and try again.",
       "timeout_error": "Timed out trying to connect to the Wiser hub. Check the IP address and try again.",
       "timeout_error_discovery": "Timed out trying to connect to the Wiser hub. Check that your hub is still online and try again.",
@@ -41,7 +42,7 @@
         "menu_options": {
           "main_params": "Main Parameters",
           "automation_params": "Automation Parameters",
-          "opentherm_sensors": "OpenTherm sensors",
+          "opentherm": "OpenTherm",
           "equipment_sensors": "Equipment sensors",
           "ui_options": "UI options"
         }
@@ -106,6 +107,14 @@
           "equipment_sensors": "Expose an additional sensor containing detailed equipment attributes for each compatible smart plug, PowerTag, and heating actuator."
         }
       },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configure OpenTherm features.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Hot water control",
+          "opentherm_sensors": "Sensors"
+        }
+      },
       "opentherm_sensors": {
         "title": "OpenTherm sensors",
         "description": "Choose a category of detected OpenTherm attributes.",
@@ -114,6 +123,20 @@
           "opentherm_central_heating": "Central heating",
           "opentherm_hot_water": "Hot water",
           "opentherm_status": "Status and diagnostics"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm hot-water control",
+        "description": "Optionally control the boiler domestic-hot-water setpoint through Wiser. The integration creates an OpenTherm Hot Water schedule in the Wiser Schedules panel. Off uses the minimum hot-water temperature reported by OpenTherm.",
+        "data": {
+          "opentherm_hot_water_control": "Enable hot-water control",
+          "opentherm_hot_water_manual_temperature": "Manual temperature",
+          "opentherm_hot_water_sensor_entity_id": "Optional external temperature sensor.",
+          "opentherm_hot_water_presets": "Presets"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperature used by Manual mode.",
+          "opentherm_hot_water_sensor_entity_id": "Optional temperature sensor used for the current water temperature. OpenTherm is used when the sensor is unavailable."
         }
       },
       "opentherm_readings": {
@@ -241,6 +264,11 @@
       },
       "floor_temperature": {
         "name": "Floor temperature"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm hot water"
       }
     },
     "number": {

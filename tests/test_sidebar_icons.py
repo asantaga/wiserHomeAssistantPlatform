@@ -3,7 +3,7 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, call
 
 ROOT = Path(__file__).resolve().parents[1] / "custom_components/wiser/frontend"
 
@@ -36,6 +36,21 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
         )
         register.side_effect = lambda *args: host._async_register_path.assert_awaited_once()
         await namespace["async_register"](host)
-        version.assert_called_once_with(ROOT / "wiser-icons.js")
-        register.assert_called_once_with(host.hass, "/wiser/wiser-icons.js?v=sha256-icons")
+        self.assertEqual(
+            version.call_args_list,
+            [
+                call(ROOT / "wiser-icons.js"),
+                call(ROOT / "wiser-hot-water-control.js"),
+            ],
+        )
+        self.assertEqual(
+            register.call_args_list,
+            [
+                call(host.hass, "/wiser/wiser-icons.js?v=sha256-icons"),
+                call(
+                    host.hass,
+                    "/wiser/wiser-hot-water-control.js?v=sha256-icons",
+                ),
+            ],
+        )
         host._async_wait_for_lovelace_resources.assert_not_awaited()
