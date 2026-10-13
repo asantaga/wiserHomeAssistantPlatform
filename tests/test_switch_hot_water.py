@@ -213,23 +213,75 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
             events.append(("refresh", delay, switch.is_on))
 
         switch.async_force_update = refresh
-        return switch, plug, events
+        scheduled = []
+        switch._schedule_command_confirmation = scheduled.append
+        return switch, plug, events, scheduled
 
-    def test_turn_on_publishes_on_before_delayed_refresh(self) -> None:
-        switch, plug, events = self._switch(is_on=False)
+    def test_turn_on_publishes_on_before_background_confirmation(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
 
         asyncio.run(switch.async_turn_on())
 
         self.assertEqual(plug.commands, ["turn_on"])
-        self.assertEqual(events, [("write", True, "On"), ("refresh", 2, True)])
+        self.assertEqual(events, [("write", True, "On")])
+        self.assertEqual(scheduled, [1])
 
-    def test_turn_off_publishes_off_before_delayed_refresh(self) -> None:
-        switch, plug, events = self._switch(is_on=True)
+    def test_turn_off_publishes_off_before_background_confirmation(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=True)
 
         asyncio.run(switch.async_turn_off())
 
         self.assertEqual(plug.commands, ["turn_off"])
-        self.assertEqual(events, [("write", False, "Off"), ("refresh", 2, False)])
+        self.assertEqual(events, [("write", False, "Off")])
+        self.assertEqual(scheduled, [1])
+
+    def test_stale_first_refresh_retries_until_hub_confirms(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
+        asyncio.run(switch.async_turn_on())
+        refreshes = []
+
+        async def refresh(*_args, **_kwargs):
+            refreshes.append(True)
+            if len(refreshes) == 2:
+                plug.is_on = True
+            switch._handle_coordinator_update()
+
+        switch.async_force_update = refresh
+        asyncio.run(switch._async_confirm_command(1))
+
+        self.assertEqual(len(refreshes), 2)
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertTrue(switch.is_on)
+
+    def test_superseded_confirmation_does_not_clobber_newer_command(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=True)
+        switch._optimistic_gen = 2
+        switch._optimistic_is_on = False
+        switch._is_on = False
+
+        asyncio.run(switch._async_confirm_command(1))
+
+        self.assertIs(switch._optimistic_is_on, False)
+        self.assertFalse(switch.is_on)
+
+    def test_failed_command_restores_hub_state(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
+
+        async def fail():
+            raise RuntimeError("command failed")
+
+        plug.turn_on = fail
+
+        with self.assertRaisesRegex(RuntimeError, "command failed"):
+            asyncio.run(switch.async_turn_on())
+
+        self.assertEqual(scheduled, [])
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertFalse(switch.is_on)
+        self.assertEqual(
+            events,
+            [("write", True, "On"), ("write", False, "Off")],
+        )
 
 
 if __name__ == "__main__":

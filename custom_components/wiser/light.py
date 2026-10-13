@@ -87,6 +87,8 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             # visible in hub data.  Keep the optimistic state through one stale
             # read and try once more instead of reverting until the next scan.
             for _attempt in range(2):
+                if gen != self._optimistic_gen:
+                    return
                 await self.async_force_update(2)
                 if gen != self._optimistic_gen or (
                     self._optimistic_is_on is None
