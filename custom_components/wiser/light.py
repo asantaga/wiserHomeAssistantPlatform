@@ -80,6 +80,24 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             await asyncio.sleep(delay)
         await self._data.async_refresh()
 
+    async def _async_confirm_command(self, gen: int) -> None:
+        """Refresh the hub after it has had time to apply a light command."""
+        try:
+            await self.async_force_update(2)
+        finally:
+            # A newer command owns the optimistic state.  Its confirmation task
+            # will clear that state after the hub has processed the newer value.
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+
+    @callback
+    def _schedule_command_confirmation(self, gen: int) -> None:
+        """Confirm a command without delaying the Home Assistant service call."""
+        self.hass.async_create_task(
+            self._async_confirm_command(gen),
+            f"Wiser light command confirmation: {self.entity_id}",
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         _LOGGER.debug(f"{self.name} updating")
@@ -211,43 +229,51 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
-        if ATTR_BRIGHTNESS in kwargs:
-            percentage = round((int(kwargs[ATTR_BRIGHTNESS]) / 255) * 100)
-            _LOGGER.debug(f"Setting brightness of {self.name} to {percentage}%")
-            await self._device.set_current_percentage(percentage)
-            self._optimistic_percentage = percentage
-        else:
-            _LOGGER.debug(f"Turning on {self.name}")
-            await self._device.turn_on()
-        # Reflect the command in the UI immediately (the hub only reports the new
-        # state a few seconds later); the refresh below then confirms it.
         self._optimistic_gen += 1
         gen = self._optimistic_gen
         self._optimistic_is_on = True
+        percentage = None
+        if ATTR_BRIGHTNESS in kwargs:
+            percentage = round((int(kwargs[ATTR_BRIGHTNESS]) / 255) * 100)
+            self._optimistic_percentage = percentage
         self.async_write_ha_state()
+
         try:
-            await self.async_force_update(2)
-        finally:
-            # Only the latest command clears the optimistic state; a superseded
-            # command must leave the newer command's value untouched.
+            if percentage is not None:
+                _LOGGER.debug(f"Setting brightness of {self.name} to {percentage}%")
+                await self._device.set_current_percentage(percentage)
+            else:
+                _LOGGER.debug(f"Turning on {self.name}")
+                await self._device.turn_on()
+        except Exception:
             if gen == self._optimistic_gen:
                 self._clear_optimistic_state()
+            raise
+
+        # The hub applies its Zigbee command asynchronously.  Refresh after the
+        # existing two-second settling period, but do not hold open the HA
+        # service call while waiting for state confirmation.
+        self._schedule_command_confirmation(gen)
         return True
 
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        _LOGGER.debug(f"Turning off {self.name}")
-        await self._device.turn_off()
         self._optimistic_gen += 1
         gen = self._optimistic_gen
         self._optimistic_is_on = False
+        self._optimistic_percentage = None
         self.async_write_ha_state()
+
         try:
-            await self.async_force_update(2)
-        finally:
+            _LOGGER.debug(f"Turning off {self.name}")
+            await self._device.turn_off()
+        except Exception:
             if gen == self._optimistic_gen:
                 self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
         return True
 
     @callback

@@ -137,30 +137,51 @@ class LightOptimisticStateTest(unittest.TestCase):
     async def _noop_async(self, *_args, **_kwargs):
         return None
 
-    def test_single_command_clears_optimistic(self):
+    def test_single_command_returns_before_confirmation(self):
         light, device = self._light(is_on=False)
-        light.async_force_update = self._noop_async
+        scheduled = []
+        light._schedule_command_confirmation = scheduled.append
+
         asyncio.run(light.async_turn_on())
-        # The one and only command clears its own optimistic state on cleanup.
-        self.assertIsNone(light._optimistic_is_on)
-        self.assertTrue(light.is_on)  # falls through to the (now on) device
 
-    def test_superseded_command_does_not_clobber_newer(self):
+        self.assertIs(light._optimistic_is_on, True)
+        self.assertTrue(light.is_on)
+        self.assertEqual(scheduled, [1])
+
+    def test_superseded_confirmation_does_not_clobber_newer(self):
         light, device = self._light(is_on=False)
+        light._optimistic_gen = 2
+        light._optimistic_is_on = False
+        light.async_force_update = self._noop_async
 
-        # Command A is turn_on. While A awaits its follow-up refresh, a newer
-        # command B (turn_off) lands: it bumps the generation and sets its own
-        # optimistic value. A's cleanup must then leave B's value alone.
-        async def force_update_with_intervening_command(delay=0):
-            light._optimistic_gen += 1
-            light._optimistic_is_on = False  # command B = turn off
+        asyncio.run(light._async_confirm_command(1))
 
-        light.async_force_update = force_update_with_intervening_command
-        asyncio.run(light.async_turn_on())  # command A
-
-        # Without the generation guard, A's finally would wipe this back to None
-        # and the UI would revert to the stale device state.
         self.assertIs(light._optimistic_is_on, False)
+
+    def test_latest_confirmation_clears_optimistic_state(self):
+        light, device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+        light.async_force_update = self._noop_async
+
+        asyncio.run(light._async_confirm_command(1))
+
+        self.assertIsNone(light._optimistic_is_on)
+
+    def test_failed_command_restores_hub_state(self):
+        light, device = self._light(is_on=False)
+        light._schedule_command_confirmation = lambda _gen: None
+
+        async def fail():
+            raise RuntimeError("command failed")
+
+        device.turn_on = fail
+
+        with self.assertRaisesRegex(RuntimeError, "command failed"):
+            asyncio.run(light.async_turn_on())
+
+        self.assertIsNone(light._optimistic_is_on)
+        self.assertFalse(light.is_on)
 
     def test_coordinator_update_clears_optimistic_once_confirmed(self):
         light, device = self._light(is_on=False)
