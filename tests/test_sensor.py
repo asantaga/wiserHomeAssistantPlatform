@@ -115,6 +115,7 @@ def _load_sensor_module() -> ModuleType:
         get_hub_device_info=lambda _data: {"identifiers": {("wiser", "hub")}},
         get_hub_via_device_info=lambda _data: {},
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
+        get_light_binary_sensor_unique_id=lambda *_args: "light-binary-id",
         get_physical_entity_unique_id=lambda _data, domain, device_id, entity_type: (
             f"physical-{domain}-{device_id}-{entity_type}"
         ),
@@ -311,7 +312,13 @@ def _load_binary_sensor_module() -> ModuleType:
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    # The classes exercised here precede WiserStateActive, whose structural
+    # pattern matching requires a newer Python than the lightweight local test
+    # runtime. Home Assistant itself runs a supported newer Python version.
+    source = BINARY_SENSOR_SOURCE_PATH.read_text(encoding="utf-8").split(
+        "class WiserStateActive", 1
+    )[0]
+    exec(compile(source, BINARY_SENSOR_SOURCE_PATH, "exec"), module.__dict__)
     return module
 
 
@@ -1425,6 +1432,62 @@ class WiserOpenThermAttributeBinarySensorTest(unittest.TestCase):
         )
 
         self.assertEqual(sensor._attr_entity_category, "diagnostic")
+
+
+class WiserSmokeAlarmStatusSensorTest(unittest.TestCase):
+    """Tests for smoke-alarm status fields exposed by the API."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.binary_sensor_module = _load_binary_sensor_module()
+
+    def setUp(self):
+        self.device = SimpleNamespace(
+            ac_mains=True,
+            test_mode=False,
+            hush_mode=True,
+            product_type="SmokeAlarmDevice",
+            firmware_version="1.0",
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: self.device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+
+    def test_reads_ac_mains_state(self):
+        sensor = self.binary_sensor_module.WiserACMains(
+            self.data, 7, "AC Mains"
+        )
+        sensor.async_write_ha_state = Mock()
+
+        self.assertTrue(sensor.is_on)
+        self.assertEqual(sensor._attr_device_class, "power")
+
+        self.device.ac_mains = False
+        sensor._handle_coordinator_update()
+
+        self.assertFalse(sensor.is_on)
+        sensor.async_write_ha_state.assert_called_once_with()
+
+    def test_reads_test_mode_state(self):
+        sensor = self.binary_sensor_module.WiserTestMode(
+            self.data, 7, "Test Mode"
+        )
+
+        self.assertFalse(sensor.is_on)
+        self.assertEqual(sensor._attr_icon, "mdi:test-tube")
+
+    def test_reads_hush_mode_state(self):
+        sensor = self.binary_sensor_module.WiserHushMode(
+            self.data, 7, "Hush Mode"
+        )
+
+        self.assertTrue(sensor.is_on)
+        self.assertEqual(sensor._attr_icon, "mdi:volume-off")
 
 
 class WiserEquipmentBinarySensorTest(unittest.TestCase):
