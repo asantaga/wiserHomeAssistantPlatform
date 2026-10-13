@@ -205,8 +205,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # EV chargers use the hub's Equipment control states rather than the
     # SmartPlug RequestOutput command.
-    for evse in data.wiserhub.devices.evse.all:
-        wiser_switches.append(WiserEVSESwitch(data, evse.id))
+    evse_collection = getattr(data.wiserhub.devices, "evse", None)
+    if evse_collection:
+        for evse in evse_collection.all:
+            wiser_switches.append(WiserEVSESwitch(data, evse.id))
 
     # Add threshold sensor interacts with room climate switch
     for device in data.wiserhub.devices.all:

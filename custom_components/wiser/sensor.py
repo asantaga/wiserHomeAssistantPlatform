@@ -318,9 +318,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add EV charger electrical telemetry. EVSE devices are published by the
     # Gen 2 hub as Equipment records rather than as SmartPlug records.
-    if data.wiserhub.devices.evse:
+    evse_collection = getattr(data.wiserhub.devices, "evse", None)
+    if evse_collection:
         _LOGGER.debug("Setting up EV charger power sensors")
-        for evse in data.wiserhub.devices.evse.all:
+        for evse in evse_collection.all:
             if equipment_sensors_enabled:
                 wiser_sensors.append(WiserEquipmentSensor(data, evse.id))
             wiser_sensors.extend(
