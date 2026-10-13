@@ -172,6 +172,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserFaultWarning(data, device.id, "Fault Warning"),
                 WiserRemoteAlarm(data, device.id, "Remote Alarm"),
                 WiserBatteryDefect(data, device.id, "Battery Defect"),
+                WiserACMains(data, device.id, "AC Mains"),
+                WiserTestMode(data, device.id, "Test Mode"),
+                WiserHushMode(data, device.id, "Hush Mode"),
             ]
         )
 
@@ -534,6 +537,24 @@ class WiserBatteryDefect(BaseBinarySensor):
 
 class WiserRemoteAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
+
+
+class WiserACMains(BaseBinarySensor):
+    """Smoke alarm mains-power status sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.POWER
+
+
+class WiserTestMode(BaseBinarySensor):
+    """Smoke alarm test-mode status sensor."""
+
+    _attr_icon = "mdi:test-tube"
+
+
+class WiserHushMode(BaseBinarySensor):
+    """Smoke alarm hush-mode status sensor."""
+
+    _attr_icon = "mdi:volume-off"
 
 
 class WiserEquipment(BaseBinarySensor):
