@@ -510,6 +510,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._is_on = self._device.is_on
         self._optimistic_is_on = None
         self._optimistic_gen = 0
+        self._confirmation_task = None
 
     async def _async_confirm_command(self, gen: int) -> None:
         """Refresh until the hub reports the accepted smart-plug command."""
@@ -527,10 +528,20 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @callback
     def _schedule_command_confirmation(self, gen: int) -> None:
         """Confirm a command without delaying the Home Assistant service call."""
-        self.hass.async_create_task(
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+        self._confirmation_task = self.hass.async_create_task(
             self._async_confirm_command(gen),
             f"Wiser smart plug command confirmation: {self.entity_id}",
         )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel delayed confirmation when Home Assistant removes the entity."""
+        self._optimistic_gen += 1
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+            self._confirmation_task = None
+        await super().async_will_remove_from_hass()
 
     @callback
     def _clear_optimistic_state(self) -> None:

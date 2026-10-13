@@ -72,6 +72,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         # optimistic state if it is still the latest, so rapid toggles don't let
         # an earlier command wipe a newer command's value.
         self._optimistic_gen = 0
+        self._confirmation_task = None
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
     async def async_force_update(self, delay: int = 0):
@@ -106,10 +107,24 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @callback
     def _schedule_command_confirmation(self, gen: int) -> None:
         """Confirm a command without delaying the Home Assistant service call."""
-        self.hass.async_create_task(
+        # A newer command makes the previous confirmation obsolete. Cancelling
+        # it also avoids an unnecessary full hub refresh after a rapid toggle.
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+        self._confirmation_task = self.hass.async_create_task(
             self._async_confirm_command(gen),
             f"Wiser light command confirmation: {self.entity_id}",
         )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel delayed confirmation when Home Assistant removes the entity."""
+        # Invalidate the task before cancellation so its finally block cannot
+        # write state for an entity that is being unloaded.
+        self._optimistic_gen += 1
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+            self._confirmation_task = None
+        await super().async_will_remove_from_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:

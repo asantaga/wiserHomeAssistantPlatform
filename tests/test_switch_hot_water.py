@@ -46,6 +46,9 @@ def _load_switch_module() -> ModuleType:
         def __init__(self, *args: object) -> None:
             pass
 
+        async def async_will_remove_from_hass(self) -> None:
+            self.removed = True
+
     _module(
         "homeassistant.helpers.update_coordinator", CoordinatorEntity=CoordinatorEntity
     )
@@ -282,6 +285,57 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
             events,
             [("write", True, "On"), ("write", False, "Off")],
         )
+
+    def test_new_confirmation_cancels_superseded_task(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+        tasks = []
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        def create_task(coro, _name):
+            coro.close()
+            task = FakeTask()
+            tasks.append(task)
+            return task
+
+        switch.hass = SimpleNamespace(async_create_task=create_task)
+        switch.entity_id = "switch.test"
+
+        # Restore the real method replaced by the helper's command spy.
+        switch._schedule_command_confirmation = (
+            self.switch_module.WiserSmartPlugSwitch._schedule_command_confirmation.__get__(
+                switch
+            )
+        )
+        switch._schedule_command_confirmation(1)
+        switch._schedule_command_confirmation(2)
+
+        self.assertTrue(tasks[0].cancelled)
+        self.assertFalse(tasks[1].cancelled)
+
+    def test_removal_invalidates_and_cancels_confirmation(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        task = FakeTask()
+        switch._confirmation_task = task
+        previous_gen = switch._optimistic_gen
+
+        asyncio.run(switch.async_will_remove_from_hass())
+
+        self.assertTrue(task.cancelled)
+        self.assertEqual(switch._optimistic_gen, previous_gen + 1)
+        self.assertIsNone(switch._confirmation_task)
+        self.assertTrue(switch.removed)
 
 
 if __name__ == "__main__":

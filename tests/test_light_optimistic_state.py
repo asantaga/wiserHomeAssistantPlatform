@@ -49,6 +49,9 @@ def _load_light_module() -> ModuleType:
         def __init__(self, *args: object) -> None:
             pass
 
+        async def async_will_remove_from_hass(self) -> None:
+            self.removed = True
+
     _module(
         "homeassistant.helpers.update_coordinator", CoordinatorEntity=CoordinatorEntity
     )
@@ -236,6 +239,51 @@ class LightOptimisticStateTest(unittest.TestCase):
         device.current_percentage = 60
         light._handle_coordinator_update()
         self.assertIsNone(light._optimistic_percentage)
+
+    def test_new_confirmation_cancels_superseded_task(self):
+        light, _device = self._light(is_on=False)
+        tasks = []
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        def create_task(coro, _name):
+            coro.close()
+            task = FakeTask()
+            tasks.append(task)
+            return task
+
+        light.hass = SimpleNamespace(async_create_task=create_task)
+        light.entity_id = "light.test"
+
+        light._schedule_command_confirmation(1)
+        light._schedule_command_confirmation(2)
+
+        self.assertTrue(tasks[0].cancelled)
+        self.assertFalse(tasks[1].cancelled)
+
+    def test_removal_invalidates_and_cancels_confirmation(self):
+        light, _device = self._light(is_on=False)
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        task = FakeTask()
+        light._confirmation_task = task
+        previous_gen = light._optimistic_gen
+
+        asyncio.run(light.async_will_remove_from_hass())
+
+        self.assertTrue(task.cancelled)
+        self.assertEqual(light._optimistic_gen, previous_gen + 1)
+        self.assertIsNone(light._confirmation_task)
+        self.assertTrue(light.removed)
 
 
 if __name__ == "__main__":
