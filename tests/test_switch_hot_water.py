@@ -165,6 +165,38 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
         self.assertEqual(self._override_calls, ["Off"])
 
 
+class WiserPassiveModeRoomSupportTest(unittest.TestCase):
+    """Tests for deciding which rooms receive a passive-mode switch."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def test_supports_smart_valve_room(self) -> None:
+        room = SimpleNamespace(
+            number_of_smartvalves=1,
+            underfloor_heating_id=None,
+        )
+
+        self.assertTrue(self.switch_module._room_supports_passive_mode(room))
+
+    def test_supports_ufh_only_room(self) -> None:
+        room = SimpleNamespace(
+            number_of_smartvalves=0,
+            underfloor_heating_id=4,
+        )
+
+        self.assertTrue(self.switch_module._room_supports_passive_mode(room))
+
+    def test_ignores_room_without_heating_device(self) -> None:
+        room = SimpleNamespace(
+            number_of_smartvalves=0,
+            underfloor_heating_id=None,
+        )
+
+        self.assertFalse(self.switch_module._room_supports_passive_mode(room))
+
+
 class _FakeSmartPlug:
     def __init__(self, *, is_on: bool) -> None:
         self.is_on = is_on
