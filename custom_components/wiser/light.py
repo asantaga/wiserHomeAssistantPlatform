@@ -83,10 +83,21 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     async def _async_confirm_command(self, gen: int) -> None:
         """Refresh the hub after it has had time to apply a light command."""
         try:
-            await self.async_force_update(2)
+            # Some hubs acknowledge the REST command before its Zigbee result is
+            # visible in hub data.  Keep the optimistic state through one stale
+            # read and try once more instead of reverting until the next scan.
+            for _attempt in range(2):
+                await self.async_force_update(2)
+                if gen != self._optimistic_gen or (
+                    self._optimistic_is_on is None
+                    and self._optimistic_percentage is None
+                ):
+                    return
         finally:
             # A newer command owns the optimistic state.  Its confirmation task
             # will clear that state after the hub has processed the newer value.
+            # If both confirmation reads remained stale, return to the real hub
+            # state rather than leaving an optimistic value indefinitely.
             if gen == self._optimistic_gen:
                 self._clear_optimistic_state()
 
@@ -114,6 +125,11 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             and self._device.is_on == self._optimistic_is_on
         ):
             self._optimistic_is_on = None
+        if (
+            self._optimistic_percentage is not None
+            and self._device.current_percentage == self._optimistic_percentage
+        ):
+            self._optimistic_percentage = None
         self.async_write_ha_state()
 
     @property

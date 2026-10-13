@@ -162,11 +162,37 @@ class LightOptimisticStateTest(unittest.TestCase):
         light, device = self._light(is_on=False)
         light._optimistic_gen = 1
         light._optimistic_is_on = True
-        light.async_force_update = self._noop_async
+        refreshes = []
+
+        async def stale_refresh(*_args, **_kwargs):
+            refreshes.append(True)
+
+        light.async_force_update = stale_refresh
 
         asyncio.run(light._async_confirm_command(1))
 
+        self.assertEqual(len(refreshes), 2)
         self.assertIsNone(light._optimistic_is_on)
+
+    def test_stale_first_refresh_retries_until_hub_confirms(self):
+        light, device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+        refreshes = []
+
+        async def refresh(*_args, **_kwargs):
+            refreshes.append(True)
+            if len(refreshes) == 2:
+                device.is_on = True
+            light._handle_coordinator_update()
+
+        light.async_force_update = refresh
+
+        asyncio.run(light._async_confirm_command(1))
+
+        self.assertEqual(len(refreshes), 2)
+        self.assertIsNone(light._optimistic_is_on)
+        self.assertTrue(light.is_on)
 
     def test_failed_command_restores_hub_state(self):
         light, device = self._light(is_on=False)
@@ -198,6 +224,18 @@ class LightOptimisticStateTest(unittest.TestCase):
         light._handle_coordinator_update()
         self.assertIsNone(light._optimistic_is_on)
         self.assertTrue(light.is_on)
+
+    def test_brightness_optimistic_state_waits_for_matching_hub_value(self):
+        light, device = self._light(is_on=True)
+        light._optimistic_percentage = 60
+
+        device.current_percentage = 20
+        light._handle_coordinator_update()
+        self.assertEqual(light._optimistic_percentage, 60)
+
+        device.current_percentage = 60
+        light._handle_coordinator_update()
+        self.assertIsNone(light._optimistic_percentage)
 
 
 if __name__ == "__main__":
