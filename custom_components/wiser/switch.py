@@ -16,7 +16,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, ENTITY_PREFIX, HOT_WATER, MANUFACTURER
+from .const import (
+    DATA,
+    DOMAIN,
+    ENTITY_PREFIX,
+    HOT_WATER,
+    MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
+)
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
@@ -195,6 +202,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserSmartPlugAwayActionSwitch(data, ptc.id, f"Wiser {ptc.name}"),
             ]
         )
+
+    # EV chargers use the hub's Equipment control states rather than the
+    # SmartPlug RequestOutput command.
+    for evse in data.wiserhub.devices.evse.all:
+        wiser_switches.append(WiserEVSESwitch(data, evse.id))
 
     # Add threshold sensor interacts with room climate switch
     for device in data.wiserhub.devices.all:
@@ -583,6 +595,63 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._is_on = False
         self.async_write_ha_state()
         await self.async_force_update(2)
+        return True
+
+
+class WiserEVSESwitch(WiserSwitch):
+    """Switch that allows or force-disables EV charging."""
+
+    def __init__(self, data, device_id) -> None:
+        self._device_id = device_id
+        super().__init__(data, "EV Charger", "", "evse", "mdi:ev-station")
+        self._attr_translation_key = "ev_charger"
+        self._device = self._data.wiserhub.devices.evse.get_by_id(device_id)
+        self._is_on = self._device.is_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh state from the latest equipment record."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.evse.get_by_id(self._device_id)
+        self._is_on = self._device.is_on
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a stable physical-device entity ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, "ev_charger"
+        )
+
+    @property
+    def device_info(self):
+        """Return EV charger device registry information."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._device.model,
+            "sw_version": self._device.firmware_version,
+            **get_hub_via_device_info(self._data),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the hub's current EVSE control state."""
+        return {"control_state": self._device.control_state}
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Return charging control to the Wiser system."""
+        await self._device.turn_on()
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Force charging consumption off."""
+        await self._device.turn_off()
+        await self.async_force_update()
         return True
 
 

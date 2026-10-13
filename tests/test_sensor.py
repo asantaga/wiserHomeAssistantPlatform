@@ -740,8 +740,8 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             'config_entry.options.get(\n        CONF_EQUIPMENT_SENSORS, False',
             setup_source,
         )
-        self.assertEqual(setup_source.count("WiserEquipmentSensor("), 4)
-        self.assertEqual(setup_source.count("if equipment_sensors_enabled"), 4)
+        self.assertEqual(setup_source.count("WiserEquipmentSensor("), 5)
+        self.assertEqual(setup_source.count("if equipment_sensors_enabled"), 5)
         self.assertNotIn("equipment_id > 0", setup_source)
         self.assertIn("power_tags_c", setup_source)
         self.assertNotIn('legacy_name="Equipment Energy Delivered"', setup_source)

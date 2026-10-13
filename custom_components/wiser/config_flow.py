@@ -290,6 +290,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 "power_tags",
                 "power_tags_c",
                 "heating_actuators",
+                "evse",
             )
             for device in all_devices(collection_name)
         )

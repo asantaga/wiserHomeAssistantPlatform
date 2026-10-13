@@ -59,6 +59,7 @@ def _load_switch_module() -> ModuleType:
         ENTITY_PREFIX="Wiser",
         HOT_WATER="hot_water",
         MANUFACTURER="Drayton",
+        MANUFACTURER_SCHNEIDER="Schneider Electric",
     )
 
     def hub_error_handler(func):
@@ -230,6 +231,65 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
 
         self.assertEqual(plug.commands, ["turn_off"])
         self.assertEqual(events, [("write", False, "Off"), ("refresh", 2, False)])
+
+
+class _FakeEVSE:
+    def __init__(self, *, is_on: bool) -> None:
+        self.is_on = is_on
+        self.control_state = "selfManagement" if is_on else "consumptionForceOff"
+        self.model = "EVSCKT/OUTLET/1"
+        self.firmware_version = "2.10.0"
+        self.commands = []
+
+    async def turn_on(self) -> None:
+        self.commands.append("turn_on")
+
+    async def turn_off(self) -> None:
+        self.commands.append("turn_off")
+
+
+class WiserEVSESwitchTest(unittest.TestCase):
+    """Tests for EV charger switch commands and registry identity."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def _switch(self, *, is_on: bool):
+        device = _FakeEVSE(is_on=is_on)
+        evse = SimpleNamespace(get_by_id=lambda _id: device)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat045XXX"),
+                devices=SimpleNamespace(evse=evse),
+            )
+        )
+        switch = self.switch_module.WiserEVSESwitch(data, 12)
+        switch.async_force_update = self._noop_async
+        return switch, device
+
+    async def _noop_async(self, *_args, **_kwargs) -> None:
+        return None
+
+    def test_turn_on_returns_control_to_wiser(self) -> None:
+        switch, device = self._switch(is_on=False)
+
+        asyncio.run(switch.async_turn_on())
+
+        self.assertEqual(device.commands, ["turn_on"])
+
+    def test_turn_off_force_disables_charging(self) -> None:
+        switch, device = self._switch(is_on=True)
+
+        asyncio.run(switch.async_turn_off())
+
+        self.assertEqual(device.commands, ["turn_off"])
+
+    def test_uses_physical_device_identity(self) -> None:
+        switch, _device = self._switch(is_on=True)
+
+        self.assertEqual(switch.unique_id, "physical-entity-id")
+        self.assertEqual(switch.device_info["model"], "EVSCKT/OUTLET/1")
 
 
 if __name__ == "__main__":
