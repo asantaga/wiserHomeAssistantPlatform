@@ -199,32 +199,50 @@ def get_light_entity_name(data, light, entity_name):
         )
 
     devices = data.wiserhub.devices
+    # aioWiserHeatAPI composes light.name from the physical device Name and
+    # the per-channel Name.  The released API does not expose the former as a
+    # public property, so read its source value directly when available.  A
+    # future API can expose device_name without changing this integration.
+    source_data = getattr(light, "_data", {})
+    device_name = str(
+        getattr(light, "device_name", "")
+        or (
+            source_data.get("Name", "")
+            if isinstance(source_data, dict)
+            else ""
+        )
+    ).strip()
+    physical_device = None
+
     # Combined dual-relay/dimmer units expose a ButtonPanel and multiple Light
     # views with the same physical ID.  The generic lookup may return one of
     # the light channels, whose name cannot be used to remove the shared device
     # prefix from another channel.  Some two-gang channels also use synthetic
     # IDs, so prefer the physical ButtonPanel view by its shared Zigbee node.
     light_node_id = getattr(light, "node_id", None)
-    physical_device = next(
-        (
-            device
-            for device in getattr(devices, "all", ())
-            if hasattr(device, "number_of_gangs")
-            and hasattr(device, "events")
-            and (
-                getattr(device, "id", None) == light.id
-                or (
-                    light_node_id not in (None, 0)
-                    and getattr(device, "node_id", None) == light_node_id
+    if not device_name:
+        physical_device = next(
+            (
+                device
+                for device in getattr(devices, "all", ())
+                if hasattr(device, "number_of_gangs")
+                and hasattr(device, "events")
+                and (
+                    getattr(device, "id", None) == light.id
+                    or (
+                        light_node_id not in (None, 0)
+                        and getattr(device, "node_id", None) == light_node_id
+                    )
                 )
-            )
-        ),
-        None,
-    )
-    if physical_device is None:
-        physical_device = devices.get_by_id(light.id)
-    device_name = str(getattr(physical_device, "name", "")).strip()
-    product_type = str(getattr(physical_device, "product_type", "")).strip()
+            ),
+            None,
+        )
+        if physical_device is None:
+            physical_device = devices.get_by_id(light.id)
+        device_name = str(getattr(physical_device, "name", "")).strip()
+    product_type = str(
+        getattr(physical_device or light, "product_type", "")
+    ).strip()
 
     # Some hub models include Wiser and/or the product type in the physical
     # device name, while their channel names omit those prefixes.  Compare all

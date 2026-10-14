@@ -234,7 +234,7 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Bordlampe Is Dimmable",
         )
 
-    def test_dual_relay_uses_button_panel_name_for_synthetic_channel_ids(
+    def test_dual_relay_uses_embedded_name_for_synthetic_channel_ids(
         self,
     ) -> None:
         light = _light(
@@ -243,18 +243,19 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             product_type="DimmableLight",
             name="Dobbeltrelæ Bordlampe",
         )
+        light._data = {"Name": "Dobbeltrelæ"}
         light.node_id = 42
         other_light = SimpleNamespace(
             id=300002,
             product_type="DimmableLight",
             name="Dobbeltrelæ Loftlampe",
-            node_id=42,
+            node_id=84,
         )
         button_panel = SimpleNamespace(
             id=300,
             product_type="DimmableLight",
             name="Dobbeltrelæ",
-            node_id=42,
+            node_id=21,
             number_of_gangs=2,
             events=[],
         )
