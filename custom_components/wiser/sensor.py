@@ -150,7 +150,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
             if hasattr(device, "battery"):
                 wiser_sensors.append(
-                    WiserBatterySensor(data, device.id, sensor_type="Battery")
+                    WiserBatterySensor(
+                        data,
+                        device.id,
+                        sensor_type="Battery",
+                        device=device,
+                    )
                 )
 
             # Add threshold temp sensors
@@ -536,17 +541,41 @@ class WiserSensor(WiserEntityMixin, CoordinatorEntity, SensorEntity):
 class WiserBatterySensor(WiserSensor):
     """Definition of a battery sensor for wiser iTRVs and RoomStats."""
 
-    def __init__(self, data, device_id=0, sensor_type="") -> None:
+    def __init__(
+        self,
+        data,
+        device_id=0,
+        sensor_type="",
+        device=None,
+    ) -> None:
         """Initialise the battery sensor."""
         super().__init__(data, device_id, sensor_type)
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device_product_type = getattr(device, "product_type", None)
+        self._device = device or self._get_battery_device()
         self._state = self._get_battery_state()
+
+    def _get_battery_device(self):
+        """Return the battery-capable API object for this physical device.
+
+        Some Schneider devices are represented by both ButtonPanel and Light
+        objects with the same device ID. A global ID lookup can therefore
+        return the light object, which has no battery property.
+        """
+        for device in self._data.wiserhub.devices.all:
+            if device.id != self._device_id or not hasattr(device, "battery"):
+                continue
+            if (
+                self._device_product_type is None
+                or device.product_type == self._device_product_type
+            ):
+                return device
+        return None
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device = self._get_battery_device()
         self._state = self._get_battery_state()
         self.async_write_ha_state()
 

@@ -1064,6 +1064,24 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         self.assertEqual(sensor._get_battery_state(), 0)
         self.assertFalse(sensor.available)
 
+    def test_battery_lookup_uses_matching_device_type_when_ids_collide(self) -> None:
+        light = SimpleNamespace(id=7, product_type="Light")
+        button_panel = SimpleNamespace(
+            id=7,
+            product_type="ButtonPanel",
+            battery=SimpleNamespace(level="Normal", voltage=None, percent=100),
+        )
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device_id = 7
+        sensor._device_product_type = "ButtonPanel"
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(all=[light, button_panel])
+            )
+        )
+
+        self.assertIs(sensor._get_battery_device(), button_panel)
+
 
 class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
     """Tests for the UFH controller measured-temperature sensor."""
