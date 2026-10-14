@@ -200,13 +200,37 @@ def get_light_entity_name(data, light, entity_name):
 
     physical_device = data.wiserhub.devices.get_by_id(light.id)
     device_name = str(getattr(physical_device, "name", "")).strip()
+    product_type = str(getattr(physical_device, "product_type", "")).strip()
+
+    # Some hub models include Wiser and/or the product type in the physical
+    # device name, while their channel names omit those prefixes.  Compare all
+    # equivalent device-name forms so only the physical-device portion is
+    # removed from the channel name.
+    device_names = {device_name}
+    metadata_prefixes = tuple(
+        prefix for prefix in (ENTITY_PREFIX, product_type) if prefix
+    )
+    pending_names = [device_name]
+    while pending_names:
+        candidate = pending_names.pop()
+        for prefix in metadata_prefixes:
+            marker = f"{prefix} "
+            if candidate.casefold().startswith(marker.casefold()):
+                stripped = candidate[len(marker) :].strip()
+                if stripped and stripped not in device_names:
+                    device_names.add(stripped)
+                    pending_names.append(stripped)
 
     channel_name = light_name
-    if device_name:
-        if light_name.casefold() == device_name.casefold():
+    for candidate in sorted(device_names, key=len, reverse=True):
+        if candidate and light_name.casefold() == candidate.casefold():
             channel_name = ""
-        elif light_name.casefold().startswith(f"{device_name} ".casefold()):
-            channel_name = light_name[len(device_name) :].strip()
+            break
+        if candidate and light_name.casefold().startswith(
+            f"{candidate} ".casefold()
+        ):
+            channel_name = light_name[len(candidate) :].strip()
+            break
 
     return " ".join(part for part in (channel_name, entity_name) if part)
 

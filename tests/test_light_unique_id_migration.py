@@ -208,6 +208,32 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Lightsource1 Away Mode Turns Off",
         )
 
+    def test_prefixed_device_name_is_removed_from_channel_name(self) -> None:
+        light = _light(
+            device_id=300,
+            light_id=5,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Bordlampe",
+        )
+        physical_device = SimpleNamespace(
+            id=300,
+            product_type="DimmableLight",
+            name="Wiser Dobbeltrelæ",
+        )
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    get_by_id=lambda _device_id: physical_device
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Bordlampe Is Dimmable",
+        )
+
     def test_legacy_naming_retains_full_light_name(self) -> None:
         data = _hub_data()
         data.legacy_naming = True
