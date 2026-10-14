@@ -234,22 +234,27 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Bordlampe Is Dimmable",
         )
 
-    def test_dual_relay_uses_button_panel_name_when_device_ids_collide(self) -> None:
+    def test_dual_relay_uses_button_panel_name_for_synthetic_channel_ids(
+        self,
+    ) -> None:
         light = _light(
-            device_id=300,
+            device_id=300001,
             light_id=5,
             product_type="DimmableLight",
             name="Dobbeltrelæ Bordlampe",
         )
+        light.node_id = 42
         other_light = SimpleNamespace(
-            id=300,
+            id=300002,
             product_type="DimmableLight",
             name="Dobbeltrelæ Loftlampe",
+            node_id=42,
         )
         button_panel = SimpleNamespace(
             id=300,
             product_type="DimmableLight",
             name="Dobbeltrelæ",
+            node_id=42,
             number_of_gangs=2,
             events=[],
         )

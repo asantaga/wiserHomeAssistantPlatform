@@ -202,14 +202,22 @@ def get_light_entity_name(data, light, entity_name):
     # Combined dual-relay/dimmer units expose a ButtonPanel and multiple Light
     # views with the same physical ID.  The generic lookup may return one of
     # the light channels, whose name cannot be used to remove the shared device
-    # prefix from another channel.  Prefer the physical ButtonPanel view.
+    # prefix from another channel.  Some two-gang channels also use synthetic
+    # IDs, so prefer the physical ButtonPanel view by its shared Zigbee node.
+    light_node_id = getattr(light, "node_id", None)
     physical_device = next(
         (
             device
             for device in getattr(devices, "all", ())
-            if getattr(device, "id", None) == light.id
-            and hasattr(device, "number_of_gangs")
+            if hasattr(device, "number_of_gangs")
             and hasattr(device, "events")
+            and (
+                getattr(device, "id", None) == light.id
+                or (
+                    light_node_id not in (None, 0)
+                    and getattr(device, "node_id", None) == light_node_id
+                )
+            )
         ),
         None,
     )
