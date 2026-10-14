@@ -73,6 +73,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         # optimistic state if it is still the latest, so rapid toggles don't let
         # an earlier command wipe a newer command's value.
         self._optimistic_gen = 0
+        self._confirmation_task = None
         _LOGGER.debug(f"{self._data.wiserhub.system.name} {self.name} initialise")
 
     async def async_force_update(self, delay: int = 0):
@@ -80,6 +81,51 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         if delay:
             await asyncio.sleep(delay)
         await self._data.async_refresh()
+
+    async def _async_confirm_command(self, gen: int) -> None:
+        """Refresh the hub after it has had time to apply a light command."""
+        try:
+            # Some hubs acknowledge the REST command before its Zigbee result is
+            # visible in hub data.  Keep the optimistic state through one stale
+            # read and try once more instead of reverting until the next scan.
+            for _attempt in range(2):
+                if gen != self._optimistic_gen:
+                    return
+                await self.async_force_update(2)
+                if gen != self._optimistic_gen or (
+                    self._optimistic_is_on is None
+                    and self._optimistic_percentage is None
+                ):
+                    return
+        finally:
+            # A newer command owns the optimistic state.  Its confirmation task
+            # will clear that state after the hub has processed the newer value.
+            # If both confirmation reads remained stale, return to the real hub
+            # state rather than leaving an optimistic value indefinitely.
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+
+    @callback
+    def _schedule_command_confirmation(self, gen: int) -> None:
+        """Confirm a command without delaying the Home Assistant service call."""
+        # A newer command makes the previous confirmation obsolete. Cancelling
+        # it also avoids an unnecessary full hub refresh after a rapid toggle.
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+        self._confirmation_task = self.hass.async_create_task(
+            self._async_confirm_command(gen),
+            f"Wiser light command confirmation: {self.entity_id}",
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel delayed confirmation when Home Assistant removes the entity."""
+        # Invalidate the task before cancellation so its finally block cannot
+        # write state for an entity that is being unloaded.
+        self._optimistic_gen += 1
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+            self._confirmation_task = None
+        await super().async_will_remove_from_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -97,6 +143,11 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             and self._device.is_on == self._optimistic_is_on
         ):
             self._optimistic_is_on = None
+        if (
+            self._optimistic_percentage is not None
+            and self._device.current_percentage == self._optimistic_percentage
+        ):
+            self._optimistic_percentage = None
         self.async_write_ha_state()
 
     @property
@@ -209,43 +260,51 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
-        if ATTR_BRIGHTNESS in kwargs:
-            percentage = round((int(kwargs[ATTR_BRIGHTNESS]) / 255) * 100)
-            _LOGGER.debug(f"Setting brightness of {self.name} to {percentage}%")
-            await self._device.set_current_percentage(percentage)
-            self._optimistic_percentage = percentage
-        else:
-            _LOGGER.debug(f"Turning on {self.name}")
-            await self._device.turn_on()
-        # Reflect the command in the UI immediately (the hub only reports the new
-        # state a few seconds later); the refresh below then confirms it.
         self._optimistic_gen += 1
         gen = self._optimistic_gen
         self._optimistic_is_on = True
+        percentage = None
+        if ATTR_BRIGHTNESS in kwargs:
+            percentage = round((int(kwargs[ATTR_BRIGHTNESS]) / 255) * 100)
+            self._optimistic_percentage = percentage
         self.async_write_ha_state()
+
         try:
-            await self.async_force_update(2)
-        finally:
-            # Only the latest command clears the optimistic state; a superseded
-            # command must leave the newer command's value untouched.
+            if percentage is not None:
+                _LOGGER.debug(f"Setting brightness of {self.name} to {percentage}%")
+                await self._device.set_current_percentage(percentage)
+            else:
+                _LOGGER.debug(f"Turning on {self.name}")
+                await self._device.turn_on()
+        except Exception:
             if gen == self._optimistic_gen:
                 self._clear_optimistic_state()
+            raise
+
+        # The hub applies its Zigbee command asynchronously.  Refresh after the
+        # existing two-second settling period, but do not hold open the HA
+        # service call while waiting for state confirmation.
+        self._schedule_command_confirmation(gen)
         return True
 
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        _LOGGER.debug(f"Turning off {self.name}")
-        await self._device.turn_off()
         self._optimistic_gen += 1
         gen = self._optimistic_gen
         self._optimistic_is_on = False
+        self._optimistic_percentage = None
         self.async_write_ha_state()
+
         try:
-            await self.async_force_update(2)
-        finally:
+            _LOGGER.debug(f"Turning off {self.name}")
+            await self._device.turn_off()
+        except Exception:
             if gen == self._optimistic_gen:
                 self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
         return True
 
     @callback

@@ -89,7 +89,7 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._attr_translation_key}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback

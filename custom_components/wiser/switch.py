@@ -509,6 +509,47 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
+        self._optimistic_is_on = None
+        self._optimistic_gen = 0
+        self._confirmation_task = None
+
+    async def _async_confirm_command(self, gen: int) -> None:
+        """Refresh until the hub reports the accepted smart-plug command."""
+        try:
+            for _attempt in range(2):
+                if gen != self._optimistic_gen:
+                    return
+                await self.async_force_update(2)
+                if gen != self._optimistic_gen or self._optimistic_is_on is None:
+                    return
+        finally:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+
+    @callback
+    def _schedule_command_confirmation(self, gen: int) -> None:
+        """Confirm a command without delaying the Home Assistant service call."""
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+        self._confirmation_task = self.hass.async_create_task(
+            self._async_confirm_command(gen),
+            f"Wiser smart plug command confirmation: {self.entity_id}",
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel delayed confirmation when Home Assistant removes the entity."""
+        self._optimistic_gen += 1
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+            self._confirmation_task = None
+        await super().async_will_remove_from_hass()
+
+    @callback
+    def _clear_optimistic_state(self) -> None:
+        """Return the entity to the latest state reported by the hub."""
+        self._optimistic_is_on = None
+        self._is_on = self._device.is_on
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -516,7 +557,12 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-        self._is_on = self._device.is_on
+        if (
+            self._optimistic_is_on is None
+            or self._device.is_on == self._optimistic_is_on
+        ):
+            self._is_on = self._device.is_on
+            self._optimistic_is_on = None
         self.async_write_ha_state()
 
     @property
@@ -568,22 +614,39 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self._device.turn_on()
-        # Publish the accepted command immediately. The hub takes a few seconds
-        # to report the new value, so waiting for the refresh leaves every HA
-        # dashboard card showing the previous state in the meantime.
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = True
         self._is_on = True
         self.async_write_ha_state()
-        await self.async_force_update(2)
+
+        try:
+            await self._device.turn_on()
+        except Exception:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
         return True
 
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self._device.turn_off()
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = False
         self._is_on = False
         self.async_write_ha_state()
-        await self.async_force_update(2)
+
+        try:
+            await self._device.turn_off()
+        except Exception:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
         return True
 
 

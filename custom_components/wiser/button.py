@@ -84,7 +84,7 @@ class WiserButton(WiserEntityMixin, CoordinatorEntity, ButtonEntity):
         """Force an update from the hub."""
         _LOGGER.debug("Hub update initiated by %s", self._name)
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         state = await self.async_get_last_state()
         if state is not None and state.state is not None:
             self.__last_pressed = (  # pylint: disable=unused-private-member
