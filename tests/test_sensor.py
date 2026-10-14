@@ -1026,10 +1026,20 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.sensor_module = _load_sensor_module()
 
-    def _sensor(self, *, level: str, voltage: float | None):
+    def _sensor(
+        self,
+        *,
+        level: str | None,
+        voltage: float | None,
+        percent: int | None = None,
+    ):
         sensor = object.__new__(self.sensor_module.WiserBatterySensor)
         sensor._device = SimpleNamespace(
-            battery=SimpleNamespace(level=level, voltage=voltage)
+            battery=SimpleNamespace(
+                level=level,
+                voltage=voltage,
+                percent=percent,
+            )
         )
         return sensor
 
@@ -1047,6 +1057,12 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         sensor = self._sensor(level="Normal", voltage=None)
 
         self.assertTrue(sensor.available)
+
+    def test_missing_level_does_not_break_sensor_setup(self) -> None:
+        sensor = self._sensor(level=None, voltage=None)
+
+        self.assertEqual(sensor._get_battery_state(), 0)
+        self.assertFalse(sensor.available)
 
 
 class WiserUFHMeasuredTemperatureTest(unittest.TestCase):

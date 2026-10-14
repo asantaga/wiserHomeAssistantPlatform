@@ -552,19 +552,20 @@ class WiserBatterySensor(WiserSensor):
 
     def _get_battery_state(self) -> int | str:
         # TODO: Move this into api
-        if self._device.battery.percent:
-            return self._device.battery.percent
-        if self._device.battery.voltage is None:
+        battery = self._device.battery
+        if battery.percent is not None:
+            return battery.percent
+        if battery.voltage is None:
             # This device does not provide battery voltage.  Calc % from level text
             levels = {"normal": 100, "twothirds": 66, "onethird": 33, "low": 10}
-            return levels.get(self._device.battery.level.lower(), 0)
+            return levels.get(str(battery.level or TEXT_UNKNOWN).lower(), 0)
         return 0
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
         battery = self._device.battery
-        return battery.level != TEXT_UNKNOWN or battery.voltage is not None
+        return battery.level not in (None, TEXT_UNKNOWN) or battery.voltage is not None
 
     @property
     def device_class(self):
