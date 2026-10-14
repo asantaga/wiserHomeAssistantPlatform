@@ -112,6 +112,17 @@ WISER_SWITCHES = [
 ]
 
 
+def _room_supports_passive_mode(room) -> bool:
+    """Return whether a room has a heating device passive mode can control."""
+    # Radiator rooms expose SmartValveIds, while UFH rooms expose an
+    # UnderFloorHeatingId instead.  Both are controlled through the same room
+    # target-temperature API used by passive mode.
+    return (
+        room.number_of_smartvalves > 0
+        or room.underfloor_heating_id is not None
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
@@ -227,7 +238,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
         for room in data.wiserhub.rooms.all:
-            if room.number_of_smartvalves > 0:
+            if _room_supports_passive_mode(room):
                 wiser_switches.append(
                     WiserPassiveModeSwitch(
                         hass, data, room.id, f"Wiser Passive Mode {room.name}"
