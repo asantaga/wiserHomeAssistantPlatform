@@ -184,6 +184,33 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device_type}"
 
 
+def get_light_entity_name(data, light, entity_name):
+    """Return a device-relative name for an entity belonging to a light.
+
+    The hub repeats the physical device name in each light channel name.  With
+    Home Assistant's native entity naming enabled, including that portion here
+    causes the device name to appear twice.  Keep only a real channel suffix so
+    multi-gang devices remain distinguishable.
+    """
+    light_name = str(getattr(light, "name", "")).strip()
+    if getattr(data, "legacy_naming", False):
+        return " ".join(
+            part for part in (ENTITY_PREFIX, light_name, entity_name) if part
+        )
+
+    physical_device = data.wiserhub.devices.get_by_id(light.id)
+    device_name = str(getattr(physical_device, "name", "")).strip()
+
+    channel_name = light_name
+    if device_name:
+        if light_name.casefold() == device_name.casefold():
+            channel_name = ""
+        elif light_name.casefold().startswith(f"{device_name} ".casefold()):
+            channel_name = light_name[len(device_name) :].strip()
+
+    return " ".join(part for part in (channel_name, entity_name) if part)
+
+
 def get_legacy_device_name(data, device_id):
     """Return a physical device name used by historical entity unique IDs."""
     device = data.wiserhub.devices.get_by_id(device_id)

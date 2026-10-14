@@ -11,12 +11,13 @@ from homeassistant.components.light import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER_SCHNEIDER
+from .const import DATA, DOMAIN, MANUFACTURER_SCHNEIDER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_via_device_info,
     get_identifier,
+    get_light_entity_name,
     get_unique_id,
     hub_error_handler,
 )
@@ -118,10 +119,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
     @property
     def name(self):
         """Return the name of the Device."""
-        # Use the per-channel light name directly. It already carries room and
-        # channel (e.g. "Badezimmer Badewanne") and is distinct per channel, so
-        # the two channels of a multi-gang dimmer no longer collide.
-        return f"{ENTITY_PREFIX} {self._device.name} Light"
+        return get_light_entity_name(self._data, self._device, "Light")
 
     @property
     def icon(self):

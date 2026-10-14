@@ -74,6 +74,7 @@ def _load_switch_module() -> ModuleType:
         get_identifier=lambda *_args: "identifier",
         get_legacy_device_name=lambda *_args, **_kwargs: "Wiser HeatHub",
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
+        get_light_entity_name=lambda _data, _light, entity_name: entity_name,
         get_physical_entity_unique_id=lambda *_args: "physical-entity-id",
         get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",

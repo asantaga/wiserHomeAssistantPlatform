@@ -71,6 +71,7 @@ def _load_light_module() -> ModuleType:
         get_device_name=lambda *_a, **_k: "Wiser Light",
         get_hub_via_device_info=lambda _data: {},
         get_identifier=lambda *_a, **_k: "identifier",
+        get_light_entity_name=lambda _data, _light, entity_name: entity_name,
         get_unique_id=lambda *_a, **_k: "unique-id",
         hub_error_handler=hub_error_handler,
     )

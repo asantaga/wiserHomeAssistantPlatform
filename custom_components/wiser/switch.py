@@ -16,13 +16,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, ENTITY_PREFIX, HOT_WATER, MANUFACTURER
+from .const import DATA, DOMAIN, HOT_WATER, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_light_entity_name,
     get_physical_entity_unique_id,
     get_room_entity_unique_id,
     get_unique_id,
@@ -671,9 +672,9 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        # Per-channel light name so the two channels of a multi-gang dimmer do
-        # not collide.
-        return f"{ENTITY_PREFIX} {self._light.name} Away Mode Turns Off"
+        return get_light_entity_name(
+            self._data, self._light, "Away Mode Turns Off"
+        )
 
     @property
     def unique_id(self):

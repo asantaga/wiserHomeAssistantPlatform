@@ -42,6 +42,7 @@ def _load_helpers_module() -> ModuleType:
         WiserHubRESTError=type("WiserHubRESTError", (Exception,), {}),
     )
     _module("homeassistant")
+    _module("homeassistant.const", MAJOR_VERSION=2026, MINOR_VERSION=10)
     _module("homeassistant.core", HomeAssistant=object)
 
     package = _module("wiser")
@@ -70,15 +71,28 @@ def _hub_data():
         _light(device_id=101, light_id=1, product_type="DimmableLight", name="Diele"),
         _light(device_id=102, light_id=2, product_type="OnOffLight", name="Flur"),
         # Two-gang dimmer: both channels share physical device id 200.
-        _light(device_id=200, light_id=3, product_type="DimmableLight", name="Bad Dusche"),
-        _light(device_id=200, light_id=4, product_type="DimmableLight", name="Bad Wanne"),
+        _light(
+            device_id=200,
+            light_id=3,
+            product_type="DimmableLight",
+            name="DualRelay Lightsource1",
+        ),
+        _light(
+            device_id=200,
+            light_id=4,
+            product_type="DimmableLight",
+            name="DualRelay Lightsource2",
+        ),
     ]
-    # get_device_name resolves the physical device; only single-gang ids should
-    # ever be looked up (multi-gang is skipped before this is called). Raising on
-    # an unexpected id turns an accidental multi-gang resolution into a failure.
+    # get_device_name resolves the physical device during migration, while the
+    # light naming helper also uses it to remove the shared device portion from
+    # a multi-gang channel name.
     devices_by_id = {
         101: SimpleNamespace(id=101, product_type="DimmableLight", name="Diele"),
         102: SimpleNamespace(id=102, product_type="OnOffLight", name="Flur"),
+        200: SimpleNamespace(
+            id=200, product_type="DimmableLight", name="DualRelay"
+        ),
     }
     rooms_by_device = {
         101: SimpleNamespace(name="Diele"),
@@ -171,6 +185,40 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
         mapping = self._mapping()
         old = self._unique_id("device", "light", "Wiser OnOffLight Flur Light")
         self.assertEqual(mapping[old], self._unique_id("device", "light", 2))
+
+    def test_single_light_entity_name_omits_physical_device_name(self) -> None:
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[0]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Away Mode Turns Off",
+        )
+
+    def test_multi_gang_entity_name_keeps_only_channel_name(self) -> None:
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[2]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Lightsource1 Away Mode Turns Off",
+        )
+
+    def test_legacy_naming_retains_full_light_name(self) -> None:
+        data = _hub_data()
+        data.legacy_naming = True
+        light = data.wiserhub.devices.lights.all[0]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Wiser Diele Away Mode Turns Off",
+        )
 
     def test_multi_gang_channels_are_skipped(self) -> None:
         mapping = self._mapping()
