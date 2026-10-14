@@ -1100,6 +1100,15 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
                     self.sensor_module._battery_data_is_reported(device)
                 )
 
+    def test_button_panel_does_not_depend_on_physical_product_type(self) -> None:
+        device = SimpleNamespace(
+            product_type="DimmableLight",
+            number_of_gangs=1,
+            events=[],
+        )
+
+        self.assertTrue(self.sensor_module._is_button_panel(device))
+
 
 class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
     """Tests for the UFH controller measured-temperature sensor."""

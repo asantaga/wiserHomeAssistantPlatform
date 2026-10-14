@@ -97,6 +97,16 @@ def _battery_data_is_reported(device) -> bool:
     )
 
 
+def _is_button_panel(device) -> bool:
+    """Return whether an API object represents a wireless button panel.
+
+    A combined Schneider dimmer/button panel inherits the physical device's
+    ``DimmableLight`` product type, so product_type cannot identify this API
+    view reliably.
+    """
+    return hasattr(device, "number_of_gangs") and hasattr(device, "events")
+
+
 def _remove_unreported_battery_entities(
     hass: HomeAssistant,
     config_entry_id: str,
@@ -184,7 +194,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
             if hasattr(device, "battery"):
                 if (
-                    device.product_type == "ButtonPanel"
+                    _is_button_panel(device)
                     and not _battery_data_is_reported(device)
                 ):
                     unreported_button_panel_ids.add(device.id)
