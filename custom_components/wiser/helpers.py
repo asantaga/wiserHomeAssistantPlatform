@@ -199,6 +199,25 @@ def get_light_entity_name(data, light, entity_name):
         )
 
     devices = data.wiserhub.devices
+    light_node_id = getattr(light, "node_id", None)
+    lights = getattr(getattr(devices, "lights", None), "all", None)
+    related_lights = (
+        [
+            candidate
+            for candidate in lights
+            if getattr(candidate, "id", None) == light.id
+            or (
+                light_node_id not in (None, 0)
+                and getattr(candidate, "node_id", None) == light_node_id
+            )
+        ]
+        if lights is not None
+        else None
+    )
+    has_multiple_channels = (
+        len(related_lights) > 1 if related_lights is not None else None
+    )
+
     # aioWiserHeatAPI composes light.name from the physical device Name and
     # the per-channel Name.  The released API does not expose the former as a
     # public property, so read its source value directly when available.  A
@@ -219,7 +238,6 @@ def get_light_entity_name(data, light, entity_name):
     # the light channels, whose name cannot be used to remove the shared device
     # prefix from another channel.  Some two-gang channels also use synthetic
     # IDs, so prefer the physical ButtonPanel view by its shared Zigbee node.
-    light_node_id = getattr(light, "node_id", None)
     if not device_name:
         physical_device = next(
             (
@@ -263,16 +281,17 @@ def get_light_entity_name(data, light, entity_name):
                     device_names.add(stripped)
                     pending_names.append(stripped)
 
-    channel_name = light_name
-    for candidate in sorted(device_names, key=len, reverse=True):
-        if candidate and light_name.casefold() == candidate.casefold():
-            channel_name = ""
-            break
-        if candidate and light_name.casefold().startswith(
-            f"{candidate} ".casefold()
-        ):
-            channel_name = light_name[len(candidate) :].strip()
-            break
+    channel_name = "" if has_multiple_channels is False else light_name
+    if channel_name:
+        for candidate in sorted(device_names, key=len, reverse=True):
+            if candidate and light_name.casefold() == candidate.casefold():
+                channel_name = ""
+                break
+            if candidate and light_name.casefold().startswith(
+                f"{candidate} ".casefold()
+            ):
+                channel_name = light_name[len(candidate) :].strip()
+                break
 
     return " ".join(part for part in (channel_name, entity_name) if part)
 

@@ -234,6 +234,31 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Bordlampe Is Dimmable",
         )
 
+    def test_single_dimmer_omits_its_only_light_source_name(self) -> None:
+        light = _light(
+            device_id=400,
+            light_id=6,
+            product_type="DimmableLight",
+            name="Dimmer Loftlampe",
+        )
+        light._data = {"Name": "Dimmer"}
+        light.node_id = 50
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    all=[light],
+                    lights=SimpleNamespace(all=[light]),
+                    get_by_id=lambda _device_id: light,
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Is Dimmable",
+        )
+
     def test_dual_relay_uses_embedded_name_for_synthetic_channel_ids(
         self,
     ) -> None:
@@ -249,7 +274,7 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             id=300002,
             product_type="DimmableLight",
             name="Dobbeltrelæ Loftlampe",
-            node_id=84,
+            node_id=42,
         )
         button_panel = SimpleNamespace(
             id=300,
@@ -264,6 +289,7 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             wiserhub=SimpleNamespace(
                 devices=SimpleNamespace(
                     all=[other_light, button_panel],
+                    lights=SimpleNamespace(all=[light, other_light]),
                     get_by_id=lambda _device_id: other_light,
                 )
             ),
