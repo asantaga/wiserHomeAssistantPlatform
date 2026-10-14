@@ -85,6 +85,28 @@ ON_OFF_STATES = {
 }
 
 
+def _battery_data_is_reported(device) -> bool:
+    """Return whether the hub supplied usable battery data for a device."""
+    battery = getattr(device, "battery", None)
+    if battery is None:
+        return False
+    return (
+        getattr(battery, "voltage", None) is not None
+        or getattr(battery, "level", TEXT_UNKNOWN)
+        not in (None, "", TEXT_UNKNOWN)
+    )
+
+
+def _is_button_panel(device) -> bool:
+    """Return whether an API object represents a wireless button panel.
+
+    A combined Schneider dimmer/button panel inherits the physical device's
+    ``DimmableLight`` product type, so product_type cannot identify this API
+    view reliably.
+    """
+    return hasattr(device, "number_of_gangs") and hasattr(device, "events")
+
+
 OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
     {
         "ch_flow_active_lower_setpoint",
@@ -136,6 +158,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         # that physical device, so emit one signal sensor per device id — two
         # channels would otherwise collide on unique_id and the second be dropped.
         signal_sensor_device_ids = set()
+        battery_sensor_device_ids = set()
         for device in data.wiserhub.devices.all:
             if device.id not in signal_sensor_device_ids:
                 signal_sensor_device_ids.add(device.id)
@@ -148,9 +171,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                             data, device.id, sensor_type="ufh_measured_temp"
                         )
                     )
-            if hasattr(device, "battery"):
+            if (
+                hasattr(device, "battery")
+                and device.id not in battery_sensor_device_ids
+                and (
+                    not _is_button_panel(device)
+                    or _battery_data_is_reported(device)
+                )
+            ):
+                battery_sensor_device_ids.add(device.id)
                 wiser_sensors.append(
-                    WiserBatterySensor(data, device.id, sensor_type="Battery")
+                    WiserBatterySensor(
+                        data,
+                        device.id,
+                        sensor_type="Battery",
+                        device=device,
+                    )
                 )
 
             # Add threshold temp sensors
@@ -534,37 +570,66 @@ class WiserSensor(WiserEntityMixin, CoordinatorEntity, SensorEntity):
 
 
 class WiserBatterySensor(WiserSensor):
-    """Definition of a battery sensor for wiser iTRVs and RoomStats."""
+    """Definition of a Wiser device battery sensor."""
 
-    def __init__(self, data, device_id=0, sensor_type="") -> None:
+    def __init__(
+        self,
+        data,
+        device_id=0,
+        sensor_type="",
+        device=None,
+    ) -> None:
         """Initialise the battery sensor."""
         super().__init__(data, device_id, sensor_type)
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device_product_type = getattr(device, "product_type", None)
+        self._device = device or self._get_battery_device()
         self._state = self._get_battery_state()
+
+    def _get_battery_device(self):
+        """Return the battery-capable API object for this physical device.
+
+        Some Schneider devices are represented by both ButtonPanel and Light
+        objects with the same device ID. A global ID lookup can therefore
+        return the light object, which has no battery property.
+        """
+        for device in self._data.wiserhub.devices.all:
+            if device.id != self._device_id or not hasattr(device, "battery"):
+                continue
+            if (
+                self._device_product_type is None
+                or getattr(device, "product_type", None)
+                == self._device_product_type
+            ):
+                return device
+        return None
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device = self._get_battery_device()
         self._state = self._get_battery_state()
         self.async_write_ha_state()
 
     def _get_battery_state(self) -> int | str:
         # TODO: Move this into api
-        if self._device.battery.percent:
-            return self._device.battery.percent
-        if self._device.battery.voltage is None:
+        battery = getattr(self._device, "battery", None)
+        if battery is None:
+            return 0
+        percent = getattr(battery, "percent", None)
+        if percent is not None:
+            return percent
+        if getattr(battery, "voltage", None) is None:
             # This device does not provide battery voltage.  Calc % from level text
             levels = {"normal": 100, "twothirds": 66, "onethird": 33, "low": 10}
-            return levels.get(self._device.battery.level.lower(), 0)
+            level = getattr(battery, "level", TEXT_UNKNOWN)
+            return levels.get(str(level or TEXT_UNKNOWN).lower(), 0)
         return 0
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        battery = self._device.battery
-        return battery.level != TEXT_UNKNOWN or battery.voltage is not None
+        return _battery_data_is_reported(self._device)
 
     @property
     def device_class(self):
