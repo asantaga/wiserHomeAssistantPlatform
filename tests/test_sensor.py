@@ -1064,6 +1064,13 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         self.assertEqual(sensor._get_battery_state(), 0)
         self.assertFalse(sensor.available)
 
+    def test_missing_device_does_not_break_coordinator_refresh(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device = None
+
+        self.assertEqual(sensor._get_battery_state(), 0)
+        self.assertFalse(sensor.available)
+
     def test_battery_lookup_uses_matching_device_type_when_ids_collide(self) -> None:
         light = SimpleNamespace(id=7, product_type="Light")
         button_panel = SimpleNamespace(

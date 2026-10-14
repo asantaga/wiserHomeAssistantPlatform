@@ -570,7 +570,7 @@ class WiserSensor(WiserEntityMixin, CoordinatorEntity, SensorEntity):
 
 
 class WiserBatterySensor(WiserSensor):
-    """Definition of a battery sensor for wiser iTRVs and RoomStats."""
+    """Definition of a Wiser device battery sensor."""
 
     def __init__(
         self,
@@ -597,7 +597,8 @@ class WiserBatterySensor(WiserSensor):
                 continue
             if (
                 self._device_product_type is None
-                or device.product_type == self._device_product_type
+                or getattr(device, "product_type", None)
+                == self._device_product_type
             ):
                 return device
         return None
@@ -612,20 +613,23 @@ class WiserBatterySensor(WiserSensor):
 
     def _get_battery_state(self) -> int | str:
         # TODO: Move this into api
-        battery = self._device.battery
-        if battery.percent is not None:
-            return battery.percent
-        if battery.voltage is None:
+        battery = getattr(self._device, "battery", None)
+        if battery is None:
+            return 0
+        percent = getattr(battery, "percent", None)
+        if percent is not None:
+            return percent
+        if getattr(battery, "voltage", None) is None:
             # This device does not provide battery voltage.  Calc % from level text
             levels = {"normal": 100, "twothirds": 66, "onethird": 33, "low": 10}
-            return levels.get(str(battery.level or TEXT_UNKNOWN).lower(), 0)
+            level = getattr(battery, "level", TEXT_UNKNOWN)
+            return levels.get(str(level or TEXT_UNKNOWN).lower(), 0)
         return 0
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        battery = self._device.battery
-        return battery.level not in (None, TEXT_UNKNOWN) or battery.voltage is not None
+        return _battery_data_is_reported(self._device)
 
     @property
     def device_class(self):
