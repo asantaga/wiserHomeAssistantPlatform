@@ -513,6 +513,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._optimistic_gen = 0
         self._confirmation_task = None
 
+    @hub_error_handler
     async def _async_confirm_command(self, gen: int) -> None:
         """Refresh until the hub reports the accepted smart-plug command."""
         try:

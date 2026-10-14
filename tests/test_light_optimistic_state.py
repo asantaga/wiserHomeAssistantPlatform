@@ -178,6 +178,21 @@ class LightOptimisticStateTest(unittest.TestCase):
         self.assertEqual(len(refreshes), 2)
         self.assertIsNone(light._optimistic_is_on)
 
+    def test_failed_confirmation_clears_optimistic_state(self):
+        light, _device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+
+        async def fail_refresh(*_args, **_kwargs):
+            raise RuntimeError("refresh failed")
+
+        light.async_force_update = fail_refresh
+
+        with self.assertRaisesRegex(RuntimeError, "refresh failed"):
+            asyncio.run(light._async_confirm_command(1))
+
+        self.assertIsNone(light._optimistic_is_on)
+
     def test_stale_first_refresh_retries_until_hub_confirms(self):
         light, device = self._light(is_on=False)
         light._optimistic_gen = 1

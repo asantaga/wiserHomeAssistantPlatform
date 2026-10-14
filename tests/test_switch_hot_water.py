@@ -257,6 +257,23 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
         self.assertIsNone(switch._optimistic_is_on)
         self.assertTrue(switch.is_on)
 
+    def test_failed_confirmation_restores_hub_state(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+        switch._optimistic_gen = 1
+        switch._optimistic_is_on = True
+        switch._is_on = True
+
+        async def fail_refresh(*_args, **_kwargs):
+            raise RuntimeError("refresh failed")
+
+        switch.async_force_update = fail_refresh
+
+        with self.assertRaisesRegex(RuntimeError, "refresh failed"):
+            asyncio.run(switch._async_confirm_command(1))
+
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertFalse(switch.is_on)
+
     def test_superseded_confirmation_does_not_clobber_newer_command(self) -> None:
         switch, plug, events, scheduled = self._switch(is_on=True)
         switch._optimistic_gen = 2

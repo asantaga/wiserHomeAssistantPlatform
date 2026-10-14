@@ -82,6 +82,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             await asyncio.sleep(delay)
         await self._data.async_refresh()
 
+    @hub_error_handler
     async def _async_confirm_command(self, gen: int) -> None:
         """Refresh the hub after it has had time to apply a light command."""
         try:
