@@ -85,6 +85,38 @@ ON_OFF_STATES = {
 }
 
 
+def _battery_data_is_reported(device) -> bool:
+    """Return whether the hub supplied usable battery data for a device."""
+    battery = getattr(device, "battery", None)
+    if battery is None:
+        return False
+    return (
+        getattr(battery, "voltage", None) is not None
+        or getattr(battery, "level", TEXT_UNKNOWN)
+        not in (None, "", TEXT_UNKNOWN)
+    )
+
+
+def _remove_unreported_battery_entities(
+    hass: HomeAssistant,
+    config_entry_id: str,
+    data,
+    device_ids: set[int],
+) -> None:
+    """Remove battery entities created for devices without battery data."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    for device_id in device_ids:
+        unique_id = get_unique_id(data, "sensor", "Battery", device_id)
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+        if entity_id is None:
+            continue
+        entry = registry.async_get(entity_id)
+        if entry and entry.config_entry_id == config_entry_id:
+            registry.async_remove(entity_id)
+
+
 OPENTHERM_TEMPERATURE_SENSOR_KEYS = frozenset(
     {
         "ch_flow_active_lower_setpoint",
@@ -136,6 +168,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         # that physical device, so emit one signal sensor per device id — two
         # channels would otherwise collide on unique_id and the second be dropped.
         signal_sensor_device_ids = set()
+        unreported_button_panel_ids = set()
+        battery_sensor_device_ids = set()
         for device in data.wiserhub.devices.all:
             if device.id not in signal_sensor_device_ids:
                 signal_sensor_device_ids.add(device.id)
@@ -149,14 +183,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         )
                     )
             if hasattr(device, "battery"):
-                wiser_sensors.append(
-                    WiserBatterySensor(
-                        data,
-                        device.id,
-                        sensor_type="Battery",
-                        device=device,
+                if (
+                    device.product_type == "ButtonPanel"
+                    and not _battery_data_is_reported(device)
+                ):
+                    unreported_button_panel_ids.add(device.id)
+                elif device.id not in battery_sensor_device_ids:
+                    battery_sensor_device_ids.add(device.id)
+                    wiser_sensors.append(
+                        WiserBatterySensor(
+                            data,
+                            device.id,
+                            sensor_type="Battery",
+                            device=device,
+                        )
                     )
-                )
 
             # Add threshold temp sensors
             if hasattr(device, "threshold_sensors"):
@@ -185,6 +226,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                                 threshold_sensor.id,
                             )
                         )
+
+        _remove_unreported_battery_entities(
+            hass,
+            config_entry.entry_id,
+            data,
+            unreported_button_panel_ids - battery_sensor_device_ids,
+        )
 
     # Add cloud status sensor
     _LOGGER.debug("Setting up Cloud sensor")

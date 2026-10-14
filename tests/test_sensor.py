@@ -1082,6 +1082,24 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
 
         self.assertIs(sensor._get_battery_device(), button_panel)
 
+    def test_missing_battery_values_are_not_reported(self) -> None:
+        device = SimpleNamespace(
+            battery=SimpleNamespace(level="Unknown", voltage=None)
+        )
+
+        self.assertFalse(self.sensor_module._battery_data_is_reported(device))
+
+    def test_level_or_voltage_reports_battery_data(self) -> None:
+        for battery in (
+            SimpleNamespace(level="Normal", voltage=None),
+            SimpleNamespace(level="Unknown", voltage=3.0),
+        ):
+            with self.subTest(battery=battery):
+                device = SimpleNamespace(battery=battery)
+                self.assertTrue(
+                    self.sensor_module._battery_data_is_reported(device)
+                )
+
 
 class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
     """Tests for the UFH controller measured-temperature sensor."""
