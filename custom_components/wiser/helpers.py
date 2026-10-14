@@ -184,6 +184,118 @@ def get_device_name(data, device_id, device_type="device"):
         return f"{ENTITY_PREFIX} {device_type}"
 
 
+def get_light_entity_name(data, light, entity_name):
+    """Return a device-relative name for an entity belonging to a light.
+
+    The hub repeats the physical device name in each light channel name.  With
+    Home Assistant's native entity naming enabled, including that portion here
+    causes the device name to appear twice.  Keep only a real channel suffix so
+    multi-gang devices remain distinguishable.
+    """
+    light_name = str(getattr(light, "name", "")).strip()
+    if getattr(data, "legacy_naming", False):
+        return " ".join(
+            part for part in (ENTITY_PREFIX, light_name, entity_name) if part
+        )
+
+    devices = data.wiserhub.devices
+    light_node_id = getattr(light, "node_id", None)
+    lights = getattr(getattr(devices, "lights", None), "all", None)
+    related_lights = (
+        [
+            candidate
+            for candidate in lights
+            if getattr(candidate, "id", None) == light.id
+            or (
+                light_node_id not in (None, 0)
+                and getattr(candidate, "node_id", None) == light_node_id
+            )
+        ]
+        if lights is not None
+        else None
+    )
+    has_multiple_channels = (
+        len(related_lights) > 1 if related_lights is not None else None
+    )
+
+    # aioWiserHeatAPI composes light.name from the physical device Name and
+    # the per-channel Name.  The released API does not expose the former as a
+    # public property, so read its source value directly when available.  A
+    # future API can expose device_name without changing this integration.
+    source_data = getattr(light, "_data", {})
+    device_name = str(
+        getattr(light, "device_name", "")
+        or (
+            source_data.get("Name", "")
+            if isinstance(source_data, dict)
+            else ""
+        )
+    ).strip()
+    physical_device = None
+
+    # Combined dual-relay/dimmer units expose a ButtonPanel and multiple Light
+    # views with the same physical ID.  The generic lookup may return one of
+    # the light channels, whose name cannot be used to remove the shared device
+    # prefix from another channel.  Some two-gang channels also use synthetic
+    # IDs, so prefer the physical ButtonPanel view by its shared Zigbee node.
+    if not device_name:
+        physical_device = next(
+            (
+                device
+                for device in getattr(devices, "all", ())
+                if hasattr(device, "number_of_gangs")
+                and hasattr(device, "events")
+                and (
+                    getattr(device, "id", None) == light.id
+                    or (
+                        light_node_id not in (None, 0)
+                        and getattr(device, "node_id", None) == light_node_id
+                    )
+                )
+            ),
+            None,
+        )
+        if physical_device is None:
+            physical_device = devices.get_by_id(light.id)
+        device_name = str(getattr(physical_device, "name", "")).strip()
+    product_type = str(
+        getattr(physical_device or light, "product_type", "")
+    ).strip()
+
+    # Some hub models include Wiser and/or the product type in the physical
+    # device name, while their channel names omit those prefixes.  Compare all
+    # equivalent device-name forms so only the physical-device portion is
+    # removed from the channel name.
+    device_names = {device_name}
+    metadata_prefixes = tuple(
+        prefix for prefix in (ENTITY_PREFIX, product_type) if prefix
+    )
+    pending_names = [device_name]
+    while pending_names:
+        candidate = pending_names.pop()
+        for prefix in metadata_prefixes:
+            marker = f"{prefix} "
+            if candidate.casefold().startswith(marker.casefold()):
+                stripped = candidate[len(marker) :].strip()
+                if stripped and stripped not in device_names:
+                    device_names.add(stripped)
+                    pending_names.append(stripped)
+
+    channel_name = "" if has_multiple_channels is False else light_name
+    if channel_name:
+        for candidate in sorted(device_names, key=len, reverse=True):
+            if candidate and light_name.casefold() == candidate.casefold():
+                channel_name = ""
+                break
+            if candidate and light_name.casefold().startswith(
+                f"{candidate} ".casefold()
+            ):
+                channel_name = light_name[len(candidate) :].strip()
+                break
+
+    return " ".join(part for part in (channel_name, entity_name) if part)
+
+
 def get_legacy_device_name(data, device_id):
     """Return a physical device name used by historical entity unique IDs."""
     device = data.wiserhub.devices.get_by_id(device_id)

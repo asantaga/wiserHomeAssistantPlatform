@@ -87,7 +87,7 @@ class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -172,7 +172,7 @@ class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEnti
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -268,7 +268,7 @@ class WiserDiscomfortIndoorTempNumber(
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -352,7 +352,7 @@ class WiserDiscomfortOutdoorTempNumber(
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
