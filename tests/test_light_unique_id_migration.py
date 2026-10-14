@@ -234,6 +234,40 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Bordlampe Is Dimmable",
         )
 
+    def test_dual_relay_uses_button_panel_name_when_device_ids_collide(self) -> None:
+        light = _light(
+            device_id=300,
+            light_id=5,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Bordlampe",
+        )
+        other_light = SimpleNamespace(
+            id=300,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Loftlampe",
+        )
+        button_panel = SimpleNamespace(
+            id=300,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ",
+            number_of_gangs=2,
+            events=[],
+        )
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    all=[other_light, button_panel],
+                    get_by_id=lambda _device_id: other_light,
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Bordlampe Is Dimmable",
+        )
+
     def test_legacy_naming_retains_full_light_name(self) -> None:
         data = _hub_data()
         data.legacy_naming = True

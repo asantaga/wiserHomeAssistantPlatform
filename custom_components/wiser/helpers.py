@@ -198,7 +198,23 @@ def get_light_entity_name(data, light, entity_name):
             part for part in (ENTITY_PREFIX, light_name, entity_name) if part
         )
 
-    physical_device = data.wiserhub.devices.get_by_id(light.id)
+    devices = data.wiserhub.devices
+    # Combined dual-relay/dimmer units expose a ButtonPanel and multiple Light
+    # views with the same physical ID.  The generic lookup may return one of
+    # the light channels, whose name cannot be used to remove the shared device
+    # prefix from another channel.  Prefer the physical ButtonPanel view.
+    physical_device = next(
+        (
+            device
+            for device in getattr(devices, "all", ())
+            if getattr(device, "id", None) == light.id
+            and hasattr(device, "number_of_gangs")
+            and hasattr(device, "events")
+        ),
+        None,
+    )
+    if physical_device is None:
+        physical_device = devices.get_by_id(light.id)
     device_name = str(getattr(physical_device, "name", "")).strip()
     product_type = str(getattr(physical_device, "product_type", "")).strip()
 
