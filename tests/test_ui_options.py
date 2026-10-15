@@ -68,8 +68,10 @@ def function_call_lines(filename, function_name):
 class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
+            "CONF_ADDITIONAL_SENSORS": "additional_sensors",
             "CONF_LEGACY_NAMING": "legacy_naming",
             "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
+            "CONF_SCHEDULE_SETPOINT_ROOMS": "schedule_setpoint_rooms",
             "CONF_OPENTHERM_EVER_CONNECTED": "opentherm_ever_connected",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_NAME": "name",
@@ -83,6 +85,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "validate_input": AsyncMock(return_value={"title": "Wiser", "unique_id": "1"}),
             "MAJOR_VERSION": 2026,
             "MINOR_VERSION": 8,
+            "room_has_climate": lambda room: bool(room.devices),
         }
 
     def test_opentherm_detection_uses_live_or_remembered_connection(self):
@@ -380,6 +383,73 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         result = await functions.async_step_init(flow)
         self.assertIn("ui_options", result["menu_options"])
         self.assertNotIn("equipment_sensors", result["menu_options"])
+        self.assertNotIn("additional_sensors", result["menu_options"])
+
+    async def test_additional_sensors_is_section_in_automation_parameters(self):
+        source = (COMPONENT / "config_flow.py").read_text()
+        tree = ast.parse(source)
+        function = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_step_automation_params"
+        )
+        self.assertIn(
+            "vol.Required(CONF_ADDITIONAL_SENSORS)", ast.unparse(function)
+        )
+        self.assertNotIn("async_step_additional_sensors", source)
+
+    def test_room_choices_exclude_rooms_with_climate(self):
+        functions = load_functions(
+            "config_flow.py", {"_rooms_without_climate"}, self.namespace
+        )
+        kitchen = SimpleNamespace(id=4, name="Kitchen", devices=[])
+        lounge = SimpleNamespace(id=5, name="Lounge", devices=[object()])
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                data={
+                    "wiser": {
+                        "entry": {
+                            "data": SimpleNamespace(
+                                wiserhub=SimpleNamespace(
+                                    rooms=SimpleNamespace(all=[kitchen, lounge])
+                                )
+                            )
+                        }
+                    }
+                }
+            ),
+            config_entry=SimpleNamespace(entry_id="entry"),
+        )
+
+        self.assertEqual(functions._rooms_without_climate(flow), [kitchen])
+
+    async def test_additional_sensor_section_preserves_other_options(self):
+        functions = load_functions(
+            "config_flow.py", {"async_step_automation_params"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            config_entry=SimpleNamespace(options={"scan_interval": 30}),
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+
+        saved = await functions.async_step_automation_params(
+            flow,
+            {
+                "additional_sensors": {
+                    "schedule_setpoint_rooms": ["4"]
+                }
+            },
+        )
+        self.assertEqual(
+            saved["data"],
+            {
+                "scan_interval": 30,
+                "additional_sensors": {
+                    "schedule_setpoint_rooms": ["4"]
+                },
+            },
+        )
 
     async def test_equipment_menu_is_below_opentherm(self):
         functions = load_functions(

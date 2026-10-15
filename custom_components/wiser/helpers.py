@@ -39,6 +39,11 @@ def active_wiser_rooms(data):
     ]
 
 
+def room_has_climate(room):
+    """Return whether the integration creates a climate entity for a room."""
+    return bool(room.devices)
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address

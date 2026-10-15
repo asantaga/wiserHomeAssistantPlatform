@@ -170,7 +170,7 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
         cls.wiser = _load_wiser_init()
 
     def setUp(self) -> None:
-        self.entry = SimpleNamespace(entry_id="entry-id")
+        self.entry = SimpleNamespace(entry_id="entry-id", options={})
         self.room = SimpleNamespace(id=7, name="Lounge")
         self.coordinator = SimpleNamespace(
             wiserhub=SimpleNamespace(

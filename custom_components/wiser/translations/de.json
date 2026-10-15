@@ -93,6 +93,16 @@
               "hotwater_boost_mode": "Warmwasser-Boost-Modus",
               "hotwater_sensor_entity_id": "Warmwasser-Temperatursensor"
             }
+          },
+          "additional_sensors": {
+            "name": "Zusätzliche Sensoren",
+            "description": "Optionale Sensoren für von Wiser gemeldete Daten bereitstellen.",
+            "data": {
+              "schedule_setpoint_rooms": "Räume ohne Klimasteuerung"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Wählen Sie die Wiser-Räume aus, für die ein Sensor für die aktuelle Zeitplantemperatur erstellt werden soll."
+            }
           }
         }
       },
@@ -348,6 +358,7 @@
       },
       "hot_water_operation_mode": { "name": "Warmwasserbetriebsart" },
       "target_temperature": { "name": "Zieltemperatur" },
+      "current_schedule_temperature": { "name": "Aktuelle Zeitplantemperatur" },
       "floor_temperature": { "name": "Fußbodentemperatur" },
       "boiler_flow_temperature": { "name": "Kesselvorlauftemperatur" },
       "boiler_return_temperature": { "name": "Kesselrücklauftemperatur" },
