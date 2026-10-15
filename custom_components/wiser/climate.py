@@ -57,6 +57,7 @@ from .helpers import (
     get_room_entity_unique_id,
     get_uuid_unique_id,
     hub_error_handler,
+    room_has_climate,
 )
 from .schedules import WiserScheduleEntity
 from .temperature import room_target_temperature
@@ -142,7 +143,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         wiser_rooms = [
             WiserRoom(hass, coordinator, room.id)
             for room in coordinator.wiserhub.rooms.all
-            if len(room.devices) > 0
+            if room_has_climate(room)
         ]
         async_add_entities(wiser_rooms, True)
 

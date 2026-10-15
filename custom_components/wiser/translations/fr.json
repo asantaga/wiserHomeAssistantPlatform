@@ -93,6 +93,16 @@
               "hotwater_boost_mode": "Mode boost de l’eau chaude",
               "hotwater_sensor_entity_id": "Capteur de température de l’eau chaude"
             }
+          },
+          "additional_sensors": {
+            "name": "Capteurs supplémentaires",
+            "description": "Exposer des capteurs facultatifs pour les données communiquées par Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Pièces sans contrôle climatique"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Sélectionnez les pièces Wiser pour lesquelles un capteur de température programmée actuelle doit être créé."
+            }
           }
         }
       },
@@ -348,6 +358,7 @@
       },
       "hot_water_operation_mode": { "name": "Mode de fonctionnement de l’eau chaude" },
       "target_temperature": { "name": "Température cible" },
+      "current_schedule_temperature": { "name": "Température programmée actuelle" },
       "floor_temperature": { "name": "Température du sol" },
       "boiler_flow_temperature": { "name": "Température de départ de la chaudière" },
       "boiler_return_temperature": { "name": "Température de retour de la chaudière" },
