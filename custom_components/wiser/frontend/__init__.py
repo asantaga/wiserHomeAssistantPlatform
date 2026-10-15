@@ -75,6 +75,13 @@ class JSModuleRegistration:
             card_version, Path(__file__).parent / "wiser-icons.js"
         )
         add_extra_js_url(self.hass, f"{URL_BASE}/wiser-icons.js?v={icon_version}")
+        hot_water_version = await self.hass.async_add_executor_job(
+            card_version, Path(__file__).parent / "wiser-hot-water-control.js"
+        )
+        add_extra_js_url(
+            self.hass,
+            f"{URL_BASE}/wiser-hot-water-control.js?v={hot_water_version}",
+        )
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()

@@ -31,11 +31,17 @@ from .const import (
     CONF_DEPRECATED_HW_TARGET_TEMP,
     CONF_LEGACY_NAMING,
     CONF_OPENTHERM_EVER_CONNECTED,
+    CONF_OPENTHERM_HOT_WATER_CAPABLE,
+    CONF_OPENTHERM_HOT_WATER_CONTROL,
+    CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+    CONF_OPENTHERM_HOT_WATER_PRESETS,
     CONF_WISER_ROOM_NAMES,
     DATA,
+    DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DOMAIN,
     ENTITY_PREFIX,
     MANUFACTURER,
+    OPENTHERM_HOT_WATER_SCHEDULE,
     UPDATE_LISTENER,
     WISER_PLATFORMS,
     WISER_SERVICES,
@@ -77,8 +83,11 @@ from .helpers import (
     get_room_entity_unique_id,
     get_unique_id,
 )
+from .local_schedule import OpenThermHotWaterSchedule
 from .opentherm_detection import (
     opentherm_entity_unique_ids,
+    opentherm_hot_water_control_is_supported,
+    opentherm_hot_water_limits,
     opentherm_is_detected,
 )
 from .services import async_setup_services
@@ -278,6 +287,33 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         ROOM_NAMES_STORE: room_names_store,
     }
 
+    opentherm = coordinator.wiserhub.system.opentherm
+    if (
+        config_entry.options.get(CONF_OPENTHERM_HOT_WATER_CONTROL, False)
+        and opentherm_is_detected(config_entry, opentherm)
+        and opentherm_hot_water_control_is_supported(config_entry, opentherm)
+    ):
+        minimum, maximum = opentherm_hot_water_limits(opentherm)
+        local_hot_water_schedule = OpenThermHotWaterSchedule(
+            hass,
+            config_entry.entry_id,
+            minimum=float(minimum),
+            maximum=float(maximum),
+            default_temperature=float(
+                config_entry.options.get(
+                    CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+                    DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+                )
+            ),
+            presets=config_entry.options.get(
+                CONF_OPENTHERM_HOT_WATER_PRESETS, []
+            ),
+        )
+        await local_hot_water_schedule.async_load()
+        hass.data[DOMAIN][config_entry.entry_id][
+            OPENTHERM_HOT_WATER_SCHEDULE
+        ] = local_hot_water_schedule
+
     # If OpenTherm connects for the first time after startup, saving the flag
     # causes one integration reload so its entities are added. Future outages
     # retain those entities and their registry/history records.
@@ -369,14 +405,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         previous_room_names,
     )
 
-    # Setup platforms
+    # Setup services
+    await async_setup_services(hass, coordinator)
+
+    # Setup platforms after services so entities can safely restore scheduled
+    # actions from async_added_to_hass.
     await hass.config_entries.async_forward_entry_setups(config_entry, WISER_PLATFORMS)
 
     # Setup websocket services for frontend cards
     await async_register_websockets(hass, coordinator)
-
-    # Setup services
-    await async_setup_services(hass, coordinator)
 
     # Register custom cards
     moodule_register = JSModuleRegistration(hass)
@@ -391,11 +428,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
 @callback
 def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
-    """Persist a confirmed OpenTherm connection until it is disabled.
+    """Persist confirmed OpenTherm connection and hot-water capability.
 
-    The flag intentionally lives in config-entry data so the existing entry
-    update listener reloads platforms when runtime detection changes. A Store
-    would persist the state but would not trigger that reload.
+    The flags intentionally live in config-entry data so the existing entry
+    update listener reloads platforms when runtime detection changes. They
+    also prevent a partial first response after restart from removing entities.
     """
     system = getattr(coordinator.wiserhub, "system", None)
     if system is None:
@@ -403,22 +440,33 @@ def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
 
     opentherm = getattr(system, "opentherm", None)
     remembered = config_entry.data.get(CONF_OPENTHERM_EVER_CONNECTED, False)
+    hot_water_capable = config_entry.data.get(
+        CONF_OPENTHERM_HOT_WATER_CAPABLE, False
+    )
+    entry_data = dict(config_entry.data)
 
     if getattr(opentherm, "enabled", None) is False:
         if remembered:
-            entry_data = dict(config_entry.data)
             entry_data.pop(CONF_OPENTHERM_EVER_CONNECTED, None)
-            hass.config_entries.async_update_entry(config_entry, data=entry_data)
+        if hot_water_capable:
+            entry_data.pop(CONF_OPENTHERM_HOT_WATER_CAPABLE, None)
         remembered = False
     elif (
         not remembered
         and getattr(opentherm, "connection_status", None) == "Connected"
     ):
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data={**config_entry.data, CONF_OPENTHERM_EVER_CONNECTED: True},
-        )
+        entry_data[CONF_OPENTHERM_EVER_CONNECTED] = True
         remembered = True
+
+    boiler_parameters = getattr(opentherm, "boiler_parameters", None)
+    if (
+        not hot_water_capable
+        and getattr(boiler_parameters, "hw_setpoint_read_write", None) is True
+    ):
+        entry_data[CONF_OPENTHERM_HOT_WATER_CAPABLE] = True
+
+    if entry_data != config_entry.data:
+        hass.config_entries.async_update_entry(config_entry, data=entry_data)
 
     detected = bool(opentherm and remembered)
     if getattr(coordinator, "_wiser_opentherm_detected", None) is detected:

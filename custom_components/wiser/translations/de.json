@@ -27,6 +27,7 @@
       "not_wiser_hub": "Das erkannte Gerät ist kein Wiser Heat Hub."
     },
     "error": {
+      "invalid_hot_water_presets": "Eine oder mehrere Warmwasservoreinstellungen sind ungültig.",
       "auth_failure": "Authentifizierung beim Wiser Heat Hub fehlgeschlagen. Überprüfen Sie den geheimen Schlüssel und versuchen Sie es erneut.",
       "timeout_error": "Zeitüberschreitung bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie die IP-Adresse und versuchen Sie es erneut.",
       "timeout_error_discovery": "Zeitüberschreitung bei der Verbindung zum Wiser Heat Hub. Überprüfen Sie, ob Ihr Hub noch online ist, und versuchen Sie es erneut.",
@@ -41,7 +42,7 @@
         "menu_options": {
           "main_params": "Hauptparameter",
           "automation_params": "Automatisierungsparameter",
-          "opentherm_sensors": "OpenTherm-Sensoren",
+          "opentherm": "OpenTherm",
           "equipment_sensors": "Gerätesensoren",
           "ui_options": "UI-Optionen"
         }
@@ -106,6 +107,14 @@
           "equipment_sensors": "Stellt für jede kompatible intelligente Steckdose, jedes PowerTag und jeden Heizungsaktor einen zusätzlichen Sensor mit detaillierten Geräteattributen bereit."
         }
       },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "OpenTherm-Funktionen konfigurieren.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Warmwassersteuerung",
+          "opentherm_sensors": "Sensoren"
+        }
+      },
       "opentherm_sensors": {
         "title": "OpenTherm-Sensoren",
         "description": "Wählen Sie eine Kategorie erkannter OpenTherm-Attribute.",
@@ -114,6 +123,20 @@
           "opentherm_central_heating": "Zentralheizung",
           "opentherm_hot_water": "Warmwasser",
           "opentherm_status": "Status und Diagnose"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm-Warmwassersteuerung",
+        "description": "Steuert optional den Warmwasser-Sollwert des Kessels über Wiser. Die Integration erstellt den Zeitplan „OpenTherm Hot Water“ im Wiser-Zeitplanbereich. Aus verwendet die von OpenTherm gemeldete minimale Warmwassertemperatur.",
+        "data": {
+          "opentherm_hot_water_control": "Warmwassersteuerung aktivieren",
+          "opentherm_hot_water_manual_temperature": "Manuelle Temperatur",
+          "opentherm_hot_water_sensor_entity_id": "Optionaler externer Temperatursensor.",
+          "opentherm_hot_water_presets": "Voreinstellungen"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperatur für den manuellen Modus.",
+          "opentherm_hot_water_sensor_entity_id": "Optionaler Temperatursensor für die aktuelle Wassertemperatur. Wenn der Sensor nicht verfügbar ist, wird OpenTherm verwendet."
         }
       },
       "opentherm_readings": {
@@ -240,6 +263,9 @@
         "name": "Heizung"
       },
       "floor_temperature": { "name": "Fußbodentemperatur" }
+    },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm-Warmwasser" }
     },
     "number": {
       "away_mode_target_temperature": { "name": "Zieltemperatur im Abwesenheitsmodus" },

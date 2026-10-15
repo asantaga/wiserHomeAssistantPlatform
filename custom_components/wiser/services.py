@@ -449,9 +449,24 @@ async def async_setup_services(hass: HomeAssistant, data):
             remove_listener = instance.async_add_listener(update_received.set)
             retry_sent = False
             retry_error = None
+            notification_id = (
+                f"wiser_opentherm_"
+                f"{getattr(instance.wiserhub.system, 'name', 'hub')}_{param}"
+            )
             deadline = (
                 asyncio.get_running_loop().time() + OPENTHERM_CONFIRMATION_WINDOW
             )
+
+            async def dismiss_previous_failure():
+                """Remove a stale warning after a later confirmed command."""
+                await hass.services.async_call(
+                    "persistent_notification",
+                    "dismiss",
+                    {
+                        "notification_id": notification_id
+                    },
+                    blocking=False,
+                )
 
             async def report_failure_if_still_mismatched():
                 """Report only a mismatch that survives the full window."""
@@ -531,9 +546,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                     {
                         "title": title,
                         "message": message,
-                        "notification_id": (
-                            f"wiser_opentherm_{instance.wiserhub.system.name}_{param}"
-                        ),
+                        "notification_id": notification_id,
                     },
                     blocking=False,
                 )
@@ -573,6 +586,7 @@ async def async_setup_services(hass: HomeAssistant, data):
                         return
                     if matches:
                         if retry_sent or timed_out:
+                            await dismiss_previous_failure()
                             return
                         continue
 

@@ -71,6 +71,9 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_LEGACY_NAMING": "legacy_naming",
             "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
             "CONF_OPENTHERM_EVER_CONNECTED": "opentherm_ever_connected",
+            "CONF_OPENTHERM_HOT_WATER_CAPABLE": "opentherm_hot_water_capable",
+            "CONF_OPENTHERM_HOT_WATER_CONTROL": "opentherm_hot_water_control",
+            "CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID": "opentherm_hot_water_sensor_entity_id",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_NAME": "name",
             "DATA": "data",
@@ -160,6 +163,96 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         functions._remember_opentherm_connection(hass, entry, coordinator)
         update.assert_not_called()
         sync_registry.assert_not_called()
+
+    def test_writable_hot_water_capability_is_remembered(self):
+        sync_registry = Mock()
+        self.namespace["_sync_opentherm_entity_registry"] = sync_registry
+        functions = load_functions(
+            "__init__.py", {"_remember_opentherm_connection"}, self.namespace
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+        entry = SimpleNamespace(
+            data={"opentherm_ever_connected": True}
+        )
+        opentherm = SimpleNamespace(
+            enabled=True,
+            connection_status="Connected",
+            boiler_parameters=SimpleNamespace(hw_setpoint_read_write=True),
+        )
+        coordinator = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(opentherm=opentherm)
+            )
+        )
+
+        functions._remember_opentherm_connection(hass, entry, coordinator)
+
+        update.assert_called_once_with(
+            entry,
+            data={
+                "opentherm_ever_connected": True,
+                "opentherm_hot_water_capable": True,
+            },
+        )
+
+    def test_hot_water_support_survives_capability_data_gap(self):
+        functions = load_functions(
+            "opentherm_detection.py",
+            {"opentherm_hot_water_control_is_supported"},
+            self.namespace,
+        )
+        opentherm = SimpleNamespace(boiler_parameters=SimpleNamespace())
+
+        self.assertTrue(
+            functions.opentherm_hot_water_control_is_supported(
+                SimpleNamespace(
+                    data={"opentherm_hot_water_capable": True}, options={}
+                ),
+                opentherm,
+            )
+        )
+        self.assertTrue(
+            functions.opentherm_hot_water_control_is_supported(
+                SimpleNamespace(
+                    data={}, options={"opentherm_hot_water_control": True}
+                ),
+                opentherm,
+            )
+        )
+
+    def test_hot_water_presets_follow_boiler_limits(self):
+        self.namespace.update(
+            vol=SimpleNamespace(Invalid=ValueError),
+            MAX_OPENTHERM_HOT_WATER_PRESETS=10,
+            DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP=55.0,
+            OPENTHERM_HOT_WATER_DEFAULT_BOOSTS=(15, 30, 45),
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {
+                "_default_opentherm_hot_water_presets",
+                "_validate_opentherm_hot_water_presets",
+            },
+            self.namespace,
+        )
+        defaults = functions._default_opentherm_hot_water_presets(40, 50)
+        self.assertTrue(
+            all(preset["temperature"] == 50 for preset in defaults)
+        )
+        stored = [{
+            "name": "Boost",
+            "temperature": 55,
+            "duration_minutes": 15,
+        }]
+        with self.assertRaises(ValueError):
+            functions._validate_opentherm_hot_water_presets(stored, 40, 50)
+        clamped = functions._validate_opentherm_hot_water_presets(
+            stored, 40, 50, clamp_temperature=True
+        )
+        self.assertEqual(clamped[0]["temperature"], 50)
 
     def test_disabling_opentherm_clears_remembered_connection(self):
         sync_registry = Mock()
@@ -379,6 +472,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         result = await functions.async_step_init(flow)
         self.assertIn("ui_options", result["menu_options"])
+        self.assertNotIn("opentherm", result["menu_options"])
         self.assertNotIn("equipment_sensors", result["menu_options"])
 
     async def test_equipment_menu_is_below_opentherm(self):
@@ -393,9 +487,43 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         result = await functions.async_step_init(flow)
         self.assertLess(
-            result["menu_options"].index("opentherm_sensors"),
+            result["menu_options"].index("opentherm"),
             result["menu_options"].index("equipment_sensors"),
         )
+
+    async def test_opentherm_menu_groups_control_and_sensors(self):
+        self.namespace["opentherm_hot_water_control_is_supported"] = (
+            lambda entry, opentherm: True
+        )
+        functions = load_functions(
+            "config_flow.py", {"async_step_opentherm"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _opentherm=lambda: object(),
+            config_entry=SimpleNamespace(),
+            async_show_menu=lambda **kwargs: kwargs,
+        )
+        result = await functions.async_step_opentherm(flow)
+        self.assertEqual(result["step_id"], "opentherm")
+        self.assertEqual(
+            result["menu_options"],
+            ["opentherm_hot_water_control", "opentherm_sensors"],
+        )
+
+    async def test_opentherm_menu_hides_unsupported_hot_water_control(self):
+        self.namespace["opentherm_hot_water_control_is_supported"] = (
+            lambda entry, opentherm: False
+        )
+        functions = load_functions(
+            "config_flow.py", {"async_step_opentherm"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _opentherm=lambda: object(),
+            config_entry=SimpleNamespace(),
+            async_show_menu=lambda **kwargs: kwargs,
+        )
+        result = await functions.async_step_opentherm(flow)
+        self.assertEqual(result["menu_options"], ["opentherm_sensors"])
 
     async def test_equipment_menu_does_not_require_opentherm(self):
         functions = load_functions(
@@ -409,7 +537,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         result = await functions.async_step_init(flow)
         self.assertIn("equipment_sensors", result["menu_options"])
-        self.assertNotIn("opentherm_sensors", result["menu_options"])
+        self.assertNotIn("opentherm", result["menu_options"])
 
     async def test_enabled_equipment_option_remains_available_during_data_gap(self):
         self.namespace.update(
