@@ -327,6 +327,7 @@
     },
     "sensor": {
       "signal": { "name": "Signal" },
+      "report_count": { "name": "Berichtsanzahl" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heizungsbetriebsart" },
       "heating": {
