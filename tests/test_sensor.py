@@ -1440,12 +1440,14 @@ class WiserSmokeAlarmStatusSensorTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.binary_sensor_module = _load_binary_sensor_module()
+        cls.sensor_module = _load_sensor_module()
 
     def setUp(self):
         self.device = SimpleNamespace(
             ac_mains=True,
             test_mode=False,
             hush_mode=True,
+            report_count=42,
             product_type="SmokeAlarmDevice",
             firmware_version="1.0",
         )
@@ -1488,6 +1490,23 @@ class WiserSmokeAlarmStatusSensorTest(unittest.TestCase):
 
         self.assertTrue(sensor.is_on)
         self.assertEqual(sensor._attr_icon, "mdi:volume-off")
+
+    def test_reads_report_count_and_refreshes(self):
+        sensor = self.sensor_module.WiserSmokeAlarmReportCountSensor(
+            self.data, 7
+        )
+        sensor.async_write_ha_state = Mock()
+
+        self.assertEqual(sensor.native_value, 42)
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertEqual(sensor._attr_icon, "mdi:counter")
+        self.assertEqual(sensor.unique_id, "physical-sensor-7-report_count")
+
+        self.device.report_count = 43
+        sensor._handle_coordinator_update()
+
+        self.assertEqual(sensor.native_value, 43)
+        sensor.async_write_ha_state.assert_called_once_with()
 
 
 class WiserEquipmentBinarySensorTest(unittest.TestCase):
