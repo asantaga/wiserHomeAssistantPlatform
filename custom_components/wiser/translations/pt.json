@@ -1,0 +1,651 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wiser Configuração do hub de calor",
+        "description": "Insira o endereço IP e a chave secreta obtidas do hub.",
+        "data": {
+          "host": "Endereço IP ou nome de host",
+          "port": "Número da porta",
+          "password": "Chave secreta"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Wiser Configuração do hub de aquecimento ({name})",
+        "description": "Insira a chave secreta obtida do hub.",
+        "data": {
+          "host": "Endereço IP ou nome de host",
+          "port": "Número da porta",
+          "password": "Chave secreta"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "Wiser A configuração do Heat Hub já está em andamento.",
+      "already_configured": "Este dispositivo já está configurado.",
+      "not_wiser_hub": "O dispositivo descoberto não é um Heat Hub Wiser."
+    },
+    "error": {
+      "auth_failure": "Não é possível autenticar com o hub Wiser. Verifique a chave secreta e tente novamente.",
+      "timeout_error": "Tempo limite esgotado ao tentar conectar-se ao hub Wiser. Verifique o endereço IP e tente novamente.",
+      "timeout_error_discovery": "Tempo limite esgotado ao tentar conectar-se ao hub Wiser. Verifique se o seu hub ainda está online e tente novamente.",
+      "unknown": "Erro desconhecido ao conectar ao hub Wiser. Por favor, verifique os registros."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wiser Opções de integração",
+        "description": "Selecione parâmetros para alterar",
+        "menu_options": {
+          "main_params": "Parâmetros principais",
+          "automation_params": "Parâmetros de automação",
+          "opentherm_sensors": "Sensores OpenTherm",
+          "equipment_sensors": "Sensores de equipamento",
+          "ui_options": "Opções de UI"
+        }
+      },
+      "ui_options": {
+        "title": "Opções de UI",
+        "data": {
+          "legacy_naming": "Nomenclatura legada",
+          "show_wiser_sidebar": "Mostrar Wiser na barra lateral"
+        },
+        "data_description": {
+          "legacy_naming": "Incluir espaço nomes em nomes de dispositivos Wiser. Se ativado, usar Home Assistant para regenerar IDs de entidade com o formato padrão em Configurações → Sistema → Formato de ID de entidade (Home Assistant 2026.8 e posterior) duplicará os nomes das áreas quando os nomes da área e da sala Wiser corresponderem. A alteração desta opção não renomeia os IDs de entidade existentes."
+        }
+      },
+      "main_params": {
+        "title": "Wiser Opções de integração",
+        "description": "Parâmetros principais",
+        "data": {
+          "host": "Endereço IP ou nome do host",
+          "port": "Número da porta",
+          "scan_interval": "Intervalo de varredura (seg)",
+          "heating_boost_temp": "Temperatura padrão do reforço de aquecimento (°C)",
+          "heating_boost_time": "Duração padrão do reforço de aquecimento (minutos)",
+          "hotwater_boost_time": "Duração padrão do reforço de água quente (minutos)",
+          "setpoint_mode": "Modo de ponto de ajuste",
+          "restore_manual_temp_option": "Use esta temperatura se não A temperatura manual é armazenada"
+        }
+      },
+      "automation_params": {
+        "title": "Wiser Opções de integração",
+        "description": "Habilitar automações integradas",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Modo passivo",
+            "description": "Habilitar capacidade TRV passiva. Cada sala precisa ser habilitada para funcionar.",
+            "data": {
+              "automations_passive_mode": "Modo passivo",
+              "passive_mode_temperature_increments": "Incrementos de temperatura no modo passivo"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Controle climático de água quente",
+            "description": "Ativa o controle climático de água quente. Veja o wiki para detalhes.",
+            "data": {
+              "hotwater_climate": "Ativar a entidade climática",
+              "experimental_mode": "Ativar modo de trabalho experimental",
+              "hotwater_auto_mode": "Modo automático de água quente",
+              "hotwater_heat_mode": "Modo de aquecimento de água quente",
+              "hotwater_boost_mode": "Modo de reforço de água quente",
+              "hotwater_sensor_entity_id": "Sensor de temperatura de água quente"
+            }
+          }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Sensores de equipamento",
+        "description": "Configure entidades de dados de equipamento detalhadas para dispositivos compatíveis.",
+        "data": {
+          "equipment_sensors": "Habilitar sensores de dados do equipamento"
+        },
+        "data_description": {
+          "equipment_sensors": "Exponha um sensor adicional contendo atributos detalhados do equipamento para cada plugue inteligente, PowerTag e atuador de aquecimento compatível."
+        }
+      },
+      "opentherm_sensors": {
+        "title": "Sensores OpenTherm",
+        "description": "Escolha uma categoria de atributos OpenTherm detectados.",
+        "menu_options": {
+          "opentherm_readings": "Leituras",
+          "opentherm_central_heating": "Aquecimento central",
+          "opentherm_hot_water": "Água quente",
+          "opentherm_status": "Estado e diagnóstico"
+        }
+      },
+      "opentherm_readings": {
+        "title": "Leituras OpenTherm",
+        "description": "Escolha qual as leituras OpenTherm detectadas são expostas como entidades de sensor.",
+        "data": {
+          "ch_flow_temperature": "Temperatura de fluxo da caldeira",
+          "ch_pressure_bar": "Pressão CH",
+          "ch_return_temperature": "Temperatura de retorno da caldeira",
+          "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Temperatura de exaustão da caldeira",
+          "estimated_boiler_output": "Potência estimada da caldeira",
+          "hw_flow_rate": "Vazão de água quente",
+          "hw_temperature": "Temperatura da água quente",
+          "maximum_capacity_kw": "Capacidade máxima da caldeira",
+          "minimum_modulation_level": "Nível mínimo de modulação",
+          "relative_modulation_level": "Nível de modulação relativa",
+          "room_temperature": "Temperatura ambiente"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm aquecimento central",
+        "description": "Escolha quais atributos de aquecimento central detectados são expostos como entidades.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Leitura/escrita do ponto de ajuste máximo do CH da caldeira",
+          "boiler_ch_max_setpoint_transfer_enable": "Transferência máxima do ponto de ajuste do CH da caldeira habilitada",
+          "boiler_ch_setpoint": "Ponto de ajuste do CH da caldeira",
+          "boiler_ch_setpoint_lower_bound": "Limite inferior do ponto de ajuste do CH da caldeira",
+          "boiler_ch_setpoint_upper_bound": "Limite superior do ponto de ajuste do CH da caldeira",
+          "ch_flow_active_lower_setpoint": "Ponto de ajuste inferior ativo de fluxo CH",
+          "ch_flow_active_upper_setpoint": "Ponto de ajuste superior ativo de fluxo CH",
+          "ch1_flow_enabled": "Fluxo CH1 habilitado",
+          "ch1_flow_setpoint": "Ponto de ajuste de fluxo CH1",
+          "ch2_flow_enabled": "Fluxo CH2 habilitado",
+          "ch2_flow_setpoint": "Fluxo CH2 ponto de ajuste",
+          "room_setpoint": "Ponto de ajuste da sala"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm água quente",
+        "description": "Escolha quais atributos de água quente detectados são expostos como entidades.",
+        "data": {
+          "boiler_hw_setpoint": "Ponto de ajuste de água quente da caldeira",
+          "boiler_hw_setpoint_lower_bound": "Limite inferior do ponto de ajuste de água quente da caldeira",
+          "boiler_hw_setpoint_read_write": "Leitura/escrita do ponto de ajuste de água quente da caldeira",
+          "boiler_hw_setpoint_transfer_enable": "Transferência do ponto de ajuste de água quente da caldeira habilitada",
+          "boiler_hw_setpoint_upper_bound": "Ponto de ajuste de água quente da caldeira limite superior",
+          "hw_enabled": "Água quente habilitada",
+          "hw_flow_setpoint": "Ponto de ajuste do fluxo de água quente"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm status e diagnóstico",
+        "description": "Escolha quais status detectados e atributos de diagnóstico são expostos como entidades de sensor.",
+        "data": {
+          "boiler_fault": "Avaria na caldeira",
+          "central_heating_active": "Aquecimento central activo",
+          "central_heating_2_active": "Aquecimento central 2 activo",
+          "connection_status": "Estado da ligação",
+          "coprocessor_update_status": "OpenTherm Estado de actualização do coprocessador",
+          "coprocessor_version": "OpenTherm versão do coprocessador",
+          "cooling_active": "Resfriamento ativo",
+          "diagnostic_event": "Evento de diagnóstico",
+          "flame_active": "Chama ativa",
+          "flame_statistics": "Estatísticas de chama",
+          "hot_water_active": "Água quente ativa",
+          "operating_mode": "Modo de operação",
+          "slave_status": "OpenTherm status escravo",
+          "tracked_room_id": "ID da sala rastreada"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "OpenTherm Os dados não estão disponíveis para este Wiser centro.",
+      "equipment_not_available": "Os dados do equipamento não estão disponíveis para este hub Wiser."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "Definir parâmetro OpenTherm",
+      "description": "Altera um parâmetro de temperatura OpenTherm compatível no hub Wiser. Parâmetro",
+      "fields": {
+        "parameter": {
+          "name": "",
+          "description": "OpenTherm Parâmetro de temperatura a ser alterado. O endpoint de API necessário é selecionado automaticamente."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Utilize uma temperatura dentro dos limites informados pela sua caldeira."
+        },
+        "hub": {
+          "name": "Hub Wiser",
+          "description": "Selecione um hub somente quando você tiver vários hubs Wiser."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Ponto de ajuste inferior de aquecimento central ativo",
+        "chFlowActiveUpperSetpoint": "Ponto de ajuste superior de aquecimento central ativo",
+        "dhwFlowSetpoint": "Ponto de ajuste de fluxo de água quente do hub",
+        "dhwSetpoint": "Ponto de ajuste de água quente da caldeira",
+        "maxChSetpoint": "Ponto de ajuste máximo de aquecimento central da caldeira"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": {
+      "message": "Forneça uma temperatura OpenTherm."
+    },
+    "opentherm_hub_not_found": {
+      "message": "O hub Wiser especificado não foi localizado."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "O hub Wiser especificado não está carregado."
+    },
+    "opentherm_hub_required": {
+      "message": "Selecione um hub Wiser quando mais de um hub estiver configurado."
+    },
+    "opentherm_not_supported": {
+      "message": "Este hub não possui a funcionalidade OpenTherm."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "O parâmetro ou valor OpenTherm é inválido: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "Não é possível definir o parâmetro OpenTherm {parameter}: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "O parâmetro OpenTherm {parameter} não permaneceu em {requested} °C após uma nova tentativa e a janela de confirmação de segundo {window}. Wiser relata {reported} °C. Nenhuma nova tentativa será enviada."
+    },
+    "opentherm_retry_failed": {
+      "message": "O parâmetro OpenTherm {parameter} não permaneceu em {requested} °C e sua nova tentativa não pôde ser enviada: {error}. Wiser relata {reported} °C. Nenhuma nova tentativa será enviada."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser Comando OpenTherm"
+    }
+  },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Aquecimento"
+      },
+      "floor_temperature": {
+        "name": "Temperatura do piso"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": {
+        "name": "Temperatura alvo do modo ausente"
+      },
+      "floor_temperature_offset": {
+        "name": "Deslocamento da temperatura do piso"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Temperatura de desconforto interno"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Temperatura de desconforto externo"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modo"
+      },
+      "power_on_behavior": {
+        "name": "Comportamento de inicialização"
+      },
+      "led_indicator": {
+        "name": "Indicador LED"
+      }
+    },
+    "button": {
+      "boost_all_heating": {
+        "name": "Aumentar todo o aquecimento"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Cancelar todas as substituições de aquecimento"
+      },
+      "boost_hot_water": {
+        "name": "Aumentar a água quente"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Cancelar substituições de água quente"
+      },
+      "toggle_hot_water": {
+        "name": "Alternar água quente"
+      },
+      "moment": {
+        "name": "Momento: {name}"
+      }
+    },
+    "switch": {
+      "valve_protection": {
+        "name": "Proteção da válvula"
+      },
+      "eco_mode": {
+        "name": "Modo Eco"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "O modo ausente afeta a água quente"
+      },
+      "comfort_mode": {
+        "name": "Modo conforto"
+      },
+      "away_mode": {
+        "name": "Modo ausente"
+      },
+      "daylight_saving": {
+        "name": "Horário de verão"
+      },
+      "summer_comfort_enabled": {
+        "name": "Conforto de verão habilitado"
+      },
+      "window_detection": {
+        "name": "Detecção de janela"
+      },
+      "include_in_summer_comfort": {
+        "name": "Incluir no conforto do verão"
+      },
+      "device_lock": {
+        "name": "Bloqueio de dispositivo"
+      },
+      "identify": {
+        "name": "Identificar"
+      },
+      "outlet": {
+        "name": "Tomada"
+      },
+      "away_mode_turns_off": {
+        "name": "O modo ausente desliga"
+      },
+      "away_mode_closes": {
+        "name": "O modo ausente fecha"
+      },
+      "passive_mode": {
+        "name": "Modo passivo"
+      },
+      "respect_summer_comfort": {
+        "name": "Respeite o conforto do verão"
+      },
+      "interacts_with_room_climate": {
+        "name": "Interage com o clima ambiente"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "A umidade interage com o clima ambiente"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "A temperatura interage com o clima ambiente"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "A iluminação interage com o clima ambiente"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} interage com o clima ambiente"
+      },
+      "manual_heat": {
+        "name": "Aquecimento manual"
+      },
+      "hot_water": {
+        "name": "Água quente"
+      }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": {
+        "name": "Prevenção de desconforto no verão"
+      },
+      "summer_comfort_available": {
+        "name": "Conforto de verão disponível"
+      },
+      "pcm_device_limit_reached": {
+        "name": "Limite do dispositivo PCM atingido"
+      },
+      "smoke_alarm": {
+        "name": "Alarme de fumaça"
+      },
+      "heat_alarm": {
+        "name": "Alarme de calor"
+      },
+      "tamper_alarm": {
+        "name": "Alarme de violação"
+      },
+      "fault_warning": {
+        "name": "Aviso de falha"
+      },
+      "remote_alarm": {
+        "name": "Alarme remoto"
+      },
+      "battery_defect": {
+        "name": "Defeito na bateria"
+      },
+      "controllable": {
+        "name": "Controlável"
+      },
+      "pcm_mode": {
+        "name": "Modo PCM"
+      },
+      "window_detection_active": {
+        "name": "Detecção de janela ativa"
+      },
+      "is_dimmable": {
+        "name": "Regulável"
+      },
+      "is_led_indicator_supported": {
+        "name": "Indicador LED compatível"
+      },
+      "is_output_mode_supported": {
+        "name": "Modo de saída compatível"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Comportamento de inicialização suportado"
+      },
+      "is_tilt_supported": {
+        "name": "Inclinação suportada"
+      },
+      "is_open": {
+        "name": "Aberto"
+      },
+      "is_closed": {
+        "name": "Fechado"
+      },
+      "active": {
+        "name": "Ativo"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Leitura/gravação do ponto de ajuste máximo do CH da caldeira"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Transferência máxima do ponto de ajuste do CH da caldeira habilitada"
+      },
+      "boiler_fault": {
+        "name": "Falha da caldeira"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Leitura/escrita do ponto de ajuste de água quente da caldeira"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Transferência do ponto de ajuste de água quente da caldeira habilitada"
+      },
+      "central_heating_2_active": {
+        "name": "Aquecimento central 2 ativo"
+      },
+      "central_heating_active": {
+        "name": "Aquecimento central ativo"
+      },
+      "ch1_flow_enabled": {
+        "name": "Fluxo CH1 habilitado"
+      },
+      "ch2_flow_enabled": {
+        "name": "Fluxo CH2 habilitado"
+      },
+      "cooling_active": {
+        "name": "Resfriamento ativo"
+      },
+      "diagnostic_event": {
+        "name": "Evento de diagnóstico"
+      },
+      "flame_active": {
+        "name": "Chama ativa"
+      },
+      "hot_water_active": {
+        "name": "Água quente ativa"
+      },
+      "hw_enabled": {
+        "name": "Água quente ativada"
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Sinal"
+      },
+      "cloud": {
+        "name": "Nuvem"
+      },
+      "heating_operation_mode": {
+        "name": "Modo de operação de aquecimento"
+      },
+      "heating": {
+        "name": "Aquecimento",
+        "state": {
+          "off": "Desligado",
+          "on": "Ligado"
+        }
+      },
+      "heating_channel": {
+        "name": "Canal de aquecimento {channel}",
+        "state": {
+          "off": "Desligado",
+          "on": "Ligado"
+        }
+      },
+      "hot_water": {
+        "name": "Água quente",
+        "state": {
+          "off": "Desligado",
+          "on": "Ligado"
+        }
+      },
+      "hot_water_operation_mode": {
+        "name": "Modo de operação de água quente"
+      },
+      "target_temperature": {
+        "name": "Temperatura alvo"
+      },
+      "floor_temperature": {
+        "name": "Temperatura do piso"
+      },
+      "boiler_flow_temperature": {
+        "name": "Temperatura de fluxo da caldeira"
+      },
+      "boiler_return_temperature": {
+        "name": "Temperatura de retorno da caldeira"
+      },
+      "flame_statistics": {
+        "name": "Estatísticas de chama"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Ponto de ajuste do CH da caldeira"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Limite inferior do ponto de ajuste do CH da caldeira"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Limite superior do ponto de ajuste do CH da caldeira"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Temperatura de exaustão da caldeira"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Ponto de ajuste de água quente da caldeira"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Limite inferior do ponto de ajuste de água quente da caldeira"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Ponto de ajuste de água quente da caldeira limite superior"
+      },
+      "ch1_flow_setpoint": {
+        "name": "Ponto de ajuste de fluxo CH1"
+      },
+      "ch2_flow_setpoint": {
+        "name": "Ponto de ajuste de fluxo CH2"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Ponto de ajuste inferior ativo de fluxo CH"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Ponto de ajuste superior ativo de fluxo CH"
+      },
+      "ch_pressure_bar": {
+        "name": "Pressão CH"
+      },
+      "connection_status": {
+        "name": "Status de conexão"
+      },
+      "coprocessor_update_status": {
+        "name": "OpenTherm Status de atualização do coprocessador"
+      },
+      "coprocessor_version": {
+        "name": "OpenTherm versão do coprocessador"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Saída estimada da caldeira"
+      },
+      "hw_flow_rate": {
+        "name": "Taxa de fluxo de água quente"
+      },
+      "hw_flow_setpoint": {
+        "name": "Ponto de ajuste do fluxo de água quente"
+      },
+      "hw_temperature": {
+        "name": "Temperatura da água quente"
+      },
+      "maximum_capacity_kw": {
+        "name": "Capacidade máxima da caldeira"
+      },
+      "minimum_modulation_level": {
+        "name": "Nível mínimo de modulação"
+      },
+      "operating_mode": {
+        "name": "Modo de operação"
+      },
+      "relative_modulation_level": {
+        "name": "Nível de modulação relativo"
+      },
+      "room_setpoint": {
+        "name": "Ponto de ajuste da sala"
+      },
+      "room_temperature": {
+        "name": "Temperatura ambiente"
+      },
+      "slave_status": {
+        "name": "OpenTherm status escravo"
+      },
+      "tracked_room_id": {
+        "name": "ID da sala rastreada"
+      },
+      "heating_demand": {
+        "name": "Demanda de aquecimento"
+      },
+      "heating_demand_channel": {
+        "name": "Canal de demanda de aquecimento {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Demanda de água quente"
+      },
+      "total_energy": {
+        "name": "Energia total"
+      },
+      "energy_delivered": {
+        "name": "Energia fornecida"
+      },
+      "energy_received": {
+        "name": "Energia recebida"
+      },
+      "equipment_power": {
+        "name": "Equipamento"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} inicia o aquecimento",
+      "stopped_heating": "{entity_name} para de aquecer",
+      "boosted": "{entity_name} é aumentado",
+      "target_temperature_increased": "{entity_name} temperatura alvo aumentada",
+      "target_temperature_decreased": "A temperatura alvo do {entity_name} diminuiu"
+    }
+  }
+}
