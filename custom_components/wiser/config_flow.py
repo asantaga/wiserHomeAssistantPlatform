@@ -42,6 +42,7 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_ADDITIONAL_SENSORS,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -50,6 +51,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_EQUIPMENT_SENSORS,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
@@ -91,6 +93,7 @@ from .opentherm_detection import (
     opentherm_hot_water_limits,
     opentherm_is_detected,
 )
+from .helpers import room_has_climate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -395,9 +398,24 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             for device in all_devices(collection_name)
         )
 
+    def _rooms_without_climate(self):
+        """Return loaded Wiser rooms that do not create climate entities."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return []
+        return [
+            room
+            for room in entry_data[DATA].wiserhub.rooms.all
+            if not room_has_climate(room)
+        ]
+
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
-        menu_options = ["main_params", "automation_params", "ui_options"]
+        menu_options = [
+            "main_params",
+            "automation_params",
+            "ui_options",
+        ]
         if self._opentherm() is not None:
             menu_options.append("opentherm")
         if self._equipment_available() or self.config_entry.options.get(
@@ -736,6 +754,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(data=options)
 
         options = self.config_entry.options
+        additional_sensor_options = options.get(CONF_ADDITIONAL_SENSORS, {})
+        if not isinstance(additional_sensor_options, dict):
+            additional_sensor_options = {}
 
         data_schema = {
             vol.Required(CONF_AUTOMATIONS_PASSIVE): section(
@@ -841,11 +862,37 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 {"collapsed": True},
             ),
+            vol.Required(CONF_ADDITIONAL_SENSORS): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_SCHEDULE_SETPOINT_ROOMS,
+                            default=[
+                                str(room_id)
+                                for room_id in additional_sensor_options.get(
+                                    CONF_SCHEDULE_SETPOINT_ROOMS, []
+                                )
+                            ],
+                        ): selector(
+                            {
+                                "select": {
+                                    "options": [
+                                        {"value": str(room.id), "label": room.name}
+                                        for room in self._rooms_without_climate()
+                                    ],
+                                    "multiple": True,
+                                    "mode": SelectSelectorMode.DROPDOWN,
+                                }
+                            }
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
         return self.async_show_form(
             step_id="automation_params", data_schema=vol.Schema(data_schema)
         )
-
 
 class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

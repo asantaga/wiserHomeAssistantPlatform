@@ -92,6 +92,8 @@ def _load_sensor_module() -> ModuleType:
     _module(
         "wiser.const",
         DATA="data",
+        CONF_ADDITIONAL_SENSORS="additional_sensors",
+        CONF_SCHEDULE_SETPOINT_ROOMS="schedule_setpoint_rooms",
         CONF_EQUIPMENT_SENSORS="equipment_sensors",
         CONF_OPENTHERM_SENSORS="opentherm_sensors",
         DOMAIN="wiser",
@@ -123,6 +125,7 @@ def _load_sensor_module() -> ModuleType:
         get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",
         get_uuid_unique_id=lambda unique_id: f"uuid-{unique_id}",
+        room_has_climate=lambda room: bool(room.devices),
     )
     class WiserEntityMixin:
         pass
@@ -611,6 +614,71 @@ class WiserSystemBinarySensorUpdateTest(unittest.TestCase):
 
         self.assertIsNone(self.sensor._state)
         self.sensor.async_write_ha_state.assert_called_once_with()
+
+
+class WiserRoomScheduledSetpointSensorTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sensor_module = _load_sensor_module()
+
+    @staticmethod
+    def _data(rooms):
+        rooms_by_id = {room.id: room for room in rooms}
+        return SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                rooms=SimpleNamespace(
+                    all=rooms,
+                    get_by_id=rooms_by_id.get,
+                    get_by_device_id=lambda _device_id: None,
+                ),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            )
+        )
+
+    def test_sensor_reports_room_scheduled_setpoint(self) -> None:
+        room = SimpleNamespace(
+            id=4,
+            name="Kitchen",
+            devices=[],
+            scheduled_target_temperature=19.5,
+        )
+        sensor = self.sensor_module.WiserRoomScheduledSetpointSensor(
+            self._data([room]), room.id
+        )
+
+        self.assertEqual(sensor.native_value, 19.5)
+        self.assertEqual(
+            sensor._attr_translation_key, "current_schedule_temperature"
+        )
+        self.assertEqual(sensor.unique_id, "room-entity-id")
+        self.assertEqual(sensor.device_info["manufacturer"], "Drayton")
+        self.assertEqual(sensor.device_info["model"], "Room")
+        self.assertEqual(sensor.device_info["suggested_area"], "Kitchen")
+
+    def test_only_selected_rooms_without_climate_get_sensors(self) -> None:
+        empty = SimpleNamespace(
+            id=4,
+            name="Kitchen",
+            devices=[],
+            scheduled_target_temperature=19.5,
+        )
+        occupied = SimpleNamespace(
+            id=5,
+            name="Lounge",
+            devices=[SimpleNamespace(id=10)],
+            scheduled_target_temperature=21,
+        )
+        data = self._data([empty, occupied])
+
+        self.assertEqual(
+            self.sensor_module._selected_room_scheduled_setpoint_sensors(data, []),
+            [],
+        )
+        sensors = self.sensor_module._selected_room_scheduled_setpoint_sensors(
+            data, [str(empty.id), str(occupied.id)]
+        )
+        self.assertEqual(len(sensors), 1)
+        self.assertEqual(sensors[0]._device_id, empty.id)
 
 
 class WiserDeviceSignalSensorNameTest(unittest.TestCase):
