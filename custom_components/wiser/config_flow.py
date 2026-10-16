@@ -29,6 +29,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult, section
+from homeassistant.helpers import area_registry as ar, entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
     EntitySelector,
@@ -51,8 +52,9 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
-    CONF_SCHEDULE_SETPOINT_ROOMS,
+    CONF_AUTOMATIONS_EXTERNAL_PASSIVE,
     CONF_EQUIPMENT_SENSORS,
+    CONF_EXTERNAL_PASSIVE_ASSIGNMENTS,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
@@ -64,6 +66,7 @@ from .const import (
     CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID,
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
+    CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_SETPOINT_MODE,
     CONF_SHOW_WISER_SIDEBAR,
     CUSTOM_DATA_STORE,
@@ -96,6 +99,19 @@ from .opentherm_detection import (
 from .helpers import active_wiser_rooms, room_has_climate
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _external_passive_duplicate_entities(assignments):
+    """Return external climate entities assigned to more than one room."""
+    assigned_rooms = {}
+    for room_id, entity_ids in assignments.items():
+        for entity_id in entity_ids:
+            assigned_rooms.setdefault(entity_id, set()).add(room_id)
+    return {
+        entity_id
+        for entity_id, room_ids in assigned_rooms.items()
+        if len(room_ids) > 1
+    }
 
 
 def _default_opentherm_hot_water_presets(minimum=35.0, maximum=55.0):
@@ -490,6 +506,60 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             menu_options=menu_options,
         )
 
+    def _wiser_rooms(self):
+        """Return Wiser rooms available to the loaded config entry."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return []
+        return entry_data[DATA].wiserhub.rooms.all
+
+    def _external_passive_room_fields(self):
+        """Return unique form field labels mapped to Wiser room IDs."""
+        rooms = sorted(
+            self._wiser_rooms(),
+            key=lambda room: (room.name.casefold(), room.name, str(room.id)),
+        )
+        name_counts = {
+            room.name: sum(other.name == room.name for other in rooms)
+            for room in rooms
+        }
+        return {
+            (
+                room.name
+                if name_counts[room.name] == 1
+                else f"{room.name} ({room.id})"
+            ): str(room.id)
+            for room in rooms
+        }
+
+    def _external_passive_entities_by_room(self):
+        """Return external climate entities in each Wiser room's HA area."""
+        entity_registry = er.async_get(self.hass)
+        area_registry = ar.async_get(self.hass)
+        entries = list(entity_registry.entities.values())
+        entities_by_room = {}
+        for room in self._wiser_rooms():
+            area = area_registry.async_get_area_by_name(room.name)
+            entities_by_room[str(room.id)] = sorted(
+                entry.entity_id
+                for entry in entries
+                if area is not None
+                and entry.platform != DOMAIN
+                and entry.entity_id.startswith("climate.")
+                and er.async_get_effective_area_id(self.hass, entry) == area.id
+            )
+        return entities_by_room
+
+    def _external_passive_form_rooms(self):
+        """Return form rooms that have at least one eligible external entity."""
+        entities_by_room = self._external_passive_entities_by_room()
+        room_fields = {
+            field_name: room_id
+            for field_name, room_id in self._external_passive_room_fields().items()
+            if entities_by_room.get(room_id)
+        }
+        return room_fields, entities_by_room
+
     async def async_step_opentherm(self, user_input=None):
         """Choose an OpenTherm feature to configure."""
         if self._opentherm() is None:
@@ -812,14 +882,105 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_automation_params(self, user_input=None):
         """Automation options."""
+        if (
+            user_input is not None
+            and CONF_AUTOMATIONS_EXTERNAL_PASSIVE not in user_input
+        ):
+            return self.async_create_entry(
+                data=self.config_entry.options | user_input
+            )
+
+        room_fields, external_entities_by_room = (
+            self._external_passive_form_rooms()
+        )
+        saved_external_options = dict(
+            self.config_entry.options.get(CONF_AUTOMATIONS_EXTERNAL_PASSIVE, {})
+        )
+        saved_assignments = {
+            str(room_id): list(entity_ids)
+            for room_id, entity_ids in saved_external_options.get(
+                CONF_EXTERNAL_PASSIVE_ASSIGNMENTS, {}
+            ).items()
+        }
+        display_external_options = saved_external_options
+        errors = {}
         if user_input is not None:
-            options = self.config_entry.options | user_input
-            return self.async_create_entry(data=options)
+            display_external_options = dict(
+                user_input.get(CONF_AUTOMATIONS_EXTERNAL_PASSIVE, {})
+            )
+            external_options = dict(display_external_options)
+            assignments = {}
+            registry = er.async_get(self.hass)
+            for field_name, room_id in room_fields.items():
+                entity_ids = list(external_options.pop(field_name, []))
+                if any(
+                    (entry := registry.async_get(entity_id)) is not None
+                    and entry.platform == DOMAIN
+                    for entity_id in entity_ids
+                ):
+                    errors["base"] = "external_trv_must_not_be_wiser"
+                if entity_ids:
+                    assignments[room_id] = entity_ids
+
+            if _external_passive_duplicate_entities(assignments):
+                errors["base"] = "external_trv_duplicate_assignment"
+
+            external_was_enabled = saved_external_options.get(
+                CONF_AUTOMATIONS_EXTERNAL_PASSIVE, False
+            )
+            external_is_enabled = external_options.get(
+                CONF_AUTOMATIONS_EXTERNAL_PASSIVE, False
+            )
+            if not errors:
+                rooms_to_disable = {
+                    room_id
+                    for room_id in set(saved_assignments) | set(assignments)
+                    if set(saved_assignments.get(room_id, []))
+                    != set(assignments.get(room_id, []))
+                }
+                if external_was_enabled and not external_is_enabled:
+                    rooms_to_disable.update(saved_assignments)
+                entry_data = self.hass.data.get(DOMAIN, {}).get(
+                    self.config_entry.entry_id
+                )
+                if entry_data:
+                    controller = entry_data[DATA].external_passive
+                    for room_id in rooms_to_disable:
+                        await controller.async_set_enabled(room_id, False)
+                external_options[CONF_EXTERNAL_PASSIVE_ASSIGNMENTS] = assignments
+                user_input = dict(user_input)
+                user_input[CONF_AUTOMATIONS_EXTERNAL_PASSIVE] = external_options
+                options = self.config_entry.options | user_input
+                return self.async_create_entry(data=options)
 
         options = self.config_entry.options
         additional_sensor_options = options.get(CONF_ADDITIONAL_SENSORS, {})
         if not isinstance(additional_sensor_options, dict):
             additional_sensor_options = {}
+
+        external_section_schema = {
+            vol.Optional(
+                CONF_AUTOMATIONS_EXTERNAL_PASSIVE,
+                default=display_external_options.get(
+                    CONF_AUTOMATIONS_EXTERNAL_PASSIVE, False
+                ),
+            ): bool,
+        }
+        for field_name, room_id in room_fields.items():
+            external_section_schema[
+                vol.Optional(
+                    field_name,
+                    default=display_external_options.get(
+                        field_name, saved_assignments.get(room_id, [])
+                    ),
+                )
+            ] = EntitySelector(
+                EntitySelectorConfig(
+                    domain="climate",
+                    multiple=True,
+                    include_entities=external_entities_by_room.get(room_id, []),
+                )
+            )
 
         data_schema = {
             vol.Required(CONF_AUTOMATIONS_PASSIVE): section(
@@ -850,6 +1011,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     }
                 ),
+                {"collapsed": True},
+            ),
+            vol.Required(CONF_AUTOMATIONS_EXTERNAL_PASSIVE): section(
+                vol.Schema(external_section_schema),
                 {"collapsed": True},
             ),
             vol.Required(CONF_AUTOMATIONS_HW_CLIMATE): section(
@@ -954,7 +1119,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         }
         return self.async_show_form(
-            step_id="automation_params", data_schema=vol.Schema(data_schema)
+            step_id="automation_params",
+            errors=errors,
+            data_schema=vol.Schema(data_schema),
         )
 
 class CannotConnect(exceptions.HomeAssistantError):

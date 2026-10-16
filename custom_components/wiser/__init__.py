@@ -288,6 +288,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     coordinator = WiserUpdateCoordinator(hass, config_entry)
 
+    await coordinator.external_passive.async_load()
+
     await coordinator.async_config_entry_first_refresh()
 
     if not coordinator.last_update_status == "Success":

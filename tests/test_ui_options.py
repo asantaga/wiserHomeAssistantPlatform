@@ -69,6 +69,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_ADDITIONAL_SENSORS": "additional_sensors",
+            "CONF_AUTOMATIONS_EXTERNAL_PASSIVE": (
+                "automations_external_passive_mode"
+            ),
+            "CONF_EXTERNAL_PASSIVE_ASSIGNMENTS": (
+                "external_passive_mode_assignments"
+            ),
             "CONF_LEGACY_NAMING": "legacy_naming",
             "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
             "CONF_SCHEDULE_SETPOINT_ROOMS": "schedule_setpoint_rooms",
@@ -614,6 +620,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         result = await functions.async_step_init(flow)
         self.assertIn("ui_options", result["menu_options"])
         self.assertNotIn("opentherm", result["menu_options"])
+        self.assertNotIn("external_passive_assignments", result["menu_options"])
         self.assertNotIn("equipment_sensors", result["menu_options"])
         self.assertNotIn("additional_sensors", result["menu_options"])
 
@@ -666,7 +673,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_additional_sensor_section_preserves_other_options(self):
         functions = load_functions(
-            "config_flow.py", {"async_step_automation_params"}, self.namespace
+            "config_flow.py",
+            {
+                "async_step_automation_params",
+                "_external_passive_duplicate_entities",
+            },
+            self.namespace,
         )
         flow = SimpleNamespace(
             config_entry=SimpleNamespace(options={"scan_interval": 30}),
@@ -690,6 +702,210 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 },
             },
         )
+
+    def test_external_passive_room_fields_are_unique_and_readable(self):
+        functions = load_functions(
+            "config_flow.py", {"_external_passive_room_fields"}, self.namespace
+        )
+        rooms = [
+            SimpleNamespace(id=1, name="Office"),
+            SimpleNamespace(id=3, name="Bedroom"),
+            SimpleNamespace(id=4, name="andys Bedroom"),
+            SimpleNamespace(id=2, name="Bedroom"),
+        ]
+        flow = SimpleNamespace(_wiser_rooms=lambda: rooms)
+
+        fields = functions._external_passive_room_fields(flow)
+
+        self.assertEqual(
+            list(fields.items()),
+            [
+                ("andys Bedroom", "4"),
+                ("Bedroom (2)", "2"),
+                ("Bedroom (3)", "3"),
+                ("Office", "1"),
+            ],
+        )
+        self.assertEqual(
+            fields,
+            {
+                "andys Bedroom": "4",
+                "Bedroom (2)": "2",
+                "Bedroom (3)": "3",
+                "Office": "1",
+            },
+        )
+
+    def test_external_passive_selector_uses_external_climates_in_room_area(self):
+        rooms = [
+            SimpleNamespace(id=1, name="Office"),
+            SimpleNamespace(id=2, name="Bedroom"),
+        ]
+        entries = [
+            SimpleNamespace(
+                entity_id="climate.office_wiser", platform="wiser", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="climate.office_trv", platform="mqtt", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="switch.office", platform="mqtt", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="climate.bedroom_trv", platform="zha", area_id="bedroom"
+            ),
+            SimpleNamespace(
+                entity_id="climate.other", platform="mqtt", area_id="other"
+            ),
+        ]
+        entity_registry = SimpleNamespace(
+            entities=SimpleNamespace(values=lambda: entries)
+        )
+        areas = {
+            "Office": SimpleNamespace(id="office"),
+            "Bedroom": SimpleNamespace(id="bedroom"),
+        }
+        area_registry = SimpleNamespace(
+            async_get_area_by_name=lambda name: areas.get(name)
+        )
+        self.namespace.update(
+            ar=SimpleNamespace(async_get=lambda _hass: area_registry),
+            er=SimpleNamespace(
+                async_get=lambda _hass: entity_registry,
+                async_get_effective_area_id=lambda _hass, entry: entry.area_id,
+            ),
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_passive_entities_by_room"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(hass=object(), _wiser_rooms=lambda: rooms)
+
+        self.assertEqual(
+            functions._external_passive_entities_by_room(flow),
+            {
+                "1": ["climate.office_trv"],
+                "2": ["climate.bedroom_trv"],
+            },
+        )
+
+    def test_external_passive_form_hides_rooms_without_external_entities(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_passive_form_rooms"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_passive_room_fields=lambda: {
+                "Bedroom": "2",
+                "Kitchen": "3",
+                "Office": "1",
+            },
+            _external_passive_entities_by_room=lambda: {
+                "1": ["climate.office_trv"],
+                "2": [],
+                "3": [],
+            },
+        )
+
+        room_fields, entities_by_room = functions._external_passive_form_rooms(flow)
+
+        self.assertEqual(room_fields, {"Office": "1"})
+        self.assertEqual(
+            entities_by_room,
+            {
+                "1": ["climate.office_trv"],
+                "2": [],
+                "3": [],
+            },
+        )
+
+    def test_external_passive_rejects_duplicate_room_assignments(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_passive_duplicate_entities"},
+            self.namespace,
+        )
+
+        duplicates = functions._external_passive_duplicate_entities(
+            {
+                "1": ["climate.office_trv", "climate.shared_trv"],
+                "2": ["climate.shared_trv"],
+                "3": ["climate.bedroom_trv"],
+            }
+        )
+
+        self.assertEqual(duplicates, {"climate.shared_trv"})
+
+    async def test_external_passive_assignments_save_with_automation_options(self):
+        controller = SimpleNamespace(async_set_enabled=AsyncMock())
+        registry = SimpleNamespace(async_get=lambda entity_id: None)
+        self.namespace.update(
+            CONF_AUTOMATIONS_EXTERNAL_PASSIVE="external",
+            CONF_EXTERNAL_PASSIVE_ASSIGNMENTS="assignments",
+            DATA="data",
+            DOMAIN="wiser",
+            er=SimpleNamespace(async_get=lambda hass: registry),
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {
+                "async_step_automation_params",
+                "_external_passive_duplicate_entities",
+            },
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_passive_form_rooms=lambda: (
+                {
+                    "Office": "1",
+                    "Bedroom": "2",
+                },
+                {
+                    "1": ["climate.office"],
+                    "2": ["climate.bedroom"],
+                },
+            ),
+            config_entry=SimpleNamespace(
+                entry_id="entry",
+                options={
+                    "external": {
+                        "external": True,
+                        "assignments": {"1": ["climate.old_office"]},
+                    }
+                },
+            ),
+            hass=SimpleNamespace(
+                data={"wiser": {"entry": {"data": SimpleNamespace(
+                    external_passive=controller
+                )}}}
+            ),
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+
+        result = await functions.async_step_automation_params(
+            flow,
+            {
+                "external": {
+                    "external": True,
+                    "Office": ["climate.office"],
+                    "Bedroom": ["climate.bedroom"],
+                }
+            },
+        )
+
+        self.assertEqual(
+            result["data"]["external"]["assignments"],
+            {
+                "1": ["climate.office"],
+                "2": ["climate.bedroom"],
+            },
+        )
+        self.assertNotIn("Office", result["data"]["external"])
+        self.assertNotIn("Bedroom", result["data"]["external"])
+        controller.async_set_enabled.assert_any_await("1", False)
+        controller.async_set_enabled.assert_any_await("2", False)
 
     async def test_equipment_menu_is_below_opentherm(self):
         functions = load_functions(

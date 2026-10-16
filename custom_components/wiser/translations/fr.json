@@ -83,6 +83,13 @@
               "passive_mode_temperature_increments": "Incréments de température du mode passif"
             }
           },
+          "automations_external_passive_mode": {
+            "name": "Mode passif externe",
+            "description": "Affectez chaque TRV externe à la même zone Home Assistant que sa pièce Wiser, puis sélectionnez-le ci-dessous. La température basse contrôle la demande de chauffage Wiser ; la température haute ferme le TRV externe.",
+            "data": {
+              "automations_external_passive_mode": "Mode passif externe"
+            }
+          },
           "hotwater_climate": {
             "name": "Commande climatique de l’eau chaude",
             "description": "Active la commande climatique de l’eau chaude. Consultez le wiki pour plus de détails.",
@@ -219,6 +226,10 @@
         }
       }
     },
+    "error": {
+      "external_trv_must_not_be_wiser": "Sélectionnez une entité de climatisation externe. Une entité Wiser ne peut pas être contrôlée comme une TRV externe.",
+      "external_trv_duplicate_assignment": "Une TRV externe ne peut être attribuée qu’à une seule pièce Wiser."
+    },
     "abort": {
       "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser.",
       "equipment_not_available": "Les données des équipements ne sont pas disponibles pour cette passerelle Wiser."
@@ -325,6 +336,7 @@
       "away_mode_turns_off": { "name": "Le mode absence éteint" },
       "away_mode_closes": { "name": "Le mode absence ferme" },
       "passive_mode": { "name": "Mode passif" },
+      "external_passive_mode": { "name": "Mode passif externe" },
       "respect_summer_comfort": { "name": "Respecter le confort d’été" },
       "interacts_with_room_climate": { "name": "Interagit avec le climat de la pièce" },
       "humidity_interacts_with_room_climate": { "name": "L’humidité interagit avec le climat de la pièce" },

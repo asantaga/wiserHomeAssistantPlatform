@@ -83,6 +83,13 @@
               "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
             }
           },
+          "automations_external_passive_mode": {
+            "name": "Externer Passivmodus",
+            "description": "Weise jedes externe TRV demselben Home-Assistant-Bereich wie seinem Wiser-Raum zu und wähle es unten aus. Die untere Temperatur steuert die Wiser-Wärmeanforderung; die obere Temperatur schließt das externe TRV.",
+            "data": {
+              "automations_external_passive_mode": "Externer Passivmodus"
+            }
+          },
           "hotwater_climate": {
             "name": "Warmwasser-Klimasteuerung",
             "description": "Aktiviert die Warmwasser-Klimasteuerung. Weitere Informationen finden Sie im Wiki.",
@@ -219,6 +226,10 @@
         }
       }
     },
+    "error": {
+      "external_trv_must_not_be_wiser": "Wähle eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes TRV gesteuert werden.",
+      "external_trv_duplicate_assignment": "Ein externes TRV kann nur einem Wiser-Raum zugewiesen werden."
+    },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
       "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar."
@@ -325,6 +336,7 @@
       "away_mode_turns_off": { "name": "Abwesenheitsmodus schaltet aus" },
       "away_mode_closes": { "name": "Abwesenheitsmodus schließt" },
       "passive_mode": { "name": "Passivmodus" },
+      "external_passive_mode": { "name": "Externer Passivmodus" },
       "respect_summer_comfort": { "name": "Sommerkomfort berücksichtigen" },
       "interacts_with_room_climate": { "name": "Beeinflusst die Raumklimaregelung" },
       "humidity_interacts_with_room_climate": { "name": "Luftfeuchtigkeit beeinflusst die Raumklimaregelung" },

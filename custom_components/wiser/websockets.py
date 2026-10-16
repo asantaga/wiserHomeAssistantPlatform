@@ -1,4 +1,6 @@
+from copy import deepcopy
 import logging
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
@@ -276,7 +278,7 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                schedule = schedule.ws_schedule_data
+                schedule = d.external_passive.schedule_data(schedule)
                 connection.send_result(msg["id"], schedule)
             else:
                 connection.send_error(
@@ -501,6 +503,7 @@ async def async_register_websockets(hass, data):
                     )
                 else:
                     await d.async_refresh()
+                await d.external_passive.async_delete_upper_schedule(schedule_id)
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(
@@ -545,8 +548,34 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                await schedule.set_schedule_from_ws_data(new_schedule)
+                upper_schedule = None
+                if (
+                    new_schedule.get("ExternalPassiveRange")
+                    and d.external_passive.schedule_uses_upper_limits(schedule)
+                ):
+                    try:
+                        upper_schedule = d.external_passive.validated_upper_schedule(
+                            schedule_id, new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                native_schedule = deepcopy(new_schedule)
+                native_schedule.pop("ExternalPassiveRange", None)
+                native_schedule.pop("MinUpperSetpoint", None)
+                native_schedule.pop("MaxUpperSetpoint", None)
+                for day in native_schedule.get("ScheduleData", []):
+                    for slot in day.get("slots") or []:
+                        slot.pop("UpperSetpoint", None)
+                await schedule.set_schedule_from_ws_data(native_schedule)
                 await d.async_refresh()
+                if upper_schedule is not None:
+                    await d.external_passive.async_save_upper_schedule(
+                        schedule_id, upper_schedule
+                    )
+                    await d.external_passive.async_update()
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(
@@ -588,6 +617,9 @@ async def async_register_websockets(hass, data):
             if schedule:
                 await schedule.copy_schedule(to_schedule_id)
                 await d.async_refresh()
+                await d.external_passive.async_copy_upper_schedule(
+                    schedule_id, to_schedule_id
+                )
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(

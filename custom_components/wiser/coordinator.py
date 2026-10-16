@@ -34,6 +34,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_AUTOMATIONS_EXTERNAL_PASSIVE,
     CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
@@ -53,6 +54,7 @@ from .const import (
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
+from .external_passive import ExternalPassiveController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,6 +143,17 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             CONF_AUTOMATIONS_PASSIVE, {}
         ).get(CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT)
 
+        # External Passive Mode options and runtime controller
+        external_passive_options = config_entry.options.get(
+            CONF_AUTOMATIONS_EXTERNAL_PASSIVE, {}
+        )
+        self.enable_automations_external_passive_mode = external_passive_options.get(
+            CONF_AUTOMATIONS_EXTERNAL_PASSIVE, False
+        )
+        self.external_passive = ExternalPassiveController(
+            hass, config_entry, self
+        )
+
         # HW Climate Automation
         self.hw_sensor_entity_id = config_entry.options.get(
             CONF_AUTOMATIONS_HW_CLIMATE, {}
@@ -192,6 +205,13 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.last_update_status = "Success"
 
             _LOGGER.info("Hub update completed for %s", self.wiserhub.system.name)
+
+            try:
+                await self.external_passive.async_update()
+            except asyncio.CancelledError:
+                raise
+            except Exception as ex:  # pylint: disable=broad-except  # noqa: BLE001
+                _LOGGER.error("External Passive Mode update failed: %s", ex)
 
             # Send event to websockets to notify hub update
             async_dispatcher_send(

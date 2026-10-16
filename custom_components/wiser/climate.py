@@ -80,6 +80,7 @@ STATUS_OVERRIDE = "Override"
 STATUS_BLANK = ""
 
 TEXT_PASSIVE = "Passive"
+TEXT_EXTERNAL_PASSIVE = "External Passive"
 
 WISER_PRESET_TO_HASS = {
     "FromAwayMode": STATUS_AWAY,
@@ -138,6 +139,23 @@ TARGET_TEMP_SOURCES = {
 }
 
 TEMP_HW_MAXIMUM = 80
+
+
+def _external_passive_preset_modes(available_presets):
+    """Insert External Passive immediately before the boost presets."""
+    presets = list(available_presets)
+    if TEXT_EXTERNAL_PASSIVE in presets:
+        return presets
+    boost_index = next(
+        (
+            index
+            for index, preset in enumerate(presets)
+            if preset == STATUS_BOOST or preset.startswith(f"{STATUS_BOOST} ")
+        ),
+        len(presets),
+    )
+    presets.insert(boost_index, TEXT_EXTERNAL_PASSIVE)
+    return presets
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -469,6 +487,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     def preset_mode(self):
         """Get current preset mode."""
         try:
+            if self._data.external_passive.is_active(self._room):
+                return TEXT_EXTERNAL_PASSIVE
             if self._room.is_passive_mode:
                 return TEXT_PASSIVE
             if self._room.preset_mode == "Boost":
@@ -484,19 +504,36 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return [
-            WISER_PRESET_FROM_API.get(preset, preset)
-            for preset in self._room.available_presets
-        ]
+        presets = list(self._room.available_presets)
+        if self._data.external_passive.is_active(self._room):
+            presets = _external_passive_preset_modes(presets)
+        return [WISER_PRESET_FROM_API.get(preset, preset) for preset in presets]
 
     @hub_error_handler
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
         _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._room.name)
+        if preset_mode == TEXT_EXTERNAL_PASSIVE:
+            # External Passive is a local state indicator, not a native Wiser
+            # preset that can be sent to the hub.
+            return
         try:
-            await self._room.set_preset(
-                WISER_PRESET_TO_API.get(preset_mode, preset_mode)
-            )
+            api_preset_mode = WISER_PRESET_TO_API.get(preset_mode, preset_mode)
+            await self._room.set_preset(api_preset_mode)
+            if (
+                self._data.external_passive.has_assignment(self._room_id)
+                and api_preset_mode == WiserPresetOptionsEnum.cancel_overrides.value
+            ):
+                await self._data.external_passive.async_cancel_upper_override(
+                    self._room_id
+                )
+            elif (
+                self._data.external_passive.has_assignment(self._room_id)
+                and api_preset_mode == WiserPresetOptionsEnum.advance_schedule.value
+            ):
+                await self._data.external_passive.async_advance_upper_schedule(
+                    self._room_id
+                )
         except ValueError as ex:
             _LOGGER.error(ex)
 
@@ -532,6 +569,13 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["is_override"] = self._room.is_override
         attrs["is_heating"] = self._room.is_heating
         attrs["is_passive"] = self._room.is_passive_mode
+        attrs["is_external_passive"] = self._data.external_passive.is_active(
+            self._room
+        )
+        if self._data.external_passive.has_assignment(self._room_id):
+            attrs["external_passive_trvs"] = (
+                self._data.external_passive.assigned_entity_ids(self._room_id)
+            )
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
         attrs["percentage_demand"] = self._room.percentage_demand
@@ -648,8 +692,12 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def supported_features(self):
         """Return the list of supported features."""
+        if self._data.external_passive.is_active(self._room):
+            return PASSIVE_MODE_SUPPORT_FLAGS
         return (
-            PASSIVE_MODE_SUPPORT_FLAGS if self._room.is_passive_mode else SUPPORT_FLAGS
+            PASSIVE_MODE_SUPPORT_FLAGS
+            if self._room.is_passive_mode
+            else SUPPORT_FLAGS
         )
 
     @property
@@ -680,6 +728,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
+        if self._data.external_passive.is_active(self._room):
+            return self._data.external_passive.upper_temperature(self._room_id)
         return self._room.passive_mode_upper_temp
 
     if not hasattr(ClimateEntity, "native_target_temperature_high"):
@@ -691,6 +741,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
+        if self._data.external_passive.is_active(self._room):
+            return self._data.external_passive.lower_temperature(self._room_id)
         return self._room.passive_mode_lower_temp
 
     if not hasattr(ClimateEntity, "native_target_temperature_low"):
@@ -699,7 +751,19 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @hub_error_handler
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        if self._room.is_passive_mode and not self._room.is_boosted:
+        if (
+            self._data.external_passive.is_active(self._room)
+            and not self._room.is_boosted
+        ):
+            if kwargs.get("target_temp_high") is not None:
+                await self._data.external_passive.async_set_upper_temperature(
+                    self._room_id, kwargs["target_temp_high"]
+                )
+            if kwargs.get("target_temp_low") is not None:
+                await self._data.external_passive.async_set_lower_temperature(
+                    self._room_id, kwargs["target_temp_low"]
+                )
+        elif self._room.is_passive_mode and not self._room.is_boosted:
             if kwargs.get("target_temp_low"):
                 await self._room.set_passive_mode_lower_temp(
                     kwargs.get("target_temp_low")
