@@ -17,7 +17,9 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
-- Added External Passive Mode, allowing external Home Assistant climate TRVs to be assigned to Wiser rooms and controlled with the existing passive temperature-range behaviour without contributing Wiser heat demand.
+- Added External Room Control, allowing external Home Assistant climate devices to follow their Wiser room normally and use its Passive Mode strategy when enabled.
+- Added selectable modulating and temperature-limiter strategies to native Passive Mode.
+- Migrated existing native Passive Mode enablement, temperature increments, lower schedules, and active lower overrides to the new configuration; experimental external-control settings are intentionally not migrated.
 - Added Schneider Mureva EV Link charger entities - issue [#689](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/689), PR [#749](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/749).
 - Added smoke alarm operating states and a report count sensor - PR [#744](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/744).
 - Added scheduled setpoint sensors, showing the current schedule temperature for Wiser rooms without climate control. Rooms are chosen under **Additional sensors** in the automation options - issue [#738](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/738), PR [#746](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/746).

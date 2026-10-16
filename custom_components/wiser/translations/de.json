@@ -77,17 +77,19 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivmodus",
-            "description": "Aktiviert die passive TRV-Funktion. Sie muss für jeden Raum einzeln aktiviert werden.",
+            "description": "Aktiviert den Passivmodus und legt fest, ob interne Wiser-Geräte oder zugewiesene externe Klimageräte gesteuert werden.",
             "data": {
               "automations_passive_mode": "Passivmodus",
-              "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
+              "passive_type": "Typ",
+              "temperature_increment": "Temperaturschritt",
+              "control_strategy": "Regelstrategie"
             }
           },
-          "automations_external_passive_mode": {
-            "name": "Externer Passivmodus",
-            "description": "Weise jedes externe TRV demselben Home-Assistant-Bereich wie seinem Wiser-Raum zu und wähle es unten aus. Die untere Temperatur steuert die Wiser-Wärmeanforderung; die obere Temperatur schließt das externe TRV.",
+          "automations_external_room_control": {
+            "name": "Externe Raumregelung",
+            "description": "Weisen Sie externe Klima-Geräte ihrem Wiser-Raum zu, damit sie dem aktuellen Raum-Sollwert mit oder ohne Passivmodus folgen.",
             "data": {
-              "automations_external_passive_mode": "Externer Passivmodus"
+              "automations_external_room_control": "Externe Raumregelung"
             }
           },
           "hotwater_climate": {
@@ -227,8 +229,8 @@
       }
     },
     "error": {
-      "external_trv_must_not_be_wiser": "Wähle eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes TRV gesteuert werden.",
-      "external_trv_duplicate_assignment": "Ein externes TRV kann nur einem Wiser-Raum zugewiesen werden."
+      "external_climate_must_not_be_wiser": "Wählen Sie eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes Gerät gesteuert werden.",
+      "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden."
     },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
@@ -256,6 +258,18 @@
     }
   },
   "selector": {
+    "passive_mode_type": {
+      "options": {
+        "internal": "Intern",
+        "external": "Extern"
+      }
+    },
+    "room_control_strategy": {
+      "options": {
+        "modulating": "Modulierend",
+        "temperature_limiter": "Temperaturbegrenzer"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "chFlowActiveLowerSetpoint": "Untere aktive Zentralheizungs-Solltemperatur",
@@ -324,7 +338,6 @@
       "away_mode_turns_off": { "name": "Abwesenheitsmodus schaltet aus" },
       "away_mode_closes": { "name": "Abwesenheitsmodus schließt" },
       "passive_mode": { "name": "Passivmodus" },
-      "external_passive_mode": { "name": "Externer Passivmodus" },
       "respect_summer_comfort": { "name": "Sommerkomfort berücksichtigen" },
       "interacts_with_room_climate": { "name": "Beeinflusst die Raumklimaregelung" },
       "humidity_interacts_with_room_climate": { "name": "Luftfeuchtigkeit beeinflusst die Raumklimaregelung" },

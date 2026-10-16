@@ -27,7 +27,12 @@ from .const import (
     CONF_AUTOMATIONS_HW_HEAT_MODE,
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
-    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_AUTOMATIONS_EXTERNAL_PASSIVE,
+    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
+    CONF_AUTOMATIONS_PASSIVE_TYPE,
+    CONF_CONTROL_STRATEGY,
+    CONF_LEGACY_PASSIVE_TEMP_INCREMENT,
+    CONF_TEMPERATURE_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
     CONF_LEGACY_NAMING,
     CONF_OPENTHERM_EVER_CONNECTED,
@@ -36,6 +41,8 @@ from .const import (
     CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     CONF_OPENTHERM_HOT_WATER_PRESETS,
     CONF_WISER_ROOM_NAMES,
+    DEFAULT_PASSIVE_CONTROL_STRATEGY,
+    DEFAULT_PASSIVE_TYPE,
     DATA,
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DOMAIN,
@@ -131,12 +138,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                         CONF_AUTOMATIONS_PASSIVE: new_options[CONF_AUTOMATIONS_PASSIVE]
                     }
                     for item in [
-                        CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+                        CONF_LEGACY_PASSIVE_TEMP_INCREMENT,
                     ]:
                         if new_options.get(item):
-                            new_options[CONF_AUTOMATIONS_PASSIVE][item] = new_options[
-                                item
-                            ]
+                            new_options[CONF_AUTOMATIONS_PASSIVE][
+                                CONF_TEMPERATURE_INCREMENT
+                            ] = new_options[item]
                             del new_options[item]
 
             # hw climate
@@ -175,8 +182,86 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             # Keep room context visible for installations upgrading to UI options.
             new_options.setdefault(CONF_LEGACY_NAMING, True)
 
+        if config_entry.minor_version < 6:
+            passive_options = new_options.get(CONF_AUTOMATIONS_PASSIVE)
+            if isinstance(passive_options, dict):
+                passive_options = dict(passive_options)
+                legacy_increment = passive_options.pop(
+                    CONF_LEGACY_PASSIVE_TEMP_INCREMENT, None
+                )
+                if legacy_increment is not None:
+                    passive_options.setdefault(
+                        CONF_TEMPERATURE_INCREMENT, legacy_increment
+                    )
+                passive_options.setdefault(
+                    CONF_CONTROL_STRATEGY, DEFAULT_PASSIVE_CONTROL_STRATEGY
+                )
+                new_options[CONF_AUTOMATIONS_PASSIVE] = passive_options
+
+        if config_entry.minor_version < 7:
+            stored_passive_options = new_options.get(CONF_AUTOMATIONS_PASSIVE)
+            passive_options = (
+                dict(stored_passive_options)
+                if isinstance(stored_passive_options, dict)
+                else {}
+            )
+            had_strategy = CONF_CONTROL_STRATEGY in passive_options
+            previous_strategy = passive_options.pop(
+                CONF_CONTROL_STRATEGY, DEFAULT_PASSIVE_CONTROL_STRATEGY
+            )
+            if isinstance(stored_passive_options, dict):
+                new_options[CONF_AUTOMATIONS_PASSIVE] = passive_options
+
+            previous_external_options = new_options.get(
+                CONF_AUTOMATIONS_EXTERNAL_PASSIVE, {}
+            )
+            if not isinstance(previous_external_options, dict):
+                previous_external_options = {}
+            external_room_options = new_options.get(
+                CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {}
+            )
+            if not isinstance(external_room_options, dict):
+                external_room_options = {}
+            if (
+                previous_external_options
+                or had_strategy
+                or external_room_options.get(
+                    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
+                )
+            ):
+                new_options[CONF_AUTOMATIONS_EXTERNAL_PASSIVE] = {
+                    CONF_AUTOMATIONS_EXTERNAL_PASSIVE: previous_external_options.get(
+                        CONF_AUTOMATIONS_EXTERNAL_PASSIVE,
+                        external_room_options.get(
+                            CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
+                        ),
+                    ),
+                    CONF_CONTROL_STRATEGY: previous_external_options.get(
+                        CONF_CONTROL_STRATEGY, previous_strategy
+                    ),
+                }
+
+        if config_entry.minor_version < 8:
+            has_passive_options = CONF_AUTOMATIONS_PASSIVE in new_options
+            stored_passive_options = new_options.get(CONF_AUTOMATIONS_PASSIVE, {})
+            passive_options = (
+                dict(stored_passive_options)
+                if isinstance(stored_passive_options, dict)
+                else {}
+            )
+            # External Passive Mode was experimental and is intentionally not
+            # migrated. Only the original native Passive Mode becomes the new
+            # Internal type.
+            new_options.pop(CONF_AUTOMATIONS_EXTERNAL_PASSIVE, None)
+            if has_passive_options:
+                passive_options[CONF_AUTOMATIONS_PASSIVE_TYPE] = (
+                    DEFAULT_PASSIVE_TYPE
+                )
+                passive_options.pop(CONF_CONTROL_STRATEGY, None)
+                new_options[CONF_AUTOMATIONS_PASSIVE] = passive_options
+
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=5, version=1
+            config_entry, options=new_options, minor_version=8, version=1
         )
 
     _LOGGER.debug(
@@ -258,12 +343,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
 
     coordinator = WiserUpdateCoordinator(hass, config_entry)
 
-    await coordinator.external_passive.async_load()
+    await coordinator.external_room_control.async_load()
 
     await coordinator.async_config_entry_first_refresh()
 
     if not coordinator.last_update_status == "Success":
         raise ConfigEntryNotReady
+
+    if await coordinator.external_room_control.async_migrate_legacy_schedule_ownership():
+        await coordinator.async_refresh()
 
     room_names_store = Store(
         hass,

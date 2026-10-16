@@ -273,10 +273,16 @@ def migrate_room_entities(
             ):
                 entity_type = "binary_sensor_window_detection_active"
         elif entry.domain == "switch":
+            if (
+                translation_key
+                in ("external_passive_mode", "external_room_control")
+                or "-external-room-control-switch-" in unique_id
+                or "-external-passive-mode-switch-" in unique_id
+            ):
+                entity_registry.async_remove(entry.entity_id)
+                continue
             if translation_key:
                 entity_type = f"switch_{translation_key}"
-            elif "-external-passive-mode-switch-" in unique_id:
-                entity_type = "switch_external_passive_mode"
             elif "-passive-mode-switch-" in unique_id:
                 entity_type = "switch_passive_mode"
             elif "-room-switch-" in unique_id:
