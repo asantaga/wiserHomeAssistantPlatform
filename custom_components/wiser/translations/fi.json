@@ -1,0 +1,652 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wiser Heat Hubin määritys",
+        "description": "Anna keskittimestä saatu IP-osoite ja salainen avain.",
+        "data": {
+          "host": "IP-osoite tai isäntänimi",
+          "port": "Portin numero",
+          "password": "Salainen avain"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Wiser Heat Hubin määritys ({name})",
+        "description": "Anna keskittimestä saatu salainen avain.",
+        "data": {
+          "host": "IP-osoite tai isäntänimi",
+          "port": "Portin numero",
+          "password": "Salainen avain"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "Wiser Heat Hubin määritys on jo käynnissä.",
+      "already_configured": "Tämä laite on jo määritetty.",
+      "not_wiser_hub": "Löydetty laite ei ole Wiser Heat Hub."
+    },
+    "error": {
+      "auth_failure": "Todennus Wiser-keskittimeen epäonnistui. Tarkista salainen avain ja yritä uudelleen.",
+      "timeout_error": "Yhteys Wiser-keskittimeen aikakatkaistiin. Tarkista IP-osoite ja yritä uudelleen.",
+      "timeout_error_discovery": "Yhteys Wiser-keskittimeen aikakatkaistiin. Tarkista, että keskitin on yhä verkossa, ja yritä uudelleen.",
+      "unknown": "Tuntematon virhe yhdistettäessä Wiser-keskittimeen. Tarkista lokit."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wiser-integraation asetukset",
+        "description": "Valitse muutettavat parametrit",
+        "menu_options": {
+          "main_params": "Pääparametrit",
+          "automation_params": "Automaatioparametrit",
+          "opentherm_sensors": "OpenTherm-anturit",
+          "equipment_sensors": "Laiteanturit",
+          "ui_options": "Käyttöliittymän asetukset"
+        }
+      },
+      "ui_options": {
+        "title": "Käyttöliittymän asetukset",
+        "data": {
+          "legacy_naming": "Vanha nimeämistapa",
+          "show_wiser_sidebar": "Näytä Wiser sivupalkissa"
+        },
+        "data_description": {
+          "legacy_naming": "Sisällytä huoneiden nimet Wiser-laitteiden nimiin. Jos tämä on käytössä, entiteettitunnusten luominen uudelleen Home Assistantin oletusmuodolla kohdassa Asetukset → Järjestelmä → Entiteettitunnuksen muoto (Home Assistant 2026.8 ja uudemmat) kahdentaa alueiden nimet, kun alueen ja Wiser-huoneen nimet ovat samat. Tämän asetuksen muuttaminen ei nimeä nykyisiä entiteettitunnuksia uudelleen."
+        }
+      },
+      "main_params": {
+        "title": "Wiser-integraation asetukset",
+        "description": "Pääparametrit",
+        "data": {
+          "host": "IP-osoite tai isäntänimi",
+          "port": "Portin numero",
+          "scan_interval": "Päivitysväli (s)",
+          "heating_boost_temp": "Lämmitystehostuksen oletuslämpötila (°C)",
+          "heating_boost_time": "Lämmitystehostuksen oletuskesto (min)",
+          "hotwater_boost_time": "Käyttövesitehostuksen oletuskesto (min)",
+          "setpoint_mode": "Asetusarvotila",
+          "restore_manual_temp_option": "Käytä tätä lämpötilaa, jos manuaalista lämpötilaa ei ole tallennettu"
+        }
+      },
+      "automation_params": {
+        "title": "Wiser-integraation asetukset",
+        "description": "Ota sisäiset automaatiot käyttöön",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passiivinen tila",
+            "description": "Ota passiivinen TRV-toiminto käyttöön. Jokainen huone on otettava erikseen käyttöön.",
+            "data": {
+              "automations_passive_mode": "Passiivinen tila",
+              "passive_mode_temperature_increments": "Passiivisen tilan lämpötilaportaat"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Käyttöveden ilmastointiohjaus",
+            "description": "Ota käyttöveden ilmastointiohjaus käyttöön. Katso lisätietoja wikistä.",
+            "data": {
+              "hotwater_climate": "Ota ilmastointientiteetti käyttöön",
+              "experimental_mode": "Ota kokeellinen toimintatila käyttöön",
+              "hotwater_auto_mode": "Käyttöveden automaattitila",
+              "hotwater_heat_mode": "Käyttöveden lämmitystila",
+              "hotwater_boost_mode": "Käyttöveden tehostustila",
+              "hotwater_sensor_entity_id": "Käyttöveden lämpötila-anturi"
+            }
+          }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Laiteanturit",
+        "description": "Määritä yksityiskohtaiset laitetietoentiteetit yhteensopiville laitteille.",
+        "data": {
+          "equipment_sensors": "Ota laitetietoanturit käyttöön"
+        },
+        "data_description": {
+          "equipment_sensors": "Näytä lisäanturi, joka sisältää yksityiskohtaiset laiteominaisuudet jokaiselle yhteensopivalle älypistorasialle, PowerTagille ja lämmitystoimilaitteelle."
+        }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm-anturit",
+        "description": "Valitse havaittujen OpenTherm-ominaisuuksien luokka.",
+        "menu_options": {
+          "opentherm_readings": "Lukemat",
+          "opentherm_central_heating": "Keskuslämmitys",
+          "opentherm_hot_water": "Käyttövesi",
+          "opentherm_status": "Tila ja diagnostiikka"
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm-lukemat",
+        "description": "Valitse, mitkä havaitut OpenTherm-lukemat näytetään anturientiteetteinä.",
+        "data": {
+          "ch_flow_temperature": "Kattilan menoveden lämpötila",
+          "ch_pressure_bar": "Keskuslämmityksen paine",
+          "ch_return_temperature": "Kattilan paluuveden lämpötila",
+          "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Kattilan savukaasun lämpötila",
+          "estimated_boiler_output": "Kattilan arvioitu teho",
+          "hw_flow_rate": "Käyttöveden virtausnopeus",
+          "hw_temperature": "Käyttöveden lämpötila",
+          "maximum_capacity_kw": "Kattilan enimmäisteho",
+          "minimum_modulation_level": "Modulaation vähimmäistaso",
+          "relative_modulation_level": "Suhteellinen modulaatiotaso",
+          "room_temperature": "Huonelämpötila"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm-keskuslämmitys",
+        "description": "Valitse, mitkä havaitut keskuslämmityksen ominaisuudet näytetään entiteetteinä.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Kattilan keskuslämmityksen enimmäisasetusarvon luku/kirjoitus",
+          "boiler_ch_max_setpoint_transfer_enable": "Kattilan keskuslämmityksen enimmäisasetusarvon siirto käytössä",
+          "boiler_ch_setpoint": "Kattilan keskuslämmityksen asetusarvo",
+          "boiler_ch_setpoint_lower_bound": "Kattilan keskuslämmityksen asetusarvon alaraja",
+          "boiler_ch_setpoint_upper_bound": "Kattilan keskuslämmityksen asetusarvon yläraja",
+          "ch_flow_active_lower_setpoint": "Keskuslämmityksen menoveden aktiivinen ala-asetusarvo",
+          "ch_flow_active_upper_setpoint": "Keskuslämmityksen menoveden aktiivinen yläasetusarvo",
+          "ch1_flow_enabled": "Keskuslämmityspiirin 1 meno käytössä",
+          "ch1_flow_setpoint": "Keskuslämmityspiirin 1 menoveden asetusarvo",
+          "ch2_flow_enabled": "Keskuslämmityspiirin 2 meno käytössä",
+          "ch2_flow_setpoint": "Keskuslämmityspiirin 2 menoveden asetusarvo",
+          "room_setpoint": "Huoneen asetusarvo"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm-käyttövesi",
+        "description": "Valitse, mitkä havaitut käyttöveden ominaisuudet näytetään entiteetteinä.",
+        "data": {
+          "boiler_hw_setpoint": "Kattilan käyttöveden asetusarvo",
+          "boiler_hw_setpoint_lower_bound": "Kattilan käyttöveden asetusarvon alaraja",
+          "boiler_hw_setpoint_read_write": "Kattilan käyttöveden asetusarvon luku/kirjoitus",
+          "boiler_hw_setpoint_transfer_enable": "Kattilan käyttöveden asetusarvon siirto käytössä",
+          "boiler_hw_setpoint_upper_bound": "Kattilan käyttöveden asetusarvon yläraja",
+          "hw_enabled": "Käyttövesi käytössä",
+          "hw_flow_setpoint": "Käyttöveden menoveden asetusarvo"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm-tila ja diagnostiikka",
+        "description": "Valitse, mitkä havaitut tila- ja diagnostiikkaominaisuudet näytetään anturientiteetteinä.",
+        "data": {
+          "boiler_fault": "Kattilavika",
+          "central_heating_active": "Keskuslämmitys aktiivinen",
+          "central_heating_2_active": "Keskuslämmitys 2 aktiivinen",
+          "connection_status": "Yhteyden tila",
+          "coprocessor_update_status": "OpenTherm-apuprosessorin päivitystila",
+          "coprocessor_version": "OpenTherm-apuprosessorin versio",
+          "cooling_active": "Jäähdytys aktiivinen",
+          "diagnostic_event": "Diagnostiikkatapahtuma",
+          "flame_active": "Liekki aktiivinen",
+          "flame_statistics": "Liekkitilastot",
+          "hot_water_active": "Käyttövesi aktiivinen",
+          "operating_mode": "Toimintatila",
+          "slave_status": "OpenTherm-orjalaitteen tila",
+          "tracked_room_id": "Seurattavan huoneen tunnus"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "OpenTherm-tietoja ei ole saatavilla tälle Wiser-keskittimelle.",
+      "equipment_not_available": "Laitetietoja ei ole saatavilla tälle Wiser-keskittimelle."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "Aseta OpenTherm-parametri",
+      "description": "Muuttaa tuettua OpenTherm-lämpötilaparametria Wiser-keskittimessä.",
+      "fields": {
+        "parameter": {
+          "name": "Parametri",
+          "description": "Muutettava OpenTherm-lämpötilaparametri. Tarvittava API-päätepiste valitaan automaattisesti."
+        },
+        "temperature": {
+          "name": "Lämpötila",
+          "description": "Käytä kattilan ilmoittamissa rajoissa olevaa lämpötilaa."
+        },
+        "hub": {
+          "name": "Wiser-keskitin",
+          "description": "Valitse keskitin vain, jos käytössä on useita Wiser-keskittimiä."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Keskuslämmityksen aktiivinen ala-asetusarvo",
+        "chFlowActiveUpperSetpoint": "Keskuslämmityksen aktiivinen yläasetusarvo",
+        "dhwFlowSetpoint": "Keskittimen käyttöveden menoveden asetusarvo",
+        "dhwSetpoint": "Kattilan käyttöveden asetusarvo",
+        "maxChSetpoint": "Kattilan keskuslämmityksen enimmäisasetusarvo"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": {
+      "message": "Anna OpenTherm-lämpötila."
+    },
+    "opentherm_hub_not_found": {
+      "message": "Määritettyä Wiser-keskitintä ei löytynyt."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "Määritettyä Wiser-keskitintä ei ole ladattu."
+    },
+    "opentherm_hub_required": {
+      "message": "Valitse Wiser-keskitin, kun useampi kuin yksi keskitin on määritetty."
+    },
+    "opentherm_not_supported": {
+      "message": "Tässä keskittimessä ei ole OpenTherm-toimintoa."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "OpenTherm-parametri tai arvo on virheellinen: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "OpenTherm-parametria {parameter} ei voitu asettaa: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "OpenTherm-parametri {parameter} ei pysynyt arvossa {requested} °C yhden uusintayrityksen ja {window} sekunnin vahvistusjakson jälkeen. Wiser ilmoittaa {reported} °C. Uusia yrityksiä ei lähetetä."
+    },
+    "opentherm_retry_failed": {
+      "message": "OpenTherm-parametri {parameter} ei pysynyt arvossa {requested} °C eikä uusintayritystä voitu lähettää: {error}. Wiser ilmoittaa {reported} °C. Uusia yrityksiä ei lähetetä."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser OpenTherm -komento"
+    }
+  },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Lämmitys"
+      },
+      "floor_temperature": {
+        "name": "Lattialämpötila"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": {
+        "name": "Poissa-tilan tavoitelämpötila"
+      },
+      "floor_temperature_offset": {
+        "name": "Lattialämpötilan poikkeama"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Sisätilojen epämukavuuslämpötila"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Ulkoilman epämukavuuslämpötila"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Tila"
+      },
+      "power_on_behavior": {
+        "name": "Käynnistyskäyttäytyminen"
+      },
+      "led_indicator": {
+        "name": "LED-merkkivalo"
+      }
+    },
+    "button": {
+      "boost_all_heating": {
+        "name": "Tehosta kaikkea lämmitystä"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Peruuta kaikki lämmityksen ohitukset"
+      },
+      "boost_hot_water": {
+        "name": "Tehosta käyttövettä"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Peruuta kaikki käyttöveden ohitukset"
+      },
+      "toggle_hot_water": {
+        "name": "Vaihda käyttöveden tila"
+      },
+      "moment": {
+        "name": "Hetki: {name}"
+      }
+    },
+    "switch": {
+      "valve_protection": {
+        "name": "Venttiilin suojaus"
+      },
+      "eco_mode": {
+        "name": "Säästötila"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "Poissa-tila vaikuttaa käyttöveteen"
+      },
+      "comfort_mode": {
+        "name": "Mukavuustila"
+      },
+      "away_mode": {
+        "name": "Poissa-tila"
+      },
+      "daylight_saving": {
+        "name": "Kesäaika"
+      },
+      "summer_comfort_enabled": {
+        "name": "Kesämukavuus käytössä"
+      },
+      "window_detection": {
+        "name": "Ikkunantunnistus"
+      },
+      "include_in_summer_comfort": {
+        "name": "Sisällytä kesämukavuuteen"
+      },
+      "device_lock": {
+        "name": "Laitelukitus"
+      },
+      "identify": {
+        "name": "Tunnista"
+      },
+      "outlet": {
+        "name": "Pistorasia"
+      },
+      "away_mode_turns_off": {
+        "name": "Poissa-tila sammuttaa"
+      },
+      "away_mode_closes": {
+        "name": "Poissa-tila sulkee"
+      },
+      "passive_mode": {
+        "name": "Passiivinen tila"
+      },
+      "respect_summer_comfort": {
+        "name": "Noudata kesämukavuutta"
+      },
+      "interacts_with_room_climate": {
+        "name": "Vaikuttaa huoneilmastoon"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "Ilmankosteus vaikuttaa huoneilmastoon"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "Lämpötila vaikuttaa huoneilmastoon"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "Valaistusvoimakkuus vaikuttaa huoneilmastoon"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} vaikuttaa huoneilmastoon"
+      },
+      "manual_heat": {
+        "name": "Manuaalinen lämmitys"
+      },
+      "hot_water": {
+        "name": "Käyttövesi"
+      }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": {
+        "name": "Kesäajan epämukavuuden esto"
+      },
+      "summer_comfort_available": {
+        "name": "Kesämukavuus saatavilla"
+      },
+      "pcm_device_limit_reached": {
+        "name": "PCM-laiteraja saavutettu"
+      },
+      "smoke_alarm": {
+        "name": "Palovaroitin"
+      },
+      "heat_alarm": {
+        "name": "Lämpöhälytys"
+      },
+      "tamper_alarm": {
+        "name": "Peukalointihälytys"
+      },
+      "fault_warning": {
+        "name": "Vikavaroitus"
+      },
+      "remote_alarm": {
+        "name": "Etähälytys"
+      },
+      "battery_defect": {
+        "name": "Akkuvika"
+      },
+      "controllable": {
+        "name": "Ohjattavissa"
+      },
+      "pcm_mode": {
+        "name": "PCM-tila"
+      },
+      "window_detection_active": {
+        "name": "Ikkunantunnistus aktiivinen"
+      },
+      "is_dimmable": {
+        "name": "Himmennettävä"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED-merkkivaloa tuetaan"
+      },
+      "is_output_mode_supported": {
+        "name": "Lähtötilaa tuetaan"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Käynnistyskäyttäytymistä tuetaan"
+      },
+      "is_tilt_supported": {
+        "name": "Kallistusta tuetaan"
+      },
+      "is_open": {
+        "name": "Auki"
+      },
+      "is_closed": {
+        "name": "Suljettu"
+      },
+      "active": {
+        "name": "Aktiivinen"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Kattilan keskuslämmityksen enimmäisasetusarvon luku/kirjoitus"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Kattilan keskuslämmityksen enimmäisasetusarvon siirto käytössä"
+      },
+      "boiler_fault": {
+        "name": "Kattilavika"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Kattilan käyttöveden asetusarvon luku/kirjoitus"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Kattilan käyttöveden asetusarvon siirto käytössä"
+      },
+      "central_heating_2_active": {
+        "name": "Keskuslämmitys 2 aktiivinen"
+      },
+      "central_heating_active": {
+        "name": "Keskuslämmitys aktiivinen"
+      },
+      "ch1_flow_enabled": {
+        "name": "Keskuslämmityspiirin 1 meno käytössä"
+      },
+      "ch2_flow_enabled": {
+        "name": "Keskuslämmityspiirin 2 meno käytössä"
+      },
+      "cooling_active": {
+        "name": "Jäähdytys aktiivinen"
+      },
+      "diagnostic_event": {
+        "name": "Diagnostiikkatapahtuma"
+      },
+      "flame_active": {
+        "name": "Liekki aktiivinen"
+      },
+      "hot_water_active": {
+        "name": "Käyttövesi aktiivinen"
+      },
+      "hw_enabled": {
+        "name": "Käyttövesi käytössä"
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Signaali"
+      },
+      "cloud": {
+        "name": "Pilvi"
+      },
+      "heating_operation_mode": {
+        "name": "Lämmityksen toimintatila"
+      },
+      "heating": {
+        "name": "Lämmitys",
+        "state": {
+          "off": "Pois",
+          "on": "Päällä"
+        }
+      },
+      "heating_channel": {
+        "name": "Lämmityskanava {channel}",
+        "state": {
+          "off": "Pois",
+          "on": "Päällä"
+        }
+      },
+      "hot_water": {
+        "name": "Käyttövesi",
+        "state": {
+          "off": "Pois",
+          "on": "Päällä"
+        }
+      },
+      "hot_water_operation_mode": {
+        "name": "Käyttöveden toimintatila"
+      },
+      "target_temperature": {
+        "name": "Tavoitelämpötila"
+      },
+      "floor_temperature": {
+        "name": "Lattialämpötila"
+      },
+      "boiler_flow_temperature": {
+        "name": "Kattilan menoveden lämpötila"
+      },
+      "boiler_return_temperature": {
+        "name": "Kattilan paluuveden lämpötila"
+      },
+      "flame_statistics": {
+        "name": "Liekkitilastot"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Kattilan keskuslämmityksen asetusarvo"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Kattilan keskuslämmityksen asetusarvon alaraja"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Kattilan keskuslämmityksen asetusarvon yläraja"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Kattilan savukaasun lämpötila"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Kattilan käyttöveden asetusarvo"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Kattilan käyttöveden asetusarvon alaraja"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Kattilan käyttöveden asetusarvon yläraja"
+      },
+      "ch1_flow_setpoint": {
+        "name": "Keskuslämmityspiirin 1 menoveden asetusarvo"
+      },
+      "ch2_flow_setpoint": {
+        "name": "Keskuslämmityspiirin 2 menoveden asetusarvo"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Keskuslämmityksen menoveden aktiivinen ala-asetusarvo"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Keskuslämmityksen menoveden aktiivinen yläasetusarvo"
+      },
+      "ch_pressure_bar": {
+        "name": "Keskuslämmityksen paine"
+      },
+      "connection_status": {
+        "name": "Yhteyden tila"
+      },
+      "coprocessor_update_status": {
+        "name": "OpenTherm-apuprosessorin päivitystila"
+      },
+      "coprocessor_version": {
+        "name": "OpenTherm-apuprosessorin versio"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Kattilan arvioitu teho"
+      },
+      "hw_flow_rate": {
+        "name": "Käyttöveden virtausnopeus"
+      },
+      "hw_flow_setpoint": {
+        "name": "Käyttöveden menoveden asetusarvo"
+      },
+      "hw_temperature": {
+        "name": "Käyttöveden lämpötila"
+      },
+      "maximum_capacity_kw": {
+        "name": "Kattilan enimmäisteho"
+      },
+      "minimum_modulation_level": {
+        "name": "Modulaation vähimmäistaso"
+      },
+      "operating_mode": {
+        "name": "Toimintatila"
+      },
+      "relative_modulation_level": {
+        "name": "Suhteellinen modulaatiotaso"
+      },
+      "room_setpoint": {
+        "name": "Huoneen asetusarvo"
+      },
+      "room_temperature": {
+        "name": "Huonelämpötila"
+      },
+      "slave_status": {
+        "name": "OpenTherm-orjalaitteen tila"
+      },
+      "tracked_room_id": {
+        "name": "Seurattavan huoneen tunnus"
+      },
+      "heating_demand": {
+        "name": "Lämmitystarve"
+      },
+      "heating_demand_channel": {
+        "name": "Lämmitystarvekanava {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Käyttöveden tarve"
+      },
+      "total_energy": {
+        "name": "Kokonaisenergia"
+      },
+      "energy_delivered": {
+        "name": "Toimitettu energia"
+      },
+      "energy_received": {
+        "name": "Vastaanotettu energia"
+      },
+      "equipment_power": {
+        "name": "Laitteisto"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} aloittaa lämmityksen",
+      "stopped_heating": "{entity_name} lopettaa lämmityksen",
+      "boosted": "{entity_name} on tehostettu",
+      "target_temperature_increased": "Entiteetin {entity_name} tavoitelämpötilaa nostettiin",
+      "target_temperature_decreased": "Entiteetin {entity_name} tavoitelämpötilaa laskettiin"
+    }
+  }
+}
+

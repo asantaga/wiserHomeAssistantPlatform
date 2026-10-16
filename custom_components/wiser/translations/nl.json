@@ -3,7 +3,7 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Wiser Installatie warmtehub",
+        "title": "Wiser Heat Hub instellen",
         "description": "Voer het IP-adres en de geheime sleutel in die u van de hub hebt verkregen.",
         "data": {
           "host": "IP-adres of hostnaam",
@@ -12,8 +12,8 @@
         }
       },
       "zeroconf_confirm": {
-        "title": "Wiser Installatie warmtehub ({name})",
-        "description": "Voer in de geheime sleutel verkregen van de hub.",
+        "title": "Wiser Heat Hub instellen ({name})",
+        "description": "Voer de geheime sleutel in die u van de hub hebt verkregen.",
         "data": {
           "host": "IP-adres of hostnaam",
           "port": "Poortnummer",
@@ -22,9 +22,9 @@
       }
     },
     "abort": {
-      "already_in_progress": "Wiser De configuratie van de warmtehub wordt al uitgevoerd.",
+      "already_in_progress": "De configuratie van de Wiser Heat Hub wordt al uitgevoerd.",
       "already_configured": "Dit apparaat is al geconfigureerd.",
-      "not_wiser_hub": "Het ontdekte apparaat is geen Wiser Warmtehub."
+      "not_wiser_hub": "Het ontdekte apparaat is geen Wiser Heat Hub."
     },
     "error": {
       "auth_failure": "Kan niet verifiëren met de Wiser-hub. Controleer de geheime sleutel en probeer het opnieuw.",
@@ -36,33 +36,33 @@
   "options": {
     "step": {
       "init": {
-        "title": "Wiser Integratieopties",
+        "title": "Opties voor de Wiser-integratie",
         "description": "Selecteer parameters om te wijzigen",
         "menu_options": {
           "main_params": "Hoofdparameters",
           "automation_params": "Automatiseringsparameters",
           "opentherm_sensors": "OpenTherm-sensoren",
           "equipment_sensors": "Apparatuursensoren",
-          "ui_options": "UI-opties"
+          "ui_options": "Opties voor de gebruikersinterface"
         }
       },
       "ui_options": {
-        "title": "UI-opties",
+        "title": "Opties voor de gebruikersinterface",
         "data": {
           "legacy_naming": "Oude naamgeving",
           "show_wiser_sidebar": "Toon Wiser in zijbalk"
         },
         "data_description": {
-          "legacy_naming": "Neem kamernamen op in Wiser apparaatnamen. Indien ingeschakeld, zal het gebruik van Home Assistant om entiteits-ID's opnieuw te genereren met het standaardformaat in Instellingen → Systeem → Entiteits-ID-formaat (Home Assistant 2026.8 en later) gebiedsnamen dupliceren wanneer het gebied en de Wiser kamernamen overeenkomen. Als u deze optie wijzigt, worden de bestaande entiteit-ID's niet hernoemd."
+          "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd."
         }
       },
       "main_params": {
-        "title": "Wiser Integratieopties",
+        "title": "Opties voor de Wiser-integratie",
         "description": "Hoofdparameters",
         "data": {
           "host": "IP-adres of hostnaam",
           "port": "Poortnummer",
-          "scan_interval": "Scaninterval (sec)",
+          "scan_interval": "Update-interval (seconden)",
           "heating_boost_temp": "Standaard verwarmingsboosttemperatuur (°C)",
           "heating_boost_time": "Standaard verwarmingsboostduur (min.)",
           "hotwater_boost_time": "Standaard warmwaterboostduur (min.)",
@@ -71,7 +71,7 @@
         }
       },
       "automation_params": {
-        "title": "Wiser Integratieopties",
+        "title": "Opties voor de Wiser-integratie",
         "description": "Ingebouwde automatiseringen inschakelen",
         "sections": {
           "automations_passive_mode": {
@@ -79,7 +79,7 @@
             "description": "Passieve TRV-mogelijkheden inschakelen. Elke kamer moet worden ingeschakeld om te kunnen functioneren.",
             "data": {
               "automations_passive_mode": "Passieve modus",
-              "passive_mode_temperature_increments": "Passieve modus Temperatuurverhogingen"
+              "passive_mode_temperature_increments": "Temperatuurstappen voor passieve modus"
             }
           },
           "hotwater_climate": {
@@ -87,10 +87,10 @@
             "description": "Schakel klimaatregeling voor warm water in. Zie de wiki voor details.",
             "data": {
               "hotwater_climate": "Schakel de klimaatentiteit in",
-              "experimental_mode": "Schakel de experimentele werkmodus in",
+              "experimental_mode": "Experimentele bedrijfsmodus inschakelen",
               "hotwater_auto_mode": "Automatische modus voor warm water",
               "hotwater_heat_mode": "Modus voor warm water",
-              "hotwater_boost_mode": "Modus voor warm water boost",
+              "hotwater_boost_mode": "Boostmodus voor warm water",
               "hotwater_sensor_entity_id": "Warmwatertemperatuursensor"
             }
           }
@@ -103,7 +103,7 @@
           "equipment_sensors": "Schakel apparatuurgegevenssensoren in"
         },
         "data_description": {
-          "equipment_sensors": "Stel een extra sensor bloot met gedetailleerde apparatuurkenmerken voor elke compatibele slimme stekker, PowerTag en verwarmingsactuator."
+          "equipment_sensors": "Maakt een extra sensor beschikbaar met gedetailleerde apparatuurkenmerken voor elke compatibele slimme stekker, PowerTag en verwarmingsactuator."
         }
       },
       "opentherm_sensors": {
@@ -124,7 +124,7 @@
           "ch_pressure_bar": "CV-druk",
           "ch_return_temperature": "Ketelretourtemperatuur",
           "delta_t": "Delta-T",
-          "boiler_exhaust_temperature": "Ketelafvoertemperatuur",
+          "boiler_exhaust_temperature": "Rookgastemperatuur van de ketel",
           "estimated_boiler_output": "Geschat ketelvermogen",
           "hw_flow_rate": "Warmwaterdebiet",
           "hw_temperature": "Warmwatertemperatuur",
@@ -138,18 +138,18 @@
         "title": "OpenTherm centrale verwarming",
         "description": "Kies welke gedetecteerde kenmerken voor centrale verwarming als entiteiten worden weergegeven.",
         "data": {
-          "boiler_ch_max_setpoint_read_write": "Ketel CH maximum setpoint lezen/schrijven",
-          "boiler_ch_max_setpoint_transfer_enable": "Ketel CH maximum setpoint overdracht ingeschakeld",
-          "boiler_ch_setpoint": "Ketel CH setpoint",
-          "boiler_ch_setpoint_lower_bound": "Ketel CH setpoint ondergrens",
-          "boiler_ch_setpoint_upper_bound": "Ketel CH setpoint bovengrens",
-          "ch_flow_active_lower_setpoint": "CH-debiet actief onderste setpoint",
-          "ch_flow_active_upper_setpoint": "CH-debiet actief bovenste setpoint",
+          "boiler_ch_max_setpoint_read_write": "Maximale CV-instelwaarde ketel lezen/schrijven",
+          "boiler_ch_max_setpoint_transfer_enable": "Overdracht maximale CV-instelwaarde ketel ingeschakeld",
+          "boiler_ch_setpoint": "CV-instelwaarde ketel",
+          "boiler_ch_setpoint_lower_bound": "Ondergrens CV-instelwaarde ketel",
+          "boiler_ch_setpoint_upper_bound": "Bovengrens CV-instelwaarde ketel",
+          "ch_flow_active_lower_setpoint": "Actieve onderste CV-aanvoerinstelwaarde",
+          "ch_flow_active_upper_setpoint": "Actieve bovenste CV-aanvoerinstelwaarde",
           "ch1_flow_enabled": "CH1-debiet ingeschakeld",
-          "ch1_flow_setpoint": "CH1 debiet-setpoint",
+          "ch1_flow_setpoint": "CV1-aanvoerinstelwaarde",
           "ch2_flow_enabled": "CH2-debiet ingeschakeld",
-          "ch2_flow_setpoint": "CH2-debiet instelpunt",
-          "room_setpoint": "Instelpunt kamer"
+          "ch2_flow_setpoint": "CV2-aanvoerinstelwaarde",
+          "room_setpoint": "Kamerinstelwaarde"
         }
       },
       "opentherm_hot_water": {
@@ -161,7 +161,7 @@
           "boiler_hw_setpoint_read_write": "Ketelwarmwaterinstelpunt lezen/schrijven",
           "boiler_hw_setpoint_transfer_enable": "Ketelwarmwaterinstelpuntoverdracht ingeschakeld",
           "boiler_hw_setpoint_upper_bound": "Ketelwarmwaterinstelpunt bovengrens",
-          "hw_enabled": "Heet water ingeschakeld",
+          "hw_enabled": "Warm water ingeschakeld",
           "hw_flow_setpoint": "Instelpunt warmwaterdebiet"
         }
       },
@@ -173,7 +173,7 @@
           "central_heating_active": "Centrale verwarming actief",
           "central_heating_2_active": "Centrale verwarming 2 actief",
           "connection_status": "Verbindingsstatus",
-          "coprocessor_update_status": "OpenTherm Updatestatus coprocessor",
+          "coprocessor_update_status": "Updatestatus OpenTherm-coprocessor",
           "coprocessor_version": "OpenTherm coprocessorversie",
           "cooling_active": "Koeling actief",
           "diagnostic_event": "Diagnosegebeurtenis",
@@ -182,13 +182,13 @@
           "hot_water_active": "Warm water actief",
           "operating_mode": "Bedrijfsmodus",
           "slave_status": "OpenTherm slave-status",
-          "tracked_room_id": "Getraceerde kamer-ID"
+          "tracked_room_id": "ID van gevolgde kamer"
         }
       }
     },
     "abort": {
-      "opentherm_not_available": "OpenTherm-gegevens zijn niet beschikbaar voor deze Wiser naaf.",
-      "equipment_not_available": "Er zijn geen uitrustingsgegevens beschikbaar voor deze Wiser-hub."
+      "opentherm_not_available": "OpenTherm-gegevens zijn niet beschikbaar voor deze Wiser-hub.",
+      "equipment_not_available": "Apparatuurgegevens zijn niet beschikbaar voor deze Wiser-hub."
     }
   },
   "services": {
@@ -198,15 +198,15 @@
       "fields": {
         "parameter": {
           "name": "Parameter",
-          "description": "OpenTherm temperatuurparameter die moet worden gewijzigd. Het vereiste API-eindpunt wordt automatisch geselecteerd."
+          "description": "OpenTherm-temperatuurparameter die moet worden gewijzigd. Het vereiste API-eindpunt wordt automatisch geselecteerd."
         },
         "temperature": {
           "name": "Temperatuur",
           "description": "Gebruik een temperatuur binnen de grenzen die door uw ketel worden gerapporteerd."
         },
         "hub": {
-          "name": "Wiser hub",
-          "description": "Selecteer alleen een hub als u meerdere Wiser hubs heeft."
+          "name": "Wiser-hub",
+          "description": "Selecteer alleen een hub als u meerdere Wiser-hubs hebt."
         }
       }
     }
@@ -242,16 +242,16 @@
       "message": "De parameter of waarde OpenTherm is ongeldig: {error}"
     },
     "opentherm_write_failed": {
-      "message": "Kan parameter OpenTherm niet instellen {parameter}: {error}"
+      "message": "Kan OpenTherm-parameter {parameter} niet instellen: {error}"
     },
     "opentherm_confirmation_failed": {
-      "message": "OpenTherm-parameter {parameter} bleef niet op {requested} °C na één nieuwe poging en het {window}-tweede bevestigingsvenster. Wiser rapporteert {reported} °C. Er wordt geen nieuwe poging meer verzonden."
+      "message": "OpenTherm-parameter {parameter} bleef na één nieuwe poging en de bevestigingsperiode van {window} seconden niet op {requested} °C. Wiser rapporteert {reported} °C. Er worden geen verdere pogingen verzonden."
     },
     "opentherm_retry_failed": {
-      "message": "OpenTherm-parameter {parameter} bleef niet op {requested} °C en de nieuwe poging kon niet worden verzonden: {error}. Wiser meldt {reported} °C. Er wordt geen nieuwe poging meer verzonden."
+      "message": "OpenTherm-parameter {parameter} bleef niet op {requested} °C en de nieuwe poging kon niet worden verzonden: {error}. Wiser rapporteert {reported} °C. Er worden geen verdere pogingen verzonden."
     },
     "opentherm_notification_title": {
-      "message": "Wiser OpenTherm commando"
+      "message": "Wiser OpenTherm-opdracht"
     }
   },
   "entity": {
@@ -271,10 +271,10 @@
         "name": "Offset vloertemperatuur"
       },
       "indoor_discomfort_temperature": {
-        "name": "Ongemakkelijke temperatuur binnen"
+        "name": "Ongemakstemperatuur binnen"
       },
       "outdoor_discomfort_temperature": {
-        "name": "Ongemakkelijke temperatuur buiten"
+        "name": "Ongemakstemperatuur buiten"
       }
     },
     "select": {
@@ -290,13 +290,13 @@
     },
     "button": {
       "boost_all_heating": {
-        "name": "Alle verwarming stimuleren"
+        "name": "Alle verwarming boosten"
       },
       "cancel_all_heating_overrides": {
         "name": "Alle verwarmingsoverrides annuleren"
       },
       "boost_hot_water": {
-        "name": "Warm water boost"
+        "name": "Warm water boosten"
       },
       "cancel_hot_water_overrides": {
         "name": "Warmwateroverrides annuleren"
@@ -343,19 +343,19 @@
         "name": "Identificeren"
       },
       "outlet": {
-        "name": "Outlet"
+        "name": "Stopcontact"
       },
       "away_mode_turns_off": {
-        "name": "Afwezig-modus wordt uitgeschakeld"
+        "name": "Schakelt uit in afwezigheidsmodus"
       },
       "away_mode_closes": {
-        "name": "Afwezig-modus sluit"
+        "name": "Sluit in afwezigheidsmodus"
       },
       "passive_mode": {
         "name": "Passieve modus"
       },
       "respect_summer_comfort": {
-        "name": "Respecteer het zomercomfort"
+        "name": "Zomercomfort respecteren"
       },
       "interacts_with_room_climate": {
         "name": "Heeft invloed op het binnenklimaat"
@@ -370,7 +370,7 @@
         "name": "Verlichtingssterkte heeft invloed op het binnenklimaat"
       },
       "sensor_interacts_with_room_climate": {
-        "name": "{sensor} interageert met het binnenklimaat"
+        "name": "{sensor} heeft invloed op het binnenklimaat"
       },
       "manual_heat": {
         "name": "Handmatige verwarming"
@@ -441,19 +441,19 @@
         "name": "Actief"
       },
       "boiler_ch_max_setpoint_read_write": {
-        "name": "Ketel CH maximaal setpoint lezen/schrijven"
+        "name": "Maximale CV-instelwaarde ketel lezen/schrijven"
       },
       "boiler_ch_max_setpoint_transfer_enable": {
-        "name": "Ketel CV maximum setpoint overdracht ingeschakeld"
+        "name": "Overdracht maximale CV-instelwaarde ketel ingeschakeld"
       },
       "boiler_fault": {
-        "name": "Ketel storing"
+        "name": "Ketelstoring"
       },
       "boiler_hw_setpoint_read_write": {
-        "name": "Ketel warm water setpoint lezen/schrijven"
+        "name": "Warmwaterinstelwaarde ketel lezen/schrijven"
       },
       "boiler_hw_setpoint_transfer_enable": {
-        "name": "Ketel warm water setpoint overdracht ingeschakeld"
+        "name": "Overdracht warmwaterinstelwaarde ketel ingeschakeld"
       },
       "central_heating_2_active": {
         "name": "Centrale verwarming 2 actief"
@@ -462,10 +462,10 @@
         "name": "Centrale verwarming actief"
       },
       "ch1_flow_enabled": {
-        "name": "CH1-stroom ingeschakeld"
+        "name": "CV1-aanvoer ingeschakeld"
       },
       "ch2_flow_enabled": {
-        "name": "CH2-stroom ingeschakeld"
+        "name": "CV2-aanvoer ingeschakeld"
       },
       "cooling_active": {
         "name": "Koeling actief"
@@ -533,19 +533,19 @@
         "name": "Vlamstatistieken"
       },
       "boiler_ch_setpoint": {
-        "name": "Ketel CV-instelpunt"
+        "name": "CV-instelwaarde ketel"
       },
       "boiler_ch_setpoint_lower_bound": {
-        "name": "Ketel CH-instelpunt ondergrens"
+        "name": "Ondergrens CV-instelwaarde ketel"
       },
       "boiler_ch_setpoint_upper_bound": {
-        "name": "Ketel CV-instelpunt bovengrens"
+        "name": "Bovengrens CV-instelwaarde ketel"
       },
       "boiler_exhaust_temperature": {
-        "name": "Ketelafvoertemperatuur"
+        "name": "Rookgastemperatuur van de ketel"
       },
       "boiler_hw_setpoint": {
-        "name": "Ketel heet waterinstelpunt"
+        "name": "Warmwaterinstelwaarde ketel"
       },
       "boiler_hw_setpoint_lower_bound": {
         "name": "Ketelwarmwaterinstelpunt ondergrens"
@@ -554,25 +554,25 @@
         "name": "Ketelwarmwaterinstelpunt bovengrens"
       },
       "ch1_flow_setpoint": {
-        "name": "CH1 debietinstelpunt"
+        "name": "CV1-aanvoerinstelwaarde"
       },
       "ch2_flow_setpoint": {
-        "name": "CH2 aanvoer setpoint"
+        "name": "CV2-aanvoerinstelwaarde"
       },
       "ch_flow_active_lower_setpoint": {
-        "name": "CH aanvoer actief onderste setpoint"
+        "name": "Actieve onderste CV-aanvoerinstelwaarde"
       },
       "ch_flow_active_upper_setpoint": {
-        "name": "CH aanvoer actief bovenste setpoint"
+        "name": "Actieve bovenste CV-aanvoerinstelwaarde"
       },
       "ch_pressure_bar": {
-        "name": "CV druk"
+        "name": "CV-druk"
       },
       "connection_status": {
         "name": "Verbindingsstatus"
       },
       "coprocessor_update_status": {
-        "name": "OpenTherm updatestatus coprocessor"
+        "name": "Updatestatus OpenTherm-coprocessor"
       },
       "coprocessor_version": {
         "name": "OpenTherm coprocessorversie"
@@ -605,7 +605,7 @@
         "name": "Relatief modulatieniveau"
       },
       "room_setpoint": {
-        "name": "Gewenste ruimteruimte"
+        "name": "Kamerinstelwaarde"
       },
       "room_temperature": {
         "name": "Kamertemperatuur"
@@ -614,7 +614,7 @@
         "name": "OpenTherm slave-status"
       },
       "tracked_room_id": {
-        "name": "Getraceerde kamer-ID"
+        "name": "ID van gevolgde kamer"
       },
       "heating_demand": {
         "name": "Verwarmingsvraag"
@@ -643,9 +643,9 @@
     "trigger_type": {
       "started_heating": "{entity_name} begint met verwarmen",
       "stopped_heating": "{entity_name} stopt met verwarmen",
-      "boosted": "{entity_name} wordt versterkt",
-      "target_temperature_increased": "{entity_name} doeltemperatuur verhoogd",
-      "target_temperature_decreased": "{entity_name} doeltemperatuur verlaagd"
+      "boosted": "{entity_name} wordt geboost",
+      "target_temperature_increased": "Doeltemperatuur van {entity_name} verhoogd",
+      "target_temperature_decreased": "Doeltemperatuur van {entity_name} verlaagd"
     }
   }
 }

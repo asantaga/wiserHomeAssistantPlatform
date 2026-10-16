@@ -330,22 +330,22 @@
       "heating": {
         "name": "Fűtés",
         "state": {
-          "off": "[%key:common::state::off%]",
-          "on": "[%key:common::state::on%]"
+          "off": "Ki",
+          "on": "Be"
         }
       },
       "heating_channel": {
         "name": "Fűtési csatorna {channel}",
         "state": {
-          "off": "[%key:common::state::off%]",
-          "on": "[%key:common::state::on%]"
+          "off": "Ki",
+          "on": "Be"
         }
       },
       "hot_water": {
         "name": "Meleg víz",
         "state": {
-          "off": "[%key:common::state::off%]",
-          "on": "[%key:common::state::on%]"
+          "off": "Ki",
+          "on": "Be"
         }
       },
       "hot_water_operation_mode": { "name": "Melegvíz üzemmód" },

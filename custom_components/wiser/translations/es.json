@@ -3,8 +3,8 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Wiser Configuración del concentrador de calor",
-        "description": "Ingrese la dirección IP y la clave secreta obtenida del concentrador.",
+        "title": "Configuración del Heat Hub Wiser",
+        "description": "Introduzca la dirección IP y la clave secreta obtenida del hub.",
         "data": {
           "host": "Dirección IP o nombre de host",
           "port": "Número de puerto",
@@ -12,7 +12,7 @@
         }
       },
       "zeroconf_confirm": {
-        "title": "Wiser Configuración del Heat Hub ({name})",
+        "title": "Configuración del Heat Hub Wiser ({name})",
         "description": "Introduzca la clave secreta obtenida del hub.",
         "data": {
           "host": "Dirección IP o nombre de host",
@@ -22,56 +22,56 @@
       }
     },
     "abort": {
-      "already_in_progress": "Wiser La configuración del Heat Hub ya está en progreso.",
+      "already_in_progress": "La configuración del Heat Hub Wiser ya está en curso.",
       "already_configured": "Este dispositivo ya está configurado.",
       "not_wiser_hub": "El dispositivo descubierto no es un Heat Hub Wiser."
     },
     "error": {
-      "auth_failure": "No se puede autenticar con el concentrador Wiser. Verifique la clave secreta y vuelva a intentarlo.",
-      "timeout_error": "Se agotó el tiempo de espera al intentar conectarse al concentrador Wiser. Verifique la dirección IP e inténtelo nuevamente.",
-      "timeout_error_discovery": "Se agotó el tiempo de espera al intentar conectarse al concentrador Wiser. Verifique que su hub todavía esté en línea e inténtelo nuevamente.",
-      "unknown": "Error desconocido al conectarse al concentrador Wiser. Por favor revise los registros."
+      "auth_failure": "No se pudo autenticar con el hub Wiser. Compruebe la clave secreta y vuelva a intentarlo.",
+      "timeout_error": "Se agotó el tiempo de espera al conectarse al hub Wiser. Compruebe la dirección IP y vuelva a intentarlo.",
+      "timeout_error_discovery": "Se agotó el tiempo de espera al conectarse al hub Wiser. Compruebe que el hub siga en línea y vuelva a intentarlo.",
+      "unknown": "Se produjo un error desconocido al conectarse al hub Wiser. Consulte los registros."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Wiser Opciones de integración",
-        "description": "Seleccionar parámetros para modificar",
+        "title": "Opciones de la integración Wiser",
+        "description": "Seleccione los parámetros que desea modificar",
         "menu_options": {
           "main_params": "Parámetros principales",
           "automation_params": "Parámetros de automatización",
           "opentherm_sensors": "OpenTherm sensores",
           "equipment_sensors": "Sensores de equipo",
-          "ui_options": "Opciones de UI"
+          "ui_options": "Opciones de la interfaz de usuario"
         }
       },
       "ui_options": {
-        "title": "Opciones de UI",
+        "title": "Opciones de la interfaz de usuario",
         "data": {
           "legacy_naming": "Nomenclatura heredada",
           "show_wiser_sidebar": "Mostrar Wiser en la barra lateral"
         },
         "data_description": {
-          "legacy_naming": "Incluir nombres de habitaciones en Nombres de dispositivos Wiser. Si está habilitado, el uso de Home Assistant para regenerar ID de entidad con el formato predeterminado en Configuración → Sistema → Formato de ID de entidad (Home Assistant 2026.8 y posterior) duplicará los nombres de área cuando el área y los nombres de sala Wiser coincidan. Cambiar esta opción no cambia el nombre de los ID de entidad existentes."
+          "legacy_naming": "Incluye los nombres de las habitaciones en los nombres de los dispositivos Wiser. Si se habilita, al usar Home Assistant para regenerar los ID de entidad con el formato predeterminado en Configuración → Sistema → Formato de ID de entidad (Home Assistant 2026.8 y posteriores), se duplicarán los nombres de área cuando coincidan con los nombres de las habitaciones Wiser. Cambiar esta opción no modifica los ID de entidad existentes."
         }
       },
       "main_params": {
-        "title": "Wiser Opciones de integración",
+        "title": "Opciones de la integración Wiser",
         "description": "Parámetros principales",
         "data": {
           "host": "Dirección IP o nombre de host",
           "port": "Número de puerto",
-          "scan_interval": "Intervalo de escaneo (segundos)",
+          "scan_interval": "Intervalo de actualización (segundos)",
           "heating_boost_temp": "Temperatura de refuerzo de calefacción predeterminada (°C)",
           "heating_boost_time": "Duración predeterminada del refuerzo de calefacción (minutos)",
           "hotwater_boost_time": "Duración predeterminada del refuerzo de agua caliente (minutos)",
-          "setpoint_mode": "Modo de punto de ajuste",
-          "restore_manual_temp_option": "Utilice esta temperatura si no se almacena ninguna temperatura manual"
+          "setpoint_mode": "Modo de consigna",
+          "restore_manual_temp_option": "Usar esta temperatura si no hay ninguna temperatura manual almacenada"
         }
       },
       "automation_params": {
-        "title": "Wiser Opciones de integración",
+        "title": "Opciones de la integración Wiser",
         "description": "Habilitar automatizaciones integradas",
         "sections": {
           "automations_passive_mode": {
@@ -86,8 +86,8 @@
             "name": "Control climático de agua caliente",
             "description": "Habilita el control climático de agua caliente. Consulte la wiki para obtener más detalles.",
             "data": {
-              "hotwater_climate": "Habilita la entidad climática",
-              "experimental_mode": "Habilita el modo de trabajo experimental",
+              "hotwater_climate": "Habilitar la entidad de climatización",
+              "experimental_mode": "Habilitar el modo de funcionamiento experimental",
               "hotwater_auto_mode": "Modo automático de agua caliente",
               "hotwater_heat_mode": "Modo de calentamiento de agua caliente",
               "hotwater_boost_mode": "Modo de refuerzo de agua caliente",
@@ -103,11 +103,11 @@
           "equipment_sensors": "Habilitar sensores de datos del equipo"
         },
         "data_description": {
-          "equipment_sensors": "Exponer un sensor adicional que contiene atributos de equipo detallados para cada enchufe inteligente, PowerTag y actuador de calefacción compatibles. Sensores"
+          "equipment_sensors": "Expone un sensor adicional con atributos detallados del equipo para cada enchufe inteligente, PowerTag y actuador de calefacción compatible."
         }
       },
       "opentherm_sensors": {
-        "title": "OpenTherm",
+        "title": "Sensores OpenTherm",
         "description": "Elija una categoría de atributos OpenTherm detectados.",
         "menu_options": {
           "opentherm_readings": "Lecturas",
@@ -117,8 +117,8 @@
         }
       },
       "opentherm_readings": {
-        "title": "OpenTherm Lecturas",
-        "description": "Elige qué detectado OpenTherm Las lecturas se exponen como entidades sensoras.",
+        "title": "Lecturas OpenTherm",
+        "description": "Elija qué lecturas OpenTherm detectadas se muestran como entidades de sensor.",
         "data": {
           "ch_flow_temperature": "Temperatura de ida de la caldera",
           "ch_pressure_bar": "Presión de calefacción",
@@ -126,34 +126,34 @@
           "delta_t": "Delta-T",
           "boiler_exhaust_temperature": "Temperatura de escape de la caldera",
           "estimated_boiler_output": "Potencia estimada de la caldera",
-          "hw_flow_rate": "Caudal de agua caliente nominal",
-          "hw_temperature": "Temperatura agua caliente sanitaria",
-          "maximum_capacity_kw": "Capacidad máxima caldera",
+          "hw_flow_rate": "Caudal de agua caliente",
+          "hw_temperature": "Temperatura del agua caliente",
+          "maximum_capacity_kw": "Capacidad máxima de la caldera",
           "minimum_modulation_level": "Nivel mínimo de modulación",
           "relative_modulation_level": "Nivel relativo de modulación",
           "room_temperature": "Temperatura ambiente"
         }
       },
       "opentherm_central_heating": {
-        "title": "OpenTherm calefacción central",
+        "title": "Calefacción central OpenTherm",
         "description": "Elija qué atributos de calefacción central detectados se exponen como entidades.",
         "data": {
-          "boiler_ch_max_setpoint_read_write": "Lectura/escritura del punto de ajuste máximo de la caldera",
-          "boiler_ch_max_setpoint_transfer_enable": "Transferencia del punto de ajuste máximo de la caldera habilitada",
-          "boiler_ch_setpoint": "Punto de ajuste de la caldera",
-          "boiler_ch_setpoint_lower_bound": "Límite inferior del punto de ajuste de la caldera",
-          "boiler_ch_setpoint_upper_bound": "Límite superior del punto de ajuste de la caldera",
-          "ch_flow_active_lower_setpoint": "Flujo CH activo punto de ajuste inferior",
-          "ch_flow_active_upper_setpoint": "Flujo CH punto de ajuste superior activo",
+          "boiler_ch_max_setpoint_read_write": "Lectura/escritura de la consigna máxima de calefacción de la caldera",
+          "boiler_ch_max_setpoint_transfer_enable": "Transferencia de la consigna máxima de calefacción de la caldera habilitada",
+          "boiler_ch_setpoint": "Consigna de calefacción de la caldera",
+          "boiler_ch_setpoint_lower_bound": "Límite inferior de la consigna de calefacción de la caldera",
+          "boiler_ch_setpoint_upper_bound": "Límite superior de la consigna de calefacción de la caldera",
+          "ch_flow_active_lower_setpoint": "Consigna inferior activa del caudal de calefacción",
+          "ch_flow_active_upper_setpoint": "Consigna superior activa del caudal de calefacción",
           "ch1_flow_enabled": "Flujo CH1 habilitado",
-          "ch1_flow_setpoint": "Punto de ajuste flujo CH1",
+          "ch1_flow_setpoint": "Consigna de caudal CH1",
           "ch2_flow_enabled": "Flujo CH2 habilitado",
-          "ch2_flow_setpoint": "Punto de ajuste flujo CH2",
-          "room_setpoint": "Punto de ajuste de la habitación"
+          "ch2_flow_setpoint": "Consigna de caudal CH2",
+          "room_setpoint": "Consigna de la habitación"
         }
       },
       "opentherm_hot_water": {
-        "title": "OpenTherm agua caliente",
+        "title": "Agua caliente OpenTherm",
         "description": "Elija qué atributos de agua caliente detectados se exponen como entidades.",
         "data": {
           "boiler_hw_setpoint": "Punto de consigna de agua caliente de la caldera",
@@ -162,26 +162,26 @@
           "boiler_hw_setpoint_transfer_enable": "Transferencia del punto de consigna de agua caliente de la caldera habilitada",
           "boiler_hw_setpoint_upper_bound": "Límite superior del punto de consigna de agua caliente de la caldera",
           "hw_enabled": "Agua caliente habilitada",
-          "hw_flow_setpoint": "Punto de ajuste del flujo de agua caliente"
+          "hw_flow_setpoint": "Consigna del caudal de agua caliente"
         }
       },
       "opentherm_status": {
         "title": "Estado y diagnóstico de OpenTherm",
         "description": "Elija qué estados detectados y atributos de diagnóstico se exponen como entidades de sensor.",
         "data": {
-          "boiler_fault": "Fallo caldera",
+          "boiler_fault": "Fallo de la caldera",
           "central_heating_active": "Calefacción central activa",
           "central_heating_2_active": "Calefacción central 2 activa",
           "connection_status": "Estado de conexión",
-          "coprocessor_update_status": "OpenTherm estado de actualización del coprocesador",
-          "coprocessor_version": "OpenTherm versión del coprocesador",
+          "coprocessor_update_status": "Estado de actualización del coprocesador OpenTherm",
+          "coprocessor_version": "Versión del coprocesador OpenTherm",
           "cooling_active": "Enfriamiento activo",
           "diagnostic_event": "Evento de diagnóstico",
           "flame_active": "Llama activa",
           "flame_statistics": "Estadísticas de llama",
           "hot_water_active": "Agua caliente activa",
           "operating_mode": "Modo de funcionamiento",
-          "slave_status": "OpenTherm Estado de esclavo",
+          "slave_status": "Estado esclavo OpenTherm",
           "tracked_room_id": "ID de habitación rastreada"
         }
       }
@@ -198,15 +198,15 @@
       "fields": {
         "parameter": {
           "name": "Parámetro",
-          "description": "OpenTherm Parámetro de temperatura a cambiar. El punto final API requerido se selecciona automáticamente."
+          "description": "Parámetro de temperatura OpenTherm que se desea cambiar. El endpoint de API necesario se selecciona automáticamente."
         },
         "temperature": {
           "name": "Temperatura",
           "description": "Utilice una temperatura dentro de los límites informados por su caldera."
         },
         "hub": {
-          "name": "Wiser concentrador",
-          "description": "Seleccione un concentrador solo cuando tenga varios concentradores Wiser."
+          "name": "Hub Wiser",
+          "description": "Seleccione un hub únicamente si tiene varios hubs Wiser."
         }
       }
     }
@@ -245,13 +245,13 @@
       "message": "No se puede establecer el parámetro OpenTherm {parameter}: {error}"
     },
     "opentherm_confirmation_failed": {
-      "message": "El parámetro OpenTherm {parameter} no permaneció en {requested} °C después de un reintento y la segunda ventana de confirmación de {window}. Wiser informa {reported} °C. No se enviarán más reintentos."
+      "message": "El parámetro OpenTherm {parameter} no se mantuvo en {requested} °C tras un reintento y el periodo de confirmación de {window} segundos. Wiser informa de {reported} °C. No se realizarán más reintentos."
     },
     "opentherm_retry_failed": {
-      "message": "El parámetro OpenTherm {parameter} no permaneció en {requested} °C y no se pudo enviar su reintento: {error}. Wiser informes {reported} °C. No se enviarán más reintentos."
+      "message": "El parámetro OpenTherm {parameter} no se mantuvo en {requested} °C y no se pudo enviar el reintento: {error}. Wiser informa de {reported} °C. No se realizarán más reintentos."
     },
     "opentherm_notification_title": {
-      "message": "Wiser Comando OpenTherm"
+      "message": "Comando OpenTherm de Wiser"
     }
   },
   "entity": {
@@ -274,7 +274,7 @@
         "name": "Temperatura de incomodidad interior"
       },
       "outdoor_discomfort_temperature": {
-        "name": "Temperatura exterior incómoda"
+        "name": "Temperatura de incomodidad exterior"
       }
     },
     "select": {
@@ -290,13 +290,13 @@
     },
     "button": {
       "boost_all_heating": {
-        "name": "Impulsar toda la calefacción"
+        "name": "Reforzar toda la calefacción"
       },
       "cancel_all_heating_overrides": {
         "name": "Cancelar todas las anulaciones de calefacción"
       },
       "boost_hot_water": {
-        "name": "Impulsar el agua caliente"
+        "name": "Reforzar el agua caliente"
       },
       "cancel_hot_water_overrides": {
         "name": "Cancelar anulaciones de agua caliente"
@@ -343,13 +343,13 @@
         "name": "Identificar"
       },
       "outlet": {
-        "name": "Outlet"
+        "name": "Toma de corriente"
       },
       "away_mode_turns_off": {
-        "name": "El modo Ausente se apaga"
+        "name": "El modo Ausente apaga"
       },
       "away_mode_closes": {
-        "name": "El modo Ausente se cierra"
+        "name": "El modo Ausente cierra"
       },
       "passive_mode": {
         "name": "Modo pasivo"
@@ -358,19 +358,19 @@
         "name": "Respetar el confort de verano"
       },
       "interacts_with_room_climate": {
-        "name": "Interactúa con el clima ambiental"
+        "name": "Interactúa con la climatización de la habitación"
       },
       "humidity_interacts_with_room_climate": {
-        "name": "La humedad interactúa con el clima ambiental"
+        "name": "La humedad interactúa con la climatización de la habitación"
       },
       "temperature_interacts_with_room_climate": {
-        "name": "La temperatura interactúa con el clima ambiental"
+        "name": "La temperatura interactúa con la climatización de la habitación"
       },
       "illuminance_interacts_with_room_climate": {
-        "name": "La iluminancia interactúa con el clima ambiental"
+        "name": "La iluminancia interactúa con la climatización de la habitación"
       },
       "sensor_interacts_with_room_climate": {
-        "name": "{sensor} interactúa con el clima ambiental"
+        "name": "{sensor} interactúa con la climatización de la habitación"
       },
       "manual_heat": {
         "name": "Calefacción manual"
@@ -453,7 +453,7 @@
         "name": "Lectura/escritura de setpoint de agua caliente de caldera"
       },
       "boiler_hw_setpoint_transfer_enable": {
-        "name": "Agua caliente de caldera transferencia de setpoint habilitada"
+        "name": "Transferencia de la consigna de agua caliente de la caldera habilitada"
       },
       "central_heating_2_active": {
         "name": "Calefacción central 2 activa"
@@ -491,7 +491,7 @@
         "name": "Nube"
       },
       "heating_operation_mode": {
-        "name": "Modo funcionamiento calefacción"
+        "name": "Modo de funcionamiento de la calefacción"
       },
       "heating": {
         "name": "Calefacción",
@@ -501,7 +501,7 @@
         }
       },
       "heating_channel": {
-        "name": "Canal calefacción {channel}",
+        "name": "Canal de calefacción {channel}",
         "state": {
           "off": "Apagado",
           "on": "Encendido"
@@ -515,7 +515,7 @@
         }
       },
       "hot_water_operation_mode": {
-        "name": "Modo funcionamiento agua caliente"
+        "name": "Modo de funcionamiento del agua caliente"
       },
       "target_temperature": {
         "name": "Temperatura objetivo"
@@ -533,13 +533,13 @@
         "name": "Estadísticas de llama"
       },
       "boiler_ch_setpoint": {
-        "name": "Punto de ajuste de calefacción de caldera"
+        "name": "Consigna de calefacción de la caldera"
       },
       "boiler_ch_setpoint_lower_bound": {
-        "name": "Caldera de calefacción Límite inferior del punto de consigna"
+        "name": "Límite inferior de la consigna de calefacción de la caldera"
       },
       "boiler_ch_setpoint_upper_bound": {
-        "name": "Límite superior del punto de consigna de calefacción de caldera"
+        "name": "Límite superior de la consigna de calefacción de la caldera"
       },
       "boiler_exhaust_temperature": {
         "name": "Temperatura de escape de la caldera"
@@ -554,16 +554,16 @@
         "name": "Límite superior del punto de consigna de agua caliente de la caldera"
       },
       "ch1_flow_setpoint": {
-        "name": "Punto de ajuste de flujo CH1"
+        "name": "Consigna de caudal CH1"
       },
       "ch2_flow_setpoint": {
-        "name": "Punto de ajuste de flujo de CH2"
+        "name": "Consigna de caudal CH2"
       },
       "ch_flow_active_lower_setpoint": {
-        "name": "Punto de ajuste inferior activo de flujo de CH"
+        "name": "Consigna inferior activa del caudal de calefacción"
       },
       "ch_flow_active_upper_setpoint": {
-        "name": "Punto de ajuste superior activo de flujo de CH"
+        "name": "Consigna superior activa del caudal de calefacción"
       },
       "ch_pressure_bar": {
         "name": "Presión de CH"
@@ -572,10 +572,10 @@
         "name": "Estado de conexión"
       },
       "coprocessor_update_status": {
-        "name": "OpenTherm estado de actualización del coprocesador"
+        "name": "Estado de actualización del coprocesador OpenTherm"
       },
       "coprocessor_version": {
-        "name": "OpenTherm versión del coprocesador"
+        "name": "Versión del coprocesador OpenTherm"
       },
       "delta_t": {
         "name": "Delta-T"
@@ -611,7 +611,7 @@
         "name": "Temperatura ambiente"
       },
       "slave_status": {
-        "name": "OpenTherm estado esclavo"
+        "name": "Estado esclavo OpenTherm"
       },
       "tracked_room_id": {
         "name": "ID de habitación rastreada"
@@ -643,9 +643,9 @@
     "trigger_type": {
       "started_heating": "{entity_name} inicia la calefacción",
       "stopped_heating": "{entity_name} deja de calentar",
-      "boosted": "{entity_name} se potencia",
-      "target_temperature_increased": "{entity_name} temperatura objetivo aumentada",
-      "target_temperature_decreased": "{entity_name} temperatura objetivo disminuida"
+      "boosted": "Se ha reforzado {entity_name}",
+      "target_temperature_increased": "Ha aumentado la temperatura objetivo de {entity_name}",
+      "target_temperature_decreased": "Ha disminuido la temperatura objetivo de {entity_name}"
     }
   }
 }
