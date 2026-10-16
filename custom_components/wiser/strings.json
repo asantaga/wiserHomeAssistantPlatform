@@ -77,17 +77,19 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passive Mode",
-            "description": "Enable passive TRV capability. Each room needs to be enabled for it to function.",
+            "description": "Enable Passive Mode and choose whether it controls internal Wiser devices or assigned external climate devices.",
             "data": {
               "automations_passive_mode": "Passive Mode",
-              "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
+              "passive_type": "Type",
+              "temperature_increment": "Temperature increment",
+              "control_strategy": "Control strategy"
             }
           },
-          "automations_external_passive_mode": {
-            "name": "External Passive Mode",
-            "description": "Assign each external TRV to the same Home Assistant area as its Wiser room, then select it below. The lower temperature controls Wiser heat demand; the upper temperature closes the external TRV.",
+          "automations_external_room_control": {
+            "name": "External Room Control",
+            "description": "Assign external climate devices to their Wiser room so they follow the room's current target, with or without Passive Mode.",
             "data": {
-              "automations_external_passive_mode": "External Passive Mode"
+              "automations_external_room_control": "External Room Control"
             }
           },
           "hotwater_climate": {
@@ -227,8 +229,8 @@
       }
     },
     "error": {
-      "external_trv_must_not_be_wiser": "Select an external climate entity. A Wiser climate entity cannot be controlled as an external TRV.",
-      "external_trv_duplicate_assignment": "An external TRV can only be assigned to one Wiser room."
+      "external_climate_must_not_be_wiser": "Select an external climate entity. A Wiser climate entity cannot be controlled as an external device.",
+      "external_climate_duplicate_assignment": "An external climate entity can only be assigned to one Wiser room."
     },
     "abort": {
       "opentherm_not_available": "OpenTherm data is not available for this Wiser hub.",
@@ -256,6 +258,18 @@
     }
   },
   "selector": {
+    "passive_mode_type": {
+      "options": {
+        "internal": "Internal",
+        "external": "External"
+      }
+    },
+    "room_control_strategy": {
+      "options": {
+        "modulating": "Modulating",
+        "temperature_limiter": "Temperature limiter"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Active central-heating lower setpoint",
@@ -340,7 +354,6 @@
       "away_mode_turns_off": { "name": "Away mode turns off" },
       "away_mode_closes": { "name": "Away mode closes" },
       "passive_mode": { "name": "Passive mode" },
-      "external_passive_mode": { "name": "External passive mode" },
       "respect_summer_comfort": { "name": "Respect summer comfort" },
       "interacts_with_room_climate": { "name": "Interacts with room climate" },
       "humidity_interacts_with_room_climate": { "name": "Humidity interacts with room climate" },
