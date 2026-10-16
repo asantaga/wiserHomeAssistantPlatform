@@ -264,6 +264,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
                 )
 
+    # Add External Passive Mode switches for assigned rooms
+    if data.enable_automations_external_passive_mode:
+        for room in data.wiserhub.rooms.all:
+            if data.external_passive.has_assignment(room.id):
+                wiser_switches.append(
+                    WiserExternalPassiveModeSwitch(
+                        hass,
+                        data,
+                        room.id,
+                        f"Wiser External Passive Mode {room.name}",
+                    )
+                )
+
     # Add hw climate switches
     if data.enable_hw_climate and not data.hw_climate_experimental_mode:
         wiser_switches.append(WiserHWClimateManualHeatSwitch(data, 0, "Manual Heat"))
@@ -1003,6 +1016,10 @@ class WiserPassiveModeSwitch(WiserSwitch):
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
+        if self._data.external_passive.is_enabled(self._room_id):
+            await self._data.external_passive.async_set_enabled(
+                self._room_id, False
+            )
         await self._data.wiserhub.rooms.get_by_id(self._room_id).set_passive_mode(True)
         await self.async_force_update()
         return True
@@ -1013,6 +1030,80 @@ class WiserPassiveModeSwitch(WiserSwitch):
         room = self._data.wiserhub.rooms.get_by_id(self._room_id)
         await room.set_passive_mode(False)
         await room.cancel_overrides()
+        await self.async_force_update()
+        return True
+
+
+class WiserExternalPassiveModeSwitch(WiserSwitch):
+    """Enable External Passive Mode for a Wiser room."""
+
+    def __init__(self, hass: HomeAssistant, data, room_id, name) -> None:
+        """Initialise the switch."""
+        self._name = name
+        self._room_id = room_id
+        self._hass = hass
+        super().__init__(
+            data,
+            name,
+            "",
+            "external-passive-mode",
+            "mdi:radiator",
+        )
+        self._attr_translation_key = "external_passive_mode"
+        self._is_on = self._data.external_passive.is_enabled(self._room_id)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Update the switch from controller state."""
+        super()._handle_coordinator_update()
+        self._is_on = self._data.external_passive.is_enabled(self._room_id)
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a stable unique ID."""
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            "switch_external_passive_mode",
+        )
+
+    @property
+    def device_info(self):
+        """Attach the switch to the Wiser room device."""
+        return {
+            "name": get_device_name(self._data, self._room_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
+            },
+            "suggested_area": self._data.wiserhub.rooms.get_by_id(
+                self._room_id
+            ).name,
+            **get_hub_via_device_info(self._data),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Expose the assigned external climate entities."""
+        return {
+            "external_trvs": self._data.external_passive.assigned_entity_ids(
+                self._room_id
+            )
+        }
+
+    async def async_turn_on(self, **kwargs):
+        """Enable External Passive Mode and disable regular Passive Mode."""
+        room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        if room.passive_mode_enabled:
+            await room.set_passive_mode(False)
+            await room.cancel_overrides()
+        await self._data.external_passive.async_set_enabled(self._room_id, True)
+        await self.async_force_update()
+        return True
+
+    async def async_turn_off(self, **kwargs):
+        """Disable External Passive Mode and return the Wiser room to schedule."""
+        await self._data.external_passive.async_set_enabled(self._room_id, False)
         await self.async_force_update()
         return True
 

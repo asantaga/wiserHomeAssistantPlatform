@@ -80,6 +80,12 @@ class BuildTest(unittest.TestCase):
                 filename = self.filename(card)
                 self.assertEqual(archive.read(f"frontend/{filename}"), payload)
                 self.assertEqual(
+                    (
+                        self.output.with_suffix("") / f"frontend/{filename}"
+                    ).read_bytes(),
+                    payload,
+                )
+                self.assertEqual(
                     (self.source / f"frontend/{filename}").read_bytes(),
                     b"old tracked bundle",
                 )
@@ -89,7 +95,25 @@ class BuildTest(unittest.TestCase):
                 {"schema_version": 1, "cards": CARD_MANIFEST},
             )
             self.assertFalse(any("__pycache__" in name for name in archive.namelist()))
+        self.assertFalse(
+            (self.output.with_suffix("") / "frontend/__pycache__").exists()
+        )
         self.assertFalse((self.output.parent / "panel-config-release.json").exists())
+
+    def test_build_replaces_the_previous_unpacked_directory(self):
+        for card in self.payloads:
+            self.local(card)
+        directory_output = self.output.with_suffix("")
+        directory_output.mkdir()
+        (directory_output / "obsolete.txt").write_text("old build")
+
+        self.build()
+
+        self.assertFalse((directory_output / "obsolete.txt").exists())
+        self.assertEqual(
+            json.loads((directory_output / "frontend/card-releases.json").read_text()),
+            json.loads((self.output.parent / "card-releases.json").read_text()),
+        )
 
     def test_missing_local_bundle_falls_back_independently(self):
         self.local("zigbee")
@@ -182,6 +206,7 @@ class BuildTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "generic settings API"):
             self.build()
         self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_suffix("").exists())
 
     def test_failed_fallback_omits_only_the_unavailable_bundle(self):
         self.local("schedule")
@@ -217,6 +242,7 @@ class BuildTest(unittest.TestCase):
                 self.build()
         releases.assert_not_called()
         self.assertFalse(self.output.exists())
+        self.assertFalse(self.output.with_suffix("").exists())
 
     def test_release_builds_ignore_local_bundles_for_both_channels(self):
         for card in self.payloads:

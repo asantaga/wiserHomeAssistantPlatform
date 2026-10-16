@@ -83,6 +83,13 @@
               "passive_mode_temperature_increments": "Passive Mode Temperature Increments"
             }
           },
+          "automations_external_passive_mode": {
+            "name": "External Passive Mode",
+            "description": "Assign each external TRV to the same Home Assistant area as its Wiser room, then select it below. The lower temperature controls Wiser heat demand; the upper temperature closes the external TRV.",
+            "data": {
+              "automations_external_passive_mode": "External Passive Mode"
+            }
+          },
           "hotwater_climate": {
             "name": "Hot Water Climate Control",
             "description": "Enable hot-water climate control. See the wiki for details.",
@@ -219,6 +226,10 @@
         }
       }
     },
+    "error": {
+      "external_trv_must_not_be_wiser": "Select an external climate entity. A Wiser climate entity cannot be controlled as an external TRV.",
+      "external_trv_duplicate_assignment": "An external TRV can only be assigned to one Wiser room."
+    },
     "abort": {
       "opentherm_not_available": "OpenTherm data is not available for this Wiser hub.",
       "equipment_not_available": "Equipment data is not available for this Wiser hub."
@@ -313,6 +324,7 @@
       "away_mode_turns_off": { "name": "Away mode turns off" },
       "away_mode_closes": { "name": "Away mode closes" },
       "passive_mode": { "name": "Passive mode" },
+      "external_passive_mode": { "name": "External passive mode" },
       "respect_summer_comfort": { "name": "Respect summer comfort" },
       "interacts_with_room_climate": { "name": "Interacts with room climate" },
       "humidity_interacts_with_room_climate": { "name": "Humidity interacts with room climate" },

@@ -249,6 +249,43 @@ class WiserDeviceSwitchRefreshTest(unittest.TestCase):
         self.assertEqual(writes, [False, False])
 
 
+class WiserExternalPassiveModeSwitchTest(unittest.TestCase):
+    """Tests for relinquishing External Passive room control."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def test_turn_off_delegates_disable_before_refresh(self) -> None:
+        events = []
+
+        async def set_enabled(room_id, enabled):
+            events.append(("set_enabled", room_id, enabled))
+
+        async def refresh():
+            events.append(("refresh",))
+
+        data = SimpleNamespace(
+            external_passive=SimpleNamespace(async_set_enabled=set_enabled),
+        )
+        switch = object.__new__(
+            self.switch_module.WiserExternalPassiveModeSwitch
+        )
+        switch._data = data
+        switch._room_id = 7
+        switch.async_force_update = refresh
+
+        asyncio.run(switch.async_turn_off())
+
+        self.assertEqual(
+            events,
+            [
+                ("set_enabled", 7, False),
+                ("refresh",),
+            ],
+        )
+
+
 class _FakeSmartPlug:
     def __init__(self, *, is_on: bool) -> None:
         self.is_on = is_on
