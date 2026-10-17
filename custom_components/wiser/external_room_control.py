@@ -233,6 +233,7 @@ class ExternalRoomControlController:
             self._rooms[room_id] = settings
         settings.setdefault("passive_upper_override", None)
         settings.setdefault("passive_lower_override", None)
+        settings.setdefault("passive_override_schedule_transition", None)
         for obsolete_key in (
             "external_passive_enabled",
             "enabled",
@@ -244,6 +245,33 @@ class ExternalRoomControlController:
         ):
             settings.pop(obsolete_key, None)
         return settings
+
+    @staticmethod
+    def _schedule_transition_marker(room) -> str | None:
+        """Return the identity of the room's next schedule transition."""
+        schedule = getattr(room, "schedule", None)
+        next_period = getattr(schedule, "next", None)
+        transition = getattr(next_period, "datetime", None)
+        if transition is None:
+            return None
+        if hasattr(transition, "isoformat"):
+            return transition.isoformat()
+        return str(transition)
+
+    def _set_schedule_override_marker(self, settings, room) -> None:
+        """Remember which schedule transition should end local overrides."""
+        marker = self._schedule_transition_marker(room)
+        if marker is not None:
+            settings["passive_override_schedule_transition"] = marker
+
+    @staticmethod
+    def _clear_unused_schedule_override_marker(settings) -> None:
+        """Discard the marker after both local overrides have ended."""
+        if (
+            settings.get("passive_lower_override") is None
+            and settings.get("passive_upper_override") is None
+        ):
+            settings["passive_override_schedule_transition"] = None
 
     def assigned_entity_ids(self, room_id) -> list[str]:
         """Return climate entities assigned to a Wiser room."""
@@ -672,6 +700,7 @@ class ExternalRoomControlController:
         if settings.get("passive_lower_override") is None:
             return
         settings["passive_lower_override"] = None
+        self._clear_unused_schedule_override_marker(settings)
         await self._async_save()
 
     async def async_set_passive_lower_temperature(
@@ -696,7 +725,9 @@ class ExternalRoomControlController:
             )
         ):
             await room.set_target_temperature(temperature)
-            self._settings(room_id)["passive_lower_override"] = temperature
+            settings = self._settings(room_id)
+            settings["passive_lower_override"] = temperature
+            self._set_schedule_override_marker(settings, room)
             await self._async_save()
             return
         await room.set_passive_mode_lower_temp(temperature)
@@ -713,15 +744,12 @@ class ExternalRoomControlController:
         temperature = max(float(temperature), float(room.passive_mode_lower_temp))
         settings = self._settings(room_id)
         if room.mode == "Auto" and room.schedule is not None:
-            if (
-                not room.is_override
-                and settings.get("passive_lower_override") is None
-            ):
-                await room.set_target_temperature(room.current_target_temperature)
             settings["passive_upper_override"] = temperature
+            self._set_schedule_override_marker(settings, room)
             await self._async_save()
             return
         settings["passive_upper_override"] = temperature
+        settings["passive_override_schedule_transition"] = None
         await self._async_save()
 
     async def async_cancel_upper_override(self, room_id) -> None:
@@ -730,6 +758,7 @@ class ExternalRoomControlController:
         if settings.get("passive_upper_override") is None:
             return
         settings["passive_upper_override"] = None
+        self._clear_unused_schedule_override_marker(settings)
         await self._async_save()
 
     async def async_advance_upper_schedule(self, room_id) -> None:
@@ -742,7 +771,9 @@ class ExternalRoomControlController:
         )
         if upper is None:
             return
-        self._settings(room_id)["passive_upper_override"] = upper
+        settings = self._settings(room_id)
+        settings["passive_upper_override"] = upper
+        self._set_schedule_override_marker(settings, room)
         await self._async_save()
 
     async def async_advance_passive_lower_schedule(self, room_id) -> None:
@@ -765,7 +796,9 @@ class ExternalRoomControlController:
             return
         if lower is None:
             return
-        self._settings(room_id)["passive_lower_override"] = lower
+        settings = self._settings(room_id)
+        settings["passive_lower_override"] = lower
+        self._set_schedule_override_marker(settings, room)
         await self._async_save()
 
     async def async_update(self) -> None:
@@ -774,16 +807,25 @@ class ExternalRoomControlController:
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
             settings = self._rooms.get(str(room.id))
-            if isinstance(settings, dict) and not room.is_override:
-                if settings.get("passive_lower_override") is not None:
-                    settings["passive_lower_override"] = None
+            if not isinstance(settings, dict):
+                continue
+            has_override = (
+                settings.get("passive_lower_override") is not None
+                or settings.get("passive_upper_override") is not None
+            )
+            if not has_override:
+                continue
+            marker = self._schedule_transition_marker(room)
+            stored_marker = settings.get("passive_override_schedule_transition")
+            if stored_marker is None:
+                if marker is not None:
+                    settings["passive_override_schedule_transition"] = marker
                     storage_changed = True
-                if (
-                    room.mode == "Auto"
-                    and settings.get("passive_upper_override") is not None
-                ):
-                    settings["passive_upper_override"] = None
-                    storage_changed = True
+            elif marker is not None and marker != stored_marker:
+                settings["passive_lower_override"] = None
+                settings["passive_upper_override"] = None
+                settings["passive_override_schedule_transition"] = None
+                storage_changed = True
         if storage_changed:
             await self._async_save()
         if not self.available:
