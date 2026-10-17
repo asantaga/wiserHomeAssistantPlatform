@@ -711,11 +711,17 @@ class ExternalRoomControlController:
                 await room.set_passive_mode_upper_temp(float(temperature))
             return
         temperature = max(float(temperature), float(room.passive_mode_lower_temp))
+        settings = self._settings(room_id)
         if room.mode == "Auto" and room.schedule is not None:
-            self._settings(room_id)["passive_upper_override"] = temperature
+            if (
+                not room.is_override
+                and settings.get("passive_lower_override") is None
+            ):
+                await room.set_target_temperature(room.current_target_temperature)
+            settings["passive_upper_override"] = temperature
             await self._async_save()
             return
-        self._settings(room_id)["passive_upper_override"] = temperature
+        settings["passive_upper_override"] = temperature
         await self._async_save()
 
     async def async_cancel_upper_override(self, room_id) -> None:
@@ -771,6 +777,12 @@ class ExternalRoomControlController:
             if isinstance(settings, dict) and not room.is_override:
                 if settings.get("passive_lower_override") is not None:
                     settings["passive_lower_override"] = None
+                    storage_changed = True
+                if (
+                    room.mode == "Auto"
+                    and settings.get("passive_upper_override") is not None
+                ):
+                    settings["passive_upper_override"] = None
                     storage_changed = True
         if storage_changed:
             await self._async_save()
