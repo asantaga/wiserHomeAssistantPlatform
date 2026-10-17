@@ -57,6 +57,14 @@ class ExternalRoomControlClimateContractTest(unittest.TestCase):
             (COMPONENT / "switch.py").read_text(),
         )
 
+    def test_climate_reports_external_passive_overrides(self):
+        climate_source = (COMPONENT / "climate.py").read_text()
+
+        self.assertIn(
+            "external_room_control.has_passive_override(self._room_id)",
+            climate_source,
+        )
+
 class FakeStore:
     """Minimal Home Assistant Store replacement."""
 
@@ -353,6 +361,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         await self.controller.async_set_upper_temperature(1, 21.0)
 
         self.room.set_target_temperature.assert_not_awaited()
+        self.assertTrue(self.controller.has_passive_override(1))
         self.room.is_override = True
         await self.controller.async_update()
         self.assertEqual(self.controller.upper_temperature(1), 21.0)
@@ -361,6 +370,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         await self.controller.async_update()
 
         self.assertEqual(self.controller.upper_temperature(1), 20.0)
+        self.assertFalse(self.controller.has_passive_override(1))
 
     async def test_auto_lower_slider_creates_schedule_override(self):
         self.controller.coordinator.external_passive_control_strategy = (
@@ -380,6 +390,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.controller._rooms["1"]["passive_lower_override"], 17.0
         )
+        self.assertTrue(self.controller.has_passive_override(1))
 
     async def test_auto_lower_override_clears_at_next_schedule(self):
         self.controller.coordinator.external_passive_control_strategy = (
@@ -480,6 +491,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         await self.controller.async_cancel_upper_override(1)
 
         self.assertEqual(self.controller.upper_temperature(1), 20.0)
+        self.assertFalse(self.controller.has_passive_override(1))
 
     async def test_boost_and_away_still_follow_wiser_target(self):
         self.room.is_boosted = True
