@@ -281,6 +281,14 @@ class ExternalRoomControlController:
         """Return whether a room has at least one external climate entity."""
         return bool(self.assigned_entity_ids(room_id))
 
+    def has_passive_override(self, room_id) -> bool:
+        """Return whether a locally stored Passive range override is active."""
+        settings = self._settings(room_id)
+        return bool(
+            settings.get("passive_lower_override") is not None
+            or settings.get("passive_upper_override") is not None
+        )
+
     def is_enabled(self, room_id) -> bool:
         """Return whether an assigned room is under External Room Control."""
         return bool(self.available and self.has_assignment(room_id))

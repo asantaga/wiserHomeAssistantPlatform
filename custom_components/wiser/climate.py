@@ -523,7 +523,10 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         # Status
         attrs["target_temperature_origin"] = self._room.target_temperature_origin
         attrs["is_boosted"] = self._room.is_boosted
-        attrs["is_override"] = self._room.is_override
+        attrs["is_override"] = (
+            self._room.is_override
+            or self._data.external_room_control.has_passive_override(self._room_id)
+        )
         attrs["is_heating"] = self._room.is_heating
         attrs["is_passive"] = self._room.is_passive_mode
         attrs["is_external_room_control"] = self._data.external_room_control.is_active(
