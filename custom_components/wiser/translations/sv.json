@@ -1,0 +1,684 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Konfiguration av Wiser Heat Hub",
+        "description": "Ange IP-adressen och den hemliga nyckeln som hämtats från hubben.",
+        "data": {
+          "host": "IP-adress eller värdnamn",
+          "port": "Portnummer",
+          "password": "Hemlig nyckel"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Konfiguration av Wiser Heat Hub ({name})",
+        "description": "Ange den hemliga nyckeln som hämtats från hubben.",
+        "data": {
+          "host": "IP-adress eller värdnamn",
+          "port": "Portnummer",
+          "password": "Hemlig nyckel"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "Konfiguration av Wiser Heat Hub pågår redan.",
+      "already_configured": "Den här enheten är redan konfigurerad.",
+      "not_wiser_hub": "Den identifierade enheten är inte en Wiser Heat Hub."
+    },
+    "error": {
+      "invalid_hot_water_presets": "En eller flera förinställningar för varmvatten är ogiltiga.",
+      "auth_failure": "Det gick inte att autentisera mot Wiser-hubben. Kontrollera den hemliga nyckeln och försök igen.",
+      "timeout_error": "Tidsgränsen överskreds vid anslutning till Wiser-hubben. Kontrollera IP-adressen och försök igen.",
+      "timeout_error_discovery": "Tidsgränsen överskreds vid anslutning till Wiser-hubben. Kontrollera att hubben fortfarande är online och försök igen.",
+      "unknown": "Okänt fel vid anslutning till Wiser-hubben. Kontrollera loggarna."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alternativ för Wiser-integrationen",
+        "description": "Välj parametrar som ska ändras",
+        "menu_options": {
+          "main_params": "Huvudparametrar",
+          "automation_params": "Automatiseringsparametrar",
+          "opentherm": "OpenTherm",
+          "equipment_sensors": "Utrustningssensorer",
+          "ui_options": "Gränssnittsalternativ"
+        }
+      },
+      "ui_options": {
+        "title": "Gränssnittsalternativ",
+        "data": {
+          "legacy_naming": "Äldre namngivning",
+          "show_wiser_sidebar": "Visa Wiser i sidopanelen"
+        },
+        "data_description": {
+          "legacy_naming": "Inkludera rumsnamn i namn på Wiser-enheter. Om detta är aktiverat kommer återskapande av entitets-ID:n i Home Assistant med standardformatet under Inställningar → System → Format för entitets-ID (Home Assistant 2026.8 och senare) att duplicera områdesnamn när området och Wiser-rummet har samma namn. Ändring av detta alternativ byter inte namn på befintliga entitets-ID:n."
+        }
+      },
+      "main_params": {
+        "title": "Alternativ för Wiser-integrationen",
+        "description": "Huvudparametrar",
+        "data": {
+          "host": "IP-adress eller värdnamn",
+          "port": "Portnummer",
+          "scan_interval": "Skanningsintervall (sek.)",
+          "heating_boost_temp": "Standardtemperatur för värmeboost (°C)",
+          "heating_boost_time": "Standardtid för värmeboost (min.)",
+          "hotwater_boost_time": "Standardtid för varmvattenboost (min.)",
+          "setpoint_mode": "Börvärdesläge",
+          "restore_manual_temp_option": "Använd denna temperatur om ingen manuell temperatur har sparats"
+        }
+      },
+      "automation_params": {
+        "title": "Alternativ för Wiser-integrationen",
+        "description": "Aktivera inbyggda automatiseringar",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passivt läge",
+            "description": "Aktivera passiv TRV-funktion. Varje rum måste aktiveras för att funktionen ska fungera.",
+            "data": {
+              "automations_passive_mode": "Passivt läge",
+              "passive_mode_temperature_increments": "Temperatursteg för passivt läge"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Klimatstyrning av varmvatten",
+            "description": "Aktivera klimatstyrning av varmvatten. Se wikin för mer information.",
+            "data": {
+              "hotwater_climate": "Aktivera klimatentiteten",
+              "experimental_mode": "Aktivera experimentellt driftläge",
+              "hotwater_auto_mode": "Automatiskt varmvattenläge",
+              "hotwater_heat_mode": "Varmvattenvärmeläge",
+              "hotwater_boost_mode": "Varmvattenboostläge",
+              "hotwater_sensor_entity_id": "Varmvattentemperatursensor"
+            }
+          },
+          "additional_sensors": {
+            "name": "Ytterligare sensorer",
+            "description": "Visa valfria sensorer för data som rapporteras av Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Rum utan klimatstyrning"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Välj de Wiser-rum där en sensor för aktuell schematemperatur ska skapas."
+            }
+          }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Utrustningssensorer",
+        "description": "Konfigurera entiteter med detaljerade utrustningsdata för kompatibla enheter.",
+        "data": {
+          "equipment_sensors": "Aktivera sensorer för utrustningsdata"
+        },
+        "data_description": {
+          "equipment_sensors": "Visa en extra sensor med detaljerade utrustningsattribut för varje kompatibelt smartuttag, PowerTag och värmeställdon."
+        }
+      },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Konfigurera OpenTherm-funktioner.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Varmvattenstyrning",
+          "opentherm_sensors": "Sensorer"
+        }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm-sensorer",
+        "description": "Välj en kategori med identifierade OpenTherm-attribut.",
+        "menu_options": {
+          "opentherm_readings": "Avläsningar",
+          "opentherm_central_heating": "Centralvärme",
+          "opentherm_hot_water": "Varmvatten",
+          "opentherm_status": "Status och diagnostik"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm-varmvattenstyrning",
+        "description": "Styr valfritt pannans börvärde för tappvarmvatten via Wiser. Integrationen skapar ett OpenTherm Hot Water-schema i Wiser Schedules-panelen. Av använder den lägsta varmvattentemperatur som OpenTherm rapporterar.",
+        "data": {
+          "opentherm_hot_water_control": "Aktivera varmvattenstyrning",
+          "opentherm_hot_water_manual_temperature": "Manuell temperatur",
+          "opentherm_hot_water_sensor_entity_id": "Valfri extern temperatursensor.",
+          "opentherm_hot_water_presets": "Förinställningar"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperatur som används i manuellt läge.",
+          "opentherm_hot_water_sensor_entity_id": "Valfri temperatursensor som används för aktuell vattentemperatur. OpenTherm används när sensorn inte är tillgänglig."
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm-avläsningar",
+        "description": "Välj vilka identifierade OpenTherm-avläsningar som ska visas som sensorentiteter.",
+        "data": {
+          "ch_flow_temperature": "Pannans framledningstemperatur",
+          "ch_pressure_bar": "Centralvärmetryck",
+          "ch_return_temperature": "Pannans returtemperatur",
+          "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Pannans avgastemperatur",
+          "estimated_boiler_output": "Beräknad panneffekt",
+          "hw_flow_rate": "Varmvattenflöde",
+          "hw_temperature": "Varmvattentemperatur",
+          "maximum_capacity_kw": "Maximal pannkapacitet",
+          "minimum_modulation_level": "Lägsta modulationsnivå",
+          "relative_modulation_level": "Relativ modulationsnivå",
+          "room_temperature": "Rumstemperatur"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm-centralvärme",
+        "description": "Välj vilka identifierade centralvärmeattribut som ska visas som entiteter.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Läsning/skrivning av pannans maximala centralvärmebörvärde",
+          "boiler_ch_max_setpoint_transfer_enable": "Överföring av pannans maximala centralvärmebörvärde aktiverad",
+          "boiler_ch_setpoint": "Pannans centralvärmebörvärde",
+          "boiler_ch_setpoint_lower_bound": "Nedre gräns för pannans centralvärmebörvärde",
+          "boiler_ch_setpoint_upper_bound": "Övre gräns för pannans centralvärmebörvärde",
+          "ch_flow_active_lower_setpoint": "Aktivt nedre börvärde för centralvärmeframledning",
+          "ch_flow_active_upper_setpoint": "Aktivt övre börvärde för centralvärmeframledning",
+          "ch1_flow_enabled": "Centralvärmekrets 1 framledning aktiverad",
+          "ch1_flow_setpoint": "Börvärde för centralvärmekrets 1 framledning",
+          "ch2_flow_enabled": "Centralvärmekrets 2 framledning aktiverad",
+          "ch2_flow_setpoint": "Börvärde för centralvärmekrets 2 framledning",
+          "room_setpoint": "Rumsbörvärde"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm-varmvatten",
+        "description": "Välj vilka identifierade varmvattenattribut som ska visas som entiteter.",
+        "data": {
+          "boiler_hw_setpoint": "Pannans varmvattenbörvärde",
+          "boiler_hw_setpoint_lower_bound": "Nedre gräns för pannans varmvattenbörvärde",
+          "boiler_hw_setpoint_read_write": "Läsning/skrivning av pannans varmvattenbörvärde",
+          "boiler_hw_setpoint_transfer_enable": "Överföring av pannans varmvattenbörvärde aktiverad",
+          "boiler_hw_setpoint_upper_bound": "Övre gräns för pannans varmvattenbörvärde",
+          "hw_enabled": "Varmvatten aktiverat",
+          "hw_flow_setpoint": "Börvärde för varmvattenframledning"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm-status och diagnostik",
+        "description": "Välj vilka identifierade status- och diagnostikattribut som ska visas som sensorentiteter.",
+        "data": {
+          "boiler_fault": "Pannfel",
+          "central_heating_active": "Centralvärme aktiv",
+          "central_heating_2_active": "Centralvärme 2 aktiv",
+          "connection_status": "Anslutningsstatus",
+          "coprocessor_update_status": "Uppdateringsstatus för OpenTherm-hjälpprocessor",
+          "coprocessor_version": "Version av OpenTherm-hjälpprocessor",
+          "cooling_active": "Kylning aktiv",
+          "diagnostic_event": "Diagnostikhändelse",
+          "flame_active": "Låga aktiv",
+          "flame_statistics": "Lågstatistik",
+          "hot_water_active": "Varmvatten aktivt",
+          "operating_mode": "Driftläge",
+          "slave_status": "OpenTherm-slavstatus",
+          "tracked_room_id": "ID för övervakat rum"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "OpenTherm-data är inte tillgängliga för denna Wiser-hubb.",
+      "equipment_not_available": "Utrustningsdata är inte tillgängliga för denna Wiser-hubb."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "Ställ in OpenTherm-parameter",
+      "description": "Ändrar en OpenTherm-temperaturparameter som stöds på Wiser-hubben.",
+      "fields": {
+        "parameter": {
+          "name": "Parameter",
+          "description": "OpenTherm-temperaturparametern som ska ändras. Nödvändig API-slutpunkt väljs automatiskt."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Använd en temperatur inom de gränser som rapporteras av pannan."
+        },
+        "hub": {
+          "name": "Wiser-hubb",
+          "description": "Välj endast en hubb om du har flera Wiser-hubbar."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Aktivt nedre centralvärmebörvärde",
+        "chFlowActiveUpperSetpoint": "Aktivt övre centralvärmebörvärde",
+        "dhwFlowSetpoint": "Hubbens börvärde för varmvattenframledning",
+        "dhwSetpoint": "Pannans varmvattenbörvärde",
+        "maxChSetpoint": "Pannans maximala centralvärmebörvärde"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": {
+      "message": "Ange en OpenTherm-temperatur."
+    },
+    "opentherm_hub_not_found": {
+      "message": "Den angivna Wiser-hubben hittades inte."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "Den angivna Wiser-hubben är inte inläst."
+    },
+    "opentherm_hub_required": {
+      "message": "Välj en Wiser-hubb när fler än en hubb är konfigurerad."
+    },
+    "opentherm_not_supported": {
+      "message": "Den här hubben har inte OpenTherm-funktionalitet."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "OpenTherm-parametern eller värdet är ogiltigt: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "Det gick inte att ställa in OpenTherm-parametern {parameter}: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "OpenTherm-parametern {parameter} låg inte kvar på {requested} °C efter ett nytt försök och bekräftelseperioden på {window} sekunder. Wiser rapporterar {reported} °C. Inga fler försök skickas."
+    },
+    "opentherm_retry_failed": {
+      "message": "OpenTherm-parametern {parameter} låg inte kvar på {requested} °C och ett nytt försök kunde inte skickas: {error}. Wiser rapporterar {reported} °C. Inga fler försök skickas."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser OpenTherm-kommando"
+    }
+  },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Uppvärmning"
+      },
+      "floor_temperature": {
+        "name": "Golvtemperatur"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": {
+        "name": "Måltemperatur för bortaläge"
+      },
+      "floor_temperature_offset": {
+        "name": "Förskjutning av golvtemperatur"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Obehagstemperatur inomhus"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Obehagstemperatur utomhus"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Läge"
+      },
+      "power_on_behavior": {
+        "name": "Startbeteende"
+      },
+      "led_indicator": {
+        "name": "LED-indikator"
+      }
+    },
+    "button": {
+      "boost_all_heating": {
+        "name": "Boosta all uppvärmning"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Avbryt alla åsidosättningar av uppvärmning"
+      },
+      "boost_hot_water": {
+        "name": "Boosta varmvatten"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Avbryt alla åsidosättningar av varmvatten"
+      },
+      "toggle_hot_water": {
+        "name": "Växla varmvatten"
+      },
+      "moment": {
+        "name": "Moment: {name}"
+      }
+    },
+    "switch": {
+      "valve_protection": {
+        "name": "Ventilskydd"
+      },
+      "eco_mode": {
+        "name": "Ekoläge"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "Bortaläge påverkar varmvatten"
+      },
+      "comfort_mode": {
+        "name": "Komfortläge"
+      },
+      "away_mode": {
+        "name": "Bortaläge"
+      },
+      "daylight_saving": {
+        "name": "Sommartid"
+      },
+      "summer_comfort_enabled": {
+        "name": "Sommarkomfort aktiverad"
+      },
+      "window_detection": {
+        "name": "Fönsterdetektering"
+      },
+      "include_in_summer_comfort": {
+        "name": "Inkludera i sommarkomfort"
+      },
+      "device_lock": {
+        "name": "Enhetslås"
+      },
+      "identify": {
+        "name": "Identifiera"
+      },
+      "outlet": {
+        "name": "Eluttag"
+      },
+      "away_mode_turns_off": {
+        "name": "Bortaläge stänger av"
+      },
+      "away_mode_closes": {
+        "name": "Bortaläge stänger"
+      },
+      "passive_mode": {
+        "name": "Passivt läge"
+      },
+      "respect_summer_comfort": {
+        "name": "Respektera sommarkomfort"
+      },
+      "interacts_with_room_climate": {
+        "name": "Samverkar med rumsklimatet"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "Luftfuktighet samverkar med rumsklimatet"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "Temperatur samverkar med rumsklimatet"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "Ljusstyrka samverkar med rumsklimatet"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} samverkar med rumsklimatet"
+      },
+      "manual_heat": {
+        "name": "Manuell uppvärmning"
+      },
+      "hot_water": {
+        "name": "Varmvatten"
+      }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": {
+        "name": "Förebyggande av sommarobehag"
+      },
+      "summer_comfort_available": {
+        "name": "Sommarkomfort tillgänglig"
+      },
+      "pcm_device_limit_reached": {
+        "name": "Gränsen för PCM-enheter har nåtts"
+      },
+      "smoke_alarm": {
+        "name": "Röklarm"
+      },
+      "heat_alarm": {
+        "name": "Värmelarm"
+      },
+      "tamper_alarm": {
+        "name": "Sabotagelarm"
+      },
+      "fault_warning": {
+        "name": "Felvarning"
+      },
+      "remote_alarm": {
+        "name": "Fjärrlarm"
+      },
+      "battery_defect": {
+        "name": "Batterifel"
+      },
+      "controllable": {
+        "name": "Styrbar"
+      },
+      "pcm_mode": {
+        "name": "PCM-läge"
+      },
+      "window_detection_active": {
+        "name": "Fönsterdetektering aktiv"
+      },
+      "is_dimmable": {
+        "name": "Dimbar"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED-indikator stöds"
+      },
+      "is_output_mode_supported": {
+        "name": "Utgångsläge stöds"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Startbeteende stöds"
+      },
+      "is_tilt_supported": {
+        "name": "Lutning stöds"
+      },
+      "is_open": {
+        "name": "Öppen"
+      },
+      "is_closed": {
+        "name": "Stängd"
+      },
+      "active": {
+        "name": "Aktiv"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Läsning/skrivning av pannans maximala centralvärmebörvärde"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Överföring av pannans maximala centralvärmebörvärde aktiverad"
+      },
+      "boiler_fault": {
+        "name": "Pannfel"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Läsning/skrivning av pannans varmvattenbörvärde"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Överföring av pannans varmvattenbörvärde aktiverad"
+      },
+      "central_heating_2_active": {
+        "name": "Centralvärme 2 aktiv"
+      },
+      "central_heating_active": {
+        "name": "Centralvärme aktiv"
+      },
+      "ch1_flow_enabled": {
+        "name": "Centralvärmekrets 1 framledning aktiverad"
+      },
+      "ch2_flow_enabled": {
+        "name": "Centralvärmekrets 2 framledning aktiverad"
+      },
+      "cooling_active": {
+        "name": "Kylning aktiv"
+      },
+      "diagnostic_event": {
+        "name": "Diagnostikhändelse"
+      },
+      "flame_active": {
+        "name": "Låga aktiv"
+      },
+      "hot_water_active": {
+        "name": "Varmvatten aktivt"
+      },
+      "hw_enabled": {
+        "name": "Varmvatten aktiverat"
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Signal"
+      },
+      "cloud": {
+        "name": "Moln"
+      },
+      "heating_operation_mode": {
+        "name": "Driftläge för uppvärmning"
+      },
+      "heating": {
+        "name": "Uppvärmning",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "heating_channel": {
+        "name": "Värmekanal {channel}",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "hot_water": {
+        "name": "Varmvatten",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "hot_water_operation_mode": {
+        "name": "Driftläge för varmvatten"
+      },
+      "target_temperature": {
+        "name": "Måltemperatur"
+      },
+      "floor_temperature": {
+        "name": "Golvtemperatur"
+      },
+      "boiler_flow_temperature": {
+        "name": "Pannans framledningstemperatur"
+      },
+      "boiler_return_temperature": {
+        "name": "Pannans returtemperatur"
+      },
+      "flame_statistics": {
+        "name": "Lågstatistik"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Pannans centralvärmebörvärde"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Nedre gräns för pannans centralvärmebörvärde"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Övre gräns för pannans centralvärmebörvärde"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Pannans avgastemperatur"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Pannans varmvattenbörvärde"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Nedre gräns för pannans varmvattenbörvärde"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Övre gräns för pannans varmvattenbörvärde"
+      },
+      "ch1_flow_setpoint": {
+        "name": "Börvärde för centralvärmekrets 1 framledning"
+      },
+      "ch2_flow_setpoint": {
+        "name": "Börvärde för centralvärmekrets 2 framledning"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Aktivt nedre börvärde för centralvärmeframledning"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Aktivt övre börvärde för centralvärmeframledning"
+      },
+      "ch_pressure_bar": {
+        "name": "Centralvärmetryck"
+      },
+      "connection_status": {
+        "name": "Anslutningsstatus"
+      },
+      "coprocessor_update_status": {
+        "name": "Uppdateringsstatus för OpenTherm-hjälpprocessor"
+      },
+      "coprocessor_version": {
+        "name": "Version av OpenTherm-hjälpprocessor"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Beräknad panneffekt"
+      },
+      "hw_flow_rate": {
+        "name": "Varmvattenflöde"
+      },
+      "hw_flow_setpoint": {
+        "name": "Börvärde för varmvattenframledning"
+      },
+      "hw_temperature": {
+        "name": "Varmvattentemperatur"
+      },
+      "maximum_capacity_kw": {
+        "name": "Maximal pannkapacitet"
+      },
+      "minimum_modulation_level": {
+        "name": "Lägsta modulationsnivå"
+      },
+      "operating_mode": {
+        "name": "Driftläge"
+      },
+      "relative_modulation_level": {
+        "name": "Relativ modulationsnivå"
+      },
+      "room_setpoint": {
+        "name": "Rumsbörvärde"
+      },
+      "room_temperature": {
+        "name": "Rumstemperatur"
+      },
+      "slave_status": {
+        "name": "OpenTherm-slavstatus"
+      },
+      "tracked_room_id": {
+        "name": "ID för övervakat rum"
+      },
+      "heating_demand": {
+        "name": "Värmebehov"
+      },
+      "heating_demand_channel": {
+        "name": "Värmebehovskanal {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Varmvattenbehov"
+      },
+      "total_energy": {
+        "name": "Total energi"
+      },
+      "energy_delivered": {
+        "name": "Levererad energi"
+      },
+      "energy_received": {
+        "name": "Mottagen energi"
+      },
+      "equipment_power": {
+        "name": "Utrustning"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} börjar värma",
+      "stopped_heating": "{entity_name} slutar värma",
+      "boosted": "{entity_name} är boostad",
+      "target_temperature_increased": "Måltemperaturen för {entity_name} höjdes",
+      "target_temperature_decreased": "Måltemperaturen för {entity_name} sänktes"
+    }
+  }
+}

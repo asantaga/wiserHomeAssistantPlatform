@@ -8,6 +8,7 @@ from .helpers import (
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_physical_entity_unique_id,
     get_unique_id,
     hub_error_handler,
 )
@@ -86,7 +87,7 @@ class WiserAwayModeTempNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -171,7 +172,7 @@ class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEnti
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -213,10 +214,12 @@ class WiserFloorTempSensorNumber(WiserEntityMixin, CoordinatorEntity, NumberEnti
 
     @property
     def unique_id(self):
-        legacy_name = (
-            f"{get_device_name(self._data, self._actuator.id)} Floor Temp Offset"
+        return get_physical_entity_unique_id(
+            self._data,
+            "number",
+            self._actuator.id,
+            "floor_temperature_offset",
         )
-        return get_unique_id(self._data, "system", "number", legacy_name)
 
     @property
     def device_info(self):
@@ -265,7 +268,7 @@ class WiserDiscomfortIndoorTempNumber(
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -349,7 +352,7 @@ class WiserDiscomfortOutdoorTempNumber(
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback

@@ -2,22 +2,32 @@
 
 import logging
 
+from aioWiserHeatAPI.const import TEXT_UNKNOWN
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
+from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_legacy_unique_id,
+    get_light_binary_sensor_unique_id,
+    get_light_entity_name,
+    get_physical_entity_unique_id,
+    get_room_entity_unique_id,
     get_unique_id,
+    get_uuid_unique_id,
 )
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
@@ -27,13 +37,81 @@ from .opentherm import (
     opentherm_sensor_value,
     opentherm_sensor_is_enabled,
 )
+from .opentherm_detection import opentherm_is_detected
 
 _LOGGER = logging.getLogger(__name__)
+
+SUMMER_DISCOMFORT_PREVENTION = "Summer Discomfort Prevention"
+SUMMER_COMFORT_AVAILABLE = "Summer Comfort Available"
+PCM_DEVICE_LIMIT_REACHED = "PCM Device Limit Reached"
+SUMMER_COMFORT_BINARY_SENSOR_TYPES = (
+    SUMMER_DISCOMFORT_PREVENTION,
+    SUMMER_COMFORT_AVAILABLE,
+)
+PCM_BINARY_SENSOR_TYPES = (PCM_DEVICE_LIMIT_REACHED,)
 
 
 def _entity_translation_key(name: str) -> str:
     """Return the stable translation key for a fixed Wiser entity label."""
     return name.lower().replace(" ", "_")
+
+
+def _supports_v2_system_property(data, property_name: str) -> bool:
+    """Return whether the hub supplies a second-generation system property."""
+    if data.hub_version < 2:
+        return False
+    return getattr(data.wiserhub.system, property_name, None) is not None
+
+
+def _supports_summer_discomfort_prevention(data) -> bool:
+    """Return whether the hub supplies summer-discomfort data."""
+    return _supports_v2_system_property(
+        data, "summer_discomfort_prevention"
+    )
+
+
+def _supports_summer_comfort_available(data) -> bool:
+    """Return whether the hub supplies summer-comfort availability data."""
+    return _supports_v2_system_property(
+        data, "summer_comfort_available"
+    )
+
+
+def _supports_pcm_binary_sensor(data) -> bool:
+    """Return whether the hub supplies PCM system data."""
+    if data.hub_version < 2:
+        return False
+    return getattr(data.wiserhub.system, "pcm_version", TEXT_UNKNOWN) not in (
+        None,
+        TEXT_UNKNOWN,
+    )
+
+
+def _requires_v2_entity_cleanup(data) -> bool:
+    """Return whether the hub is definitively unable to support V2 entities."""
+    return data.hub_version < 2
+
+
+def _remove_unsupported_v2_entities(
+    hass: HomeAssistant, config_entry_id: str, data, sensor_types
+) -> None:
+    """Remove V2-only registry entries from an unsupported hub."""
+    registry = er.async_get(hass)
+    legacy_hub_name = data.wiserhub.system.name.replace("WiserHeat", "HeatHub")
+    for sensor_type in sensor_types:
+        unique_id = get_uuid_unique_id(
+            get_legacy_unique_id(
+                data,
+                "sensor",
+                sensor_type,
+                f"{legacy_hub_name} {sensor_type}",
+            )
+        )
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if entity_id is not None:
+            entry = registry.async_get(entity_id)
+            if entry and entry.config_entry_id == config_entry_id:
+                registry.async_remove(entity_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -43,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     binary_sensors = []
 
     opentherm = getattr(data.wiserhub.system, "opentherm", None)
-    if opentherm is not None and opentherm.enabled:
+    if opentherm_is_detected(config_entry, opentherm):
         configured_sensors = config_entry.options.get(CONF_OPENTHERM_SENSORS)
         binary_sensors.extend(
             WiserOpenThermAttributeBinarySensor(data, key)
@@ -60,15 +138,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
         )
 
-    # System sensors
-    if data.wiserhub.system:
-        binary_sensors.extend(
-            [
-                WiserSummerDiscomfortPrevention(data, 0, "Summer Discomfort Prevention"),
-                WiserSummerComfortAvailable(data, 0, "Summer Comfort Available"),
-                WiserPCMDeviceLimitReached(data, 0, "PCM Device Limit Reached")
-            ]
-        ) 
+    if _supports_summer_discomfort_prevention(data):
+        binary_sensors.append(
+            WiserSummerDiscomfortPrevention(
+                data, 0, SUMMER_DISCOMFORT_PREVENTION
+            )
+        )
+
+    if _supports_summer_comfort_available(data):
+        binary_sensors.append(
+            WiserSummerComfortAvailable(data, 0, SUMMER_COMFORT_AVAILABLE)
+        )
+
+    if _supports_pcm_binary_sensor(data):
+        binary_sensors.append(
+            WiserPCMDeviceLimitReached(data, 0, PCM_DEVICE_LIMIT_REACHED)
+        )
+    if _requires_v2_entity_cleanup(data):
+        _remove_unsupported_v2_entities(
+            hass,
+            config_entry.entry_id,
+            data,
+            SUMMER_COMFORT_BINARY_SENSOR_TYPES + PCM_BINARY_SENSOR_TYPES,
+        )
 
     # Smoke alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
@@ -80,6 +172,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 WiserFaultWarning(data, device.id, "Fault Warning"),
                 WiserRemoteAlarm(data, device.id, "Remote Alarm"),
                 WiserBatteryDefect(data, device.id, "Battery Defect"),
+                WiserACMains(data, device.id, "AC Mains"),
+                WiserTestMode(data, device.id, "Test Mode"),
+                WiserHushMode(data, device.id, "Hush Mode"),
             ]
         )
 
@@ -94,7 +189,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             )
 
     # Room binary sensors
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         binary_sensors.extend(
             [
                 WiserRoomWindow(data, room.id, "Window Detection Active"),
@@ -201,12 +296,9 @@ class BaseBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
 
     @property
     def unique_id(self):
-        """Return uniqueid."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._device_id)} {self._sensor_type}"
-        )
-        return get_unique_id(
-            self._data, "binary_sensor", self._sensor_type, legacy_name
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "binary_sensor", self._device_id, self._sensor_type
         )
 
     @property
@@ -253,6 +345,7 @@ class WiserOpenThermAttributeBinarySensor(
 
     @property
     def available(self):
+        # Keep the entity during outages without exposing stale boiler state.
         opentherm = self._data.wiserhub.system.opentherm
         return (
             super().available
@@ -315,10 +408,13 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         _LOGGER.debug(f"{self._sensor_type} device update requested")
-        HeatHub = self._data.wiserhub.system.name
-        HeatHub = HeatHub.replace("WiserHeat","HeatHub")
-        return f"{HeatHub} {self._sensor_type}"
-        
+        self._state = getattr(
+            self._data.wiserhub.system,
+            self._sensor_type.replace(" ", "_").lower(),
+            None,
+        )
+        self.async_write_ha_state()
+
     @property
     def is_on(self):
         """Return the state of the sensor."""
@@ -377,7 +473,11 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
     @property
     def unique_id(self):
         """Return uniqueid."""
-        return get_unique_id(self._data, "sensor", self._sensor_type, self._room_id)
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            f"binary_sensor_{self._attr_translation_key}",
+        )
 
     @property
     def device_info(self):
@@ -439,8 +539,47 @@ class WiserRemoteAlarm(BaseBinarySensor):
     """Smoke Alarm sensor."""
 
 
+class WiserACMains(BaseBinarySensor):
+    """Smoke alarm mains-power status sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.POWER
+
+
+class WiserTestMode(BaseBinarySensor):
+    """Smoke alarm test-mode status sensor."""
+
+    _attr_icon = "mdi:test-tube"
+
+
+class WiserHushMode(BaseBinarySensor):
+    """Smoke alarm hush-mode status sensor."""
+
+    _attr_icon = "mdi:volume-off"
+
+
 class WiserEquipment(BaseBinarySensor):
-    """Base binary sensor class."""
+    """Binary sensor backed by optional equipment data."""
+
+    @property
+    def available(self) -> bool:
+        """Return whether equipment data is currently available."""
+        return (
+            super().available
+            and self._device is not None
+            and getattr(self._device, "equipment", None) is not None
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh state without failing when equipment data is missing."""
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        equipment = getattr(self._device, "equipment", None)
+        self._state = (
+            getattr(equipment, self._sensor_type.replace(" ", "_").lower())
+            if equipment is not None
+            else None
+        )
+        self.async_write_ha_state()
 
 
 ## binary sensor of System
@@ -463,7 +602,7 @@ class WiserSummerComfortAvailable(SystemBinarySensor):
     _attr_device_class = BinarySensorDeviceClass.HEAT
 
 class WiserPCMDeviceLimitReached(SystemBinarySensor):
-    """Summer Comfort Available sensor."""
+    """PCM device limit reached sensor."""
     _attr_device_class = BinarySensorDeviceClass.POWER
 
 
@@ -485,7 +624,14 @@ class WiserStateIsDimmable(BaseBinarySensor):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{ENTITY_PREFIX} {self._light.name} {self._sensor_type}"
+        return get_light_entity_name(self._data, self._light, self._sensor_type)
+
+    @property
+    def unique_id(self):
+        """Return the per-channel light capability sensor unique ID."""
+        return get_light_binary_sensor_unique_id(
+            self._data, self._light, self._sensor_type
+        )
 
 
 class WiserStateIsTiltSupported(BaseBinarySensor):

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "cards": [
+    {
+      "id": "schedule",
+      "name": "Wiser Schedule Card",
+      "filename": "wiser-schedule-card.js",
+      "repository": "andyblac/wiser-schedule-card",
+      "component": "wiser-schedule-card",
+      "panel": "wiser-schedules-panel"
+    },
+    {
+      "id": "zigbee",
+      "name": "Wiser Zigbee Card",
+      "filename": "wiser-zigbee-card.js",
+      "repository": "andyblac/wiser-zigbee-card",
+      "component": "wiser-zigbee-card",
+      "panel": "wiser-zigbee-panel"
+    },
+    {
+      "id": "rooms",
+      "name": "Wiser Controls Card",
+      "filename": "wiser-controls-card.js",
+      "repository": "andyblac/wiser-controls-card",
+      "component": "wiser-controls-card",
+      "panel": "wiser-controls-panel",
+      "legacy_filenames": [
+        "wiser-rooms-card.js"
+      ]
+    },
+    {
+      "id": "hub",
+      "name": "Wiser Hub Panel",
+      "filename": "wiser-hub-panel.js",
+      "repository": "andyblac/wiser-hub-panel",
+      "component": "wiser-hub-panel",
+      "panel": "wiser-hub-panel",
+      "card": false
+    }
+  ]
+}

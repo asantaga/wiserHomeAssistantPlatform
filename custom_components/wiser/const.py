@@ -6,24 +6,33 @@ Angelosantagata@gmail.com
 """
 
 from enum import StrEnum
+import json
+from pathlib import Path
 
-VERSION = "3.4.21b0"
+VERSION = "4.0.0"
 DOMAIN = "wiser"
+CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
+CONF_SHOW_WISER_SIDEBAR = "show_wiser_sidebar"
+CONF_WISER_PANEL_CONFIG = "wiser_panel_config"
+CONF_WISER_ROOM_NAMES = "wiser_room_names"
 
-JSMODULES = [
-    {
-        "name": "Wiser Schedule Card",
-        "filename": "wiser-schedule-card.js",
-        "version": "1.5.6",
-    },
-    {
-        "name": "Wiser Zigbee Card",
-        "filename": "wiser-zigbee-card.js",
-        "version": "2.1.2",
-    },
-]
+
+def _load_card_manifest():
+    """Load the shared card registry used by packaging and runtime setup."""
+    try:
+        registry = json.loads(
+            (Path(__file__).parent / "frontend/cards.json").read_text("utf-8")
+        )
+        return registry.get("cards", []) if isinstance(registry, dict) else registry
+    except FileNotFoundError:
+        # Keep setup resilient if an incomplete installation omits the registry.
+        return []
+
+
+CARD_MANIFEST = _load_card_manifest()
+
 
 WISER_PLATFORMS = [
     "binary_sensor",
@@ -35,6 +44,8 @@ WISER_PLATFORMS = [
     "number",
     "light",
     "cover",
+    "water_heater",
+    "update",
 ]
 DATA = "data"
 UPDATE_TRACK = "update_track"
@@ -78,6 +89,7 @@ SETPOINT_MODE_BOOST = "boost"
 SETPOINT_MODE_BOOST_AUTO = "boost auto mode only"
 
 # Custom Configs
+CONF_ADDITIONAL_SENSORS = "additional_sensors"
 CONF_AUTOMATIONS_PASSIVE = "automations_passive_mode"
 CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT = "passive_mode_temperature_increments"
 CONF_HEATING_BOOST_TEMP = "heating_boost_temp"
@@ -94,7 +106,23 @@ CONF_AUTOMATIONS_HW_HEAT_MODE = "hotwater_heat_mode"
 CONF_AUTOMATIONS_HW_BOOST_MODE = "hotwater_boost_mode"
 CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID = "hotwater_sensor_entity_id"
 CONF_DEPRECATED_HW_TARGET_TEMP = "hotwater_target_temperature"
+CONF_OPENTHERM_EVER_CONNECTED = "opentherm_ever_connected"
+CONF_OPENTHERM_HOT_WATER_CAPABLE = "opentherm_hot_water_capable"
 CONF_OPENTHERM_SENSORS = "opentherm_sensors"
+CONF_OPENTHERM_HOT_WATER_CONTROL = "opentherm_hot_water_control"
+CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP = "opentherm_hot_water_manual_temperature"
+CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID = (
+    "opentherm_hot_water_sensor_entity_id"
+)
+CONF_OPENTHERM_HOT_WATER_PRESETS = "opentherm_hot_water_presets"
+CONF_EQUIPMENT_SENSORS = "equipment_sensors"
+OPENTHERM_HOT_WATER_SCHEDULE = "opentherm_hot_water_schedule"
+
+DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP = 45.0
+DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP = 55.0
+MAX_OPENTHERM_HOT_WATER_PRESETS = 10
+OPENTHERM_HOT_WATER_DEFAULT_BOOSTS = (15, 30, 45)
+CONF_SCHEDULE_SETPOINT_ROOMS = "schedule_setpoint_rooms"
 
 # Custom Attributes
 ATTR_OPENTHERM_ENDPOINT = "endpoint"

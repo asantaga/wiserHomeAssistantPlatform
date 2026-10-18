@@ -2,26 +2,72 @@ name: Publish
 
 on:
   release:
-    types:
-      - published
+    types: [published]
+  push:
+    branches: [test-build]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Card release channel to test (does not publish a release)
+        type: choice
+        options: [dev, stable]
+        default: dev
+
+permissions:
+  contents: read
 
 jobs:
-  release_zip_file:
-    name: Publish Wiser zip file asset
-    runs-on: ubuntu-latest
+  package:
+    name: Build Wiser integration
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install test dependencies
+        run: python -m pip install -r tests/requirements.txt
+      - name: Test packaging and sidebar integration
+        run: |
+          python -m unittest discover -s tests -p test_card_releases.py
+          python -m unittest discover -s tests -p test_build.py
+          python -m unittest discover -s tests -p test_card_updates.py
+          python -m unittest discover -s tests -p test_ui_options.py
+          python -m unittest discover -s tests -p test_sidebar_icons.py
+          python -m unittest discover -s tests -p 'test_*sidebar.py'
+          python -m unittest discover -s tests -p 'test_*version.py'
+      - name: Build integration with published card releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
+          PANEL_CONFIG_REPOSITORY: ${{ vars.WISER_PANEL_CONFIG_REPOSITORY || 'andyblac/WiserFrontendPanelConfig' }}
+        run: >-
+          python scripts/build.py --release
+          --channel "$CARD_CHANNEL"
+          --panel-config-repository "$PANEL_CONFIG_REPOSITORY"
+      - name: Upload release package for inspection
+        uses: actions/upload-artifact@v7
+        with:
+          name: wiser-package
+          path: |
+            dist/wiser.zip
+            dist/card-releases.json
+            dist/panel-config-release.json
+          if-no-files-found: error
+
+  publish:
+    name: Attach package to published release
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - name: 📥 Checkout the repository
-        uses: actions/checkout@v3.0.2
-      # Pack the Wiser dir as a zip and upload to the release
-      - name: 📦 ZIP Wiser Dir
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          cd ${{ github.workspace }}/custom_components/wiser
-          zip wiser.zip -r ./
-      - name: 📤 Upload zip to release
-        uses: softprops/action-gh-release@v0.1.14
-        if: ${{ github.event_name == 'release' }}
+      - uses: actions/download-artifact@v8
         with:
-          files: ${{ github.workspace }}/custom_components/wiser/wiser.zip
+          name: wiser-package
+          path: dist
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/wiser.zip
+          fail_on_unmatched_files: true

@@ -5,6 +5,7 @@ from aioWiserHeatAPI.wiserhub import (
     WiserHubAuthenticationError,
     WiserHubRESTError,
 )
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
 import logging
@@ -28,6 +29,21 @@ LIGHT_BINARY_SENSOR_TYPES = (
 ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
 
 
+def active_wiser_rooms(data):
+    """Return rooms that still have a device or controller assigned."""
+    return [
+        room
+        for room in data.wiserhub.rooms.all
+        if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
+        != "nothingassigned"
+    ]
+
+
+def room_has_climate(room):
+    """Return whether the integration creates a climate entity for a room."""
+    return bool(room.devices)
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address
@@ -42,13 +58,20 @@ def get_hub_device_name(data):
     return f"{ENTITY_PREFIX} HeatHub"
 
 
-def get_hub_entity_object_id(data, entity_name):
+def get_hub_entity_object_id(data, entity_name, device_name=None):
     """Return the MAC-derived entity portion of a new hub object ID."""
     entity_slug = re.sub(r"[^a-z0-9]+", "_", str(entity_name).lower()).strip("_")
-    # Home Assistant adds the area and device portions. Supplying them here too
-    # would produce IDs such as ``wiser_heathub_wiser_heathub_...`` when users
-    # recreate entity IDs from the device page.
-    return f"{get_hub_mac_suffix(data).lower()}_{entity_slug}"
+    # Home Assistant adds the area and effective device name around this value.
+    # The integration's multi-hub device name already contains the MAC suffix,
+    # so omit it here to avoid ``..._04f8a0_04f8a0_away_mode``.
+    device_name = device_name or get_hub_device_name(data)
+    compact_device_name = re.sub(r"[^0-9A-Fa-f]", "", str(device_name))
+    mac_suffix = get_hub_mac_suffix(data)
+    if mac_suffix.casefold() in compact_device_name.casefold():
+        return entity_slug
+    # A user may rename the device and remove the visible MAC. Add it to the
+    # entity portion so resetting the entity ID still retains the hub identity.
+    return f"{mac_suffix.lower()}_{entity_slug}"
 
 
 def hub_error_handler(func):
@@ -68,6 +91,7 @@ def hub_error_handler(func):
 
 
 def get_device_name(data, device_id, device_type="device"):
+    legacy_naming = getattr(data, "legacy_naming", False)
     if device_type == "device":
         device = data.wiserhub.devices.get_by_id(device_id)
 
@@ -75,6 +99,8 @@ def get_device_name(data, device_id, device_type="device"):
             return get_hub_device_name(data)
 
         if device.product_type == "iTRV":
+            if not legacy_naming:
+                return f"{ENTITY_PREFIX} {device.product_type}"
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
@@ -90,6 +116,8 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "RoomStat":
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             if device_room:
+                if legacy_naming:
+                    return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
                 return f"{ENTITY_PREFIX} Thermostat"
             return f"{ENTITY_PREFIX} Thermostat {device.id}"
 
@@ -97,6 +125,8 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["HeatingActuator", "CFMT"]:
+            if not legacy_naming:
+                return f"{ENTITY_PREFIX} {device.product_type}"
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
             if device_room:
@@ -113,12 +143,15 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "SmartPlug":
             return f"{ENTITY_PREFIX} {device.name}"
 
+        if device.product_type == "EVSE":
+            return f"{ENTITY_PREFIX} {device.name}"
+
         if device.product_type in ["PowerTagE", "LoadControl"]:
             return f"{ENTITY_PREFIX} {device.name}"
 
         if device.product_type in ["SmokeAlarmDevice", "ButtonPanel"]:
             device_room = data.wiserhub.rooms.get_by_id(device.room_id)
-            if device_room:
+            if legacy_naming and device_room:
                 return f"{ENTITY_PREFIX} {device_room.name} {device.name}"
             return f"{ENTITY_PREFIX} {device.name} {device.id}"
 
@@ -126,6 +159,10 @@ def get_device_name(data, device_id, device_type="device"):
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
         if device.product_type == "TemperatureHumiditySensor":
+            if legacy_naming:
+                device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+                suffix = device_room.name if device_room else device.name
+                return f"{ENTITY_PREFIX} Temperature/Humidity Sensor {suffix}"
             return f"{ENTITY_PREFIX} Temperature/Humidity Sensor"
 
         if device.product_type in [
@@ -139,32 +176,193 @@ def get_device_name(data, device_id, device_type="device"):
         ]:
             device_room = data.wiserhub.rooms.get_by_device_id(device_id)
             # If device not allocated to a room return type and id only
-            if device_room:
+            if legacy_naming and device_room:
                 return f"{ENTITY_PREFIX} {device.product_type} {device_room.name} {device.name}"
             return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
 
         return f"{ENTITY_PREFIX} {device.serial_number}"
 
     elif device_type == "room":
+        if legacy_naming:
+            room = data.wiserhub.rooms.get_by_id(device_id)
+            return f"{ENTITY_PREFIX} {room.name}"
         return f"{ENTITY_PREFIX} Room"
 
     else:
         return f"{ENTITY_PREFIX} {device_type}"
 
 
+def get_light_entity_name(data, light, entity_name):
+    """Return a device-relative name for an entity belonging to a light.
+
+    The hub repeats the physical device name in each light channel name.  With
+    Home Assistant's native entity naming enabled, including that portion here
+    causes the device name to appear twice.  Keep only a real channel suffix so
+    multi-gang devices remain distinguishable.
+    """
+    light_name = str(getattr(light, "name", "")).strip()
+    if getattr(data, "legacy_naming", False):
+        return " ".join(
+            part for part in (ENTITY_PREFIX, light_name, entity_name) if part
+        )
+
+    devices = data.wiserhub.devices
+    light_node_id = getattr(light, "node_id", None)
+    lights = getattr(getattr(devices, "lights", None), "all", None)
+    related_lights = (
+        [
+            candidate
+            for candidate in lights
+            if getattr(candidate, "id", None) == light.id
+            or (
+                light_node_id not in (None, 0)
+                and getattr(candidate, "node_id", None) == light_node_id
+            )
+        ]
+        if lights is not None
+        else None
+    )
+    has_multiple_channels = (
+        len(related_lights) > 1 if related_lights is not None else None
+    )
+
+    # aioWiserHeatAPI composes light.name from the physical device Name and
+    # the per-channel Name.  The released API does not expose the former as a
+    # public property, so read its source value directly when available.  A
+    # future API can expose device_name without changing this integration.
+    source_data = getattr(light, "_data", {})
+    device_name = str(
+        getattr(light, "device_name", "")
+        or (
+            source_data.get("Name", "")
+            if isinstance(source_data, dict)
+            else ""
+        )
+    ).strip()
+    physical_device = None
+
+    # Combined dual-relay/dimmer units expose a ButtonPanel and multiple Light
+    # views with the same physical ID.  The generic lookup may return one of
+    # the light channels, whose name cannot be used to remove the shared device
+    # prefix from another channel.  Some two-gang channels also use synthetic
+    # IDs, so prefer the physical ButtonPanel view by its shared Zigbee node.
+    if not device_name:
+        physical_device = next(
+            (
+                device
+                for device in getattr(devices, "all", ())
+                if hasattr(device, "number_of_gangs")
+                and hasattr(device, "events")
+                and (
+                    getattr(device, "id", None) == light.id
+                    or (
+                        light_node_id not in (None, 0)
+                        and getattr(device, "node_id", None) == light_node_id
+                    )
+                )
+            ),
+            None,
+        )
+        if physical_device is None:
+            physical_device = devices.get_by_id(light.id)
+        device_name = str(getattr(physical_device, "name", "")).strip()
+    product_type = str(
+        getattr(physical_device or light, "product_type", "")
+    ).strip()
+
+    # Some hub models include Wiser and/or the product type in the physical
+    # device name, while their channel names omit those prefixes.  Compare all
+    # equivalent device-name forms so only the physical-device portion is
+    # removed from the channel name.
+    device_names = {device_name}
+    metadata_prefixes = tuple(
+        prefix for prefix in (ENTITY_PREFIX, product_type) if prefix
+    )
+    pending_names = [device_name]
+    while pending_names:
+        candidate = pending_names.pop()
+        for prefix in metadata_prefixes:
+            marker = f"{prefix} "
+            if candidate.casefold().startswith(marker.casefold()):
+                stripped = candidate[len(marker) :].strip()
+                if stripped and stripped not in device_names:
+                    device_names.add(stripped)
+                    pending_names.append(stripped)
+
+    channel_name = "" if has_multiple_channels is False else light_name
+    if channel_name:
+        for candidate in sorted(device_names, key=len, reverse=True):
+            if candidate and light_name.casefold() == candidate.casefold():
+                channel_name = ""
+                break
+            if candidate and light_name.casefold().startswith(
+                f"{candidate} ".casefold()
+            ):
+                channel_name = light_name[len(candidate) :].strip()
+                break
+
+    return " ".join(part for part in (channel_name, entity_name) if part)
+
+
 def get_legacy_device_name(data, device_id):
     """Return a physical device name used by historical entity unique IDs."""
     device = data.wiserhub.devices.get_by_id(device_id)
-    if device.product_type != "TemperatureHumiditySensor":
-        return get_device_name(data, device_id)
-
     device_room = data.wiserhub.rooms.get_by_device_id(device_id)
-    if device_room:
+
+    if device.product_type == "iTRV":
+        if device_room:
+            if device_room.number_of_smartvalves > 1:
+                index = device_room.smartvalve_ids.index(device.id) + 1
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} "
+                    f"{device_room.name}-{index}"
+                )
+            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+        return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
+
+    if device.product_type == "RoomStat":
+        if device_room:
+            return f"{ENTITY_PREFIX} Thermostat {device_room.name}"
+        return f"{ENTITY_PREFIX} Thermostat {device.id}"
+
+    if device.product_type in {"HeatingActuator", "CFMT"}:
+        if device_room:
+            if device_room.number_of_heating_actuators > 1:
+                index = device_room.heating_actuator_ids.index(device.id) + 1
+                return (
+                    f"{ENTITY_PREFIX} {device.product_type} "
+                    f"{device_room.name}-{index}"
+                )
+            return f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+        return f"{ENTITY_PREFIX} {device.product_type} {device.id}"
+
+    if device.product_type in {"SmokeAlarmDevice", "ButtonPanel"}:
+        if device_room:
+            return f"{ENTITY_PREFIX} {device_room.name} {device.name}"
+        return f"{ENTITY_PREFIX} {device.name} {device.id}"
+
+    if device.product_type == "TemperatureHumiditySensor" and device_room:
         return (
             f"{ENTITY_PREFIX} {device.product_type} "
             f"{device_room.name} {device.name}"
         )
-    return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+    if device.product_type in {
+        "Shutter",
+        "OnOffLight",
+        "DimmableLight",
+        "WindowDoorSensor",
+        "WaterLeakageSensor",
+        "MotionLightSensor",
+        "TemperatureHumiditySensor",
+    }:
+        if device_room:
+            return (
+                f"{ENTITY_PREFIX} {device.product_type} "
+                f"{device_room.name} {device.name}"
+            )
+        return f"{ENTITY_PREFIX} {device.product_type} {device.name}"
+
+    return get_device_name(data, device_id)
 
 
 def get_identifier(data, device_id, device_type="device"):
@@ -173,25 +371,43 @@ def get_identifier(data, device_id, device_type="device"):
     if device_id == 0 and device_type == "device":
         # Preserve the historical Controller identifier for registry migration.
         device_name = f"{ENTITY_PREFIX} HeatHub ({data.wiserhub.system.name})"
-    elif device_type == "device" and (
-        device := data.wiserhub.devices.get_by_id(device_id)
-    ).product_type == "RoomStat":
-        # Preserve the existing name-derived identifier while modernising the
-        # RoomStat's display name.
+    elif device_type == "device":
+        # A physical device can move between rooms or be renamed without
+        # becoming a new Home Assistant device.
+        return f"{data.wiserhub.system.name} device {device_id}"
+    else:
+        device_name = get_device_name(data, device_id, device_type)
+    return f"{data.wiserhub.system.name} {device_name}"
+
+
+def get_legacy_device_identifier(data, device_id):
+    """Return the former name-derived identifier for a physical device."""
+    device = data.wiserhub.devices.get_by_id(device_id)
+    if device.product_type == "RoomStat":
         device_room = data.wiserhub.rooms.get_by_device_id(device_id)
         if device_room:
             device_name = f"{ENTITY_PREFIX} RoomStat {device_room.name}"
         else:
             device_name = f"{ENTITY_PREFIX} RoomStat {device.id}"
-    elif (
-        device_type == "device"
-        and device.product_type == "TemperatureHumiditySensor"
-    ):
-        # Preserve the former name-derived identifier while modernising the
-        # physical sensor's display name.
+    elif device.product_type == "TemperatureHumiditySensor":
         device_name = get_legacy_device_name(data, device_id)
+    elif device.product_type == "iTRV":
+        device_room = data.wiserhub.rooms.get_by_device_id(device_id)
+        if device_room:
+            if device_room.number_of_smartvalves > 1:
+                index = device_room.smartvalve_ids.index(device.id) + 1
+                device_name = (
+                    f"{ENTITY_PREFIX} {device.product_type} "
+                    f"{device_room.name}-{index}"
+                )
+            else:
+                device_name = (
+                    f"{ENTITY_PREFIX} {device.product_type} {device_room.name}"
+                )
+        else:
+            device_name = f"{ENTITY_PREFIX} {device.product_type} {device.id}"
     else:
-        device_name = get_device_name(data, device_id, device_type)
+        device_name = get_legacy_device_name(data, device_id)
     return f"{data.wiserhub.system.name} {device_name}"
 
 
@@ -221,11 +437,12 @@ def get_hub_device_info(data):
 
 
 def get_hub_via_device_info(data):
-    """Return the registered physical HeatHub as a parent device."""
-    hub_device_id = getattr(data, "hub_device_id", None)
-    if hub_device_id is None:
-        return {}
-    return {"via_device_id": hub_device_id}
+    """Return the HeatHub parent supported by this Home Assistant version."""
+    if (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8):
+        hub_device_id = getattr(data, "hub_device_id", None)
+        if hub_device_id is not None:
+            return {"via_device_id": hub_device_id}
+    return {"via_device": (DOMAIN, data.wiserhub.system.name)}
 
 
 def get_legacy_unique_id(data, device_type, entity_type, device_id):
@@ -243,6 +460,219 @@ def get_unique_id(data, device_type, entity_type, device_id):
     return get_uuid_unique_id(
         get_legacy_unique_id(data, device_type, entity_type, device_id)
     )
+
+
+def get_physical_entity_unique_id(data, domain, device_id, entity_type):
+    """Return a name-independent unique ID for a physical-device entity."""
+    return get_unique_id(data, domain, entity_type, device_id)
+
+
+def get_room_entity_unique_id(data, room_id, entity_type):
+    """Return a room-name-independent unique ID for a room entity."""
+    return get_unique_id(data, "room", entity_type, room_id)
+
+
+def get_light_binary_sensor_unique_id(data, light, sensor_type):
+    """Return the stable per-channel ID for a light capability sensor."""
+    return get_unique_id(
+        data,
+        "binary_sensor",
+        sensor_type,
+        light.light_id,
+    )
+
+
+def build_physical_entity_unique_id_migration(
+    data,
+    previous_room_names=None,
+    legacy_device_names_by_id=None,
+    device_ids=None,
+) -> dict:
+    """Map mutable-name physical entity IDs to immutable device-based IDs."""
+    mapping = {}
+    previous_room_names = previous_room_names or {}
+    legacy_device_names_by_id = legacy_device_names_by_id or {}
+    binary_sensor_types = (
+        "Smoke Alarm",
+        "Heat Alarm",
+        "Tamper Alarm",
+        "Fault Warning",
+        "Remote Alarm",
+        "Battery Defect",
+        "Controllable",
+        "PCM Mode",
+        "Is Tilt Supported",
+        "Is Open",
+        "Is Closed",
+        "Active",
+    )
+
+    for device in data.wiserhub.devices.all:
+        if device_ids is not None and device.id not in device_ids:
+            continue
+        device_names = set(legacy_device_names_by_id.get(device.id, ()))
+        device_names.add(get_legacy_device_name(data, device.id))
+        product_type = device.product_type
+        room = data.wiserhub.rooms.get_by_device_id(device.id)
+        possible_room_names = {room.name} if room is not None else set()
+        if room is not None and (
+            previous_name := previous_room_names.get(str(room.id))
+        ):
+            possible_room_names.add(previous_name)
+
+        if product_type == "RoomStat":
+            for room_name in possible_room_names:
+                mapping[
+                    get_unique_id(
+                        data,
+                        "sensor",
+                        f"LTS Humidity {room_name}",
+                        device.id,
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "sensor", device.id, "humidity"
+                )
+
+        power_device_names = possible_room_names or {
+            f"{product_type} {device.id}"
+        }
+        historical_power_types = {
+            "Power": "power",
+            "Total Power": "energy",
+            "Equipment Power ": "power",
+            "Equipment Total Energy ": "energy",
+            "Power ": "power",
+            "Energy Delivered ": "energy",
+            "Energy Received ": "energy_received",
+        }
+        for power_device_name in power_device_names:
+            historical_power_types.update(
+                {
+                    f"LTS Power {power_device_name}": "power",
+                    f"LTS Energy {power_device_name}": "energy",
+                }
+            )
+        for old_entity_type, new_entity_type in historical_power_types.items():
+            mapping[
+                get_unique_id(data, "sensor", old_entity_type, device.id)
+            ] = get_physical_entity_unique_id(
+                data, "sensor", device.id, new_entity_type
+            )
+
+        # Light capability sensors are keyed by channel ``light_id`` and have
+        # their own migration below. A multi-gang dimmer shares one physical
+        # device ID, so treating these as ordinary physical-device sensors
+        # would merge distinct channels.
+        if product_type not in {"DimmableLight", "OnOffLight"}:
+            for device_name in device_names:
+                for sensor_type in binary_sensor_types:
+                    old_name = f"{device_name} {sensor_type}"
+                    mapping[
+                        get_unique_id(
+                            data, "binary_sensor", sensor_type, old_name
+                        )
+                    ] = get_physical_entity_unique_id(
+                        data, "binary_sensor", device.id, sensor_type
+                    )
+
+        if product_type == "Shutter":
+            for device_name in device_names:
+                old_cover_id = get_uuid_unique_id(
+                    f"{data.wiserhub.system.name}-Wisershutter-"
+                    f"{device.id}-{device_name} Control"
+                )
+                mapping[old_cover_id] = get_physical_entity_unique_id(
+                    data, "cover", device.id, "control"
+                )
+                for label, entity_type in (
+                    ("Away Mode Closes", "away_mode_closes"),
+                    ("Respect Summer Comfort", "respect_summer_comfort"),
+                ):
+                    mapping[
+                        get_unique_id(
+                            data,
+                            product_type,
+                            f"{device_name} {label}",
+                            device.id,
+                        )
+                    ] = get_physical_entity_unique_id(
+                        data, "switch", device.id, entity_type
+                    )
+
+        if product_type in {"HeatingActuator", "CFMT"}:
+            for device_name in device_names:
+                mapping[
+                    get_unique_id(
+                        data,
+                        "system",
+                        "number",
+                        f"{device_name} Floor Temp Offset",
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "number", device.id, "floor_temperature_offset"
+                )
+
+        if product_type in {"SmartPlug", "PowerTagC"}:
+            for device_name in device_names:
+                mapping[
+                    get_unique_id(
+                        data,
+                        product_type,
+                        f"{device_name} Switch",
+                        device.id,
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "switch", device.id, "outlet"
+                )
+                mapping[
+                    get_unique_id(
+                        data,
+                        product_type,
+                        f"{device_name} Away Mode Turns Off",
+                        device.id,
+                    )
+                ] = get_physical_entity_unique_id(
+                    data, "switch", device.id, "away_mode_turns_off"
+                )
+
+        if hasattr(device, "interacts_with_room_climate"):
+            suffix = "Interacts With Room Climate"
+            for device_name in device_names:
+                old_id = get_legacy_unique_id(
+                    data,
+                    product_type,
+                    f"{device_name} {suffix}",
+                    device.id,
+                )
+                mapping[get_uuid_unique_id(old_id)] = (
+                    get_physical_entity_unique_id(
+                        data,
+                        "switch",
+                        device.id,
+                        "interacts_with_room_climate",
+                    )
+                )
+
+        for ancillary in getattr(device, "threshold_sensors", ()):
+            suffix = f"{ancillary.quantity} Interacts With Room Climate"
+            for device_name in device_names:
+                old_id = get_legacy_unique_id(
+                    data,
+                    product_type,
+                    f"{device_name} {suffix}",
+                    device.id,
+                )
+                mapping[get_uuid_unique_id(f"{old_id}_{ancillary.id}")] = (
+                    get_physical_entity_unique_id(
+                        data,
+                        "switch",
+                        device.id,
+                        f"{ancillary.quantity.lower()}_"
+                        f"interacts_with_room_climate_{ancillary.id}",
+                    )
+                )
+
+    return mapping
 
 
 def build_light_unique_id_migration(data) -> dict:
@@ -275,7 +705,7 @@ def build_light_unique_id_migration(data) -> dict:
         old_id = light.id
         new_id = light.light_id
         ptype = light.product_type
-        old_name = get_device_name(data, old_id)
+        old_name = get_legacy_device_name(data, old_id)
         new_name = f"{ENTITY_PREFIX} {light.name}"
 
         # light (name-based -> light_id-based)
@@ -292,20 +722,23 @@ def build_light_unique_id_migration(data) -> dict:
         # away-mode switch (both name and id embedded in the unique_id)
         mapping[
             get_unique_id(data, ptype, f"{old_name} Away Mode Turns Off", old_id)
-        ] = get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
+        ] = get_physical_entity_unique_id(
+            data, "switch", new_id, "light_away_mode_turns_off"
+        )
+        mapping[
+            get_unique_id(data, ptype, f"{new_name} Away Mode Turns Off", new_id)
+        ] = get_physical_entity_unique_id(
+            data, "switch", new_id, "light_away_mode_turns_off"
+        )
 
         # capability binary_sensors (name-based)
         for stype in LIGHT_BINARY_SENSOR_TYPES:
             mapping[
                 get_unique_id(data, "binary_sensor", stype, f"{old_name} {stype}")
-            ] = get_unique_id(data, "binary_sensor", stype, f"{new_name} {stype}")
+            ] = get_light_binary_sensor_unique_id(data, light, stype)
 
     # Drop no-ops where the two id spaces happen to coincide for a light.
     return {old: new for old, new in mapping.items() if old != new}
-
-
-def get_room_name(data, room_id):
-    return f"{ENTITY_PREFIX} {data.wiserhub.rooms.get_by_id(room_id).name}"
 
 
 def get_instance_count(hass: HomeAssistant) -> int:

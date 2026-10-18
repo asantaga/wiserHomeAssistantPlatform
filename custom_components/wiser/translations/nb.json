@@ -1,0 +1,684 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Oppsett av Wiser Heat Hub",
+        "description": "Skriv inn IP-adressen og den hemmelige nøkkelen som ble hentet fra huben.",
+        "data": {
+          "host": "IP-adresse eller vertsnavn",
+          "port": "Portnummer",
+          "password": "Hemmelig nøkkel"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Oppsett av Wiser Heat Hub ({name})",
+        "description": "Skriv inn den hemmelige nøkkelen som ble hentet fra huben.",
+        "data": {
+          "host": "IP-adresse eller vertsnavn",
+          "port": "Portnummer",
+          "password": "Hemmelig nøkkel"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "Konfigurasjon av Wiser Heat Hub pågår allerede.",
+      "already_configured": "Denne enheten er allerede konfigurert.",
+      "not_wiser_hub": "Den oppdagede enheten er ikke en Wiser Heat Hub."
+    },
+    "error": {
+      "invalid_hot_water_presets": "En eller flere varmtvannsforhåndsinnstillinger er ugyldige.",
+      "auth_failure": "Kan ikke autentisere mot Wiser-huben. Kontroller den hemmelige nøkkelen og prøv igjen.",
+      "timeout_error": "Tidsavbrudd ved tilkobling til Wiser-huben. Kontroller IP-adressen og prøv igjen.",
+      "timeout_error_discovery": "Tidsavbrudd ved tilkobling til Wiser-huben. Kontroller at huben fortsatt er tilkoblet, og prøv igjen.",
+      "unknown": "Ukjent feil ved tilkobling til Wiser-huben. Kontroller loggene."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alternativer for Wiser-integrasjonen",
+        "description": "Velg parametere som skal endres",
+        "menu_options": {
+          "main_params": "Hovedparametere",
+          "automation_params": "Automatiseringsparametere",
+          "opentherm": "OpenTherm",
+          "equipment_sensors": "Utstyrssensorer",
+          "ui_options": "Brukergrensesnittalternativer"
+        }
+      },
+      "ui_options": {
+        "title": "Brukergrensesnittalternativer",
+        "data": {
+          "legacy_naming": "Eldre navngivning",
+          "show_wiser_sidebar": "Vis Wiser i sidepanelet"
+        },
+        "data_description": {
+          "legacy_naming": "Ta med romnavn i navnene på Wiser-enheter. Hvis dette er aktivert, vil regenerering av entitets-ID-er i Home Assistant med standardformatet under Innstillinger → System → Entitets-ID-format (Home Assistant 2026.8 og nyere) duplisere områdenavn når området og Wiser-rommet har samme navn. Endring av dette valget gir ikke nytt navn til eksisterende entitets-ID-er."
+        }
+      },
+      "main_params": {
+        "title": "Alternativer for Wiser-integrasjonen",
+        "description": "Hovedparametere",
+        "data": {
+          "host": "IP-adresse eller vertsnavn",
+          "port": "Portnummer",
+          "scan_interval": "Skanneintervall (sek.)",
+          "heating_boost_temp": "Standardtemperatur for varmeboost (°C)",
+          "heating_boost_time": "Standardvarighet for varmeboost (min.)",
+          "hotwater_boost_time": "Standardvarighet for varmtvannsboost (min.)",
+          "setpoint_mode": "Settpunktmodus",
+          "restore_manual_temp_option": "Bruk denne temperaturen hvis ingen manuell temperatur er lagret"
+        }
+      },
+      "automation_params": {
+        "title": "Alternativer for Wiser-integrasjonen",
+        "description": "Aktiver innebygde automatiseringer",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passiv modus",
+            "description": "Aktiver passiv TRV-funksjon. Hvert rom må aktiveres for at den skal fungere.",
+            "data": {
+              "automations_passive_mode": "Passiv modus",
+              "passive_mode_temperature_increments": "Temperaturtrinn for passiv modus"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Klimastyring av varmtvann",
+            "description": "Aktiver klimastyring av varmtvann. Se wikien for detaljer.",
+            "data": {
+              "hotwater_climate": "Aktiver klimaentiteten",
+              "experimental_mode": "Aktiver eksperimentell driftsmodus",
+              "hotwater_auto_mode": "Automatisk varmtvannsmodus",
+              "hotwater_heat_mode": "Varmtvannsoppvarmingsmodus",
+              "hotwater_boost_mode": "Varmtvannsboostmodus",
+              "hotwater_sensor_entity_id": "Varmtvannstemperatursensor"
+            }
+          },
+          "additional_sensors": {
+            "name": "Ekstra sensorer",
+            "description": "Vis valgfrie sensorer for data rapportert av Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Rom uten klimastyring"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Velg Wiser-rommene der det skal opprettes en sensor for gjeldende tidsplantemperatur."
+            }
+          }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Utstyrssensorer",
+        "description": "Konfigurer entiteter med detaljerte utstyrsdata for kompatible enheter.",
+        "data": {
+          "equipment_sensors": "Aktiver utstyrsdatasensorer"
+        },
+        "data_description": {
+          "equipment_sensors": "Vis en ekstra sensor med detaljerte utstyrsattributter for hver kompatible smartplugg, PowerTag og varmeaktuator."
+        }
+      },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Konfigurer OpenTherm-funksjoner.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Varmtvannsstyring",
+          "opentherm_sensors": "Sensorer"
+        }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm-sensorer",
+        "description": "Velg en kategori med oppdagede OpenTherm-attributter.",
+        "menu_options": {
+          "opentherm_readings": "Avlesninger",
+          "opentherm_central_heating": "Sentralvarme",
+          "opentherm_hot_water": "Varmtvann",
+          "opentherm_status": "Status og diagnostikk"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm-varmtvannsstyring",
+        "description": "Styr eventuelt kjelens settpunkt for forbruksvann via Wiser. Integrasjonen oppretter en OpenTherm Hot Water-tidsplan i Wiser Schedules-panelet. Av bruker den laveste varmtvannstemperaturen som OpenTherm rapporterer.",
+        "data": {
+          "opentherm_hot_water_control": "Aktiver varmtvannsstyring",
+          "opentherm_hot_water_manual_temperature": "Manuell temperatur",
+          "opentherm_hot_water_sensor_entity_id": "Valgfri ekstern temperatursensor.",
+          "opentherm_hot_water_presets": "Forhåndsinnstillinger"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperatur som brukes i manuell modus.",
+          "opentherm_hot_water_sensor_entity_id": "Valgfri temperatursensor som brukes for gjeldende vanntemperatur. OpenTherm brukes når sensoren ikke er tilgjengelig."
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm-avlesninger",
+        "description": "Velg hvilke oppdagede OpenTherm-avlesninger som skal vises som sensorentiteter.",
+        "data": {
+          "ch_flow_temperature": "Kjelens turtemperatur",
+          "ch_pressure_bar": "Sentralvarmetrykk",
+          "ch_return_temperature": "Kjelens returtemperatur",
+          "delta_t": "Delta-T",
+          "boiler_exhaust_temperature": "Kjelens avgastemperatur",
+          "estimated_boiler_output": "Anslått kjeleeffekt",
+          "hw_flow_rate": "Varmtvannsstrøm",
+          "hw_temperature": "Varmtvannstemperatur",
+          "maximum_capacity_kw": "Maksimal kjelekapasitet",
+          "minimum_modulation_level": "Minste modulasjonsnivå",
+          "relative_modulation_level": "Relativt modulasjonsnivå",
+          "room_temperature": "Romtemperatur"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm-sentralvarme",
+        "description": "Velg hvilke oppdagede sentralvarmeattributter som skal vises som entiteter.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Lesing/skriving av kjelens maksimale sentralvarmesettpunkt",
+          "boiler_ch_max_setpoint_transfer_enable": "Overføring av kjelens maksimale sentralvarmesettpunkt aktivert",
+          "boiler_ch_setpoint": "Kjelens sentralvarmesettpunkt",
+          "boiler_ch_setpoint_lower_bound": "Nedre grense for kjelens sentralvarmesettpunkt",
+          "boiler_ch_setpoint_upper_bound": "Øvre grense for kjelens sentralvarmesettpunkt",
+          "ch_flow_active_lower_setpoint": "Aktivt nedre settpunkt for sentralvarmetur",
+          "ch_flow_active_upper_setpoint": "Aktivt øvre settpunkt for sentralvarmetur",
+          "ch1_flow_enabled": "Sentralvarmekrets 1 tur aktivert",
+          "ch1_flow_setpoint": "Settpunkt for sentralvarmekrets 1 tur",
+          "ch2_flow_enabled": "Sentralvarmekrets 2 tur aktivert",
+          "ch2_flow_setpoint": "Settpunkt for sentralvarmekrets 2 tur",
+          "room_setpoint": "Romsettpunkt"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm-varmtvann",
+        "description": "Velg hvilke oppdagede varmtvannsattributter som skal vises som entiteter.",
+        "data": {
+          "boiler_hw_setpoint": "Kjelens varmtvannssettpunkt",
+          "boiler_hw_setpoint_lower_bound": "Nedre grense for kjelens varmtvannssettpunkt",
+          "boiler_hw_setpoint_read_write": "Lesing/skriving av kjelens varmtvannssettpunkt",
+          "boiler_hw_setpoint_transfer_enable": "Overføring av kjelens varmtvannssettpunkt aktivert",
+          "boiler_hw_setpoint_upper_bound": "Øvre grense for kjelens varmtvannssettpunkt",
+          "hw_enabled": "Varmtvann aktivert",
+          "hw_flow_setpoint": "Settpunkt for varmtvannstur"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm-status og diagnostikk",
+        "description": "Velg hvilke oppdagede status- og diagnoseattributter som skal vises som sensorentiteter.",
+        "data": {
+          "boiler_fault": "Kjelfeil",
+          "central_heating_active": "Sentralvarme aktiv",
+          "central_heating_2_active": "Sentralvarme 2 aktiv",
+          "connection_status": "Tilkoblingsstatus",
+          "coprocessor_update_status": "Oppdateringsstatus for OpenTherm-koprosessor",
+          "coprocessor_version": "Versjon av OpenTherm-koprosessor",
+          "cooling_active": "Kjøling aktiv",
+          "diagnostic_event": "Diagnosehendelse",
+          "flame_active": "Flamme aktiv",
+          "flame_statistics": "Flammestatistikk",
+          "hot_water_active": "Varmtvann aktivt",
+          "operating_mode": "Driftsmodus",
+          "slave_status": "OpenTherm-slavestatus",
+          "tracked_room_id": "ID for sporet rom"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "OpenTherm-data er ikke tilgjengelige for denne Wiser-huben.",
+      "equipment_not_available": "Utstyrsdata er ikke tilgjengelige for denne Wiser-huben."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "Angi OpenTherm-parameter",
+      "description": "Endrer en støttet OpenTherm-temperaturparameter på Wiser-huben.",
+      "fields": {
+        "parameter": {
+          "name": "Parameter",
+          "description": "OpenTherm-temperaturparameteren som skal endres. Nødvendig API-endepunkt velges automatisk."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Bruk en temperatur innenfor grensene som kjelen rapporterer."
+        },
+        "hub": {
+          "name": "Wiser-hub",
+          "description": "Velg bare en hub når du har flere Wiser-huber."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Aktivt nedre sentralvarmesettpunkt",
+        "chFlowActiveUpperSetpoint": "Aktivt øvre sentralvarmesettpunkt",
+        "dhwFlowSetpoint": "Hubens settpunkt for varmtvannstur",
+        "dhwSetpoint": "Kjelens varmtvannssettpunkt",
+        "maxChSetpoint": "Kjelens maksimale sentralvarmesettpunkt"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": {
+      "message": "Angi en OpenTherm-temperatur."
+    },
+    "opentherm_hub_not_found": {
+      "message": "Den angitte Wiser-huben ble ikke funnet."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "Den angitte Wiser-huben er ikke lastet inn."
+    },
+    "opentherm_hub_required": {
+      "message": "Velg en Wiser-hub når mer enn én hub er konfigurert."
+    },
+    "opentherm_not_supported": {
+      "message": "Denne huben har ikke OpenTherm-funksjonalitet."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "OpenTherm-parameteren eller verdien er ugyldig: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "Kan ikke angi OpenTherm-parameteren {parameter}: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "OpenTherm-parameteren {parameter} forble ikke på {requested} °C etter ett nytt forsøk og bekreftelsesvinduet på {window} sekunder. Wiser rapporterer {reported} °C. Ingen flere forsøk sendes."
+    },
+    "opentherm_retry_failed": {
+      "message": "OpenTherm-parameteren {parameter} forble ikke på {requested} °C, og et nytt forsøk kunne ikke sendes: {error}. Wiser rapporterer {reported} °C. Ingen flere forsøk sendes."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser OpenTherm-kommando"
+    }
+  },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Oppvarming"
+      },
+      "floor_temperature": {
+        "name": "Gulvtemperatur"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": {
+        "name": "Måltemperatur for bortemodus"
+      },
+      "floor_temperature_offset": {
+        "name": "Forskyvning av gulvtemperatur"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Innendørs ubehagstemperatur"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Utendørs ubehagstemperatur"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus"
+      },
+      "power_on_behavior": {
+        "name": "Oppstartsadferd"
+      },
+      "led_indicator": {
+        "name": "LED-indikator"
+      }
+    },
+    "button": {
+      "boost_all_heating": {
+        "name": "Boost all oppvarming"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Avbryt alle overstyringer av oppvarming"
+      },
+      "boost_hot_water": {
+        "name": "Boost varmtvann"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Avbryt alle overstyringer av varmtvann"
+      },
+      "toggle_hot_water": {
+        "name": "Slå varmtvann av/på"
+      },
+      "moment": {
+        "name": "Øyeblikk: {name}"
+      }
+    },
+    "switch": {
+      "valve_protection": {
+        "name": "Ventilbeskyttelse"
+      },
+      "eco_mode": {
+        "name": "Økomodus"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "Bortemodus påvirker varmtvann"
+      },
+      "comfort_mode": {
+        "name": "Komfortmodus"
+      },
+      "away_mode": {
+        "name": "Bortemodus"
+      },
+      "daylight_saving": {
+        "name": "Sommertid"
+      },
+      "summer_comfort_enabled": {
+        "name": "Sommerkomfort aktivert"
+      },
+      "window_detection": {
+        "name": "Vindusregistrering"
+      },
+      "include_in_summer_comfort": {
+        "name": "Ta med i sommerkomfort"
+      },
+      "device_lock": {
+        "name": "Enhetslås"
+      },
+      "identify": {
+        "name": "Identifiser"
+      },
+      "outlet": {
+        "name": "Stikkontakt"
+      },
+      "away_mode_turns_off": {
+        "name": "Bortemodus slår av"
+      },
+      "away_mode_closes": {
+        "name": "Bortemodus lukker"
+      },
+      "passive_mode": {
+        "name": "Passiv modus"
+      },
+      "respect_summer_comfort": {
+        "name": "Respekter sommerkomfort"
+      },
+      "interacts_with_room_climate": {
+        "name": "Samhandler med romklima"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "Luftfuktighet samhandler med romklima"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "Temperatur samhandler med romklima"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "Belysningsstyrke samhandler med romklima"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} samhandler med romklima"
+      },
+      "manual_heat": {
+        "name": "Manuell oppvarming"
+      },
+      "hot_water": {
+        "name": "Varmtvann"
+      }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": {
+        "name": "Forebygging av sommerubehag"
+      },
+      "summer_comfort_available": {
+        "name": "Sommerkomfort tilgjengelig"
+      },
+      "pcm_device_limit_reached": {
+        "name": "Grensen for PCM-enheter er nådd"
+      },
+      "smoke_alarm": {
+        "name": "Røykalarm"
+      },
+      "heat_alarm": {
+        "name": "Varmealarm"
+      },
+      "tamper_alarm": {
+        "name": "Sabotasjealarm"
+      },
+      "fault_warning": {
+        "name": "Feilvarsel"
+      },
+      "remote_alarm": {
+        "name": "Fjernalarm"
+      },
+      "battery_defect": {
+        "name": "Batterifeil"
+      },
+      "controllable": {
+        "name": "Styrbar"
+      },
+      "pcm_mode": {
+        "name": "PCM-modus"
+      },
+      "window_detection_active": {
+        "name": "Vindusregistrering aktiv"
+      },
+      "is_dimmable": {
+        "name": "Kan dimmes"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED-indikator støttes"
+      },
+      "is_output_mode_supported": {
+        "name": "Utgangsmodus støttes"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Oppstartsadferd støttes"
+      },
+      "is_tilt_supported": {
+        "name": "Vipping støttes"
+      },
+      "is_open": {
+        "name": "Åpen"
+      },
+      "is_closed": {
+        "name": "Lukket"
+      },
+      "active": {
+        "name": "Aktiv"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Lesing/skriving av kjelens maksimale sentralvarmesettpunkt"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Overføring av kjelens maksimale sentralvarmesettpunkt aktivert"
+      },
+      "boiler_fault": {
+        "name": "Kjelfeil"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Lesing/skriving av kjelens varmtvannssettpunkt"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Overføring av kjelens varmtvannssettpunkt aktivert"
+      },
+      "central_heating_2_active": {
+        "name": "Sentralvarme 2 aktiv"
+      },
+      "central_heating_active": {
+        "name": "Sentralvarme aktiv"
+      },
+      "ch1_flow_enabled": {
+        "name": "Sentralvarmekrets 1 tur aktivert"
+      },
+      "ch2_flow_enabled": {
+        "name": "Sentralvarmekrets 2 tur aktivert"
+      },
+      "cooling_active": {
+        "name": "Kjøling aktiv"
+      },
+      "diagnostic_event": {
+        "name": "Diagnosehendelse"
+      },
+      "flame_active": {
+        "name": "Flamme aktiv"
+      },
+      "hot_water_active": {
+        "name": "Varmtvann aktivt"
+      },
+      "hw_enabled": {
+        "name": "Varmtvann aktivert"
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Signal"
+      },
+      "cloud": {
+        "name": "Sky"
+      },
+      "heating_operation_mode": {
+        "name": "Driftsmodus for oppvarming"
+      },
+      "heating": {
+        "name": "Oppvarming",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "heating_channel": {
+        "name": "Varmekanal {channel}",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "hot_water": {
+        "name": "Varmtvann",
+        "state": {
+          "off": "Av",
+          "on": "På"
+        }
+      },
+      "hot_water_operation_mode": {
+        "name": "Driftsmodus for varmtvann"
+      },
+      "target_temperature": {
+        "name": "Måltemperatur"
+      },
+      "floor_temperature": {
+        "name": "Gulvtemperatur"
+      },
+      "boiler_flow_temperature": {
+        "name": "Kjelens turtemperatur"
+      },
+      "boiler_return_temperature": {
+        "name": "Kjelens returtemperatur"
+      },
+      "flame_statistics": {
+        "name": "Flammestatistikk"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Kjelens sentralvarmesettpunkt"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Nedre grense for kjelens sentralvarmesettpunkt"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Øvre grense for kjelens sentralvarmesettpunkt"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Kjelens avgastemperatur"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Kjelens varmtvannssettpunkt"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Nedre grense for kjelens varmtvannssettpunkt"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Øvre grense for kjelens varmtvannssettpunkt"
+      },
+      "ch1_flow_setpoint": {
+        "name": "Settpunkt for sentralvarmekrets 1 tur"
+      },
+      "ch2_flow_setpoint": {
+        "name": "Settpunkt for sentralvarmekrets 2 tur"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Aktivt nedre settpunkt for sentralvarmetur"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Aktivt øvre settpunkt for sentralvarmetur"
+      },
+      "ch_pressure_bar": {
+        "name": "Sentralvarmetrykk"
+      },
+      "connection_status": {
+        "name": "Tilkoblingsstatus"
+      },
+      "coprocessor_update_status": {
+        "name": "Oppdateringsstatus for OpenTherm-koprosessor"
+      },
+      "coprocessor_version": {
+        "name": "Versjon av OpenTherm-koprosessor"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Anslått kjeleeffekt"
+      },
+      "hw_flow_rate": {
+        "name": "Varmtvannsstrøm"
+      },
+      "hw_flow_setpoint": {
+        "name": "Settpunkt for varmtvannstur"
+      },
+      "hw_temperature": {
+        "name": "Varmtvannstemperatur"
+      },
+      "maximum_capacity_kw": {
+        "name": "Maksimal kjelekapasitet"
+      },
+      "minimum_modulation_level": {
+        "name": "Minste modulasjonsnivå"
+      },
+      "operating_mode": {
+        "name": "Driftsmodus"
+      },
+      "relative_modulation_level": {
+        "name": "Relativt modulasjonsnivå"
+      },
+      "room_setpoint": {
+        "name": "Romsettpunkt"
+      },
+      "room_temperature": {
+        "name": "Romtemperatur"
+      },
+      "slave_status": {
+        "name": "OpenTherm-slavestatus"
+      },
+      "tracked_room_id": {
+        "name": "ID for sporet rom"
+      },
+      "heating_demand": {
+        "name": "Varmebehov"
+      },
+      "heating_demand_channel": {
+        "name": "Varmebehovskanal {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Varmtvannsbehov"
+      },
+      "total_energy": {
+        "name": "Total energi"
+      },
+      "energy_delivered": {
+        "name": "Levert energi"
+      },
+      "energy_received": {
+        "name": "Mottatt energi"
+      },
+      "equipment_power": {
+        "name": "Utstyr"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} starter oppvarming",
+      "stopped_heating": "{entity_name} stopper oppvarming",
+      "boosted": "{entity_name} er boostet",
+      "target_temperature_increased": "Måltemperaturen for {entity_name} ble økt",
+      "target_temperature_decreased": "Måltemperaturen for {entity_name} ble redusert"
+    }
+  }
+}

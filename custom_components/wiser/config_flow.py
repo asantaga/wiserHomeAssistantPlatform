@@ -23,6 +23,8 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
+    MAJOR_VERSION,
+    MINOR_VERSION,
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -31,12 +33,16 @@ from homeassistant.helpers.selector import (
     BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
+    SELECTORS,
     SelectSelectorMode,
+    Selector,
+    make_selector_config_schema,
     selector,
 )
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
+    CONF_ADDITIONAL_SENSORS,
     CONF_AUTOMATIONS_HW_AUTO_MODE,
     CONF_AUTOMATIONS_HW_BOOST_MODE,
     CONF_AUTOMATIONS_HW_CLIMATE,
@@ -45,23 +51,35 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_SCHEDULE_SETPOINT_ROOMS,
+    CONF_EQUIPMENT_SENSORS,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
     CONF_HW_BOOST_TIME,
+    CONF_LEGACY_NAMING,
+    CONF_OPENTHERM_HOT_WATER_CONTROL,
+    CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+    CONF_OPENTHERM_HOT_WATER_PRESETS,
+    CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID,
     CONF_OPENTHERM_SENSORS,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CONF_SHOW_WISER_SIDEBAR,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
+    DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+    DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP,
     DEFAULT_SCAN_INTERVAL,
     DATA,
     DOMAIN,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
     HWCycleModes,
+    MAX_OPENTHERM_HOT_WATER_PRESETS,
+    OPENTHERM_HOT_WATER_DEFAULT_BOOSTS,
 )
 from .opentherm import (
     OPENTHERM_SENSOR_CATEGORIES,
@@ -70,8 +88,99 @@ from .opentherm import (
     detected_opentherm_sensor_keys,
     opentherm_sensor_is_enabled,
 )
+from .opentherm_detection import (
+    opentherm_hot_water_control_is_supported,
+    opentherm_hot_water_limits,
+    opentherm_is_detected,
+)
+from .helpers import room_has_climate
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _default_opentherm_hot_water_presets(minimum=35.0, maximum=55.0):
+    """Return the default timed hot-water boosts from the original control."""
+    return [
+        {
+            "name": f"Boost {duration} Mins",
+            "icon": f"mdi:numeric-{index}",
+            "temperature": min(
+                max(DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP, minimum), maximum
+            ),
+            "duration_minutes": duration,
+        }
+        for index, duration in enumerate(
+            OPENTHERM_HOT_WATER_DEFAULT_BOOSTS, start=1
+        )
+    ]
+
+
+def _validate_opentherm_hot_water_presets(
+    value, minimum=35.0, maximum=55.0, *, clamp_temperature=False
+):
+    """Validate the custom preset selector value."""
+    if not isinstance(value, list):
+        raise vol.Invalid("Presets must be a list")
+    if len(value) > MAX_OPENTHERM_HOT_WATER_PRESETS:
+        raise vol.Invalid("Too many presets")
+
+    presets = []
+    names = set()
+    for item in value:
+        if not isinstance(item, dict):
+            raise vol.Invalid("Each preset must be an object")
+        name = str(item.get("name", "")).strip()
+        folded_name = name.casefold()
+        if not name or folded_name in {"off", "manual", "auto", "custom"}:
+            raise vol.Invalid("Preset name is empty or reserved")
+        if folded_name in names:
+            raise vol.Invalid("Preset names must be unique")
+        try:
+            temperature = float(item.get("temperature"))
+            duration = int(item.get("duration_minutes", 0))
+        except (TypeError, ValueError) as err:
+            raise vol.Invalid(
+                "Preset temperature and duration must be numbers"
+            ) from err
+        icon = str(item.get("icon", "")).strip()
+        if clamp_temperature:
+            temperature = min(max(temperature, minimum), maximum)
+        if not minimum <= temperature <= maximum or not 0 <= duration <= 999:
+            raise vol.Invalid("Preset temperature or duration is out of range")
+        presets.append(
+            {
+                "name": name,
+                "icon": icon,
+                "temperature": temperature,
+                "duration_minutes": duration,
+            }
+        )
+        names.add(folded_name)
+    return presets
+
+
+@SELECTORS.register("opentherm_presets_v2")
+class OpenThermPresetsSelector(Selector):
+    """Render the preset editor supplied by the Wiser frontend module."""
+
+    # Keep the selector name versioned. Home Assistant registers custom
+    # elements once per browser session, so reusing the old name would leave a
+    # previously loaded implementation in place.
+    selector_type = "opentherm_presets_v2"
+    CONFIG_SCHEMA = make_selector_config_schema(
+        {
+            vol.Optional("minimum", default=35.0): vol.Coerce(float),
+            vol.Optional("maximum", default=55.0): vol.Coerce(float),
+        }
+    )
+
+    def __call__(self, data):
+        return _validate_opentherm_hot_water_presets(
+            data,
+            float(self.config.get("minimum", 35.0)),
+            float(self.config.get("maximum", 55.0)),
+        )
+
 
 DATA_SCHEMA = vol.Schema(
     {
@@ -115,7 +224,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 4
+    MINOR_VERSION = 5
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self) -> None:
@@ -156,7 +265,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_NAME] = validated["title"]
 
                 return self.async_create_entry(
-                    title=validated["title"], data=user_input
+                    title=validated["title"],
+                    data=user_input,
+                    options={
+                        CONF_LEGACY_NAMING: (MAJOR_VERSION, MINOR_VERSION) < (2026, 8)
+                    },
                 )
 
         return self.async_show_form(
@@ -217,7 +330,11 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 # Add hub name to config
                 user_input[CONF_NAME] = validated["title"]
                 return self.async_create_entry(
-                    title=validated["title"], data=user_input
+                    title=validated["title"],
+                    data=user_input,
+                    options={
+                        CONF_LEGACY_NAMING: (MAJOR_VERSION, MINOR_VERSION) < (2026, 8)
+                    },
                 )
 
         return self.async_show_form(
@@ -251,16 +368,227 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
         if not entry_data:
             return None
-        return getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
+        opentherm = getattr(entry_data[DATA].wiserhub.system, "opentherm", None)
+        return (
+            opentherm
+            if opentherm_is_detected(self.config_entry, opentherm)
+            else None
+        )
+
+    def _equipment_available(self):
+        """Return whether the loaded entry has equipment data available."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return False
+        devices = entry_data[DATA].wiserhub.devices
+
+        def all_devices(collection_name):
+            collection = getattr(devices, collection_name, None)
+            return getattr(collection, "all", ())
+
+        return any(
+            getattr(device, "equipment", None) is not None
+            for collection_name in (
+                "smartplugs",
+                "power_tags",
+                "power_tags_c",
+                "heating_actuators",
+                "evse",
+            )
+            for device in all_devices(collection_name)
+        )
+
+    def _rooms_without_climate(self):
+        """Return loaded Wiser rooms that do not create climate entities."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        if not entry_data:
+            return []
+        return [
+            room
+            for room in entry_data[DATA].wiserhub.rooms.all
+            if not room_has_climate(room)
+        ]
 
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
-        menu_options = ["main_params", "automation_params"]
+        menu_options = [
+            "main_params",
+            "automation_params",
+            "ui_options",
+        ]
         if self._opentherm() is not None:
-            menu_options.append("opentherm_sensors")
+            menu_options.append("opentherm")
+        if self._equipment_available() or self.config_entry.options.get(
+            CONF_EQUIPMENT_SENSORS, False
+        ):
+            menu_options.append("equipment_sensors")
         return self.async_show_menu(
             step_id="init",
             menu_options=menu_options,
+        )
+
+    async def async_step_opentherm(self, user_input=None):
+        """Choose an OpenTherm feature to configure."""
+        if self._opentherm() is None:
+            return self.async_abort(reason="opentherm_not_available")
+        menu_options = ["opentherm_sensors"]
+        if opentherm_hot_water_control_is_supported(
+            self.config_entry, self._opentherm()
+        ):
+            menu_options.insert(0, "opentherm_hot_water_control")
+        return self.async_show_menu(
+            step_id="opentherm",
+            menu_options=menu_options,
+        )
+
+    async def async_step_opentherm_hot_water_control(self, user_input=None):
+        """Configure Home Assistant control of the OpenTherm DHW setpoint."""
+        opentherm = self._opentherm()
+        if opentherm is None or not opentherm_hot_water_control_is_supported(
+            self.config_entry, opentherm
+        ):
+            return self.async_abort(reason="opentherm_not_available")
+        minimum, maximum = opentherm_hot_water_limits(opentherm)
+        try:
+            manual_default = float(
+                self.config_entry.options.get(
+                    CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+                    DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+                )
+            )
+        except (TypeError, ValueError):
+            manual_default = DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP
+        manual_default = min(max(manual_default, minimum), maximum)
+        try:
+            preset_default = _validate_opentherm_hot_water_presets(
+                self.config_entry.options.get(
+                    CONF_OPENTHERM_HOT_WATER_PRESETS,
+                    _default_opentherm_hot_water_presets(minimum, maximum),
+                ),
+                minimum,
+                maximum,
+                clamp_temperature=True,
+            )
+        except vol.Invalid:
+            preset_default = _default_opentherm_hot_water_presets(
+                minimum, maximum
+            )
+        errors = {}
+        if user_input is not None:
+            try:
+                user_input[CONF_OPENTHERM_HOT_WATER_PRESETS] = (
+                    _validate_opentherm_hot_water_presets(
+                        user_input.get(CONF_OPENTHERM_HOT_WATER_PRESETS, []),
+                        minimum,
+                        maximum,
+                    )
+                )
+            except vol.Invalid:
+                errors["base"] = "invalid_hot_water_presets"
+            else:
+                options = self.config_entry.options | user_input
+                if not user_input.get(
+                    CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID
+                ):
+                    options.pop(
+                        CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID, None
+                    )
+                # Remove the prototype option now that Off follows the minimum
+                # domestic-hot-water temperature reported by OpenTherm.
+                options.pop("opentherm_hot_water_off_temperature", None)
+                return self.async_create_entry(data=options)
+        return self.async_show_form(
+            step_id="opentherm_hot_water_control",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_OPENTHERM_HOT_WATER_CONTROL,
+                        default=self.config_entry.options.get(
+                            CONF_OPENTHERM_HOT_WATER_CONTROL, False
+                        ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
+                        default=manual_default,
+                    ): vol.All(
+                        vol.Coerce(float),
+                        vol.Range(min=minimum, max=maximum),
+                    ),
+                    vol.Optional(
+                        CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID,
+                        description={
+                            "suggested_value": self.config_entry.options.get(
+                                CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID
+                            )
+                        },
+                    ): EntitySelector(
+                        EntitySelectorConfig(
+                            domain="sensor",
+                            device_class="temperature",
+                            multiple=False,
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_OPENTHERM_HOT_WATER_PRESETS,
+                        default=preset_default,
+                    ): OpenThermPresetsSelector(
+                        {"minimum": minimum, "maximum": maximum}
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_equipment_sensors(self, user_input=None):
+        """Configure detailed equipment data sensors."""
+        if not self._equipment_available() and not self.config_entry.options.get(
+            CONF_EQUIPMENT_SENSORS, False
+        ):
+            return self.async_abort(reason="equipment_not_available")
+        if user_input is not None:
+            return self.async_create_entry(
+                data=self.config_entry.options | user_input
+            )
+        return self.async_show_form(
+            step_id="equipment_sensors",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_EQUIPMENT_SENSORS,
+                        default=self.config_entry.options.get(
+                            CONF_EQUIPMENT_SENSORS, False
+                        ),
+                    ): BooleanSelector(),
+                }
+            ),
+        )
+
+    async def async_step_ui_options(self, user_input=None):
+        """Configure Wiser UI options, including legacy naming and sidebar panels."""
+        if user_input is not None:
+            return self.async_create_entry(
+                data=self.config_entry.options | user_input
+            )
+
+        return self.async_show_form(
+            step_id="ui_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_LEGACY_NAMING,
+                        default=self.config_entry.options.get(
+                            CONF_LEGACY_NAMING, True
+                        ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SHOW_WISER_SIDEBAR,
+                        default=self.config_entry.options.get(
+                            CONF_SHOW_WISER_SIDEBAR,
+                            True,
+                        ),
+                    ): BooleanSelector(),
+                }
+            ),
         )
 
     async def async_step_opentherm_sensors(self, user_input=None):
@@ -426,6 +754,9 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(data=options)
 
         options = self.config_entry.options
+        additional_sensor_options = options.get(CONF_ADDITIONAL_SENSORS, {})
+        if not isinstance(additional_sensor_options, dict):
+            additional_sensor_options = {}
 
         data_schema = {
             vol.Required(CONF_AUTOMATIONS_PASSIVE): section(
@@ -531,11 +862,37 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 {"collapsed": True},
             ),
+            vol.Required(CONF_ADDITIONAL_SENSORS): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_SCHEDULE_SETPOINT_ROOMS,
+                            default=[
+                                str(room_id)
+                                for room_id in additional_sensor_options.get(
+                                    CONF_SCHEDULE_SETPOINT_ROOMS, []
+                                )
+                            ],
+                        ): selector(
+                            {
+                                "select": {
+                                    "options": [
+                                        {"value": str(room.id), "label": room.name}
+                                        for room in self._rooms_without_climate()
+                                    ],
+                                    "multiple": True,
+                                    "mode": SelectSelectorMode.DROPDOWN,
+                                }
+                            }
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
         return self.async_show_form(
             step_id="automation_params", data_schema=vol.Schema(data_schema)
         )
-
 
 class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

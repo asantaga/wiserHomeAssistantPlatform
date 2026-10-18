@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Wiser Heat Hub Setup",
-        "description": "Please enter the ip address and secret key obtained from the hub.",
+        "description": "Please enter the IP address and secret key obtained from the hub.",
         "data": {
           "host": "IP Address or Hostname",
           "port": "Port number",
@@ -27,10 +27,11 @@
       "not_wiser_hub": "The discovered device is not a Wiser Heat Hub."
     },
     "error": {
-      "auth_failure": "Unable to authenticate with the Wiser Hub.  Check the secret key and try again.",
-      "timeout_error": "Timed out trying to connect to the Wiser Hub.  Check the IP address and try again.",
-      "timeout_error_discovery": "Timed out trying to connect to the Wiser Hub.  Check your hub is still online and try again.",
-      "unknown": "Unknown error connecting to the Wiser hub.  Please check the logs."
+      "invalid_hot_water_presets": "One or more hot-water presets are invalid.",
+      "auth_failure": "Unable to authenticate with the Wiser hub. Check the secret key and try again.",
+      "timeout_error": "Timed out trying to connect to the Wiser hub. Check the IP address and try again.",
+      "timeout_error_discovery": "Timed out trying to connect to the Wiser hub. Check that your hub is still online and try again.",
+      "unknown": "Unknown error connecting to the Wiser hub. Please check the logs."
     }
   },
   "options": {
@@ -41,7 +42,19 @@
         "menu_options": {
           "main_params": "Main Parameters",
           "automation_params": "Automation Parameters",
-          "opentherm_sensors": "OpenTherm sensors"
+          "opentherm": "OpenTherm",
+          "equipment_sensors": "Equipment sensors",
+          "ui_options": "UI options"
+        }
+      },
+      "ui_options": {
+        "title": "UI options",
+        "data": {
+          "legacy_naming": "Legacy naming",
+          "show_wiser_sidebar": "Show Wiser in sidebar"
+        },
+        "data_description": {
+          "legacy_naming": "Include room names in Wiser device names. If enabled, using Home Assistant to regenerate entity IDs with the default format in Settings → System → Entity ID format (Home Assistant 2026.8 and later) will duplicate area names when the area and Wiser room names match. Changing this option does not rename existing entity IDs."
         }
       },
       "main_params": {
@@ -55,12 +68,12 @@
           "heating_boost_time": "Default Heating Boost Duration (mins)",
           "hotwater_boost_time": "Default Hot Water Boost Duration (mins)",
           "setpoint_mode": "Setpoint Mode",
-          "restore_manual_temp_option": "Use This Temperature If No Stored Manual Temperature"
+          "restore_manual_temp_option": "Use This Temperature If No Manual Temperature Is Stored"
         }
       },
       "automation_params": {
         "title": "Wiser Integration Options",
-        "description": "Enable in-built automations",
+        "description": "Enable built-in automations",
         "sections": {
           "automations_passive_mode": {
             "name": "Passive Mode",
@@ -81,7 +94,35 @@
               "hotwater_boost_mode": "Hot Water Boost Mode",
               "hotwater_sensor_entity_id": "Hot Water Temperature Sensor"
             }
+          },
+          "additional_sensors": {
+            "name": "Additional sensors",
+            "description": "Expose optional sensors for data reported by Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Rooms without climate control"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Select the Wiser rooms where a current schedule temperature sensor should be created."
+            }
           }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Equipment sensors",
+        "description": "Configure detailed equipment data entities for compatible devices.",
+        "data": {
+          "equipment_sensors": "Enable equipment data sensors"
+        },
+        "data_description": {
+          "equipment_sensors": "Expose an additional sensor containing detailed equipment attributes for each compatible smart plug, PowerTag, and heating actuator."
+        }
+      },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configure OpenTherm features.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Hot water control",
+          "opentherm_sensors": "Sensors"
         }
       },
       "opentherm_sensors": {
@@ -92,6 +133,20 @@
           "opentherm_central_heating": "Central heating",
           "opentherm_hot_water": "Hot water",
           "opentherm_status": "Status and diagnostics"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm hot-water control",
+        "description": "Optionally control the boiler domestic-hot-water setpoint through Wiser. The integration creates an OpenTherm Hot Water schedule in the Wiser Schedules panel. Off uses the minimum hot-water temperature reported by OpenTherm.",
+        "data": {
+          "opentherm_hot_water_control": "Enable hot-water control",
+          "opentherm_hot_water_manual_temperature": "Manual temperature",
+          "opentherm_hot_water_sensor_entity_id": "Optional external temperature sensor.",
+          "opentherm_hot_water_presets": "Presets"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperature used by Manual mode.",
+          "opentherm_hot_water_sensor_entity_id": "Optional temperature sensor used for the current water temperature. OpenTherm is used when the sensor is unavailable."
         }
       },
       "opentherm_readings": {
@@ -165,7 +220,8 @@
       }
     },
     "abort": {
-      "opentherm_not_available": "OpenTherm data is not available for this Wiser hub."
+      "opentherm_not_available": "OpenTherm data is not available for this Wiser hub.",
+      "equipment_not_available": "Equipment data is not available for this Wiser hub."
     }
   },
   "services": {
@@ -220,6 +276,11 @@
         "name": "Floor temperature"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm hot water"
+      }
+    },
     "number": {
       "away_mode_target_temperature": { "name": "Away mode target temperature" },
       "floor_temperature_offset": { "name": "Floor temperature offset" },
@@ -252,6 +313,7 @@
       "device_lock": { "name": "Device lock" },
       "identify": { "name": "Identify" },
       "outlet": { "name": "Outlet" },
+      "ev_charger": { "name": "EV charger" },
       "away_mode_turns_off": { "name": "Away mode turns off" },
       "away_mode_closes": { "name": "Away mode closes" },
       "passive_mode": { "name": "Passive mode" },
@@ -274,6 +336,9 @@
       "fault_warning": { "name": "Fault warning" },
       "remote_alarm": { "name": "Remote alarm" },
       "battery_defect": { "name": "Battery defect" },
+      "ac_mains": { "name": "AC mains" },
+      "test_mode": { "name": "Test mode" },
+      "hush_mode": { "name": "Hush mode" },
       "controllable": { "name": "Controllable" },
       "pcm_mode": { "name": "PCM mode" },
       "window_detection_active": { "name": "Window detection active" },
@@ -302,13 +367,33 @@
     },
     "sensor": {
       "signal": { "name": "Signal" },
+      "report_count": { "name": "Report count" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heating operation mode" },
-      "heating": { "name": "Heating" },
-      "heating_channel": { "name": "Heating channel {channel}" },
-      "hot_water": { "name": "Hot water" },
+      "heating": {
+        "name": "Heating",
+        "state": {
+          "off": "[%key:common::state::off%]",
+          "on": "[%key:common::state::on%]"
+        }
+      },
+      "heating_channel": {
+        "name": "Heating channel {channel}",
+        "state": {
+          "off": "[%key:common::state::off%]",
+          "on": "[%key:common::state::on%]"
+        }
+      },
+      "hot_water": {
+        "name": "Hot water",
+        "state": {
+          "off": "[%key:common::state::off%]",
+          "on": "[%key:common::state::on%]"
+        }
+      },
       "hot_water_operation_mode": { "name": "Hot water operation mode" },
       "target_temperature": { "name": "Target temperature" },
+      "current_schedule_temperature": { "name": "Current schedule temperature" },
       "floor_temperature": { "name": "Floor temperature" },
       "boiler_flow_temperature": { "name": "Boiler flow temperature" },
       "boiler_return_temperature": { "name": "Boiler return temperature" },
@@ -347,7 +432,7 @@
       "total_energy": { "name": "Total energy" },
       "energy_delivered": { "name": "Energy delivered" },
       "energy_received": { "name": "Energy received" },
-      "equipment_power": { "name": "Equipment power" }
+      "equipment_power": { "name": "Equipment" }
     }
   },
   "device_automation": {

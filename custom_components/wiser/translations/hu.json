@@ -1,0 +1,684 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wiser fűtési központ beállítása",
+        "description": "Adja meg a központ IP-címét és a hozzá tartozó titkos kulcsot.",
+        "data": {
+          "host": "IP-cím vagy állomásnév",
+          "port": "Portszám",
+          "password": "Titkos kulcs"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Wiser fűtési központ beállítása ({name})",
+        "description": "Adja meg a központtól kapott titkos kulcsot.",
+        "data": {
+          "host": "IP-cím vagy állomásnév",
+          "port": "Portszám",
+          "password": "Titkos kulcs"
+        }
+      }
+    },
+    "abort": {
+      "already_in_progress": "A Wiser fűtési központ konfigurálása már folyamatban van.",
+      "already_configured": "Ez az eszköz már konfigurálva van.",
+      "not_wiser_hub": "A felismert eszköz nem Wiser fűtési központ."
+    },
+    "error": {
+      "invalid_hot_water_presets": "Egy vagy több melegvíz-előbeállítás érvénytelen.",
+      "auth_failure": "Nem sikerült hitelesíteni a Wiser központnál. Ellenőrizze a titkos kulcsot, majd próbálja újra.",
+      "timeout_error": "Időtúllépés történt a Wiser központhoz való csatlakozáskor. Ellenőrizze az IP-címet, majd próbálja újra.",
+      "timeout_error_discovery": "Időtúllépés történt a Wiser központhoz való csatlakozáskor. Ellenőrizze, hogy a központ továbbra is elérhető-e, majd próbálja újra.",
+      "unknown": "Ismeretlen hiba történt a Wiser központhoz való csatlakozáskor. Ellenőrizze a naplókat."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wiser integráció beállításai",
+        "description": "Válassza ki a módosítandó paramétereket",
+        "menu_options": {
+          "main_params": "Fő paraméterek",
+          "automation_params": "Automatizálási paraméterek",
+          "opentherm": "OpenTherm",
+          "equipment_sensors": "Berendezésérzékelők",
+          "ui_options": "Felhasználói felület beállításai"
+        }
+      },
+      "ui_options": {
+        "title": "Felhasználói felület beállításai",
+        "data": {
+          "legacy_naming": "Korábbi elnevezési mód",
+          "show_wiser_sidebar": "Wiser megjelenítése az oldalsávon"
+        },
+        "data_description": {
+          "legacy_naming": "A helyiségek neveinek hozzáadása a Wiser-eszközök nevéhez. Ha engedélyezve van, az entitásazonosítók Home Assistant általi újragenerálása az alapértelmezett formátummal a Beállítások → Rendszer → Entitásazonosító-formátum menüben (Home Assistant 2026.8-tól) megkettőzi a területneveket, ha a terület és a Wiser-helyiség neve megegyezik. A beállítás módosítása nem nevezi át a meglévő entitásazonosítókat."
+        }
+      },
+      "main_params": {
+        "title": "Wiser integráció beállításai",
+        "description": "Fő paraméterek",
+        "data": {
+          "host": "IP-cím vagy állomásnév",
+          "port": "Portszám",
+          "scan_interval": "Lekérdezési időköz (másodperc)",
+          "heating_boost_temp": "Fűtési gyorsfelfűtés alapértelmezett hőmérséklete (°C)",
+          "heating_boost_time": "Fűtési gyorsfelfűtés alapértelmezett időtartama (perc)",
+          "hotwater_boost_time": "Melegvíz-gyorsfelfűtés alapértelmezett időtartama (perc)",
+          "setpoint_mode": "Célhőmérséklet-beállítási mód",
+          "restore_manual_temp_option": "Ezt a hőmérsékletet használja, ha nincs tárolt kézi hőmérséklet"
+        }
+      },
+      "automation_params": {
+        "title": "Wiser integráció beállításai",
+        "description": "Beépített automatizálások engedélyezése",
+        "sections": {
+          "automations_passive_mode": {
+            "name": "Passzív mód",
+            "description": "A passzív termosztatikus radiátorszelep (TRV) funkció engedélyezése. A működéshez helyiségenként külön engedélyezni kell.",
+            "data": {
+              "automations_passive_mode": "Passzív mód",
+              "passive_mode_temperature_increments": "Passzív mód hőmérsékleti lépésköze"
+            }
+          },
+          "hotwater_climate": {
+            "name": "Melegvíz-hőmérséklet szabályozása",
+            "description": "A melegvíz-hőmérséklet szabályozásának engedélyezése. Részletek a wikiben.",
+            "data": {
+              "hotwater_climate": "Klímaentitás engedélyezése",
+              "experimental_mode": "Kísérleti üzemmód engedélyezése",
+              "hotwater_auto_mode": "Melegvíz automatikus módja",
+              "hotwater_heat_mode": "Melegvíz fűtési módja",
+              "hotwater_boost_mode": "Melegvíz gyorsfelfűtési módja",
+              "hotwater_sensor_entity_id": "Melegvíz-hőmérséklet érzékelője"
+            }
+          },
+          "additional_sensors": {
+            "name": "További érzékelők",
+            "description": "Opcionális érzékelők megjelenítése a Wiser által jelentett adatokhoz.",
+            "data": {
+              "schedule_setpoint_rooms": "Klímavezérlés nélküli helyiségek"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Válassza ki azokat a Wiser helyiségeket, amelyekhez aktuális ütemezési hőmérséklet-érzékelőt kell létrehozni."
+            }
+          }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Berendezésérzékelők",
+        "description": "Részletes berendezésadat-entitások beállítása kompatibilis eszközökhöz.",
+        "data": {
+          "equipment_sensors": "Berendezésadat-érzékelők engedélyezése"
+        },
+        "data_description": {
+          "equipment_sensors": "További érzékelő megjelenítése részletes berendezésjellemzőkkel minden kompatibilis okoskonnektorhoz, PowerTag eszközhöz és fűtési szelepmozgatóhoz."
+        }
+      },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "OpenTherm funkciók beállítása.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Melegvíz-vezérlés",
+          "opentherm_sensors": "Érzékelők"
+        }
+      },
+      "opentherm_sensors": {
+        "title": "OpenTherm érzékelők",
+        "description": "Válasszon kategóriát a felismert OpenTherm-attribútumok közül.",
+        "menu_options": {
+          "opentherm_readings": "Mért értékek",
+          "opentherm_central_heating": "Központi fűtés",
+          "opentherm_hot_water": "Meleg víz",
+          "opentherm_status": "Állapot és diagnosztika"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm melegvíz-vezérlés",
+        "description": "A kazán használati melegvíz-alapjelének opcionális vezérlése a Wiseren keresztül. Az integráció létrehoz egy OpenTherm Hot Water ütemezést a Wiser Schedules panelen. A Ki állapot az OpenTherm által jelentett minimális melegvíz-hőmérsékletet használja.",
+        "data": {
+          "opentherm_hot_water_control": "Melegvíz-vezérlés engedélyezése",
+          "opentherm_hot_water_manual_temperature": "Kézi hőmérséklet",
+          "opentherm_hot_water_sensor_entity_id": "Opcionális külső hőmérséklet-érzékelő.",
+          "opentherm_hot_water_presets": "Előbeállítások"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "A kézi módban használt hőmérséklet.",
+          "opentherm_hot_water_sensor_entity_id": "Opcionális hőmérséklet-érzékelő az aktuális vízhőmérséklethez. Ha az érzékelő nem érhető el, az OpenTherm értéke kerül felhasználásra."
+        }
+      },
+      "opentherm_readings": {
+        "title": "OpenTherm mért értékek",
+        "description": "Válassza ki, mely felismert OpenTherm-mért értékek jelenjenek meg érzékelőentitásként.",
+        "data": {
+          "ch_flow_temperature": "Kazán előremenő hőmérséklete",
+          "ch_pressure_bar": "Központi fűtés nyomása",
+          "ch_return_temperature": "Kazán visszatérő hőmérséklete",
+          "delta_t": "Hőmérséklet-különbség (ΔT)",
+          "boiler_exhaust_temperature": "Kazán füstgázhőmérséklete",
+          "estimated_boiler_output": "Kazán becsült teljesítménye",
+          "hw_flow_rate": "Melegvíz térfogatárama",
+          "hw_temperature": "Melegvíz hőmérséklete",
+          "maximum_capacity_kw": "Kazán maximális teljesítménye",
+          "minimum_modulation_level": "Minimális modulációs szint",
+          "relative_modulation_level": "Relatív modulációs szint",
+          "room_temperature": "Helyiség hőmérséklete"
+        }
+      },
+      "opentherm_central_heating": {
+        "title": "OpenTherm központi fűtés",
+        "description": "Válassza ki, mely felismert központifűtés-attribútumok jelenjenek meg entitásként.",
+        "data": {
+          "boiler_ch_max_setpoint_read_write": "Kazán központifűtés-maximális célértékének olvasása/írása",
+          "boiler_ch_max_setpoint_transfer_enable": "Kazán központifűtés-maximális célértékének átvitele engedélyezve",
+          "boiler_ch_setpoint": "Kazán központifűtés-célértéke",
+          "boiler_ch_setpoint_lower_bound": "Kazán központifűtés-célértékének alsó határa",
+          "boiler_ch_setpoint_upper_bound": "Kazán központifűtés-célértékének felső határa",
+          "ch_flow_active_lower_setpoint": "Központi fűtés előremenő aktív alsó célértéke",
+          "ch_flow_active_upper_setpoint": "Központi fűtés előremenő aktív felső célértéke",
+          "ch1_flow_enabled": "1. fűtési kör előremenő ága engedélyezve",
+          "ch1_flow_setpoint": "1. fűtési kör előremenő célértéke",
+          "ch2_flow_enabled": "2. fűtési kör előremenő ága engedélyezve",
+          "ch2_flow_setpoint": "2. fűtési kör előremenő célértéke",
+          "room_setpoint": "Helyiség célhőmérséklete"
+        }
+      },
+      "opentherm_hot_water": {
+        "title": "OpenTherm meleg víz",
+        "description": "Válassza ki, mely felismert melegvíz-attribútumok jelenjenek meg entitásként.",
+        "data": {
+          "boiler_hw_setpoint": "Kazán melegvíz-célhőmérséklete",
+          "boiler_hw_setpoint_lower_bound": "Kazán melegvíz-célhőmérsékletének alsó határa",
+          "boiler_hw_setpoint_read_write": "Kazán melegvíz-célhőmérsékletének olvasása/írása",
+          "boiler_hw_setpoint_transfer_enable": "Kazán melegvíz-célhőmérsékletének átvitele engedélyezve",
+          "boiler_hw_setpoint_upper_bound": "Kazán melegvíz-célhőmérsékletének felső határa",
+          "hw_enabled": "Melegvíz-készítés engedélyezve",
+          "hw_flow_setpoint": "Melegvíz előremenő célhőmérséklete"
+        }
+      },
+      "opentherm_status": {
+        "title": "OpenTherm állapot és diagnosztika",
+        "description": "Válassza ki, mely felismert állapot- és diagnosztikai attribútumok jelenjenek meg érzékelőentitásként.",
+        "data": {
+          "boiler_fault": "Kazánhiba",
+          "central_heating_active": "Központi fűtés aktív",
+          "central_heating_2_active": "2. központi fűtési kör aktív",
+          "connection_status": "Kapcsolat állapota",
+          "coprocessor_update_status": "OpenTherm koprocesszor frissítési állapota",
+          "coprocessor_version": "OpenTherm koprocesszor verziója",
+          "cooling_active": "Hűtés aktív",
+          "diagnostic_event": "Diagnosztikai esemény",
+          "flame_active": "Láng aktív",
+          "flame_statistics": "Lángstatisztika",
+          "hot_water_active": "Melegvíz-készítés aktív",
+          "operating_mode": "Üzemmód",
+          "slave_status": "OpenTherm alárendelt eszköz állapota",
+          "tracked_room_id": "Követett helyiség azonosítója"
+        }
+      }
+    },
+    "abort": {
+      "opentherm_not_available": "Ehhez a Wiser központhoz nem érhetők el OpenTherm-adatok.",
+      "equipment_not_available": "Ehhez a Wiser központhoz nem érhetők el berendezésadatok."
+    }
+  },
+  "services": {
+    "set_opentherm_parameter": {
+      "name": "OpenTherm-paraméter beállítása",
+      "description": "Egy támogatott OpenTherm-hőmérsékleti paraméter módosítása a Wiser központon.",
+      "fields": {
+        "parameter": {
+          "name": "Paraméter",
+          "description": "A módosítandó OpenTherm-hőmérsékleti paraméter. A szükséges API-végpont automatikusan kerül kiválasztásra."
+        },
+        "temperature": {
+          "name": "Hőmérséklet",
+          "description": "A kazán által megadott határértékeken belüli hőmérsékletet használjon."
+        },
+        "hub": {
+          "name": "Wiser központ",
+          "description": "Csak akkor válasszon központot, ha több Wiser központja van."
+        }
+      }
+    }
+  },
+  "selector": {
+    "opentherm_parameter": {
+      "options": {
+        "chFlowActiveLowerSetpoint": "Központi fűtés aktív alsó célhőmérséklete",
+        "chFlowActiveUpperSetpoint": "Központi fűtés aktív felső célhőmérséklete",
+        "dhwFlowSetpoint": "Központ melegvíz-előremenő célhőmérséklete",
+        "dhwSetpoint": "Kazán melegvíz-célhőmérséklete",
+        "maxChSetpoint": "Kazán központifűtés-maximális célhőmérséklete"
+      }
+    }
+  },
+  "exceptions": {
+    "opentherm_temperature_required": {
+      "message": "Adjon meg egy OpenTherm-hőmérsékletet."
+    },
+    "opentherm_hub_not_found": {
+      "message": "A megadott Wiser központ nem található."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "A megadott Wiser központ nincs betöltve."
+    },
+    "opentherm_hub_required": {
+      "message": "Ha több központ van konfigurálva, válasszon egy Wiser központot."
+    },
+    "opentherm_not_supported": {
+      "message": "Ez a központ nem támogatja az OpenTherm funkciót."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "Érvénytelen OpenTherm-paraméter vagy érték: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "Nem sikerült beállítani az OpenTherm-paramétert ({parameter}): {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "Az OpenTherm-paraméter ({parameter}) egy újrapróbálkozás és a {window} másodperces ellenőrzési időablak után sem maradt a kért {requested} °C értéken. A Wiser által jelentett érték: {reported} °C. Nem történik további újrapróbálkozás."
+    },
+    "opentherm_retry_failed": {
+      "message": "Az OpenTherm-paraméter ({parameter}) nem maradt a kért {requested} °C értéken, és az újrapróbálkozást nem sikerült elküldeni: {error}. A Wiser által jelentett érték: {reported} °C. Nem történik további újrapróbálkozás."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser OpenTherm parancs"
+    }
+  },
+  "entity": {
+    "climate": {
+      "heating": {
+        "name": "Fűtés"
+      },
+      "floor_temperature": {
+        "name": "Padlóhőmérséklet"
+      }
+    },
+    "number": {
+      "away_mode_target_temperature": {
+        "name": "Távolléti mód célhőmérséklete"
+      },
+      "floor_temperature_offset": {
+        "name": "Padlóhőmérséklet korrekciója"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Beltéri diszkomfort-hőmérséklet"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Kültéri diszkomfort-hőmérséklet"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Mód"
+      },
+      "power_on_behavior": {
+        "name": "Bekapcsolás utáni viselkedés"
+      },
+      "led_indicator": {
+        "name": "LED-jelzőfény"
+      }
+    },
+    "button": {
+      "boost_all_heating": {
+        "name": "Összes fűtés gyorsfelfűtése"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Összes fűtési felülbírálás törlése"
+      },
+      "boost_hot_water": {
+        "name": "Melegvíz gyorsfelfűtése"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Melegvíz-felülbírálások törlése"
+      },
+      "toggle_hot_water": {
+        "name": "Melegvíz be-/kikapcsolása"
+      },
+      "moment": {
+        "name": "Pillanat: {name}"
+      }
+    },
+    "switch": {
+      "valve_protection": {
+        "name": "Szelepvédelem"
+      },
+      "eco_mode": {
+        "name": "Takarékos mód"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "A távolléti mód a melegvízre is hatással van"
+      },
+      "comfort_mode": {
+        "name": "Komfort mód"
+      },
+      "away_mode": {
+        "name": "Távolléti mód"
+      },
+      "daylight_saving": {
+        "name": "Nyári időszámítás"
+      },
+      "summer_comfort_enabled": {
+        "name": "Nyári komfort engedélyezve"
+      },
+      "window_detection": {
+        "name": "Ablaknyitás-érzékelés"
+      },
+      "include_in_summer_comfort": {
+        "name": "Bevonás a nyári komfortba"
+      },
+      "device_lock": {
+        "name": "Eszköz zárolása"
+      },
+      "identify": {
+        "name": "Azonosítás"
+      },
+      "outlet": {
+        "name": "Aljzat"
+      },
+      "away_mode_turns_off": {
+        "name": "Távolléti módban kikapcsol"
+      },
+      "away_mode_closes": {
+        "name": "Távolléti módban bezár"
+      },
+      "passive_mode": {
+        "name": "Passzív mód"
+      },
+      "respect_summer_comfort": {
+        "name": "Nyári komfort figyelembevétele"
+      },
+      "interacts_with_room_climate": {
+        "name": "Hatással van a helyiség klímaszabályozására"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "A páratartalom hatással van a helyiség klímaszabályozására"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "A hőmérséklet hatással van a helyiség klímaszabályozására"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "A megvilágítás hatással van a helyiség klímaszabályozására"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "A(z) {sensor} hatással van a helyiség klímaszabályozására"
+      },
+      "manual_heat": {
+        "name": "Kézi fűtés"
+      },
+      "hot_water": {
+        "name": "Meleg víz"
+      }
+    },
+    "binary_sensor": {
+      "summer_discomfort_prevention": {
+        "name": "Nyári túlmelegedés megelőzése"
+      },
+      "summer_comfort_available": {
+        "name": "Nyári komfort elérhető"
+      },
+      "pcm_device_limit_reached": {
+        "name": "Elérte a PCM-eszközök maximális számát"
+      },
+      "smoke_alarm": {
+        "name": "Füstjelzés"
+      },
+      "heat_alarm": {
+        "name": "Hőriasztás"
+      },
+      "tamper_alarm": {
+        "name": "Szabotázsriasztás"
+      },
+      "fault_warning": {
+        "name": "Hibajelzés"
+      },
+      "remote_alarm": {
+        "name": "Távoli riasztás"
+      },
+      "battery_defect": {
+        "name": "Akkumulátorhiba"
+      },
+      "controllable": {
+        "name": "Vezérelhető"
+      },
+      "pcm_mode": {
+        "name": "PCM mód"
+      },
+      "window_detection_active": {
+        "name": "Ablaknyitás-érzékelés aktív"
+      },
+      "is_dimmable": {
+        "name": "Fényerőszabályozható"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED-jelzőfény támogatott"
+      },
+      "is_output_mode_supported": {
+        "name": "Kimeneti mód támogatott"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Bekapcsolás utáni viselkedés támogatott"
+      },
+      "is_tilt_supported": {
+        "name": "Döntés támogatott"
+      },
+      "is_open": {
+        "name": "Nyitva"
+      },
+      "is_closed": {
+        "name": "Zárva"
+      },
+      "active": {
+        "name": "Aktív"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Kazán központifűtés-maximális célértékének olvasása/írása"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Kazán központifűtés-maximális célértékének átvitele engedélyezve"
+      },
+      "boiler_fault": {
+        "name": "Kazánhiba"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Kazán melegvíz-célhőmérsékletének olvasása/írása"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Kazán melegvíz-célhőmérsékletének átvitele engedélyezve"
+      },
+      "central_heating_2_active": {
+        "name": "2. központi fűtési kör aktív"
+      },
+      "central_heating_active": {
+        "name": "Központi fűtés aktív"
+      },
+      "ch1_flow_enabled": {
+        "name": "1. fűtési kör előremenő ága engedélyezve"
+      },
+      "ch2_flow_enabled": {
+        "name": "2. fűtési kör előremenő ága engedélyezve"
+      },
+      "cooling_active": {
+        "name": "Hűtés aktív"
+      },
+      "diagnostic_event": {
+        "name": "Diagnosztikai esemény"
+      },
+      "flame_active": {
+        "name": "Láng aktív"
+      },
+      "hot_water_active": {
+        "name": "Melegvíz-készítés aktív"
+      },
+      "hw_enabled": {
+        "name": "Melegvíz-készítés engedélyezve"
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Jel"
+      },
+      "cloud": {
+        "name": "Felhő"
+      },
+      "heating_operation_mode": {
+        "name": "Fűtési üzemmód"
+      },
+      "heating": {
+        "name": "Fűtés",
+        "state": {
+          "off": "Ki",
+          "on": "Be"
+        }
+      },
+      "heating_channel": {
+        "name": "Fűtési csatorna {channel}",
+        "state": {
+          "off": "Ki",
+          "on": "Be"
+        }
+      },
+      "hot_water": {
+        "name": "Meleg víz",
+        "state": {
+          "off": "Ki",
+          "on": "Be"
+        }
+      },
+      "hot_water_operation_mode": {
+        "name": "Melegvíz üzemmód"
+      },
+      "target_temperature": {
+        "name": "Célhőmérséklet"
+      },
+      "floor_temperature": {
+        "name": "Padlóhőmérséklet"
+      },
+      "boiler_flow_temperature": {
+        "name": "Kazán előremenő hőmérséklete"
+      },
+      "boiler_return_temperature": {
+        "name": "Kazán visszatérő hőmérséklete"
+      },
+      "flame_statistics": {
+        "name": "Lángstatisztika"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Kazán központifűtés-célértéke"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Kazán központifűtés-célértékének alsó határa"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Kazán központifűtés-célértékének felső határa"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Kazán füstgázhőmérséklete"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Kazán melegvíz-célhőmérséklete"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Kazán melegvíz-célhőmérsékletének alsó határa"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Kazán melegvíz-célhőmérsékletének felső határa"
+      },
+      "ch1_flow_setpoint": {
+        "name": "1. fűtési kör előremenő célértéke"
+      },
+      "ch2_flow_setpoint": {
+        "name": "2. fűtési kör előremenő célértéke"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Központi fűtés előremenő aktív alsó célértéke"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Központi fűtés előremenő aktív felső célértéke"
+      },
+      "ch_pressure_bar": {
+        "name": "Központi fűtés nyomása"
+      },
+      "connection_status": {
+        "name": "Kapcsolat állapota"
+      },
+      "coprocessor_update_status": {
+        "name": "OpenTherm koprocesszor frissítési állapota"
+      },
+      "coprocessor_version": {
+        "name": "OpenTherm koprocesszor verziója"
+      },
+      "delta_t": {
+        "name": "Hőmérséklet-különbség (ΔT)"
+      },
+      "estimated_boiler_output": {
+        "name": "Kazán becsült teljesítménye"
+      },
+      "hw_flow_rate": {
+        "name": "Melegvíz térfogatárama"
+      },
+      "hw_flow_setpoint": {
+        "name": "Melegvíz előremenő célhőmérséklete"
+      },
+      "hw_temperature": {
+        "name": "Melegvíz hőmérséklete"
+      },
+      "maximum_capacity_kw": {
+        "name": "Kazán maximális teljesítménye"
+      },
+      "minimum_modulation_level": {
+        "name": "Minimális modulációs szint"
+      },
+      "operating_mode": {
+        "name": "Üzemmód"
+      },
+      "relative_modulation_level": {
+        "name": "Relatív modulációs szint"
+      },
+      "room_setpoint": {
+        "name": "Helyiség célhőmérséklete"
+      },
+      "room_temperature": {
+        "name": "Helyiség hőmérséklete"
+      },
+      "slave_status": {
+        "name": "OpenTherm alárendelt eszköz állapota"
+      },
+      "tracked_room_id": {
+        "name": "Követett helyiség azonosítója"
+      },
+      "heating_demand": {
+        "name": "Fűtési igény"
+      },
+      "heating_demand_channel": {
+        "name": "Fűtési igény – {channel}. csatorna"
+      },
+      "hot_water_demand": {
+        "name": "Melegvíz-igény"
+      },
+      "total_energy": {
+        "name": "Összes energia"
+      },
+      "energy_delivered": {
+        "name": "Leadott energia"
+      },
+      "energy_received": {
+        "name": "Felvett energia"
+      },
+      "equipment_power": {
+        "name": "Berendezés teljesítménye"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "started_heating": "{entity_name} fűtése elindul",
+      "stopped_heating": "{entity_name} fűtése leáll",
+      "boosted": "{entity_name} gyorsfelfűtése aktiválódik",
+      "target_temperature_increased": "{entity_name} célhőmérséklete emelkedett",
+      "target_temperature_decreased": "{entity_name} célhőmérséklete csökkent"
+    }
+  }
+}

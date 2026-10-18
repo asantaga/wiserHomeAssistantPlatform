@@ -16,18 +16,23 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DATA, DOMAIN, ENTITY_PREFIX, HOT_WATER, MANUFACTURER
+from .const import (
+    DATA,
+    DOMAIN,
+    HOT_WATER,
+    MANUFACTURER,
+    MANUFACTURER_SCHNEIDER,
+)
 from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
-    get_legacy_device_name,
-    get_legacy_unique_id,
-    get_room_name,
+    get_light_entity_name,
+    get_physical_entity_unique_id,
+    get_room_entity_unique_id,
     get_unique_id,
-    get_uuid_unique_id,
     hub_error_handler,
 )
 from custom_components.wiser.schedules import WiserScheduleEntity
@@ -114,6 +119,17 @@ WISER_SWITCHES = [
 ]
 
 
+def _room_supports_passive_mode(room) -> bool:
+    """Return whether a room has a heating device passive mode can control."""
+    # Radiator rooms expose SmartValveIds, while UFH rooms expose an
+    # UnderFloorHeatingId instead.  Both are controlled through the same room
+    # target-temperature API used by passive mode.
+    return (
+        room.number_of_smartvalves > 0
+        or room.underfloor_heating_id is not None
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
@@ -198,6 +214,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             ]
         )
 
+    # EV chargers use the hub's Equipment control states rather than the
+    # SmartPlug RequestOutput command.
+    evse_collection = getattr(data.wiserhub.devices, "evse", None)
+    if evse_collection:
+        for evse in evse_collection.all:
+            wiser_switches.append(WiserEVSESwitch(data, evse.id))
+
     # Add threshold sensor interacts with room climate switch
     for device in data.wiserhub.devices.all:
         if hasattr(device, "interacts_with_room_climate"):
@@ -229,7 +252,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
         for room in data.wiserhub.rooms.all:
-            if room.number_of_smartvalves > 0:
+            if _room_supports_passive_mode(room):
                 wiser_switches.append(
                     WiserPassiveModeSwitch(
                         hass, data, room.id, f"Wiser Passive Mode {room.name}"
@@ -300,11 +323,13 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
     @property
     def unique_id(self):
         if self._type == "room":
-            legacy_name = (
-                f"{get_room_name(self._data, self._room_id)} {self._name}"
+            entity_key = self._attr_translation_key or self._key
+            return get_room_entity_unique_id(
+                self._data,
+                self._room_id,
+                f"switch_{entity_key}",
             )
-        else:
-            legacy_name = get_device_name(self._data, 0, self._name)
+        legacy_name = get_device_name(self._data, 0, self._name)
         return get_unique_id(self._data, self._type, "switch", legacy_name)
 
     @property
@@ -508,6 +533,48 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
         self._is_on = self._device.is_on
+        self._optimistic_is_on = None
+        self._optimistic_gen = 0
+        self._confirmation_task = None
+
+    @hub_error_handler
+    async def _async_confirm_command(self, gen: int) -> None:
+        """Refresh until the hub reports the accepted smart-plug command."""
+        try:
+            for _attempt in range(2):
+                if gen != self._optimistic_gen:
+                    return
+                await self.async_force_update(2)
+                if gen != self._optimistic_gen or self._optimistic_is_on is None:
+                    return
+        finally:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+
+    @callback
+    def _schedule_command_confirmation(self, gen: int) -> None:
+        """Confirm a command without delaying the Home Assistant service call."""
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+        self._confirmation_task = self.hass.async_create_task(
+            self._async_confirm_command(gen),
+            f"Wiser smart plug command confirmation: {self.entity_id}",
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel delayed confirmation when Home Assistant removes the entity."""
+        self._optimistic_gen += 1
+        if self._confirmation_task is not None:
+            self._confirmation_task.cancel()
+            self._confirmation_task = None
+        await super().async_will_remove_from_hass()
+
+    @callback
+    def _clear_optimistic_state(self) -> None:
+        """Return the entity to the latest state reported by the hub."""
+        self._optimistic_is_on = None
+        self._is_on = self._device.is_on
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -515,15 +582,19 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         super()._handle_coordinator_update()
         self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._schedule = self._device.schedule
-        self._is_on = self._device.is_on
+        if (
+            self._optimistic_is_on is None
+            or self._device.is_on == self._optimistic_is_on
+        ):
+            self._is_on = self._device.is_on
+            self._optimistic_is_on = None
         self.async_write_ha_state()
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = f"{get_device_name(self._data, self._device_id)} Switch"
-        return get_unique_id(
-            self._data, self._device.product_type, legacy_name, self._device_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, "outlet"
         )
 
     @property
@@ -546,7 +617,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         attrs["manual_state"] = self._device.manual_state
         attrs["mode"] = self._device.mode
         attrs["name"] = self._device.name
-        attrs["output_state"] = "On" if self._device.is_on else "Off"
+        attrs["output_state"] = "On" if self.is_on else "Off"
         # Switches could be not allocated to room (issue:209)
         if self._data.wiserhub.rooms.get_by_id(self._device.room_id) is not None:
             attrs["room"] = self._data.wiserhub.rooms.get_by_id(
@@ -568,15 +639,96 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self._device.turn_on()
-        await self.async_force_update(2)
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = True
+        self._is_on = True
+        self.async_write_ha_state()
+
+        try:
+            await self._device.turn_on()
+        except Exception:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
         return True
 
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
+        self._optimistic_gen += 1
+        gen = self._optimistic_gen
+        self._optimistic_is_on = False
+        self._is_on = False
+        self.async_write_ha_state()
+
+        try:
+            await self._device.turn_off()
+        except Exception:
+            if gen == self._optimistic_gen:
+                self._clear_optimistic_state()
+            raise
+
+        self._schedule_command_confirmation(gen)
+        return True
+
+
+class WiserEVSESwitch(WiserSwitch):
+    """Switch that allows or force-disables EV charging."""
+
+    def __init__(self, data, device_id) -> None:
+        self._device_id = device_id
+        super().__init__(data, "EV Charger", "", "evse", "mdi:ev-station")
+        self._attr_translation_key = "ev_charger"
+        self._device = self._data.wiserhub.devices.evse.get_by_id(device_id)
+        self._is_on = self._device.is_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh state from the latest equipment record."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.evse.get_by_id(self._device_id)
+        self._is_on = self._device.is_on
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a stable physical-device entity ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, "ev_charger"
+        )
+
+    @property
+    def device_info(self):
+        """Return EV charger device registry information."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            "model": self._device.model,
+            "sw_version": self._device.firmware_version,
+            **get_hub_via_device_info(self._data),
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Return the hub's current EVSE control state."""
+        return {"control_state": self._device.control_state}
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Return charging control to the Wiser system."""
+        await self._device.turn_on()
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Force charging consumption off."""
         await self._device.turn_off()
-        await self.async_force_update(2)
+        await self.async_force_update()
         return True
 
 
@@ -602,15 +754,12 @@ class WiserSmartPlugAwayActionSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._smart_plug_id)} Away Mode Turns Off"
-        )
-        return get_unique_id(
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
             self._data,
-            self._smartplug.product_type,
-            legacy_name,
+            "switch",
             self._smart_plug_id,
+            "away_mode_turns_off",
         )
 
     @property
@@ -668,18 +817,18 @@ class WiserLightAwayActionSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the Device."""
-        # Per-channel light name so the two channels of a multi-gang dimmer do
-        # not collide.
-        return f"{ENTITY_PREFIX} {self._light.name} Away Mode Turns Off"
+        return get_light_entity_name(
+            self._data, self._light, "Away Mode Turns Off"
+        )
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._light_id)} Away Mode Turns Off"
-        )
-        return get_unique_id(
-            self._data, self._light.product_type, legacy_name, self._light_id
+        """Return a name-independent per-channel unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "switch",
+            self._light_id,
+            "light_away_mode_turns_off",
         )
 
     @property
@@ -731,12 +880,9 @@ class WiserShutterAwayActionSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._shutter_id)} Away Mode Closes"
-        )
-        return get_unique_id(
-            self._data, self._shutter.product_type, legacy_name, self._shutter_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._shutter_id, "away_mode_closes"
         )
 
     @property
@@ -792,11 +938,10 @@ class WiserPassiveModeSwitch(WiserSwitch):
     @property
     def unique_id(self):
         """Return unique Id."""
-        legacy_name = (
-            f"{get_room_name(self._data, self._room_id)} Passive Mode"
-        )
-        return get_unique_id(
-            self._data, "passive-mode-switch", legacy_name, self._room_id
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            "switch_passive_mode",
         )
 
     @property
@@ -858,12 +1003,12 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        legacy_name = (
-            f"{get_device_name(self._data, self._shutter_id)} Respect Summer Comfort"
-        )
-        return get_unique_id(
-            self._data, self._shutter.product_type, legacy_name, self._shutter_id
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "switch",
+            self._shutter_id,
+            "respect_summer_comfort",
         )
 
     @property
@@ -944,19 +1089,16 @@ class WiserInteractsRoomClimateSwitch(WiserSwitch):
 
     @property
     def unique_id(self):
-        """Return unique Id."""
-        suffix = "Interacts With Room Climate"
+        """Return a name-independent unique ID."""
+        entity_type = "interacts_with_room_climate"
         if self._ancillary_sensor_type:
-            suffix = f"{self._ancillary_sensor_type} {suffix}"
-        legacy_name = (
-            f"{get_legacy_device_name(self._data, self._device_id)} {suffix}"
+            entity_type = (
+                f"{self._ancillary_sensor_type.lower()}_"
+                f"interacts_with_room_climate_{self._ancillary_sensor_id}"
+            )
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._device_id, entity_type
         )
-        legacy_unique_id = get_legacy_unique_id(
-            self._data, self._device.product_type, legacy_name, self._device_id
-        )
-        if self._ancillary_sensor_id:
-            legacy_unique_id = f"{legacy_unique_id}_{self._ancillary_sensor_id}"
-        return get_uuid_unique_id(legacy_unique_id)
 
     @property
     def is_on(self) -> bool:
@@ -1104,7 +1246,7 @@ class WiserHotWaterSwitch(WiserSwitch):
             },
             "manufacturer": MANUFACTURER,
             "model": HOT_WATER.title(),
-            "via_device": (DOMAIN, self._data.wiserhub.system.name),
+            **get_hub_via_device_info(self._data),
         }
 
     @hub_error_handler
@@ -1118,4 +1260,3 @@ class WiserHotWaterSwitch(WiserSwitch):
         """Turn hot water off."""
         await self._data.wiserhub.hotwater.override_state("Off")
         await self.async_force_update()
-

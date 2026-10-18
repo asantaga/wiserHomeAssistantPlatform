@@ -18,6 +18,7 @@ ENTITY_BASE_CLASSES = {
     "climate.py": {"WiserTempProbe", "WiserRoom", "WiserHotWater"},
     "cover.py": {"WiserShutter"},
     "light.py": {"WiserLight"},
+    "opentherm_hot_water.py": {"WiserOpenThermHotWater"},
     "number.py": {
         "WiserAwayModeTempNumber",
         "WiserFloorTempSensorNumber",
@@ -43,6 +44,7 @@ TRANSLATED_ENTITY_BASE_CLASSES = {
         "WiserDiscomfortIndoorTempNumber",
         "WiserDiscomfortOutdoorTempNumber",
     },
+    "opentherm_hot_water.py": {"WiserOpenThermHotWater"},
     "select.py": {"WiserSelectEntity"},
     "sensor.py": {"WiserSensor"},
     "switch.py": {"WiserSwitch"},
@@ -181,7 +183,13 @@ class EntityNamingTest(unittest.TestCase):
                 )
 
     def test_all_entity_unique_ids_are_uuid_backed(self) -> None:
-        uuid_helpers = {"get_unique_id", "get_uuid_unique_id"}
+        uuid_helpers = {
+            "get_light_binary_sensor_unique_id",
+            "get_physical_entity_unique_id",
+            "get_room_entity_unique_id",
+            "get_unique_id",
+            "get_uuid_unique_id",
+        }
         for filename in ENTITY_BASE_CLASSES:
             tree = ast.parse((COMPONENT_PATH / filename).read_text())
             for node in ast.walk(tree):
@@ -379,9 +387,7 @@ class EntityNamingTest(unittest.TestCase):
             self.assertEqual(
                 translations["entity"][domain][key]["name"], expected_name
             )
-        for filename in (
-            "translations/en.json",
-            "translations/de.json",
-            "translations/fr.json",
+        for translation in sorted(
+            (COMPONENT_PATH / "translations").glob("*.json")
         ):
-            self.assertNotIn("[%key:", (COMPONENT_PATH / filename).read_text())
+            self.assertNotIn("[%key:", translation.read_text())

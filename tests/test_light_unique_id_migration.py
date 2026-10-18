@@ -42,6 +42,7 @@ def _load_helpers_module() -> ModuleType:
         WiserHubRESTError=type("WiserHubRESTError", (Exception,), {}),
     )
     _module("homeassistant")
+    _module("homeassistant.const", MAJOR_VERSION=2026, MINOR_VERSION=10)
     _module("homeassistant.core", HomeAssistant=object)
 
     package = _module("wiser")
@@ -70,15 +71,28 @@ def _hub_data():
         _light(device_id=101, light_id=1, product_type="DimmableLight", name="Diele"),
         _light(device_id=102, light_id=2, product_type="OnOffLight", name="Flur"),
         # Two-gang dimmer: both channels share physical device id 200.
-        _light(device_id=200, light_id=3, product_type="DimmableLight", name="Bad Dusche"),
-        _light(device_id=200, light_id=4, product_type="DimmableLight", name="Bad Wanne"),
+        _light(
+            device_id=200,
+            light_id=3,
+            product_type="DimmableLight",
+            name="DualRelay Lightsource1",
+        ),
+        _light(
+            device_id=200,
+            light_id=4,
+            product_type="DimmableLight",
+            name="DualRelay Lightsource2",
+        ),
     ]
-    # get_device_name resolves the physical device; only single-gang ids should
-    # ever be looked up (multi-gang is skipped before this is called). Raising on
-    # an unexpected id turns an accidental multi-gang resolution into a failure.
+    # get_device_name resolves the physical device during migration, while the
+    # light naming helper also uses it to remove the shared device portion from
+    # a multi-gang channel name.
     devices_by_id = {
         101: SimpleNamespace(id=101, product_type="DimmableLight", name="Diele"),
         102: SimpleNamespace(id=102, product_type="OnOffLight", name="Flur"),
+        200: SimpleNamespace(
+            id=200, product_type="DimmableLight", name="DualRelay"
+        ),
     }
     rooms_by_device = {
         101: SimpleNamespace(name="Diele"),
@@ -136,27 +150,167 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Wiser DimmableLight Diele Diele Away Mode Turns Off",
             101,
         )
-        new = self._unique_id(
-            "DimmableLight", "Wiser Diele Away Mode Turns Off", 1
-        )
+        new = self._unique_id("switch", "light_away_mode_turns_off", 1)
         self.assertEqual(mapping[old], new)
+
+    def test_light_and_smart_plug_away_switch_ids_cannot_collide(self) -> None:
+        light_id = self._unique_id(
+            "switch", "light_away_mode_turns_off", 2
+        )
+        smart_plug_id = self._unique_id(
+            "switch", "away_mode_turns_off", 2
+        )
+
+        self.assertNotEqual(light_id, smart_plug_id)
 
     def test_capability_binary_sensors_map_name(self) -> None:
         mapping = self._mapping()
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[0]
         old = self._unique_id(
             "binary_sensor",
             "Is Dimmable",
             "Wiser DimmableLight Diele Diele Is Dimmable",
         )
-        new = self._unique_id(
-            "binary_sensor", "Is Dimmable", "Wiser Diele Is Dimmable"
-        )
+        new = self._unique_id("binary_sensor", "Is Dimmable", 1)
         self.assertEqual(mapping[old], new)
+        self.assertEqual(
+            self.helpers.get_light_binary_sensor_unique_id(
+                data, light, "Is Dimmable"
+            ),
+            new,
+        )
 
     def test_no_room_light_uses_type_and_name(self) -> None:
         mapping = self._mapping()
         old = self._unique_id("device", "light", "Wiser OnOffLight Flur Light")
         self.assertEqual(mapping[old], self._unique_id("device", "light", 2))
+
+    def test_single_light_entity_name_omits_physical_device_name(self) -> None:
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[0]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Away Mode Turns Off",
+        )
+
+    def test_multi_gang_entity_name_keeps_only_channel_name(self) -> None:
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[2]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Lightsource1 Away Mode Turns Off",
+        )
+
+    def test_prefixed_device_name_is_removed_from_channel_name(self) -> None:
+        light = _light(
+            device_id=300,
+            light_id=5,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Bordlampe",
+        )
+        physical_device = SimpleNamespace(
+            id=300,
+            product_type="DimmableLight",
+            name="Wiser Dobbeltrelæ",
+        )
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    get_by_id=lambda _device_id: physical_device
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Bordlampe Is Dimmable",
+        )
+
+    def test_single_dimmer_omits_its_only_light_source_name(self) -> None:
+        light = _light(
+            device_id=400,
+            light_id=6,
+            product_type="DimmableLight",
+            name="Dimmer Loftlampe",
+        )
+        light._data = {"Name": "Dimmer"}
+        light.node_id = 50
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    all=[light],
+                    lights=SimpleNamespace(all=[light]),
+                    get_by_id=lambda _device_id: light,
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Is Dimmable",
+        )
+
+    def test_dual_relay_uses_embedded_name_for_synthetic_channel_ids(
+        self,
+    ) -> None:
+        light = _light(
+            device_id=300001,
+            light_id=5,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Bordlampe",
+        )
+        light._data = {"Name": "Dobbeltrelæ"}
+        light.node_id = 42
+        other_light = SimpleNamespace(
+            id=300002,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ Loftlampe",
+            node_id=42,
+        )
+        button_panel = SimpleNamespace(
+            id=300,
+            product_type="DimmableLight",
+            name="Dobbeltrelæ",
+            node_id=21,
+            number_of_gangs=2,
+            events=[],
+        )
+        data = SimpleNamespace(
+            legacy_naming=False,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    all=[other_light, button_panel],
+                    lights=SimpleNamespace(all=[light, other_light]),
+                    get_by_id=lambda _device_id: other_light,
+                )
+            ),
+        )
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(data, light, "Is Dimmable"),
+            "Bordlampe Is Dimmable",
+        )
+
+    def test_legacy_naming_retains_full_light_name(self) -> None:
+        data = _hub_data()
+        data.legacy_naming = True
+        light = data.wiserhub.devices.lights.all[0]
+
+        self.assertEqual(
+            self.helpers.get_light_entity_name(
+                data, light, "Away Mode Turns Off"
+            ),
+            "Wiser Diele Away Mode Turns Off",
+        )
 
     def test_multi_gang_channels_are_skipped(self) -> None:
         mapping = self._mapping()
@@ -173,8 +327,8 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
         mapping = self._mapping()
         # Every entry is a real rename.
         self.assertTrue(all(old != new for old, new in mapping.items()))
-        # 2 single-gang lights x (1 light + 3 selects + 1 away + 4 binary) = 18.
-        self.assertEqual(len(mapping), 18)
+        # 2 lights x (1 light + 3 selects + 2 away aliases + 4 binary) = 20.
+        self.assertEqual(len(mapping), 20)
 
 
 if __name__ == "__main__":

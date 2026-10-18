@@ -9,7 +9,15 @@ from homeassistant.components.websocket_api import (
 from aioWiserHeatAPI.exceptions import WiserScheduleError
 from aioWiserHeatAPI.schedule import WiserScheduleTypeEnum
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from .const import DATA, DOMAIN
+from .const import DATA, DOMAIN, OPENTHERM_HOT_WATER_SCHEDULE
+from .local_schedule import (
+    LOCAL_HOT_WATER_SCHEDULE_ID,
+    LOCAL_HOT_WATER_SCHEDULE_TYPE,
+)
+from .frontend.wiser_sidebar import (
+    save_panel_config,
+    save_wiser_panel_tabs,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +59,13 @@ async def handle_subscribe_updates(hass, connection, msg):
 
 
 async def async_register_websockets(hass, data):
+    def get_entry_for_hub(hub: str):
+        """Return the integration runtime data for the requested hub."""
+        for entry_id, entry_data in hass.data[DOMAIN].items():
+            if not hub or entry_data[DATA].wiserhub.system.name == hub:
+                return entry_data
+        return None
+
     def get_hub_name(config_entry_id):
         try:
             api = hass.data[DOMAIN][config_entry_id][DATA]
@@ -59,14 +74,13 @@ async def async_register_websockets(hass, data):
             return None
 
     def get_api_for_hub(hub: str):
-        if hub:
-            for entry_id in hass.data[DOMAIN]:
-                if hass.data[DOMAIN][entry_id][DATA].wiserhub.system.name == hub:
-                    return hass.data[DOMAIN][entry_id][DATA]
-            return None
-        else:
-            for entry_id in hass.data[DOMAIN]:
-                return hass.data[DOMAIN][entry_id][DATA]
+        entry_data = get_entry_for_hub(hub)
+        return entry_data[DATA] if entry_data else None
+
+    def get_local_hot_water_schedule(hub: str):
+        """Return this hub's integration-owned hot-water schedule, if enabled."""
+        entry_data = get_entry_for_hub(hub)
+        return entry_data.get(OPENTHERM_HOT_WATER_SCHEDULE) if entry_data else None
 
     def get_entity_from_entity_id(entity: str):
         """Get wiser entity from entity_id"""
@@ -75,6 +89,42 @@ async def async_register_websockets(hass, data):
         if entity_comp:
             return entity_comp.get_entity(entity)
         return None
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/panel/configure",
+        vol.Required("panel_id"): str,
+        vol.Required("configs"): {str: dict},
+    })
+    @websocket_api.require_admin
+    def websocket_configure_panel(hass, connection, msg):
+        """Save settings for any panel supplied by the frontend registry."""
+        try:
+            save_panel_config(hass, msg["panel_id"], msg["configs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/panel/configure_tabs",
+        vol.Required("tabs"): [
+            {
+                vol.Required("id"): str,
+                vol.Required("title"): str,
+            }
+        ],
+    })
+    @websocket_api.require_admin
+    def websocket_configure_wiser_panel_tabs(hass, connection, msg):
+        """Save the unified Wiser panel tab order and custom titles."""
+        try:
+            save_wiser_panel_tabs(hass, msg["tabs"])
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"])
 
     # Get Hubs
     @websocket_api.websocket_command(
@@ -147,6 +197,21 @@ async def async_register_websockets(hass, data):
                         }
                     )
 
+            local_schedule = get_local_hot_water_schedule(msg.get("hub"))
+            if local_schedule and (
+                not schedule_type
+                or schedule_type.lower()
+                == LOCAL_HOT_WATER_SCHEDULE_TYPE.lower()
+            ):
+                output.append(
+                    {
+                        "Id": LOCAL_HOT_WATER_SCHEDULE_ID,
+                        "Type": LOCAL_HOT_WATER_SCHEDULE_TYPE,
+                        "Name": local_schedule.name,
+                        "Assignments": 1,
+                    }
+                )
+
             connection.send_result(msg["id"], sorted(output, key=lambda n: n["Name"]))
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
@@ -196,6 +261,16 @@ async def async_register_websockets(hass, data):
         schedule_id = msg.get("schedule_id")
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            local_schedule = get_local_hot_water_schedule(msg.get("hub"))
+            if (
+                schedule_id == LOCAL_HOT_WATER_SCHEDULE_ID
+                and schedule_type == LOCAL_HOT_WATER_SCHEDULE_TYPE.lower()
+                and local_schedule
+            ):
+                connection.send_result(
+                    msg["id"], local_schedule.ws_schedule_data
+                )
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -294,6 +369,13 @@ async def async_register_websockets(hass, data):
         schedule_id = msg.get("schedule_id")
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            if schedule_id == LOCAL_HOT_WATER_SCHEDULE_ID:
+                connection.send_error(
+                    msg["id"],
+                    "wiser error",
+                    "The integration-owned OpenTherm hot-water schedule cannot be assigned",
+                )
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -350,6 +432,11 @@ async def async_register_websockets(hass, data):
         name = msg["schedule_name"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            local_schedule = get_local_hot_water_schedule(msg.get("hub"))
+            if schedule_id == LOCAL_HOT_WATER_SCHEDULE_ID and local_schedule:
+                await local_schedule.async_set_name(name)
+                connection.send_result(msg["id"], "success")
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -383,6 +470,13 @@ async def async_register_websockets(hass, data):
         schedule_id = msg["schedule_id"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            if schedule_id == LOCAL_HOT_WATER_SCHEDULE_ID:
+                connection.send_error(
+                    msg["id"],
+                    "wiser error",
+                    "The integration-owned OpenTherm hot-water schedule cannot be deleted",
+                )
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -435,6 +529,17 @@ async def async_register_websockets(hass, data):
         new_schedule = msg["schedule"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            local_schedule = get_local_hot_water_schedule(msg.get("hub"))
+            if schedule_id == LOCAL_HOT_WATER_SCHEDULE_ID and local_schedule:
+                try:
+                    await local_schedule.async_save(new_schedule)
+                except (TypeError, ValueError) as err:
+                    connection.send_error(
+                        msg["id"], "invalid_schedule", str(err)
+                    )
+                    return
+                connection.send_result(msg["id"], "success")
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -469,6 +574,13 @@ async def async_register_websockets(hass, data):
         to_schedule_id = msg["to_schedule_id"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            if LOCAL_HOT_WATER_SCHEDULE_ID in (schedule_id, to_schedule_id):
+                connection.send_error(
+                    msg["id"],
+                    "wiser error",
+                    "The integration-owned OpenTherm hot-water schedule cannot be copied",
+                )
+                return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
@@ -540,6 +652,8 @@ async def async_register_websockets(hass, data):
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
+    async_register_command(hass, websocket_configure_panel)
+    async_register_command(hass, websocket_configure_wiser_panel_tabs)
     async_register_command(hass, websocket_get_hubs)
     async_register_command(hass, websocket_get_suntimes)
     async_register_command(hass, websocket_get_schedules)

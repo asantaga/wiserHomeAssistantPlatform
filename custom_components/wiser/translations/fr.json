@@ -4,20 +4,20 @@
     "step": {
       "user": {
         "title": "Configuration de la Box Wiser",
-        "description": "Entrez l'adresse IP et la clé secrète SVP.",
+        "description": "Veuillez saisir l’adresse IP et la clé secrète obtenue auprès de la box Wiser.",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "password": "Clé Secrète"
+          "password": "Clé secrète"
         }
       },
       "zeroconf_confirm": {
         "title": "Configuration de la Box Wiser ({name})",
         "description": "Entrez la clé secrète obtenue de la Box Wiser.",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "password": "Clé Secrète"
+          "password": "Clé secrète"
         }
       }
     },
@@ -27,39 +27,52 @@
       "not_wiser_hub": "L’appareil détecté n’est pas une passerelle Wiser."
     },
     "error": {
-      "auth_failure": "Authentification après de la Wiser Box impossible. Controlez la clé secrète et rééssayez.",
-      "timeout_error": "Timed out de la connection à la Box Wiser.  Controlez l'adresse IP et rééssayez.",
-      "timeout_error_discovery": "Timed out de la connection à la Box Wiser.  Vérifiez que votre Box Wiser est toujours en ligne et rééssayer.",
-      "unknown": "Erreur inconnue lors de la connexion à la Box Wiser.  Controlez les logs, SVP."
+      "invalid_hot_water_presets": "Un ou plusieurs préréglages d’eau chaude sont invalides.",
+      "auth_failure": "Impossible de s’authentifier auprès de la box Wiser. Vérifiez la clé secrète et réessayez.",
+      "timeout_error": "Le délai de connexion à la box Wiser a expiré. Vérifiez l’adresse IP et réessayez.",
+      "timeout_error_discovery": "Le délai de connexion à la box Wiser a expiré. Vérifiez que votre box Wiser est toujours en ligne et réessayez.",
+      "unknown": "Erreur inconnue lors de la connexion à la box Wiser. Veuillez consulter les journaux."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Réglages des paramètres Wiser.",
         "menu_options": {
           "main_params": "Paramètres principaux",
           "automation_params": "Paramètres d'automatisation",
-          "opentherm_sensors": "Capteurs OpenTherm"
+          "opentherm": "OpenTherm",
+          "equipment_sensors": "Capteurs d’équipement",
+          "ui_options": "Options de l’interface"
+        }
+      },
+      "ui_options": {
+        "title": "Options de l’interface",
+        "data": {
+          "legacy_naming": "Nommage historique",
+          "show_wiser_sidebar": "Afficher Wiser dans la barre latérale"
+        },
+        "data_description": {
+          "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants."
         }
       },
       "main_params": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Paramètres principaux",
         "data": {
-          "host": "Adresse IP ou nom d'hote",
+          "host": "Adresse IP ou nom d’hôte",
           "port": "Numéro de port",
-          "scan_interval": " Période d'acquisition",
-          "heating_boost_temp": "Défault temperature de boost chauffage",
-          "heating_boost_time": "Défault durée de boost chauffage",
-          "hotwater_boost_time": "Défault durée de boost eau chaude",
-          "setpoint_mode": "Mode de fonctionnement consigne",
-          "restore_manual_temp_option": "Utilisez cette température si aucune température manuelle stockée"
+          "scan_interval": "Intervalle d’actualisation (s)",
+          "heating_boost_temp": "Température de boost du chauffage par défaut (°C)",
+          "heating_boost_time": "Durée de boost du chauffage par défaut (min)",
+          "hotwater_boost_time": "Durée de boost de l’eau chaude par défaut (min)",
+          "setpoint_mode": "Mode de consigne",
+          "restore_manual_temp_option": "Utiliser cette température si aucune température manuelle n’est enregistrée"
         }
       },
       "automation_params": {
-        "title": "Wiser possibilités d'intégration",
+        "title": "Options de l’intégration Wiser",
         "description": "Activer les automatisations intégrées",
         "sections": {
           "automations_passive_mode": {
@@ -81,7 +94,35 @@
               "hotwater_boost_mode": "Mode boost de l’eau chaude",
               "hotwater_sensor_entity_id": "Capteur de température de l’eau chaude"
             }
+          },
+          "additional_sensors": {
+            "name": "Capteurs supplémentaires",
+            "description": "Exposer des capteurs facultatifs pour les données communiquées par Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Pièces sans contrôle climatique"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Sélectionnez les pièces Wiser pour lesquelles un capteur de température programmée actuelle doit être créé."
+            }
           }
+        }
+      },
+      "equipment_sensors": {
+        "title": "Capteurs d’équipement",
+        "description": "Configurez les entités de données détaillées des équipements compatibles.",
+        "data": {
+          "equipment_sensors": "Activer les capteurs de données des équipements"
+        },
+        "data_description": {
+          "equipment_sensors": "Expose un capteur supplémentaire contenant les attributs détaillés de l’équipement pour chaque prise intelligente, PowerTag et actionneur de chauffage compatible."
+        }
+      },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configurer les fonctions OpenTherm.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Commande d’eau chaude",
+          "opentherm_sensors": "Capteurs"
         }
       },
       "opentherm_sensors": {
@@ -92,6 +133,20 @@
           "opentherm_central_heating": "Chauffage central",
           "opentherm_hot_water": "Eau chaude",
           "opentherm_status": "État et diagnostics"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "Commande d’eau chaude OpenTherm",
+        "description": "Contrôle facultativement la consigne d’eau chaude sanitaire de la chaudière via Wiser. L’intégration crée le planning « OpenTherm Hot Water » dans le panneau des plannings Wiser. Le mode Arrêt utilise la température minimale d’eau chaude indiquée par OpenTherm.",
+        "data": {
+          "opentherm_hot_water_control": "Activer la commande d’eau chaude",
+          "opentherm_hot_water_manual_temperature": "Température manuelle",
+          "opentherm_hot_water_sensor_entity_id": "Capteur de température externe facultatif.",
+          "opentherm_hot_water_presets": "Préréglages"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Température utilisée en mode manuel.",
+          "opentherm_hot_water_sensor_entity_id": "Capteur de température facultatif utilisé pour la température actuelle de l’eau. OpenTherm est utilisé lorsque le capteur est indisponible."
         }
       },
       "opentherm_readings": {
@@ -140,7 +195,7 @@
           "boiler_hw_setpoint_transfer_enable": "Transfert de la consigne d’eau chaude activé",
           "boiler_hw_setpoint_upper_bound": "Limite supérieure de la consigne d’eau chaude",
           "hw_enabled": "Eau chaude activée",
-          "hw_flow_setpoint": "Consigne de débit d’eau chaude"
+          "hw_flow_setpoint": "Consigne de température de départ d’eau chaude"
         }
       },
       "opentherm_status": {
@@ -165,7 +220,8 @@
       }
     },
     "abort": {
-      "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser."
+      "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser.",
+      "equipment_not_available": "Les données des équipements ne sont pas disponibles pour cette passerelle Wiser."
     }
   },
   "services": {
@@ -218,6 +274,9 @@
       },
       "floor_temperature": { "name": "Température du sol" }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "Eau chaude OpenTherm" }
+    },
     "number": {
       "away_mode_target_temperature": { "name": "Température cible du mode absence" },
       "floor_temperature_offset": { "name": "Décalage de température du sol" },
@@ -250,6 +309,7 @@
       "device_lock": { "name": "Verrouillage de l’appareil" },
       "identify": { "name": "Identifier" },
       "outlet": { "name": "Prise" },
+      "ev_charger": { "name": "Chargeur de véhicule électrique" },
       "away_mode_turns_off": { "name": "Le mode absence éteint" },
       "away_mode_closes": { "name": "Le mode absence ferme" },
       "passive_mode": { "name": "Mode passif" },
@@ -272,6 +332,9 @@
       "fault_warning": { "name": "Avertissement de défaut" },
       "remote_alarm": { "name": "Alarme distante" },
       "battery_defect": { "name": "Défaut de batterie" },
+      "ac_mains": { "name": "Alimentation secteur" },
+      "test_mode": { "name": "Mode test" },
+      "hush_mode": { "name": "Mode silencieux" },
       "controllable": { "name": "Contrôlable" },
       "pcm_mode": { "name": "Mode PCM" },
       "window_detection_active": { "name": "Détection de fenêtre active" },
@@ -300,13 +363,33 @@
     },
     "sensor": {
       "signal": { "name": "Signal" },
+      "report_count": { "name": "Nombre de rapports" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Mode de fonctionnement du chauffage" },
-      "heating": { "name": "Chauffage" },
-      "heating_channel": { "name": "Canal de chauffage {channel}" },
-      "hot_water": { "name": "Eau chaude" },
+      "heating": {
+        "name": "Chauffage",
+        "state": {
+          "off": "Éteint",
+          "on": "Allumé"
+        }
+      },
+      "heating_channel": {
+        "name": "Canal de chauffage {channel}",
+        "state": {
+          "off": "Éteint",
+          "on": "Allumé"
+        }
+      },
+      "hot_water": {
+        "name": "Eau chaude",
+        "state": {
+          "off": "Éteint",
+          "on": "Allumé"
+        }
+      },
       "hot_water_operation_mode": { "name": "Mode de fonctionnement de l’eau chaude" },
       "target_temperature": { "name": "Température cible" },
+      "current_schedule_temperature": { "name": "Température programmée actuelle" },
       "floor_temperature": { "name": "Température du sol" },
       "boiler_flow_temperature": { "name": "Température de départ de la chaudière" },
       "boiler_return_temperature": { "name": "Température de retour de la chaudière" },
@@ -329,7 +412,7 @@
       "delta_t": { "name": "Delta-T" },
       "estimated_boiler_output": { "name": "Puissance estimée de la chaudière" },
       "hw_flow_rate": { "name": "Débit d’eau chaude" },
-      "hw_flow_setpoint": { "name": "Consigne de débit d’eau chaude" },
+      "hw_flow_setpoint": { "name": "Consigne de température de départ d’eau chaude" },
       "hw_temperature": { "name": "Température de l’eau chaude" },
       "maximum_capacity_kw": { "name": "Puissance maximale de la chaudière" },
       "minimum_modulation_level": { "name": "Niveau minimal de modulation" },
@@ -345,16 +428,16 @@
       "total_energy": { "name": "Énergie totale" },
       "energy_delivered": { "name": "Énergie fournie" },
       "energy_received": { "name": "Énergie reçue" },
-      "equipment_power": { "name": "Puissance de l’équipement" }
+      "equipment_power": { "name": "Équipement" }
     }
   },
   "device_automation": {
     "trigger_type": {
-      "started_heating": "{entity_name} chauffe démarrée",
-      "stopped_heating": "{entity_name} chauffe arrêté",
+      "started_heating": "{entity_name} commence à chauffer",
+      "stopped_heating": "{entity_name} cesse de chauffer",
       "boosted": "{entity_name} est boosté",
-      "target_temperature_increased": "{entity_name} température cible a diminué",
-      "target_temperature_decreased": "{entity_name} température cible augmentée"
+      "target_temperature_increased": "La température cible de {entity_name} augmente",
+      "target_temperature_decreased": "La température cible de {entity_name} diminue"
     }
   }
 }

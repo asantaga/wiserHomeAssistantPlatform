@@ -54,9 +54,10 @@ from .helpers import (
     get_device_name,
     get_hub_via_device_info,
     get_identifier,
-    get_room_name,
+    get_room_entity_unique_id,
     get_uuid_unique_id,
     hub_error_handler,
+    room_has_climate,
 )
 from .schedules import WiserScheduleEntity
 from .temperature import room_target_temperature
@@ -142,7 +143,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         wiser_rooms = [
             WiserRoom(hass, coordinator, room.id)
             for room in coordinator.wiserhub.rooms.all
-            if len(room.devices) > 0
+            if room_has_climate(room)
         ]
         async_add_entities(wiser_rooms, True)
 
@@ -498,7 +499,6 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["away_mode_supressed"] = self._room.away_mode_suppressed
         attrs["heating_type"] = self._room.heating_type
         attrs["number_of_heating_actuators"] = self._room.number_of_heating_actuators
-        attrs["demand_type"] = self._room.demand_type
 
         # Status
         attrs["target_temperature_origin"] = self._room.target_temperature_origin
@@ -508,13 +508,22 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["is_passive"] = self._room.is_passive_mode
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
+        attrs["percentage_demand"] = self._room.percentage_demand
+
+        # OpenTherm
+        opentherm = getattr(self._data.wiserhub.system, "opentherm", None)
+        if opentherm is not None and opentherm.enabled:
+            attrs["demand_type"] = self._room.demand_type
+            if hasattr(self._room, "is_calling_for_heat"):
+                attrs["is_calling_for_heat"] = self._room.is_calling_for_heat
+            else:
+                attrs["is_calling_for_heat"] = self._room.percentage_demand > 0
 
         # If boosted show boost end time
         if self._room.is_boosted:
             attrs["boost_end"] = self._room.boost_end_time
 
         attrs["boost_time_remaining"] = int(self._room.boost_time_remaining / 60)
-        attrs["percentage_demand"] = self._room.percentage_demand
         attrs["comfort_mode_score"] = self._room.comfort_mode_score
         attrs["control_direction"] = self._room.control_direction
         attrs["displayed_setpoint"] = self._room.displayed_setpoint
@@ -699,12 +708,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def unique_id(self):
         """Return unique Id."""
-        legacy_name = get_room_name(self._data, self._room_id)
-        legacy_unique_id = (
-            f"{self._data.wiserhub.system.name}-WiserRoom-"
-            f"{self._room_id}-{legacy_name}"
-        )
-        return get_uuid_unique_id(legacy_unique_id)
+        return get_room_entity_unique_id(self._data, self._room_id, "climate")
 
     @hub_error_handler
     async def async_boost_heating(
