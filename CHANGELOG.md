@@ -4,37 +4,55 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.0.0-rc1
+## v4.0.0
 
 ### Breaking changes
 
 - The device registry is restructured. The separate virtual controller device is merged into the physical hub device, and Wiser room devices move to stable identifiers. In both cases the old device is removed and its entities are reassigned to the surviving device. Entity IDs and history are preserved, but anything that targets a Wiser *device* rather than an entity - device-based automations and scripts, or dashboard cards pointing at a device - needs repointing - PR [#693](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/693).
 - Entity unique IDs migrate to deterministic UUIDv5. The migration runs automatically on upgrade and renames registry entries in place, so entity IDs, history, and customisations are preserved. Every target is checked before any change is applied, so it cannot partially apply, but it aborts if it finds a unique ID collision - take a backup before upgrading - PR [#693](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/693).
+- Downgrading is not supported. Because unique IDs and device identifiers change, returning to a 3.x release means restoring the backup taken before upgrading, not just reinstalling the older version.
 
 ### Added
 
-- Added optional Wiser-only OpenTherm domestic-hot-water control with a Home Assistant water-heater entity, configurable temperature and presets, an optional external current-temperature sensor, icon mode controls, and an integration-owned weekly schedule managed from the Wiser Schedules panel. Non-timed presets can be used in schedule periods; temporary boost presets remain manual actions.
-- Manage frontend definitions in the integration's bundled `cards.json`, with independent card and panel installation, offline caching, and a generic panel-settings API.
-
+- Added Schneider Mureva EV Link charger entities - issue [#689](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/689), PR [#749](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/749).
+- Added smoke alarm operating states and a report count sensor - PR [#744](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/744).
+- Added scheduled setpoint sensors, showing the current schedule temperature for Wiser rooms without climate control. Rooms are chosen under **Additional sensors** in the automation options - issue [#738](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/738), PR [#746](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/746).
+- Added optional Wiser-only OpenTherm domestic-hot-water control with a Home Assistant water-heater entity, configurable temperature and presets, an optional external current-temperature sensor, icon mode controls, and an integration-owned weekly schedule managed from the Wiser Schedules panel. Non-timed presets can be used in schedule periods; temporary boost presets remain manual actions - PR [#745](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/745).
 - Added configurable OpenTherm monitoring and controls, including relative modulation, a Delta-T sensor, expanded telemetry, and categorized diagnostics - PR [#697](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/697).
+- Added OpenTherm room demand attributes - PR [#724](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/724).
+- Added PowerTag Control equipment sensors - PR [#726](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/726).
 - Added a configurable Wiser Schedules sidebar panel - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
 - Added a Wiser Zigbee sidebar panel with a custom sidebar icon - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
+- Added an integration-managed frontend registry (`cards.json`), so the Schedules and Zigbee cards and the sidebar panels install and update independently through Home Assistant update entities, with offline caching and a shared panel-settings API - PR [#709](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/709), PR [#719](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/719).
 - Added a Hot Water on/off switch entity - issue [#626](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/626), PR [#682](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/682).
 - Added a UFH controller measured-temperature sensor - issue [#628](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/628).
 - Added optimistic light state for instant UI feedback on toggles, kept stable across rapid repeated toggles - PR [#684](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/684).
 - Added British English translations and corrected the German, French, and English integration translations - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
+- Added Danish, Spanish, Finnish, Hungarian, Norwegian, Dutch, Portuguese, and Swedish translations - PR [#747](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/747).
 
 ### Changed
 
 - Entity naming now follows Home Assistant conventions, using `has_entity_name` so Home Assistant composes each displayed name from the device name plus the entity name. Existing entity IDs are not renamed. A new **Legacy naming** option controls whether Wiser room names are included in device names; it is switched on automatically for existing installations, so your device names stay as they are unless you turn it off. New installations on Home Assistant 2026.8 and later default it to off - PR [#693](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/693), PR [#700](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/700).
 - Wiser devices are now placed in Home Assistant areas matching their Wiser room, creating the area if it does not exist. This applies only to devices that have no area yet, so any area you assigned manually is left untouched - PR [#693](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/693), PR [#700](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/700).
+- Equipment power and energy sensors are now optional, under **Equipment sensors** in the integration options. Existing installations upgrading from 3.x keep them switched on; new installations start with them off - PR [#726](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/726).
+- Card and panel bundles are no longer stored in the source repository. Release packages include them, and each card or panel updates from its own repository through a Home Assistant update entity - PR [#716](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/716).
 - Sidebar panel visibility is now configured through the integration's UI options - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
 - Card versions are now detected from the installed card bundles instead of being pinned in the integration, so card updates no longer need an integration release - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
-- OpenTherm hot-water temperature changes made in Auto mode now act as temporary overrides and are replaced by the next scheduled period.
+- OpenTherm hot-water temperature changes made in Auto mode now act as temporary overrides and are replaced by the next scheduled period - PR [#745](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/745).
 
 ### Fixed
 
 - Fixed Wiser room renames and removals creating duplicate or orphaned devices and entities. Physical devices and logical rooms now use stable identifiers, existing registry records are migrated while retaining entity IDs and history, integration-managed area assignments follow room renames, user-selected areas remain unchanged, and deleted rooms are removed after confirmation - issue [#732](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/732).
+- Fixed passive mode for underfloor heating rooms - issue [#641](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/641), PR [#742](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/742).
+- Improved light and smart plug responsiveness: commands are no longer blocked by a hub refresh, stale confirmations are retried, obsolete ones are cancelled, and smart plug state updates immediately after a command - issue [#666](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/666), PR [#725](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/725).
+- Fixed light and dual-relay channel names, using the device's own name and dropping the redundant channel name on single-channel lights - issue [#666](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/666).
+- Fixed OpenTherm options and entities appearing on systems with a standard boiler - issue [#735](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/735), PR [#729](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/729).
+- Fixed Hub V1 installations creating unsupported Hub V2 system sensors - PR [#731](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/731).
+- Fixed HeatHub parent device compatibility - issue [#733](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/733), PR [#734](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/734).
+- Fixed system binary sensors not updating - issue [#736](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/736), PR [#737](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/737).
+- Fixed heating and hot-water circuit state normalisation - issue [#711](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/711), PR [#721](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/721).
+- Fixed light capability entities being lost during unique ID migration - PR [#723](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/723).
+- Fixed flame runtime statistics to count from local midnight - PR [#715](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/715).
 - Reintroduced the previous Power and Energy entities, corrected equipment data naming on v2 hubs, and added an active state for the window/door sensor - issue [#677](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/677), PR [#690](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/690).
 - Fixed multi-gang dimmer lights breaking select, binary_sensor, switch, and sensor entities - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681), PR [#683](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/683).
 - Preserved light entities across the multi-gang unique_id migration - issue [#681](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/681), PR [#683](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/683).
@@ -44,7 +62,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Fixed the hot water switch to report against the hub as its parent device - PR [#704](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/704).
 - Fixed a Zigbee sidebar route conflict that could stop the integration setting up - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
 - Fixed the boiler capacity and estimated boiler output sensors to use a gas burner icon - PR [#701](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/701).
-- Fix for issue [#662](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/662) - PR [#680](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/680).
+- Fixed room stat and iTRV battery values not always being reported correctly - issue [#662](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/662), PR [#680](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/680).
 
 ## v3.4.20
 

@@ -116,10 +116,28 @@ python3 scripts/build.py --release --channel stable
 python3 scripts/build.py --release --channel dev
 ```
 
+The build downloads every card and panel declared in
+`custom_components/wiser/frontend/cards.json` from its own GitHub repository.
+Stable builds use stable frontend releases; prerelease builds use the most
+recently published stable or prerelease release. In a running installation,
+each frontend update entity follows the HACS **Pre-release** switch for this
+integration; without that option it offers stable releases only. See
+[Adding frontend cards and panels](docs/frontend-registry.md) for the registry
+format and shared panel API.
+
 The output is `dist/wiser.zip`, with `dist/card-releases.json` recording the
-card releases and checksums included. Stable builds use stable card releases;
-prerelease builds use the most recently published stable or prerelease of each
-card. Missing or invalid card assets fail the build.
+frontend artifacts and checksums included. If an individual card or panel
+repository is temporarily unavailable, its bundle is omitted and the
+integration still builds; its Home Assistant update entity can install it
+later. Invalid local development bundles and an invalid bundled registry still
+fail the build.
+
+For an integration-only test package that retains the registry but
+deliberately omits every card and panel bundle:
+
+```sh
+python3 scripts/build.py --channel dev --without-frontend
+```
 
 To see which card releases would be selected without downloading card bundles
 (the registry metadata is still fetched):
@@ -128,8 +146,9 @@ To see which card releases would be selected without downloading card bundles
 python3 scripts/fetch_card_releases.py --channel dev --plan
 ```
 
-The **Publish** workflow runs the same build and attaches `wiser.zip` when a
-release is published.
+The **Publish** GitHub Actions workflow runs the same build and attaches
+`wiser.zip` when an integration release is published. Preview runs provide a
+downloadable **wiser-package** artifact without publishing a release.
 
 ## Licence
 
