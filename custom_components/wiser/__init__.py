@@ -29,7 +29,6 @@ from .const import (
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
-    CONF_EQUIPMENT_SENSORS,
     CONF_LEGACY_NAMING,
     CONF_OPENTHERM_EVER_CONNECTED,
     CONF_OPENTHERM_HOT_WATER_CAPABLE,
@@ -175,8 +174,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if config_entry.minor_version < 5:
             # Keep room context visible for installations upgrading to UI options.
             new_options.setdefault(CONF_LEGACY_NAMING, True)
-            # Equipment sensors were always created before they became optional.
-            new_options.setdefault(CONF_EQUIPMENT_SENSORS, True)
 
         hass.config_entries.async_update_entry(
             config_entry, options=new_options, minor_version=5, version=1
