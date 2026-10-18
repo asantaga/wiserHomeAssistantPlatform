@@ -3,7 +3,8 @@
   "name": "Drayton Wiser Integration for Home Assistant",
   "codeowners": [
     "@asantaga",
-    "@msp1974"
+    "@msp1974",
+    "@andyblac"
   ],
   "config_flow": true,
   "dependencies": [
