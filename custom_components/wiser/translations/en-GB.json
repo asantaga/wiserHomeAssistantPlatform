@@ -296,6 +296,9 @@
       "fault_warning": { "name": "Fault warning" },
       "remote_alarm": { "name": "Remote alarm" },
       "battery_defect": { "name": "Battery defect" },
+      "ac_mains": { "name": "AC mains" },
+      "test_mode": { "name": "Test mode" },
+      "hush_mode": { "name": "Hush mode" },
       "controllable": { "name": "Controllable" },
       "pcm_mode": { "name": "PCM mode" },
       "window_detection_active": { "name": "Window detection active" },
@@ -324,6 +327,7 @@
     },
     "sensor": {
       "signal": { "name": "Signal" },
+      "report_count": { "name": "Report count" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heating operation mode" },
       "heating": {
