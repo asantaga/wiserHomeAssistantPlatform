@@ -296,6 +296,9 @@
       "fault_warning": { "name": "Fehlerwarnung" },
       "remote_alarm": { "name": "Fernalarm" },
       "battery_defect": { "name": "Batteriedefekt" },
+      "ac_mains": { "name": "Netzstrom" },
+      "test_mode": { "name": "Testmodus" },
+      "hush_mode": { "name": "Stummschaltungsmodus" },
       "controllable": { "name": "Steuerbar" },
       "pcm_mode": { "name": "PCM-Modus" },
       "window_detection_active": { "name": "Fenstererkennung aktiv" },
@@ -324,6 +327,7 @@
     },
     "sensor": {
       "signal": { "name": "Signal" },
+      "report_count": { "name": "Berichtsanzahl" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heizungsbetriebsart" },
       "heating": {

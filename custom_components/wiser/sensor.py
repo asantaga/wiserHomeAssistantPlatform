@@ -401,15 +401,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
             if room.roomstat_id:
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
 
-    # Add temp sensors for smoke alarms
-    wiser_sensors.extend(
-        WiserLTSTempSensor(
-            data,
-            device.id,
-            sensor_type="smokealarm_temp",
+    # Add smoke-alarm sensors
+    for device in data.wiserhub.devices.smokealarms.all:
+        wiser_sensors.extend(
+            [
+                WiserLTSTempSensor(
+                    data,
+                    device.id,
+                    sensor_type="smokealarm_temp",
+                ),
+                WiserSmokeAlarmReportCountSensor(data, device.id),
+            ]
         )
-        for device in data.wiserhub.devices.smokealarms.all
-    )
 
     # Add temp sensors for ITRVs
     _LOGGER.debug("Setting up smartvalve remperature sensors")
@@ -619,6 +622,55 @@ class WiserBatterySensor(WiserSensor):
     @property
     def device_info(self):
         """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            **get_device_area_info(self._data, self._device_id),
+            **get_hub_via_device_info(self._data),
+        }
+
+
+class WiserSmokeAlarmReportCountSensor(WiserSensor):
+    """Diagnostic count of reports received from a smoke alarm."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:counter"
+
+    def __init__(self, data, device_id=0) -> None:
+        """Initialize the report-count sensor."""
+        super().__init__(
+            data,
+            device_id,
+            "report_count",
+            translation_key="report_count",
+        )
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.report_count
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh the report count."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._device.report_count
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "sensor",
+            self._device_id,
+            "report_count",
+        )
+
+    @property
+    def device_info(self):
+        """Attach the entity to its physical smoke-alarm device."""
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
