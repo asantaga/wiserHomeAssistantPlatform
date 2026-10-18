@@ -94,6 +94,16 @@
               "hotwater_boost_mode": "Hot Water Boost Mode",
               "hotwater_sensor_entity_id": "Hot Water Temperature Sensor"
             }
+          },
+          "additional_sensors": {
+            "name": "Additional sensors",
+            "description": "Expose optional sensors for data reported by Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Rooms without climate control"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Select the Wiser rooms where a current schedule temperature sensor should be created."
+            }
           }
         }
       },
@@ -383,6 +393,7 @@
       },
       "hot_water_operation_mode": { "name": "Hot water operation mode" },
       "target_temperature": { "name": "Target temperature" },
+      "current_schedule_temperature": { "name": "Current schedule temperature" },
       "floor_temperature": { "name": "Floor temperature" },
       "boiler_flow_temperature": { "name": "Boiler flow temperature" },
       "boiler_return_temperature": { "name": "Boiler return temperature" },

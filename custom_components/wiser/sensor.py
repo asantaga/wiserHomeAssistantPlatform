@@ -42,6 +42,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
 from .const import (
+    CONF_ADDITIONAL_SENSORS,
+    CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_EQUIPMENT_SENSORS,
     CONF_OPENTHERM_SENSORS,
     DATA,
@@ -62,6 +64,7 @@ from .helpers import (
     get_identifier,
     get_room_entity_unique_id,
     get_unique_id,
+    room_has_climate,
 )
 from .opentherm import (
     OPENTHERM_BINARY_SENSOR_KEYS,
@@ -117,12 +120,30 @@ OPENTHERM_MEASUREMENT_SENSOR_KEYS = OPENTHERM_TEMPERATURE_SENSOR_KEYS | {
 }
 
 
+def _selected_room_scheduled_setpoint_sensors(data, selected_room_ids):
+    """Create scheduled setpoint sensors for selected rooms without climate."""
+    selected_room_ids = {str(room_id) for room_id in selected_room_ids or ()}
+    return [
+        WiserRoomScheduledSetpointSensor(data, room.id)
+        for room in data.wiserhub.rooms.all
+        if str(room.id) in selected_room_ids and not room_has_climate(room)
+    ]
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Initialize the entry."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
     wiser_sensors = []
     equipment_sensors_enabled = config_entry.options.get(
         CONF_EQUIPMENT_SENSORS, False
+    )
+    additional_sensor_options = config_entry.options.get(
+        CONF_ADDITIONAL_SENSORS, {}
+    )
+    if not isinstance(additional_sensor_options, dict):
+        additional_sensor_options = {}
+    schedule_setpoint_rooms = additional_sensor_options.get(
+        CONF_SCHEDULE_SETPOINT_ROOMS, []
     )
 
     # Add signal sensors for all devices
@@ -400,6 +421,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
             if room.roomstat_id:
                 wiser_sensors.append(WiserLTSHumiditySensor(data, room.roomstat_id))
+
+    wiser_sensors.extend(
+        _selected_room_scheduled_setpoint_sensors(data, schedule_setpoint_rooms)
+    )
 
     # Add smoke-alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
@@ -1246,6 +1271,59 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             return UnitOfPower.WATT
         return UnitOfEnergy.KILO_WATT_HOUR
+
+
+class WiserRoomScheduledSetpointSensor(WiserSensor):
+    """Scheduled setpoint reported for a Wiser room without climate control."""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_translation_key = "current_schedule_temperature"
+
+    def __init__(self, data, room_id: int) -> None:
+        """Initialize the scheduled setpoint sensor."""
+        super().__init__(
+            data,
+            room_id,
+            "Current Schedule Temperature",
+            translation_key="current_schedule_temperature",
+        )
+        self._update_state()
+
+    def _update_state(self) -> None:
+        """Read the current ScheduledSetPoint value from the room."""
+        room = self._data.wiserhub.rooms.get_by_id(self._device_id)
+        self._state = room.scheduled_target_temperature if room else None
+
+    @property
+    def unique_id(self):
+        """Return a stable ID when the room is renamed."""
+        return get_room_entity_unique_id(
+            self._data, self._device_id, "current_schedule_temperature"
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch the latest scheduled setpoint."""
+        super()._handle_coordinator_update()
+        self._update_state()
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self):
+        """Attach the entity to its Wiser room device."""
+        room = self._data.wiserhub.rooms.get_by_id(self._device_id)
+        return {
+            "name": get_device_name(self._data, self._device_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._device_id, "room"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": "Room",
+            "suggested_area": room.name,
+            **get_hub_via_device_info(self._data),
+        }
 
 
 class WiserLTSTempSensor(WiserSensor):
