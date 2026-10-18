@@ -138,6 +138,9 @@ def get_device_name(data, device_id, device_type="device"):
         if device.product_type == "SmartPlug":
             return f"{ENTITY_PREFIX} {device.name}"
 
+        if device.product_type == "EVSE":
+            return f"{ENTITY_PREFIX} {device.name}"
+
         if device.product_type in ["PowerTagE", "LoadControl"]:
             return f"{ENTITY_PREFIX} {device.name}"
 

@@ -273,6 +273,7 @@
       "device_lock": { "name": "Gerätesperre" },
       "identify": { "name": "Identifizieren" },
       "outlet": { "name": "Steckdose" },
+      "ev_charger": { "name": "EV-Ladegerät" },
       "away_mode_turns_off": { "name": "Abwesenheitsmodus schaltet aus" },
       "away_mode_closes": { "name": "Abwesenheitsmodus schließt" },
       "passive_mode": { "name": "Passivmodus" },

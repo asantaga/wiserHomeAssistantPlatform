@@ -273,6 +273,7 @@
       "device_lock": { "name": "Device lock" },
       "identify": { "name": "Identify" },
       "outlet": { "name": "Socket" },
+      "ev_charger": { "name": "EV charger" },
       "away_mode_turns_off": { "name": "Away mode turns off" },
       "away_mode_closes": { "name": "Away mode closes" },
       "passive_mode": { "name": "Passive mode" },

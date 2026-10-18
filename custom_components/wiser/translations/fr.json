@@ -273,6 +273,7 @@
       "device_lock": { "name": "Verrouillage de l’appareil" },
       "identify": { "name": "Identifier" },
       "outlet": { "name": "Prise" },
+      "ev_charger": { "name": "Chargeur de véhicule électrique" },
       "away_mode_turns_off": { "name": "Le mode absence éteint" },
       "away_mode_closes": { "name": "Le mode absence ferme" },
       "passive_mode": { "name": "Mode passif" },
