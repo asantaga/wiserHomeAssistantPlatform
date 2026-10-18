@@ -202,6 +202,53 @@ class WiserPassiveModeRoomSupportTest(unittest.TestCase):
         self.assertFalse(self.switch_module._room_supports_passive_mode(room))
 
 
+class WiserDeviceSwitchRefreshTest(unittest.TestCase):
+    """Tests device switches when hub device data changes during refresh."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def test_missing_device_does_not_break_coordinator_refresh(self) -> None:
+        device = SimpleNamespace(id=7, product_type="ButtonPanel", identify=True)
+        devices = SimpleNamespace(all=[device], get_by_id=lambda _device_id: device)
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=devices,
+                system=SimpleNamespace(name="WiserHeat045XXX"),
+            )
+        )
+        switch = self.switch_module.WiserDeviceSwitch(
+            data,
+            "Identify",
+            "identify",
+            "mdi:alarm-light",
+            device.id,
+            device=device,
+        )
+        writes = []
+        switch.async_write_ha_state = lambda: writes.append(switch.is_on)
+
+        devices.all = []
+        switch._handle_coordinator_update()
+
+        self.assertFalse(switch.available)
+        self.assertFalse(switch.is_on)
+        self.assertEqual(writes, [False])
+
+        replacement = SimpleNamespace(
+            id=7,
+            product_type="ButtonPanel",
+            identify=False,
+        )
+        devices.all = [replacement]
+        switch._handle_coordinator_update()
+
+        self.assertTrue(switch.available)
+        self.assertFalse(switch.is_on)
+        self.assertEqual(writes, [False, False])
+
+
 class _FakeSmartPlug:
     def __init__(self, *, is_on: bool) -> None:
         self.is_on = is_on
