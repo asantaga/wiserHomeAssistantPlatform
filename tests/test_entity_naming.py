@@ -384,9 +384,7 @@ class EntityNamingTest(unittest.TestCase):
             self.assertEqual(
                 translations["entity"][domain][key]["name"], expected_name
             )
-        for filename in (
-            "translations/en.json",
-            "translations/de.json",
-            "translations/fr.json",
+        for translation in sorted(
+            (COMPONENT_PATH / "translations").glob("*.json")
         ):
-            self.assertNotIn("[%key:", (COMPONENT_PATH / filename).read_text())
+            self.assertNotIn("[%key:", translation.read_text())
