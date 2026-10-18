@@ -27,6 +27,7 @@
       "not_wiser_hub": "Het ontdekte apparaat is geen Wiser Heat Hub."
     },
     "error": {
+      "invalid_hot_water_presets": "Een of meer warmwatervoorinstellingen zijn ongeldig.",
       "auth_failure": "Kan niet verifiëren met de Wiser-hub. Controleer de geheime sleutel en probeer het opnieuw.",
       "timeout_error": "Er is een time-out opgetreden bij het verbinden met de Wiser-hub. Controleer het IP-adres en probeer het opnieuw.",
       "timeout_error_discovery": "Er is een time-out opgetreden bij het verbinden met de Wiser-hub. Controleer of uw hub nog steeds online is en probeer het opnieuw.",
@@ -41,7 +42,7 @@
         "menu_options": {
           "main_params": "Hoofdparameters",
           "automation_params": "Automatiseringsparameters",
-          "opentherm_sensors": "OpenTherm-sensoren",
+          "opentherm": "OpenTherm",
           "equipment_sensors": "Apparatuursensoren",
           "ui_options": "Opties voor de gebruikersinterface"
         }
@@ -93,6 +94,16 @@
               "hotwater_boost_mode": "Boostmodus voor warm water",
               "hotwater_sensor_entity_id": "Warmwatertemperatuursensor"
             }
+          },
+          "additional_sensors": {
+            "name": "Extra sensoren",
+            "description": "Maak optionele sensoren beschikbaar voor gegevens die Wiser rapporteert.",
+            "data": {
+              "schedule_setpoint_rooms": "Ruimtes zonder klimaatregeling"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Selecteer de Wiser-ruimtes waarvoor een sensor voor de huidige schematemperatuur moet worden aangemaakt."
+            }
           }
         }
       },
@@ -106,6 +117,14 @@
           "equipment_sensors": "Maakt een extra sensor beschikbaar met gedetailleerde apparatuurkenmerken voor elke compatibele slimme stekker, PowerTag en verwarmingsactuator."
         }
       },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configureer OpenTherm-functies.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Warmwaterregeling",
+          "opentherm_sensors": "Sensoren"
+        }
+      },
       "opentherm_sensors": {
         "title": "OpenTherm-sensoren",
         "description": "Kies een categorie gedetecteerde OpenTherm-attributen.",
@@ -114,6 +133,20 @@
           "opentherm_central_heating": "Centrale verwarming",
           "opentherm_hot_water": "Warm water",
           "opentherm_status": "Status en diagnostiek"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "OpenTherm-warmwaterregeling",
+        "description": "Regel optioneel het tapwater-setpoint van de ketel via Wiser. De integratie maakt een OpenTherm Hot Water-schema aan in het Wiser Schedules-paneel. Uit gebruikt de minimale warmwatertemperatuur die OpenTherm rapporteert.",
+        "data": {
+          "opentherm_hot_water_control": "Warmwaterregeling inschakelen",
+          "opentherm_hot_water_manual_temperature": "Handmatige temperatuur",
+          "opentherm_hot_water_sensor_entity_id": "Optionele externe temperatuursensor.",
+          "opentherm_hot_water_presets": "Voorinstellingen"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperatuur die in de handmatige modus wordt gebruikt.",
+          "opentherm_hot_water_sensor_entity_id": "Optionele temperatuursensor voor de huidige watertemperatuur. OpenTherm wordt gebruikt wanneer de sensor niet beschikbaar is."
         }
       },
       "opentherm_readings": {

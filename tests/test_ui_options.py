@@ -461,9 +461,28 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             saved = update.call_args.kwargs
             self.assertEqual(
                 saved["options"],
-                options | {"legacy_naming": expected},
+                options | {"legacy_naming": expected, "equipment_sensors": True},
             )
             self.assertEqual(saved["minor_version"], 5)
+
+    async def test_migration_keeps_equipment_sensors_for_upgrades(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        for options, expected in (({}, True),
+                                  ({"equipment_sensors": False}, False)):
+            entry = SimpleNamespace(version=1, minor_version=4, options=options)
+            update = Mock()
+            hass = SimpleNamespace(config_entries=SimpleNamespace(async_update_entry=update))
+            self.assertTrue(await functions.async_migrate_entry(hass, entry))
+            saved = update.call_args.kwargs["options"]
+            self.assertIs(saved["equipment_sensors"], expected)
+
+    async def test_migration_leaves_current_entries_equipment_option_unset(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        entry = SimpleNamespace(version=1, minor_version=5, options={})
+        update = Mock()
+        hass = SimpleNamespace(config_entries=SimpleNamespace(async_update_entry=update))
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+        self.assertNotIn("equipment_sensors", update.call_args.kwargs["options"])
 
     async def test_menu_available_without_opentherm(self):
         functions = load_functions("config_flow.py", {"async_step_init"}, self.namespace)
