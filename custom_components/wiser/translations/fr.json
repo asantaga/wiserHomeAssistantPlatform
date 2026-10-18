@@ -27,6 +27,7 @@
       "not_wiser_hub": "L’appareil détecté n’est pas une passerelle Wiser."
     },
     "error": {
+      "invalid_hot_water_presets": "Un ou plusieurs préréglages d’eau chaude sont invalides.",
       "auth_failure": "Impossible de s’authentifier auprès de la box Wiser. Vérifiez la clé secrète et réessayez.",
       "timeout_error": "Le délai de connexion à la box Wiser a expiré. Vérifiez l’adresse IP et réessayez.",
       "timeout_error_discovery": "Le délai de connexion à la box Wiser a expiré. Vérifiez que votre box Wiser est toujours en ligne et réessayez.",
@@ -41,7 +42,7 @@
         "menu_options": {
           "main_params": "Paramètres principaux",
           "automation_params": "Paramètres d'automatisation",
-          "opentherm_sensors": "Capteurs OpenTherm",
+          "opentherm": "OpenTherm",
           "equipment_sensors": "Capteurs d’équipement",
           "ui_options": "Options de l’interface"
         }
@@ -106,6 +107,14 @@
           "equipment_sensors": "Expose un capteur supplémentaire contenant les attributs détaillés de l’équipement pour chaque prise intelligente, PowerTag et actionneur de chauffage compatible."
         }
       },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configurer les fonctions OpenTherm.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Commande d’eau chaude",
+          "opentherm_sensors": "Capteurs"
+        }
+      },
       "opentherm_sensors": {
         "title": "Capteurs OpenTherm",
         "description": "Choisissez une catégorie d’attributs OpenTherm détectés.",
@@ -114,6 +123,20 @@
           "opentherm_central_heating": "Chauffage central",
           "opentherm_hot_water": "Eau chaude",
           "opentherm_status": "État et diagnostics"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "Commande d’eau chaude OpenTherm",
+        "description": "Contrôle facultativement la consigne d’eau chaude sanitaire de la chaudière via Wiser. L’intégration crée le planning « OpenTherm Hot Water » dans le panneau des plannings Wiser. Le mode Arrêt utilise la température minimale d’eau chaude indiquée par OpenTherm.",
+        "data": {
+          "opentherm_hot_water_control": "Activer la commande d’eau chaude",
+          "opentherm_hot_water_manual_temperature": "Température manuelle",
+          "opentherm_hot_water_sensor_entity_id": "Capteur de température externe facultatif.",
+          "opentherm_hot_water_presets": "Préréglages"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Température utilisée en mode manuel.",
+          "opentherm_hot_water_sensor_entity_id": "Capteur de température facultatif utilisé pour la température actuelle de l’eau. OpenTherm est utilisé lorsque le capteur est indisponible."
         }
       },
       "opentherm_readings": {
@@ -240,6 +263,9 @@
         "name": "Chauffage"
       },
       "floor_temperature": { "name": "Température du sol" }
+    },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "Eau chaude OpenTherm" }
     },
     "number": {
       "away_mode_target_temperature": { "name": "Température cible du mode absence" },

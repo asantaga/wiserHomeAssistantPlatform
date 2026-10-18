@@ -60,8 +60,13 @@ def _load_wiser_init() -> ModuleType:
             "CONF_DEPRECATED_HW_TARGET_TEMP",
             "CONF_LEGACY_NAMING",
             "CONF_OPENTHERM_EVER_CONNECTED",
+            "CONF_OPENTHERM_HOT_WATER_CAPABLE",
+            "CONF_OPENTHERM_HOT_WATER_CONTROL",
+            "CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP",
+            "CONF_OPENTHERM_HOT_WATER_PRESETS",
             "CONF_WISER_ROOM_NAMES",
             "DATA",
+            "OPENTHERM_HOT_WATER_SCHEDULE",
             "UPDATE_LISTENER",
         )
     }
@@ -69,6 +74,7 @@ def _load_wiser_init() -> ModuleType:
         DOMAIN="wiser",
         ENTITY_PREFIX="Wiser",
         MANUFACTURER="Drayton Wiser",
+        DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP=45.0,
         WISER_PLATFORMS=[],
         WISER_SERVICES={},
         HWCycleModes=SimpleNamespace(CONTINUOUS="continuous", ONCE="once"),
@@ -136,7 +142,13 @@ def _load_wiser_init() -> ModuleType:
     _module(
         "wiser_init_test.opentherm_detection",
         opentherm_entity_unique_ids=Mock(return_value=set()),
+        opentherm_hot_water_control_is_supported=Mock(return_value=False),
+        opentherm_hot_water_limits=Mock(return_value=(35.0, 55.0)),
         opentherm_is_detected=Mock(return_value=False),
+    )
+    _module(
+        "wiser_init_test.local_schedule",
+        OpenThermHotWaterSchedule=Mock(),
     )
     _module("wiser_init_test.services", async_setup_services=Mock())
     _module("wiser_init_test.update", async_unload_card_updates=Mock())

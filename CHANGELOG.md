@@ -13,6 +13,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added optional Wiser-only OpenTherm domestic-hot-water control with a Home Assistant water-heater entity, configurable temperature and presets, an optional external current-temperature sensor, icon mode controls, and an integration-owned weekly schedule managed from the Wiser Schedules panel. Non-timed presets can be used in schedule periods; temporary boost presets remain manual actions.
 - Manage frontend definitions in the integration's bundled `cards.json`, with independent card and panel installation, offline caching, and a generic panel-settings API.
 
 - Added configurable OpenTherm monitoring and controls, including relative modulation, a Delta-T sensor, expanded telemetry, and categorized diagnostics - PR [#697](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/697).
@@ -29,6 +30,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Wiser devices are now placed in Home Assistant areas matching their Wiser room, creating the area if it does not exist. This applies only to devices that have no area yet, so any area you assigned manually is left untouched - PR [#693](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/693), PR [#700](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/700).
 - Sidebar panel visibility is now configured through the integration's UI options - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
 - Card versions are now detected from the installed card bundles instead of being pinned in the integration, so card updates no longer need an integration release - PR [#708](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/708).
+- OpenTherm hot-water temperature changes made in Auto mode now act as temporary overrides and are replaced by the next scheduled period.
 
 ### Fixed
 
