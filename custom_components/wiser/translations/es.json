@@ -27,6 +27,7 @@
       "not_wiser_hub": "El dispositivo descubierto no es un Heat Hub Wiser."
     },
     "error": {
+      "invalid_hot_water_presets": "Uno o más preajustes de agua caliente no son válidos.",
       "auth_failure": "No se pudo autenticar con el hub Wiser. Compruebe la clave secreta y vuelva a intentarlo.",
       "timeout_error": "Se agotó el tiempo de espera al conectarse al hub Wiser. Compruebe la dirección IP y vuelva a intentarlo.",
       "timeout_error_discovery": "Se agotó el tiempo de espera al conectarse al hub Wiser. Compruebe que el hub siga en línea y vuelva a intentarlo.",
@@ -41,7 +42,7 @@
         "menu_options": {
           "main_params": "Parámetros principales",
           "automation_params": "Parámetros de automatización",
-          "opentherm_sensors": "OpenTherm sensores",
+          "opentherm": "OpenTherm",
           "equipment_sensors": "Sensores de equipo",
           "ui_options": "Opciones de la interfaz de usuario"
         }
@@ -93,6 +94,16 @@
               "hotwater_boost_mode": "Modo de refuerzo de agua caliente",
               "hotwater_sensor_entity_id": "Sensor de temperatura de agua caliente"
             }
+          },
+          "additional_sensors": {
+            "name": "Sensores adicionales",
+            "description": "Exponga sensores opcionales para los datos informados por Wiser.",
+            "data": {
+              "schedule_setpoint_rooms": "Habitaciones sin control de climatización"
+            },
+            "data_description": {
+              "schedule_setpoint_rooms": "Seleccione las habitaciones Wiser en las que se debe crear un sensor de temperatura de la programación actual."
+            }
           }
         }
       },
@@ -106,6 +117,14 @@
           "equipment_sensors": "Expone un sensor adicional con atributos detallados del equipo para cada enchufe inteligente, PowerTag y actuador de calefacción compatible."
         }
       },
+      "opentherm": {
+        "title": "OpenTherm",
+        "description": "Configure las funciones de OpenTherm.",
+        "menu_options": {
+          "opentherm_hot_water_control": "Control de agua caliente",
+          "opentherm_sensors": "Sensores"
+        }
+      },
       "opentherm_sensors": {
         "title": "Sensores OpenTherm",
         "description": "Elija una categoría de atributos OpenTherm detectados.",
@@ -114,6 +133,20 @@
           "opentherm_central_heating": "Calefacción central",
           "opentherm_hot_water": "Agua caliente",
           "opentherm_status": "Estado y diagnóstico"
+        }
+      },
+      "opentherm_hot_water_control": {
+        "title": "Control de agua caliente OpenTherm",
+        "description": "Controle opcionalmente la consigna de agua caliente sanitaria de la caldera a través de Wiser. La integración crea una programación OpenTherm Hot Water en el panel Wiser Schedules. Apagado usa la temperatura mínima de agua caliente informada por OpenTherm.",
+        "data": {
+          "opentherm_hot_water_control": "Habilitar el control de agua caliente",
+          "opentherm_hot_water_manual_temperature": "Temperatura manual",
+          "opentherm_hot_water_sensor_entity_id": "Sensor de temperatura externo opcional.",
+          "opentherm_hot_water_presets": "Preajustes"
+        },
+        "data_description": {
+          "opentherm_hot_water_manual_temperature": "Temperatura utilizada por el modo manual.",
+          "opentherm_hot_water_sensor_entity_id": "Sensor de temperatura opcional utilizado para la temperatura actual del agua. Se utiliza OpenTherm cuando el sensor no está disponible."
         }
       },
       "opentherm_readings": {
