@@ -45,7 +45,8 @@ Huge thanks to [@andyblac](https://github.com/andyblac) and [@lgo44](https://git
 - **Entity unique IDs move to a new format.** This migration runs automatically and keeps your entity IDs and history. It is all-or-nothing: if it finds a conflict it stops without changing anything, and the integration will not load until it is resolved.
 - **Downgrading is not supported.** To go back to 3.x, restore the backup you took before upgrading - reinstalling the older version on its own will not work.
 - **Equipment power and energy sensors are now off by default**, including for existing installations. If you use them, for example in the Energy dashboard, enable **Equipment sensors** in the integration options after upgrading.
-- **Room climate entities only report `percentage_demand` and `demand_type` when OpenTherm is enabled.** On systems without OpenTherm these attributes are no longer present, so update any templates or automations that use them.
+- **Room climate entities only report `demand_type` when OpenTherm is enabled.** On systems without OpenTherm this attribute is no longer present, so update any templates or automations that use it. `percentage_demand` is still reported on all systems.
+- **The Heating and Hot Water circuit state sensors now report `on`/`off` instead of `On`/`Off`.** The dashboard still shows On and Off, but templates and automations that compare against `On` or `Off` need updating to the lowercase values.
 
 ## Installing
 

@@ -100,11 +100,18 @@ surrounding code, which follows Home Assistant core conventions:
 
 ## Versioning
 
-`version` in `custom_components/wiser/manifest.json` must stay parseable by HACS
-and Home Assistant. Use `X.Y.Z` for releases, `X.Y.Z-rcN` for release
-candidates, and `X.Y.ZbN` for beta builds on `dev`. Do not invent suffixes such
-as `Dev` — HACS and Home Assistant reject them, and the integration will fail to
-load with `does not have a valid version key`.
+The version is set in two places, and both must be changed together:
+
+- `version` in `custom_components/wiser/manifest.json`, which HACS and Home
+  Assistant read.
+- `VERSION` in `custom_components/wiser/const.py`, which the integration reports
+  itself, for example in the hub sensor's `integration_version` attribute.
+
+The version must stay parseable by HACS and Home Assistant. Use `X.Y.Z` for
+releases, `X.Y.Z-rcN` for release candidates, and `X.Y.ZbN` for beta builds on
+`dev`. Do not invent suffixes such as `Dev` — HACS and Home Assistant reject
+them, and the integration will fail to load with `does not have a valid version
+key`.
 
 ## Building a package
 
