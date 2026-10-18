@@ -4,7 +4,7 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.0.0
+## v4.0.0-rc2
 
 ### Breaking changes
 
@@ -44,6 +44,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed device switches, such as **Identify**, breaking the hub refresh when the hub briefly stops reporting their device. The switch now shows as unavailable until the device returns - PR [#752](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/752).
 - Fixed Wiser room renames and removals creating duplicate or orphaned devices and entities. Physical devices and logical rooms now use stable identifiers, existing registry records are migrated while retaining entity IDs and history, integration-managed area assignments follow room renames, user-selected areas remain unchanged, and deleted rooms are removed after confirmation - issue [#732](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/732).
 - Fixed passive mode for underfloor heating rooms - issue [#641](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/641), PR [#742](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/742).
 - Improved light and smart plug responsiveness: commands are no longer blocked by a hub refresh, stale confirmations are retried, obsolete ones are cancelled, and smart plug state updates immediately after a command - issue [#666](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/666), PR [#725](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/725).
