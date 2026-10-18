@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, ENTITY_PREFIX, MANUFACTURER
+from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, MANUFACTURER
 from .entity import WiserEntityMixin
 from .helpers import (
     active_wiser_rooms,
@@ -23,6 +23,7 @@ from .helpers import (
     get_identifier,
     get_legacy_unique_id,
     get_light_binary_sensor_unique_id,
+    get_light_entity_name,
     get_physical_entity_unique_id,
     get_room_entity_unique_id,
     get_unique_id,
@@ -602,7 +603,7 @@ class WiserStateIsDimmable(BaseBinarySensor):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{ENTITY_PREFIX} {self._light.name} {self._sensor_type}"
+        return get_light_entity_name(self._data, self._light, self._sensor_type)
 
     @property
     def unique_id(self):

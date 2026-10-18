@@ -49,6 +49,9 @@ def _load_light_module() -> ModuleType:
         def __init__(self, *args: object) -> None:
             pass
 
+        async def async_will_remove_from_hass(self) -> None:
+            self.removed = True
+
     _module(
         "homeassistant.helpers.update_coordinator", CoordinatorEntity=CoordinatorEntity
     )
@@ -71,6 +74,7 @@ def _load_light_module() -> ModuleType:
         get_device_name=lambda *_a, **_k: "Wiser Light",
         get_hub_via_device_info=lambda _data: {},
         get_identifier=lambda *_a, **_k: "identifier",
+        get_light_entity_name=lambda _data, _light, entity_name: entity_name,
         get_unique_id=lambda *_a, **_k: "unique-id",
         hub_error_handler=hub_error_handler,
     )
@@ -137,30 +141,92 @@ class LightOptimisticStateTest(unittest.TestCase):
     async def _noop_async(self, *_args, **_kwargs):
         return None
 
-    def test_single_command_clears_optimistic(self):
+    def test_single_command_returns_before_confirmation(self):
         light, device = self._light(is_on=False)
-        light.async_force_update = self._noop_async
+        scheduled = []
+        light._schedule_command_confirmation = scheduled.append
+
         asyncio.run(light.async_turn_on())
-        # The one and only command clears its own optimistic state on cleanup.
-        self.assertIsNone(light._optimistic_is_on)
-        self.assertTrue(light.is_on)  # falls through to the (now on) device
 
-    def test_superseded_command_does_not_clobber_newer(self):
+        self.assertIs(light._optimistic_is_on, True)
+        self.assertTrue(light.is_on)
+        self.assertEqual(scheduled, [1])
+
+    def test_superseded_confirmation_does_not_clobber_newer(self):
         light, device = self._light(is_on=False)
+        light._optimistic_gen = 2
+        light._optimistic_is_on = False
+        light.async_force_update = self._noop_async
 
-        # Command A is turn_on. While A awaits its follow-up refresh, a newer
-        # command B (turn_off) lands: it bumps the generation and sets its own
-        # optimistic value. A's cleanup must then leave B's value alone.
-        async def force_update_with_intervening_command(delay=0):
-            light._optimistic_gen += 1
-            light._optimistic_is_on = False  # command B = turn off
+        asyncio.run(light._async_confirm_command(1))
 
-        light.async_force_update = force_update_with_intervening_command
-        asyncio.run(light.async_turn_on())  # command A
-
-        # Without the generation guard, A's finally would wipe this back to None
-        # and the UI would revert to the stale device state.
         self.assertIs(light._optimistic_is_on, False)
+
+    def test_latest_confirmation_clears_optimistic_state(self):
+        light, device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+        refreshes = []
+
+        async def stale_refresh(*_args, **_kwargs):
+            refreshes.append(True)
+
+        light.async_force_update = stale_refresh
+
+        asyncio.run(light._async_confirm_command(1))
+
+        self.assertEqual(len(refreshes), 2)
+        self.assertIsNone(light._optimistic_is_on)
+
+    def test_failed_confirmation_clears_optimistic_state(self):
+        light, _device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+
+        async def fail_refresh(*_args, **_kwargs):
+            raise RuntimeError("refresh failed")
+
+        light.async_force_update = fail_refresh
+
+        with self.assertRaisesRegex(RuntimeError, "refresh failed"):
+            asyncio.run(light._async_confirm_command(1))
+
+        self.assertIsNone(light._optimistic_is_on)
+
+    def test_stale_first_refresh_retries_until_hub_confirms(self):
+        light, device = self._light(is_on=False)
+        light._optimistic_gen = 1
+        light._optimistic_is_on = True
+        refreshes = []
+
+        async def refresh(*_args, **_kwargs):
+            refreshes.append(True)
+            if len(refreshes) == 2:
+                device.is_on = True
+            light._handle_coordinator_update()
+
+        light.async_force_update = refresh
+
+        asyncio.run(light._async_confirm_command(1))
+
+        self.assertEqual(len(refreshes), 2)
+        self.assertIsNone(light._optimistic_is_on)
+        self.assertTrue(light.is_on)
+
+    def test_failed_command_restores_hub_state(self):
+        light, device = self._light(is_on=False)
+        light._schedule_command_confirmation = lambda _gen: None
+
+        async def fail():
+            raise RuntimeError("command failed")
+
+        device.turn_on = fail
+
+        with self.assertRaisesRegex(RuntimeError, "command failed"):
+            asyncio.run(light.async_turn_on())
+
+        self.assertIsNone(light._optimistic_is_on)
+        self.assertFalse(light.is_on)
 
     def test_coordinator_update_clears_optimistic_once_confirmed(self):
         light, device = self._light(is_on=False)
@@ -177,6 +243,63 @@ class LightOptimisticStateTest(unittest.TestCase):
         light._handle_coordinator_update()
         self.assertIsNone(light._optimistic_is_on)
         self.assertTrue(light.is_on)
+
+    def test_brightness_optimistic_state_waits_for_matching_hub_value(self):
+        light, device = self._light(is_on=True)
+        light._optimistic_percentage = 60
+
+        device.current_percentage = 20
+        light._handle_coordinator_update()
+        self.assertEqual(light._optimistic_percentage, 60)
+
+        device.current_percentage = 60
+        light._handle_coordinator_update()
+        self.assertIsNone(light._optimistic_percentage)
+
+    def test_new_confirmation_cancels_superseded_task(self):
+        light, _device = self._light(is_on=False)
+        tasks = []
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        def create_task(coro, _name):
+            coro.close()
+            task = FakeTask()
+            tasks.append(task)
+            return task
+
+        light.hass = SimpleNamespace(async_create_task=create_task)
+        light.entity_id = "light.test"
+
+        light._schedule_command_confirmation(1)
+        light._schedule_command_confirmation(2)
+
+        self.assertTrue(tasks[0].cancelled)
+        self.assertFalse(tasks[1].cancelled)
+
+    def test_removal_invalidates_and_cancels_confirmation(self):
+        light, _device = self._light(is_on=False)
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        task = FakeTask()
+        light._confirmation_task = task
+        previous_gen = light._optimistic_gen
+
+        asyncio.run(light.async_will_remove_from_hass())
+
+        self.assertTrue(task.cancelled)
+        self.assertEqual(light._optimistic_gen, previous_gen + 1)
+        self.assertIsNone(light._confirmation_task)
+        self.assertTrue(light.removed)
 
 
 if __name__ == "__main__":

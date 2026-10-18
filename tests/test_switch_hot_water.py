@@ -46,6 +46,9 @@ def _load_switch_module() -> ModuleType:
         def __init__(self, *args: object) -> None:
             pass
 
+        async def async_will_remove_from_hass(self) -> None:
+            self.removed = True
+
     _module(
         "homeassistant.helpers.update_coordinator", CoordinatorEntity=CoordinatorEntity
     )
@@ -75,6 +78,7 @@ def _load_switch_module() -> ModuleType:
         get_identifier=lambda *_args: "identifier",
         get_legacy_device_name=lambda *_args, **_kwargs: "Wiser HeatHub",
         get_legacy_unique_id=lambda *_args: "legacy-unique-id",
+        get_light_entity_name=lambda _data, _light, entity_name: entity_name,
         get_physical_entity_unique_id=lambda *_args: "physical-entity-id",
         get_room_entity_unique_id=lambda *_args: "room-entity-id",
         get_unique_id=lambda *_args: "unique-id",
@@ -246,23 +250,143 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
             events.append(("refresh", delay, switch.is_on))
 
         switch.async_force_update = refresh
-        return switch, plug, events
+        scheduled = []
+        switch._schedule_command_confirmation = scheduled.append
+        return switch, plug, events, scheduled
 
-    def test_turn_on_publishes_on_before_delayed_refresh(self) -> None:
-        switch, plug, events = self._switch(is_on=False)
+    def test_turn_on_publishes_on_before_background_confirmation(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
 
         asyncio.run(switch.async_turn_on())
 
         self.assertEqual(plug.commands, ["turn_on"])
-        self.assertEqual(events, [("write", True, "On"), ("refresh", 2, True)])
+        self.assertEqual(events, [("write", True, "On")])
+        self.assertEqual(scheduled, [1])
 
-    def test_turn_off_publishes_off_before_delayed_refresh(self) -> None:
-        switch, plug, events = self._switch(is_on=True)
+    def test_turn_off_publishes_off_before_background_confirmation(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=True)
 
         asyncio.run(switch.async_turn_off())
 
         self.assertEqual(plug.commands, ["turn_off"])
-        self.assertEqual(events, [("write", False, "Off"), ("refresh", 2, False)])
+        self.assertEqual(events, [("write", False, "Off")])
+        self.assertEqual(scheduled, [1])
+
+    def test_stale_first_refresh_retries_until_hub_confirms(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
+        asyncio.run(switch.async_turn_on())
+        refreshes = []
+
+        async def refresh(*_args, **_kwargs):
+            refreshes.append(True)
+            if len(refreshes) == 2:
+                plug.is_on = True
+            switch._handle_coordinator_update()
+
+        switch.async_force_update = refresh
+        asyncio.run(switch._async_confirm_command(1))
+
+        self.assertEqual(len(refreshes), 2)
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertTrue(switch.is_on)
+
+    def test_failed_confirmation_restores_hub_state(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+        switch._optimistic_gen = 1
+        switch._optimistic_is_on = True
+        switch._is_on = True
+
+        async def fail_refresh(*_args, **_kwargs):
+            raise RuntimeError("refresh failed")
+
+        switch.async_force_update = fail_refresh
+
+        with self.assertRaisesRegex(RuntimeError, "refresh failed"):
+            asyncio.run(switch._async_confirm_command(1))
+
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertFalse(switch.is_on)
+
+    def test_superseded_confirmation_does_not_clobber_newer_command(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=True)
+        switch._optimistic_gen = 2
+        switch._optimistic_is_on = False
+        switch._is_on = False
+
+        asyncio.run(switch._async_confirm_command(1))
+
+        self.assertIs(switch._optimistic_is_on, False)
+        self.assertFalse(switch.is_on)
+
+    def test_failed_command_restores_hub_state(self) -> None:
+        switch, plug, events, scheduled = self._switch(is_on=False)
+
+        async def fail():
+            raise RuntimeError("command failed")
+
+        plug.turn_on = fail
+
+        with self.assertRaisesRegex(RuntimeError, "command failed"):
+            asyncio.run(switch.async_turn_on())
+
+        self.assertEqual(scheduled, [])
+        self.assertIsNone(switch._optimistic_is_on)
+        self.assertFalse(switch.is_on)
+        self.assertEqual(
+            events,
+            [("write", True, "On"), ("write", False, "Off")],
+        )
+
+    def test_new_confirmation_cancels_superseded_task(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+        tasks = []
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        def create_task(coro, _name):
+            coro.close()
+            task = FakeTask()
+            tasks.append(task)
+            return task
+
+        switch.hass = SimpleNamespace(async_create_task=create_task)
+        switch.entity_id = "switch.test"
+
+        # Restore the real method replaced by the helper's command spy.
+        switch._schedule_command_confirmation = (
+            self.switch_module.WiserSmartPlugSwitch._schedule_command_confirmation.__get__(
+                switch
+            )
+        )
+        switch._schedule_command_confirmation(1)
+        switch._schedule_command_confirmation(2)
+
+        self.assertTrue(tasks[0].cancelled)
+        self.assertFalse(tasks[1].cancelled)
+
+    def test_removal_invalidates_and_cancels_confirmation(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+
+        class FakeTask:
+            cancelled = False
+
+            def cancel(self):
+                self.cancelled = True
+
+        task = FakeTask()
+        switch._confirmation_task = task
+        previous_gen = switch._optimistic_gen
+
+        asyncio.run(switch.async_will_remove_from_hass())
+
+        self.assertTrue(task.cancelled)
+        self.assertEqual(switch._optimistic_gen, previous_gen + 1)
+        self.assertIsNone(switch._confirmation_task)
+        self.assertTrue(switch.removed)
 
 
 class _FakeEVSE:

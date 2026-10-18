@@ -3,7 +3,6 @@ import asyncio
 from .const import (
     DATA,
     DOMAIN,
-    ENTITY_PREFIX,
     HOT_WATER,
     MANUFACTURER,
 )
@@ -12,6 +11,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_via_device_info,
+    get_light_entity_name,
     get_unique_id,
     get_identifier,
     hub_error_handler,
@@ -89,7 +89,7 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self._attr_translation_key}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
@@ -260,9 +260,7 @@ class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
     @property
     def name(self):
         """Return Name of device."""
-        # Per-channel light name so the two channels of a multi-gang dimmer do
-        # not collide (WiserSelectEntity.name would use the shared device id).
-        return f"{ENTITY_PREFIX} {self._device.name} Mode"
+        return get_light_entity_name(self._data, self._device, "Mode")
 
     @property
     def unique_id(self):
@@ -324,7 +322,9 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{ENTITY_PREFIX} {self._device.name} Power On Behaviour"
+        return get_light_entity_name(
+            self._data, self._device, "Power On Behaviour"
+        )
 
     @property
     def current_option(self) -> str:
@@ -376,7 +376,7 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     @property
     def name(self):
         """Return Name of device."""
-        return f"{ENTITY_PREFIX} {self._device.name} Led Indicator"
+        return get_light_entity_name(self._data, self._device, "LED Indicator")
 
     @property
     def current_option(self) -> str:

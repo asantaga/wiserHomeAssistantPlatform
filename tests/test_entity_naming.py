@@ -182,6 +182,7 @@ class EntityNamingTest(unittest.TestCase):
 
     def test_all_entity_unique_ids_are_uuid_backed(self) -> None:
         uuid_helpers = {
+            "get_light_binary_sensor_unique_id",
             "get_physical_entity_unique_id",
             "get_room_entity_unique_id",
             "get_unique_id",

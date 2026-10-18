@@ -81,7 +81,7 @@ class WiserShutter(
     async def async_force_update(self, delay: int = 0):
         _LOGGER.debug(f"Hub update initiated by {self.name}")
         if delay:
-            asyncio.sleep(delay)
+            await asyncio.sleep(delay)
         await self._data.async_refresh()
 
     @callback
