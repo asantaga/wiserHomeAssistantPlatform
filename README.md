@@ -41,7 +41,7 @@ Huge thanks to [@andyblac](https://github.com/andyblac) and [@lgo44](https://git
 - **The device registry is restructured.** The separate virtual controller device is merged into the physical hub device, and Wiser room devices move to stable identifiers. Entity IDs and history are preserved, but anything that targets a Wiser *device* rather than an entity - device-based automations and scripts, or dashboard cards pointing at a device - needs repointing. Check these after upgrading.
 - **Entity unique IDs move to a new format.** This migration runs automatically and keeps your entity IDs and history. It is all-or-nothing: if it finds a conflict it stops without changing anything, and the integration will not load until it is resolved.
 - **Downgrading is not supported.** To go back to 3.x, restore the backup you took before upgrading - reinstalling the older version on its own will not work.
-- **Equipment power and energy sensors are now optional.** Existing installations keep them; new installations can enable them under **Equipment sensors** in the integration options.
+- **Equipment power and energy sensors are now off by default**, including for existing installations. If you use them, for example in the Energy dashboard, enable **Equipment sensors** in the integration options after upgrading.
 
 ## Installing
 

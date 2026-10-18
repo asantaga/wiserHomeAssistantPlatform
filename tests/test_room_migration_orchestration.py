@@ -58,7 +58,6 @@ def _load_wiser_init() -> ModuleType:
             "CONF_AUTOMATIONS_PASSIVE",
             "CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT",
             "CONF_DEPRECATED_HW_TARGET_TEMP",
-            "CONF_EQUIPMENT_SENSORS",
             "CONF_LEGACY_NAMING",
             "CONF_OPENTHERM_EVER_CONNECTED",
             "CONF_OPENTHERM_HOT_WATER_CAPABLE",
