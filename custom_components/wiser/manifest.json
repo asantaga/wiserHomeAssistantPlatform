@@ -4,7 +4,8 @@
   "codeowners": [
     "@asantaga",
     "@msp1974",
-    "@andyblac"
+    "@andyblac",
+    "@lgo44"
   ],
   "config_flow": true,
   "dependencies": [
