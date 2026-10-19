@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v4.0.1
+# Wiser Home Assistant Integration v4.0.2b0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)

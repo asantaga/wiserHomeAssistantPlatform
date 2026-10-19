@@ -9,7 +9,7 @@ from enum import StrEnum
 import json
 from pathlib import Path
 
-VERSION = "4.0.1"
+VERSION = "4.0.2b0"
 DOMAIN = "wiser"
 CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
