@@ -15,6 +15,30 @@ from fetch_card_releases import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+API_PACKAGE = "aioWiserHeatAPI"
+API_DEV_FALLBACK_REQUIREMENT = (
+    f"{API_PACKAGE}@git+https://github.com/msp1974/aioWiserHeatAPI.git@dev"
+)
+
+
+def set_api_requirement(manifest_path, channel):
+    """Use the upstream API dev branch only for dev-channel packages."""
+    if channel != "dev":
+        return
+
+    manifest = json.loads(manifest_path.read_text("utf-8"))
+    requirements = manifest.get("requirements", [])
+    matches = [
+        index
+        for index, requirement in enumerate(requirements)
+        if requirement.startswith(API_PACKAGE)
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected exactly one {API_PACKAGE} requirement in {manifest_path}"
+        )
+    requirements[matches[0]] = API_DEV_FALLBACK_REQUIREMENT
+    manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n", encoding="utf-8")
 
 
 def build(
@@ -36,6 +60,10 @@ def build(
         shutil.copytree(
             source, staging,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+        )
+        set_api_requirement(
+            staging / "manifest.json",
+            channel,
         )
         manifest = validate_registry(
             json.loads((staging / "frontend/cards.json").read_text("utf-8"))

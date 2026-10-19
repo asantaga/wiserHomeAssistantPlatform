@@ -43,6 +43,16 @@ class BuildTest(unittest.TestCase):
             json.dumps({"schema_version": 1, "cards": CARD_MANIFEST}),
             encoding="utf-8",
         )
+        (self.source / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "domain": "wiser",
+                    "requirements": ["aioWiserHeatAPI==1.7.4"],
+                    "version": "4.0.0-rc2",
+                }
+            ),
+            encoding="utf-8",
+        )
         for definition in CARD_MANIFEST:
             (frontend / definition["filename"]).write_bytes(b"old tracked bundle")
         (frontend / "__pycache__").mkdir()
@@ -66,6 +76,88 @@ class BuildTest(unittest.TestCase):
     def filename(self, card):
         return next(
             item["filename"] for item in CARD_MANIFEST if item["id"] == card
+        )
+
+    def packaged_manifest(self):
+        with ZipFile(self.output) as archive:
+            return json.loads(archive.read("manifest.json"))
+
+    def test_dev_build_uses_upstream_api_dev_even_with_local_checkout(self):
+        api_root = self.root / "aioWiserHeatAPI"
+        api_root.mkdir()
+        (api_root / "setup.py").touch()
+
+        with patch.object(FETCH, "list_releases", return_value=[]):
+            self.build()
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            [
+                "aioWiserHeatAPI@git+https://github.com/msp1974/"
+                "aioWiserHeatAPI.git@dev"
+            ],
+        )
+        self.assertEqual(
+            json.loads((self.source / "manifest.json").read_text())["requirements"],
+            ["aioWiserHeatAPI==1.7.4"],
+        )
+        with ZipFile(self.output) as archive:
+            self.assertFalse(
+                any(name.startswith("vendor/") for name in archive.namelist())
+            )
+
+    def test_stable_build_keeps_released_api_version(self):
+        with patch.object(FETCH, "list_releases", return_value=[]):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "stable",
+                CARD_REPOSITORIES,
+            )
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            ["aioWiserHeatAPI==1.7.4"],
+        )
+
+    def test_dev_release_build_uses_upstream_api_dev(self):
+        with patch.object(FETCH, "list_releases", return_value=[]):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
+                CARD_REPOSITORIES,
+                release=True,
+            )
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            [
+                "aioWiserHeatAPI@git+https://github.com/msp1974/"
+                "aioWiserHeatAPI.git@dev"
+            ],
+        )
+        with ZipFile(self.output) as archive:
+            self.assertFalse(
+                any(name.startswith("vendor/") for name in archive.namelist())
+            )
+
+    def test_stable_release_build_keeps_released_api_version(self):
+        with patch.object(FETCH, "list_releases", return_value=[]):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "stable",
+                CARD_REPOSITORIES,
+                release=True,
+            )
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            ["aioWiserHeatAPI==1.7.4"],
         )
 
     def test_local_bundles_win_without_network_and_tracked_files_are_untouched(self):
