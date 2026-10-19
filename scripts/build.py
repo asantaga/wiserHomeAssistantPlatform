@@ -21,9 +21,9 @@ API_DEV_FALLBACK_REQUIREMENT = (
 )
 
 
-def set_api_requirement(manifest_path, channel):
-    """Use the upstream API dev branch only for dev-channel packages."""
-    if channel != "dev":
+def set_api_requirement(manifest_path, channel, release=False):
+    """Use API dev only for non-release dev-channel packages."""
+    if release or channel != "dev":
         return
 
     manifest = json.loads(manifest_path.read_text("utf-8"))
@@ -64,6 +64,7 @@ def build(
         set_api_requirement(
             staging / "manifest.json",
             channel,
+            release=release,
         )
         manifest = validate_registry(
             json.loads((staging / "frontend/cards.json").read_text("utf-8"))

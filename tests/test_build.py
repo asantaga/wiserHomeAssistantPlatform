@@ -121,7 +121,7 @@ class BuildTest(unittest.TestCase):
             ["aioWiserHeatAPI==1.7.4"],
         )
 
-    def test_dev_release_build_uses_upstream_api_dev(self):
+    def test_dev_release_build_keeps_released_api_version(self):
         with patch.object(FETCH, "list_releases", return_value=[]):
             BUILD.build(
                 self.source,
@@ -134,10 +134,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            [
-                "aioWiserHeatAPI@git+https://github.com/msp1974/"
-                "aioWiserHeatAPI.git@dev"
-            ],
+            ["aioWiserHeatAPI==1.7.4"],
         )
         with ZipFile(self.output) as archive:
             self.assertFalse(
