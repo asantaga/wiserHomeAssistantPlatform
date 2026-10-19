@@ -47,7 +47,7 @@ class BuildTest(unittest.TestCase):
             json.dumps(
                 {
                     "domain": "wiser",
-                    "requirements": ["aioWiserHeatAPI==1.7.4"],
+                    "requirements": ["aioWiserHeatAPI==1.7.5"],
                     "version": "4.0.0-rc2",
                 }
             ),
@@ -99,7 +99,7 @@ class BuildTest(unittest.TestCase):
         )
         self.assertEqual(
             json.loads((self.source / "manifest.json").read_text())["requirements"],
-            ["aioWiserHeatAPI==1.7.4"],
+            ["aioWiserHeatAPI==1.7.5"],
         )
         with ZipFile(self.output) as archive:
             self.assertFalse(
@@ -118,7 +118,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.4"],
+            ["aioWiserHeatAPI==1.7.5"],
         )
 
     def test_dev_release_build_keeps_released_api_version(self):
@@ -134,7 +134,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.4"],
+            ["aioWiserHeatAPI==1.7.5"],
         )
         with ZipFile(self.output) as archive:
             self.assertFalse(
@@ -154,7 +154,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.4"],
+            ["aioWiserHeatAPI==1.7.5"],
         )
 
     def test_local_bundles_win_without_network_and_tracked_files_are_untouched(self):
