@@ -1,3 +1,4 @@
 # Runtime helpers used by card-update tests; Home Assistant itself is stubbed.
 aiohttp>=3.11,<4
 awesomeversion>=24.6,<26
+packaging>=24,<27

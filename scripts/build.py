@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 import shutil
 import tempfile
+from urllib.request import Request, urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
+
+from packaging.version import InvalidVersion, Version
 
 from fetch_card_releases import (
     fetch_cards,
@@ -16,17 +19,11 @@ from fetch_card_releases import (
 
 ROOT = Path(__file__).resolve().parents[1]
 API_PACKAGE = "aioWiserHeatAPI"
-API_DEV_FALLBACK_REQUIREMENT = (
-    f"{API_PACKAGE}@git+https://github.com/msp1974/aioWiserHeatAPI.git@dev"
-)
+API_RELEASES_URL = "https://pypi.org/pypi/aioWiserHeatAPI/json"
 
 
-def set_api_requirement(manifest_path, channel, release=False):
-    """Use API dev only for non-release dev-channel packages."""
-    if release or channel != "dev":
-        return
-
-    manifest = json.loads(manifest_path.read_text("utf-8"))
+def api_requirement(manifest):
+    """Return the released API requirement and its position."""
     requirements = manifest.get("requirements", [])
     matches = [
         index
@@ -35,9 +32,56 @@ def set_api_requirement(manifest_path, channel, release=False):
     ]
     if len(matches) != 1:
         raise ValueError(
-            f"Expected exactly one {API_PACKAGE} requirement in {manifest_path}"
+            f"Expected exactly one {API_PACKAGE} requirement"
         )
-    requirements[matches[0]] = API_DEV_FALLBACK_REQUIREMENT
+    requirement = requirements[matches[0]]
+    prefix = f"{API_PACKAGE}=="
+    if not requirement.startswith(prefix):
+        raise ValueError(f"Expected a released {API_PACKAGE} version pin")
+    version = Version(requirement.removeprefix(prefix))
+    if version.is_prerelease or version.is_devrelease:
+        raise ValueError(f"Expected a stable {API_PACKAGE} version pin")
+    return requirements, matches[0], version
+
+
+def latest_api_prerelease(released_version):
+    """Return the newest usable API prerelease newer than the released pin."""
+    request = Request(API_RELEASES_URL, headers={"User-Agent": "wiser-packager"})
+    try:
+        with urlopen(request, timeout=30) as response:
+            releases = json.load(response).get("releases", {})
+    except (OSError, ValueError):
+        return None
+
+    candidates = []
+    for value, files in releases.items():
+        try:
+            version = Version(value)
+        except InvalidVersion:
+            continue
+        if (
+            version > released_version
+            and version.is_prerelease
+            and any(not file.get("yanked", False) for file in files)
+        ):
+            candidates.append(version)
+    return max(candidates) if candidates else None
+
+
+def set_api_requirement(manifest_path, channel, release=False):
+    """Select API handling for local, prerelease, and release packages."""
+    manifest = json.loads(manifest_path.read_text("utf-8"))
+    requirements, index, released_version = api_requirement(manifest)
+
+    if not release:
+        # Local builds use whichever API is already installed in Home Assistant.
+        requirements.pop(index)
+    elif channel == "dev":
+        # Integration prereleases prefer a published API prerelease. If none is
+        # available (or PyPI is unavailable), retain the released version pin.
+        if prerelease := latest_api_prerelease(released_version):
+            requirements[index] = f"{API_PACKAGE}=={prerelease}"
+
     manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n", encoding="utf-8")
 
 

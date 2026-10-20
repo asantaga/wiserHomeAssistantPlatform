@@ -12,7 +12,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Changed
 
-- Updated the `aioWiserHeatAPI` dependency from v1.7.3 to v1.7.5, using its native room heat-demand and button-panel battery support. Release builds remain pinned to the released API version, while normal dev-channel builds use the API `dev` branch - PR [#754](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/754).
+- Updated the `aioWiserHeatAPI` dependency from v1.7.3 to v1.7.5, using its native room heat-demand and button-panel battery support. Local builds use the API already installed in Home Assistant, integration prereleases prefer a published API prerelease and fall back to the released API pin, and final integration releases always use that released API pin - PR [#754](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/754).
 
 ### Fixed
 
