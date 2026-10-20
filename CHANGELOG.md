@@ -6,6 +6,14 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ## v4.0.2b0
 
+### Added
+
+- Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
+
+### Changed
+
+- Updated the `aioWiserHeatAPI` dependency from v1.7.3 to v1.7.5, using its native room heat-demand and button-panel battery support. Release builds remain pinned to the released API version, while normal dev-channel builds use the API `dev` branch - PR [#754](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/754).
+
 ### Fixed
 
 - Fixed the Zigbee network failing to load when multi-function or multi-gang devices expose several logical endpoints with the same physical Zigbee node ID - PR [#750](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/750).
