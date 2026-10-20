@@ -132,6 +132,14 @@ integration; without that option it offers stable releases only. See
 [Adding frontend cards and panels](docs/frontend-registry.md) for the registry
 format and shared panel API.
 
+The source manifest pins the released `aioWiserHeatAPI` version. During a dev
+channel build, the package installs the upstream API `dev` branch from GitHub.
+Stable packages, including explicit `--release` builds, retain the released
+version pin. The `--release` option controls frontend asset selection only. API
+artifacts are built separately in the `aioWiserHeatAPI` repository; they are
+not bundled in the integration package. The source manifest itself is never
+modified by the build.
+
 The output is `dist/wiser.zip`, with `dist/card-releases.json` recording the
 frontend artifacts and checksums included. If an individual card or panel
 repository is temporarily unavailable, its bundle is omitted and the

@@ -1,4 +1,4 @@
-"""Compatibility helpers for OpenTherm writes in aioWiserHeatAPI 1.7.3."""
+"""Compatibility helpers for OpenTherm writes in aioWiserHeatAPI 1.7.4."""
 
 import json
 import math
@@ -315,7 +315,7 @@ def _path_value(value, path):
 
 def relative_modulation_level(opentherm):
     """Read modulation as percent, preserving zero and fractional readings."""
-    # aioWiserHeatAPI 1.7.3's convenience property returns None for zero and
+    # aioWiserHeatAPI 1.7.4's convenience property returns None for zero and
     # truncates fractions. The raw OpenTherm value is in tenths of a percent.
     raw = opentherm.operational_data.json_data.get("RelativeModulationLevel")
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
