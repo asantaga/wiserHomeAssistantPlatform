@@ -1102,10 +1102,20 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.sensor_module = _load_sensor_module()
 
-    def _sensor(self, *, level: str, voltage: float | None):
+    def _sensor(
+        self,
+        *,
+        level: str | None,
+        voltage: float | None,
+        percent: int | None = None,
+    ):
         sensor = object.__new__(self.sensor_module.WiserBatterySensor)
         sensor._device = SimpleNamespace(
-            battery=SimpleNamespace(level=level, voltage=voltage)
+            battery=SimpleNamespace(
+                level=level,
+                voltage=voltage,
+                percent=percent,
+            )
         )
         return sensor
 
@@ -1123,6 +1133,64 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         sensor = self._sensor(level="Normal", voltage=None)
 
         self.assertTrue(sensor.available)
+
+    def test_missing_level_does_not_break_sensor_setup(self) -> None:
+        sensor = self._sensor(level=None, voltage=None)
+
+        self.assertEqual(sensor._get_battery_state(), 0)
+        self.assertFalse(sensor.available)
+
+    def test_missing_device_does_not_break_coordinator_refresh(self) -> None:
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device = None
+
+        self.assertEqual(sensor._get_battery_state(), 0)
+        self.assertFalse(sensor.available)
+
+    def test_battery_lookup_uses_matching_device_type_when_ids_collide(self) -> None:
+        light = SimpleNamespace(id=7, product_type="Light")
+        button_panel = SimpleNamespace(
+            id=7,
+            product_type="ButtonPanel",
+            battery=SimpleNamespace(level="Normal", voltage=None, percent=100),
+        )
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._device_id = 7
+        sensor._device_product_type = "ButtonPanel"
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(all=[light, button_panel])
+            )
+        )
+
+        self.assertIs(sensor._get_battery_device(), button_panel)
+
+    def test_missing_battery_values_are_not_reported(self) -> None:
+        device = SimpleNamespace(
+            battery=SimpleNamespace(level="Unknown", voltage=None)
+        )
+
+        self.assertFalse(self.sensor_module._battery_data_is_reported(device))
+
+    def test_level_or_voltage_reports_battery_data(self) -> None:
+        for battery in (
+            SimpleNamespace(level="Normal", voltage=None),
+            SimpleNamespace(level="Unknown", voltage=3.0),
+        ):
+            with self.subTest(battery=battery):
+                device = SimpleNamespace(battery=battery)
+                self.assertTrue(
+                    self.sensor_module._battery_data_is_reported(device)
+                )
+
+    def test_button_panel_does_not_depend_on_physical_product_type(self) -> None:
+        device = SimpleNamespace(
+            product_type="DimmableLight",
+            number_of_gangs=1,
+            events=[],
+        )
+
+        self.assertTrue(self.sensor_module._is_button_panel(device))
 
 
 class WiserUFHMeasuredTemperatureTest(unittest.TestCase):
