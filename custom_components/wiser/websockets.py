@@ -18,6 +18,7 @@ from .frontend.wiser_sidebar import (
     save_panel_config,
     save_wiser_panel_tabs,
 )
+from .zigbee import build_zigbee_network_data
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -610,45 +611,9 @@ async def async_register_websockets(hass, data):
         """Publish devices zigbee data."""
         d = get_api_for_hub(msg.get("hub"))
         if d:
-            nodes = []
-            edges = []
-
-            # Add controller
-            nodes.append(
-                {
-                    "id": 0,
-                    "label": f"Wiser Hub",
-                    "group": "Controller",
-                }
+            connection.send_result(
+                msg["id"], build_zigbee_network_data(d.wiserhub)
             )
-
-            for device in d.wiserhub.devices.all:
-                room = d.wiserhub.rooms.get_by_device_id(device.id)
-                nodes.append(
-                    {
-                        "id": device.node_id,
-                        "label": f"{device.name}\n({room.name if room else 'No Room'})",
-                        "group": device.product_type,
-                    }
-                )
-
-                if device.product_type in ["SmartPlug", "HeatingActuator"]:
-                    lqi = device.signal.displayed_signal_strength
-                else:
-                    lqi = f"{device.signal.displayed_signal_strength} ({device.signal.controller_signal_strength}%)"
-
-                edge = {
-                    "id": f"{device.node_id}-{device.parent_node_id}",
-                    "from": device.node_id,
-                    "to": device.parent_node_id,
-                    "label": lqi,
-                }
-                if lqi == "NoSignal":
-                    edge["color"] = "#db4437"
-
-                edges.append(edge)
-
-            connection.send_result(msg["id"], {"nodes": nodes, "edges": edges})
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
