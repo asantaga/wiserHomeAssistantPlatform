@@ -508,16 +508,13 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["is_passive"] = self._room.is_passive_mode
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
+        attrs["percentage_demand"] = self._room.percentage_demand
 
         # OpenTherm
         opentherm = getattr(self._data.wiserhub.system, "opentherm", None)
         if opentherm is not None and opentherm.enabled:
             attrs["demand_type"] = self._room.demand_type
-            attrs["percentage_demand"] = self._room.percentage_demand
-            if hasattr(self._room, "is_calling_for_heat"):
-                attrs["is_calling_for_heat"] = self._room.is_calling_for_heat
-            else:
-                attrs["is_calling_for_heat"] = self._room.percentage_demand > 0
+            attrs["is_calling_for_heat"] = self._room.is_calling_for_heat
 
         # If boosted show boost end time
         if self._room.is_boosted:

@@ -171,7 +171,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 seen_device_ids.add(device.id)
                 wiser_switches.append(
                     WiserDeviceSwitch(
-                        data, switch["name"], switch["key"], switch["icon"], device.id
+                        data,
+                        switch["name"],
+                        switch["key"],
+                        switch["icon"],
+                        device.id,
+                        device=device,
                     )
                 )
 
@@ -462,24 +467,50 @@ class WiserRoomSwitch(WiserSwitch):
 class WiserDeviceSwitch(WiserSwitch):
     """Switch to set the status of a TRV/Roomstat switch"""
 
-    def __init__(self, data, name, key, icon, device_id) -> None:
+    def __init__(self, data, name, key, icon, device_id, device=None) -> None:
         """Initialize the sensor."""
         self._device_id = device_id
         super().__init__(data, name, key, "device-switch", icon)
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._is_on = getattr(self._device, self._key)
+        self._device = device or self._data.wiserhub.devices.get_by_id(
+            self._device_id
+        )
+        self._device_product_type = getattr(self._device, "product_type", None)
+        self._device_firmware_version = getattr(
+            self._device, "firmware_version", None
+        )
+        self._is_on = getattr(self._device, self._key, False)
+
+    def _get_device(self):
+        """Return the matching device object from the latest hub refresh."""
+        for device in getattr(self._data.wiserhub.devices, "all", []):
+            if device.id != self._device_id or not hasattr(device, self._key):
+                continue
+            if (
+                self._device_product_type is None
+                or getattr(device, "product_type", None)
+                == self._device_product_type
+            ):
+                return device
+        return None
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Async Update to HA."""
         super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
-        self._is_on = getattr(self._device, self._key)
+        self._device = self._get_device()
+        self._is_on = getattr(self._device, self._key, False)
         self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        """Return whether the device is present in the latest hub data."""
+        return self._device is not None
 
     @hub_error_handler
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
+        if self._device is None:
+            return False
         fn = getattr(self._device, "set_" + self._key)
         await fn(True)
         await self.async_force_update()
@@ -488,6 +519,8 @@ class WiserDeviceSwitch(WiserSwitch):
     @hub_error_handler
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
+        if self._device is None:
+            return False
         fn = getattr(self._device, "set_" + self._key)
         await fn(False)
         await self.async_force_update()
@@ -497,7 +530,10 @@ class WiserDeviceSwitch(WiserSwitch):
     def unique_id(self):
         """Return unique Id."""
         return get_unique_id(
-            self._data, self._device.product_type, self._name, self._device_id
+            self._data,
+            self._device_product_type,
+            self._name,
+            self._device_id,
         )
 
     @property
@@ -507,8 +543,8 @@ class WiserDeviceSwitch(WiserSwitch):
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
-            "model": self._device.product_type,
-            "sw_version": self._device.firmware_version,
+            "model": self._device_product_type,
+            "sw_version": self._device_firmware_version,
             **get_hub_via_device_info(self._data),
         }
 

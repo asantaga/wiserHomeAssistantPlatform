@@ -3,7 +3,9 @@
   "name": "Drayton Wiser Integration for Home Assistant",
   "codeowners": [
     "@asantaga",
-    "@msp1974"
+    "@msp1974",
+    "@andyblac",
+    "@lgo44"
   ],
   "config_flow": true,
   "dependencies": [
@@ -17,9 +19,9 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
   "requirements": [
-    "aioWiserHeatAPI==1.7.3"
+    "aioWiserHeatAPI==1.7.5"
   ],
-  "version": "4.0.0-rc1",
+  "version": "4.0.2b0",
   "zeroconf": [
     {
       "type": "_http._tcp.local.",

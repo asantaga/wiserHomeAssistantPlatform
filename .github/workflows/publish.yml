@@ -40,11 +40,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARD_CHANNEL: ${{ github.event_name == 'release' && (github.event.release.prerelease && 'dev' || 'stable') || inputs.channel || 'dev' }}
-          PANEL_CONFIG_REPOSITORY: ${{ vars.WISER_PANEL_CONFIG_REPOSITORY || 'andyblac/WiserFrontendPanelConfig' }}
         run: >-
           python scripts/build.py --release
           --channel "$CARD_CHANNEL"
-          --panel-config-repository "$PANEL_CONFIG_REPOSITORY"
       - name: Upload release package for inspection
         uses: actions/upload-artifact@v7
         with:
@@ -52,7 +50,6 @@ jobs:
           path: |
             dist/wiser.zip
             dist/card-releases.json
-            dist/panel-config-release.json
           if-no-files-found: error
 
   publish:
