@@ -68,17 +68,25 @@ def latest_api_prerelease(released_version):
     return max(candidates) if candidates else None
 
 
-def set_api_requirement(manifest_path, channel, release=False):
+def set_api_requirement(
+    manifest_path,
+    channel,
+    release=False,
+    use_installed_api=False,
+):
     """Select API handling for local, prerelease, and release packages."""
+    if release and use_installed_api:
+        raise ValueError("--use-installed-api cannot be combined with --release")
+
     manifest = json.loads(manifest_path.read_text("utf-8"))
     requirements, index, released_version = api_requirement(manifest)
 
-    if not release:
-        # Local builds use whichever API is already installed in Home Assistant.
+    if use_installed_api:
+        # Explicit local testing uses whichever API is already installed.
         requirements.pop(index)
     elif channel == "dev":
-        # Integration prereleases prefer a published API prerelease. If none is
-        # available (or PyPI is unavailable), retain the released version pin.
+        # Dev builds prefer a published API prerelease. If none is available
+        # (or PyPI is unavailable), retain the released version pin.
         if prerelease := latest_api_prerelease(released_version):
             requirements[index] = f"{API_PACKAGE}=={prerelease}"
 
@@ -93,6 +101,7 @@ def build(
     repositories=None,
     release=False,
     without_frontend=False,
+    use_installed_api=False,
 ):
     """Stage a fresh integration and replace the ZIP only after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
@@ -109,6 +118,7 @@ def build(
             staging / "manifest.json",
             channel,
             release=release,
+            use_installed_api=use_installed_api,
         )
         manifest = validate_registry(
             json.loads((staging / "frontend/cards.json").read_text("utf-8"))
@@ -161,6 +171,14 @@ def main():
         action="store_true",
         help="Package cards.json without any card or panel JavaScript bundles",
     )
+    parser.add_argument(
+        "--use-installed-api",
+        action="store_true",
+        help=(
+            "Omit the API requirement and use the API already installed in "
+            "Home Assistant (local builds only)"
+        ),
+    )
     args = parser.parse_args()
     try:
         report = build(
@@ -169,6 +187,7 @@ def main():
             repository_overrides(args.repository),
             release=args.release,
             without_frontend=args.without_frontend,
+            use_installed_api=args.use_installed_api,
         )
     except Exception as error:
         parser.exit(1, f"Build failed: {error}\n")

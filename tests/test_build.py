@@ -72,7 +72,14 @@ class BuildTest(unittest.TestCase):
         return path
 
     def build(self):
-        return BUILD.build(self.source, self.output, self.root, "dev", CARD_REPOSITORIES)
+        return BUILD.build(
+            self.source,
+            self.output,
+            self.root,
+            "dev",
+            CARD_REPOSITORIES,
+            use_installed_api=True,
+        )
 
     def filename(self, card):
         return next(
@@ -130,6 +137,7 @@ class BuildTest(unittest.TestCase):
                 self.root,
                 "stable",
                 CARD_REPOSITORIES,
+                use_installed_api=True,
             )
 
         self.assertEqual(
@@ -137,7 +145,7 @@ class BuildTest(unittest.TestCase):
             [],
         )
 
-    def test_prerelease_build_prefers_published_api_prerelease(self):
+    def test_dev_build_prefers_published_api_prerelease(self):
         with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
             BUILD, "latest_api_prerelease", return_value=BUILD.Version("1.7.6b1")
         ):
@@ -147,7 +155,6 @@ class BuildTest(unittest.TestCase):
                 self.root,
                 "dev",
                 CARD_REPOSITORIES,
-                release=True,
             )
 
         self.assertEqual(
@@ -159,7 +166,7 @@ class BuildTest(unittest.TestCase):
                 any(name.startswith("vendor/") for name in archive.namelist())
             )
 
-    def test_prerelease_build_falls_back_to_released_api_pin(self):
+    def test_dev_build_falls_back_to_released_api_pin(self):
         with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
             BUILD, "latest_api_prerelease", return_value=None
         ):
@@ -169,13 +176,28 @@ class BuildTest(unittest.TestCase):
                 self.root,
                 "dev",
                 CARD_REPOSITORIES,
-                release=True,
             )
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
             ["aioWiserHeatAPI==1.7.5"],
         )
+
+    def test_release_build_rejects_installed_api_flag(self):
+        with self.assertRaisesRegex(
+            ValueError, "--use-installed-api cannot be combined with --release"
+        ):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
+                CARD_REPOSITORIES,
+                release=True,
+                use_installed_api=True,
+            )
+
+        self.assertFalse(self.output.exists())
 
     def test_stable_release_build_keeps_released_api_pin(self):
         with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
@@ -245,6 +267,7 @@ class BuildTest(unittest.TestCase):
                 "dev",
                 CARD_REPOSITORIES,
                 without_frontend=True,
+                use_installed_api=True,
             )
 
         releases.assert_not_called()
@@ -295,7 +318,13 @@ class BuildTest(unittest.TestCase):
         bundle.parent.mkdir(parents=True)
         bundle.write_bytes(b"customElements.define('wiser-electricity-card',class{});customElements.define('wiser-electricity-panel',class{})")
         with patch.object(FETCH, "list_releases") as releases:
-            report = BUILD.build(self.source, self.output, self.root, "dev")
+            report = BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
+                use_installed_api=True,
+            )
         releases.assert_not_called()
         self.assertEqual(report[-1]["repository"], "example/monitoring")
         with ZipFile(self.output) as archive:

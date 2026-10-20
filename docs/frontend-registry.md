@@ -101,6 +101,15 @@ GitHub/
 python3 scripts/build.py --channel dev
 ```
 
+This normal dev build selects a published API prerelease when one is available,
+falling back to the released API pin. To use an API wheel installed manually in
+Home Assistant instead, build with `--use-installed-api`; this deliberately
+omits the API requirement from the packaged manifest:
+
+```sh
+python3 scripts/build.py --channel dev --use-installed-api
+```
+
 To test installation through Home Assistant instead, edit the installed `custom_components/wiser/frontend/cards.json` and run **Check for updates** on any Wiser frontend update entity. The shared coordinator reloads and validates the file, creates an update entity for the new definition, and offers it as installed version `0.0.0`. This does not require an integration rebuild or Home Assistant restart.
 
 To build a package containing the definitions but none of the JavaScript bundles, run:
