@@ -116,6 +116,12 @@ key`.
 ## Building a package
 
 ```sh
+# Local development package
+python3 scripts/build.py --channel dev
+
+# Local development package using a manually installed API
+python3 scripts/build.py --channel dev --use-installed-api
+
 # Stable release package
 python3 scripts/build.py --release --channel stable
 
@@ -132,13 +138,18 @@ integration; without that option it offers stable releases only. See
 [Adding frontend cards and panels](docs/frontend-registry.md) for the registry
 format and shared panel API.
 
-The source manifest pins the released `aioWiserHeatAPI` version. During a dev
-channel build, the package installs the upstream API `dev` branch from GitHub.
-Stable packages, including explicit `--release` builds, retain the released
-version pin. The `--release` option controls frontend asset selection only. API
-artifacts are built separately in the `aioWiserHeatAPI` repository; they are
-not bundled in the integration package. The source manifest itself is never
-modified by the build.
+The source manifest pins the released `aioWiserHeatAPI` version. A dev-channel
+build uses the newest published API prerelease that is newer than the released
+pin; if none is available, or PyPI cannot be checked, it retains the released
+pin. Pass `--use-installed-api` for local testing with a manually installed API;
+this removes the API requirement from the packaged manifest so Home Assistant
+does not replace the installed version. The option cannot be combined with
+`--release`. A final release package (`--release --channel stable`) always
+retains the released pin.
+
+API artifacts are built separately in the `aioWiserHeatAPI` repository and are
+never bundled in the integration package. All API requirement changes apply
+only to the staged package; the source manifest is never modified by the build.
 
 The output is `dist/wiser.zip`, with `dist/card-releases.json` recording the
 frontend artifacts and checksums included. If an individual card or panel

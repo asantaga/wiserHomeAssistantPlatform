@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 import shutil
 import tempfile
+from urllib.request import Request, urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
+
+from packaging.version import InvalidVersion, Version
 
 from fetch_card_releases import (
     fetch_cards,
@@ -16,17 +19,11 @@ from fetch_card_releases import (
 
 ROOT = Path(__file__).resolve().parents[1]
 API_PACKAGE = "aioWiserHeatAPI"
-API_DEV_FALLBACK_REQUIREMENT = (
-    f"{API_PACKAGE}@git+https://github.com/msp1974/aioWiserHeatAPI.git@dev"
-)
+API_RELEASES_URL = "https://pypi.org/pypi/aioWiserHeatAPI/json"
 
 
-def set_api_requirement(manifest_path, channel, release=False):
-    """Use API dev only for non-release dev-channel packages."""
-    if release or channel != "dev":
-        return
-
-    manifest = json.loads(manifest_path.read_text("utf-8"))
+def api_requirement(manifest):
+    """Return the released API requirement and its position."""
     requirements = manifest.get("requirements", [])
     matches = [
         index
@@ -35,9 +32,64 @@ def set_api_requirement(manifest_path, channel, release=False):
     ]
     if len(matches) != 1:
         raise ValueError(
-            f"Expected exactly one {API_PACKAGE} requirement in {manifest_path}"
+            f"Expected exactly one {API_PACKAGE} requirement"
         )
-    requirements[matches[0]] = API_DEV_FALLBACK_REQUIREMENT
+    requirement = requirements[matches[0]]
+    prefix = f"{API_PACKAGE}=="
+    if not requirement.startswith(prefix):
+        raise ValueError(f"Expected a released {API_PACKAGE} version pin")
+    version = Version(requirement.removeprefix(prefix))
+    if version.is_prerelease or version.is_devrelease:
+        raise ValueError(f"Expected a stable {API_PACKAGE} version pin")
+    return requirements, matches[0], version
+
+
+def latest_api_prerelease(released_version):
+    """Return the newest usable API prerelease newer than the released pin."""
+    request = Request(API_RELEASES_URL, headers={"User-Agent": "wiser-packager"})
+    try:
+        with urlopen(request, timeout=30) as response:
+            releases = json.load(response).get("releases", {})
+    except (OSError, ValueError):
+        return None
+
+    candidates = []
+    for value, files in releases.items():
+        try:
+            version = Version(value)
+        except InvalidVersion:
+            continue
+        if (
+            version > released_version
+            and version.is_prerelease
+            and any(not file.get("yanked", False) for file in files)
+        ):
+            candidates.append(version)
+    return max(candidates) if candidates else None
+
+
+def set_api_requirement(
+    manifest_path,
+    channel,
+    release=False,
+    use_installed_api=False,
+):
+    """Select API handling for local, prerelease, and release packages."""
+    if release and use_installed_api:
+        raise ValueError("--use-installed-api cannot be combined with --release")
+
+    manifest = json.loads(manifest_path.read_text("utf-8"))
+    requirements, index, released_version = api_requirement(manifest)
+
+    if use_installed_api:
+        # Explicit local testing uses whichever API is already installed.
+        requirements.pop(index)
+    elif channel == "dev":
+        # Dev builds prefer a published API prerelease. If none is available
+        # (or PyPI is unavailable), retain the released version pin.
+        if prerelease := latest_api_prerelease(released_version):
+            requirements[index] = f"{API_PACKAGE}=={prerelease}"
+
     manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n", encoding="utf-8")
 
 
@@ -49,6 +101,7 @@ def build(
     repositories=None,
     release=False,
     without_frontend=False,
+    use_installed_api=False,
 ):
     """Stage a fresh integration and replace the ZIP only after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
@@ -65,6 +118,7 @@ def build(
             staging / "manifest.json",
             channel,
             release=release,
+            use_installed_api=use_installed_api,
         )
         manifest = validate_registry(
             json.loads((staging / "frontend/cards.json").read_text("utf-8"))
@@ -100,8 +154,14 @@ def build(
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel", choices=["dev", "stable"], default="dev")
-    parser.add_argument("--release", action="store_true",
-                        help="Use only GitHub release assets, including for the dev channel")
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help=(
+            "Build a release package using published frontend assets and "
+            "release-aware API selection"
+        ),
+    )
     parser.add_argument("--local-root", type=Path, default=ROOT.parent,
                         help="Directory containing sibling card repositories")
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
@@ -111,6 +171,14 @@ def main():
         action="store_true",
         help="Package cards.json without any card or panel JavaScript bundles",
     )
+    parser.add_argument(
+        "--use-installed-api",
+        action="store_true",
+        help=(
+            "Omit the API requirement and use the API already installed in "
+            "Home Assistant (local builds only)"
+        ),
+    )
     args = parser.parse_args()
     try:
         report = build(
@@ -119,6 +187,7 @@ def main():
             repository_overrides(args.repository),
             release=args.release,
             without_frontend=args.without_frontend,
+            use_installed_api=args.use_installed_api,
         )
     except Exception as error:
         parser.exit(1, f"Build failed: {error}\n")

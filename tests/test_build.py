@@ -1,6 +1,7 @@
 """Test automatic card source selection and integration packaging."""
 
 import importlib.util
+from io import StringIO
 import json
 from pathlib import Path
 import sys
@@ -71,7 +72,14 @@ class BuildTest(unittest.TestCase):
         return path
 
     def build(self):
-        return BUILD.build(self.source, self.output, self.root, "dev", CARD_REPOSITORIES)
+        return BUILD.build(
+            self.source,
+            self.output,
+            self.root,
+            "dev",
+            CARD_REPOSITORIES,
+            use_installed_api=True,
+        )
 
     def filename(self, card):
         return next(
@@ -82,7 +90,25 @@ class BuildTest(unittest.TestCase):
         with ZipFile(self.output) as archive:
             return json.loads(archive.read("manifest.json"))
 
-    def test_dev_build_uses_upstream_api_dev_even_with_local_checkout(self):
+    def test_latest_api_prerelease_uses_newest_non_yanked_version(self):
+        response = StringIO(json.dumps({"releases": {
+            "1.7.5": [{"yanked": False}],
+            "1.7.6b1": [{"yanked": False}],
+            "1.7.7b1": [{"yanked": True}],
+            "not-a-version": [{"yanked": False}],
+        }}))
+        with patch.object(BUILD, "urlopen", return_value=response):
+            selected = BUILD.latest_api_prerelease(BUILD.Version("1.7.5"))
+
+        self.assertEqual(selected, BUILD.Version("1.7.6b1"))
+
+    def test_latest_api_prerelease_falls_back_when_pypi_is_unavailable(self):
+        with patch.object(BUILD, "urlopen", side_effect=OSError("offline")):
+            selected = BUILD.latest_api_prerelease(BUILD.Version("1.7.5"))
+
+        self.assertIsNone(selected)
+
+    def test_local_dev_build_uses_whichever_api_is_installed(self):
         api_root = self.root / "aioWiserHeatAPI"
         api_root.mkdir()
         (api_root / "setup.py").touch()
@@ -92,10 +118,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            [
-                "aioWiserHeatAPI@git+https://github.com/msp1974/"
-                "aioWiserHeatAPI.git@dev"
-            ],
+            [],
         )
         self.assertEqual(
             json.loads((self.source / "manifest.json").read_text())["requirements"],
@@ -106,13 +129,52 @@ class BuildTest(unittest.TestCase):
                 any(name.startswith("vendor/") for name in archive.namelist())
             )
 
-    def test_stable_build_keeps_released_api_version(self):
+    def test_local_stable_build_uses_whichever_api_is_installed(self):
         with patch.object(FETCH, "list_releases", return_value=[]):
             BUILD.build(
                 self.source,
                 self.output,
                 self.root,
                 "stable",
+                CARD_REPOSITORIES,
+                use_installed_api=True,
+            )
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            [],
+        )
+
+    def test_dev_build_prefers_published_api_prerelease(self):
+        with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
+            BUILD, "latest_api_prerelease", return_value=BUILD.Version("1.7.6b1")
+        ):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
+                CARD_REPOSITORIES,
+            )
+
+        self.assertEqual(
+            self.packaged_manifest()["requirements"],
+            ["aioWiserHeatAPI==1.7.6b1"],
+        )
+        with ZipFile(self.output) as archive:
+            self.assertFalse(
+                any(name.startswith("vendor/") for name in archive.namelist())
+            )
+
+    def test_dev_build_falls_back_to_released_api_pin(self):
+        with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
+            BUILD, "latest_api_prerelease", return_value=None
+        ):
+            BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
                 CARD_REPOSITORIES,
             )
 
@@ -121,8 +183,10 @@ class BuildTest(unittest.TestCase):
             ["aioWiserHeatAPI==1.7.5"],
         )
 
-    def test_dev_release_build_keeps_released_api_version(self):
-        with patch.object(FETCH, "list_releases", return_value=[]):
+    def test_release_build_rejects_installed_api_flag(self):
+        with self.assertRaisesRegex(
+            ValueError, "--use-installed-api cannot be combined with --release"
+        ):
             BUILD.build(
                 self.source,
                 self.output,
@@ -130,19 +194,15 @@ class BuildTest(unittest.TestCase):
                 "dev",
                 CARD_REPOSITORIES,
                 release=True,
+                use_installed_api=True,
             )
 
-        self.assertEqual(
-            self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.5"],
-        )
-        with ZipFile(self.output) as archive:
-            self.assertFalse(
-                any(name.startswith("vendor/") for name in archive.namelist())
-            )
+        self.assertFalse(self.output.exists())
 
-    def test_stable_release_build_keeps_released_api_version(self):
-        with patch.object(FETCH, "list_releases", return_value=[]):
+    def test_stable_release_build_keeps_released_api_pin(self):
+        with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
+            BUILD, "latest_api_prerelease"
+        ) as prerelease:
             BUILD.build(
                 self.source,
                 self.output,
@@ -156,6 +216,7 @@ class BuildTest(unittest.TestCase):
             self.packaged_manifest()["requirements"],
             ["aioWiserHeatAPI==1.7.5"],
         )
+        prerelease.assert_not_called()
 
     def test_local_bundles_win_without_network_and_tracked_files_are_untouched(self):
         for card in self.payloads:
@@ -206,6 +267,7 @@ class BuildTest(unittest.TestCase):
                 "dev",
                 CARD_REPOSITORIES,
                 without_frontend=True,
+                use_installed_api=True,
             )
 
         releases.assert_not_called()
@@ -256,7 +318,13 @@ class BuildTest(unittest.TestCase):
         bundle.parent.mkdir(parents=True)
         bundle.write_bytes(b"customElements.define('wiser-electricity-card',class{});customElements.define('wiser-electricity-panel',class{})")
         with patch.object(FETCH, "list_releases") as releases:
-            report = BUILD.build(self.source, self.output, self.root, "dev")
+            report = BUILD.build(
+                self.source,
+                self.output,
+                self.root,
+                "dev",
+                use_installed_api=True,
+            )
         releases.assert_not_called()
         self.assertEqual(report[-1]["repository"], "example/monitoring")
         with ZipFile(self.output) as archive:
@@ -326,7 +394,9 @@ class BuildTest(unittest.TestCase):
                         "sha256:rooms",
                     ),
                     (self.payloads["hub"], "sha256:hub"),
-                ]) as download:
+                ]) as download, patch.object(
+                    BUILD, "latest_api_prerelease", return_value=None
+                ):
                     report = BUILD.build(
                         self.source, self.output, self.root, channel,
                         CARD_REPOSITORIES, release=explicit_release,
@@ -379,7 +449,11 @@ class BuildTest(unittest.TestCase):
     def test_release_failure_omits_bundles_without_falling_back_to_local(self):
         for card in self.payloads:
             self.local(card)
-        with patch.object(FETCH, "list_releases", side_effect=ValueError("unavailable")):
+        with patch.object(
+            FETCH, "list_releases", side_effect=ValueError("unavailable")
+        ), patch.object(
+            BUILD, "latest_api_prerelease", return_value=None
+        ):
             report = BUILD.build(
                 self.source, self.output, self.root, "dev",
                 CARD_REPOSITORIES, release=True,
