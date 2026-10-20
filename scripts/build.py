@@ -144,8 +144,14 @@ def build(
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel", choices=["dev", "stable"], default="dev")
-    parser.add_argument("--release", action="store_true",
-                        help="Use only GitHub release assets, including for the dev channel")
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help=(
+            "Build a release package using published frontend assets and "
+            "release-aware API selection"
+        ),
+    )
     parser.add_argument("--local-root", type=Path, default=ROOT.parent,
                         help="Directory containing sibling card repositories")
     parser.add_argument("--output", type=Path, default=ROOT / "dist/wiser.zip")
