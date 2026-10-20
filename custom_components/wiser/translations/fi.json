@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Käyttövesi"
+      },
+      "ev_charger": {
+        "name": "Sähköauton latauslaite"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Käyttövesi käytössä"
+      },
+      "ac_mains": {
+        "name": "Verkkovirta"
+      },
+      "hush_mode": {
+        "name": "Hiljennystila"
+      },
+      "test_mode": {
+        "name": "Testitila"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Laitteisto"
+      },
+      "current_schedule_temperature": {
+        "name": "Nykyinen aikataulutettu lämpötila"
+      },
+      "report_count": {
+        "name": "Raporttien määrä"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm-käyttövesi"
       }
     }
   },

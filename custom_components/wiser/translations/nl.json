@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Warm water"
+      },
+      "ev_charger": {
+        "name": "EV-lader"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Warm water ingeschakeld"
+      },
+      "ac_mains": {
+        "name": "Netspanning"
+      },
+      "hush_mode": {
+        "name": "Stille modus"
+      },
+      "test_mode": {
+        "name": "Testmodus"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Apparatuur"
+      },
+      "current_schedule_temperature": {
+        "name": "Huidige schematemperatuur"
+      },
+      "report_count": {
+        "name": "Aantal rapporten"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm warm water"
       }
     }
   },

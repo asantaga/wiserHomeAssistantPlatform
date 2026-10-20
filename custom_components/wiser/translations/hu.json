@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Meleg víz"
+      },
+      "ev_charger": {
+        "name": "Elektromosautó-töltő"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Melegvíz-készítés engedélyezve"
+      },
+      "ac_mains": {
+        "name": "Hálózati tápellátás"
+      },
+      "hush_mode": {
+        "name": "Némítási mód"
+      },
+      "test_mode": {
+        "name": "Tesztüzemmód"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Berendezés teljesítménye"
+      },
+      "current_schedule_temperature": {
+        "name": "Aktuális ütemezett hőmérséklet"
+      },
+      "report_count": {
+        "name": "Jelentések száma"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm meleg víz"
       }
     }
   },

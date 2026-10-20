@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Água quente"
+      },
+      "ev_charger": {
+        "name": "Carregador de veículo elétrico"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Água quente ativada"
+      },
+      "ac_mains": {
+        "name": "Alimentação da rede"
+      },
+      "hush_mode": {
+        "name": "Modo silencioso"
+      },
+      "test_mode": {
+        "name": "Modo de teste"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Equipamento"
+      },
+      "current_schedule_temperature": {
+        "name": "Temperatura atual da programação"
+      },
+      "report_count": {
+        "name": "Contagem de relatórios"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "Água quente OpenTherm"
       }
     }
   },
