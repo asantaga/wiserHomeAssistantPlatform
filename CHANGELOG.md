@@ -16,6 +16,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed battery sensors raising an error during hub refresh when a battery-powered device temporarily disappears.
 - Fixed the Zigbee network failing to load when multi-function or multi-gang devices expose several logical endpoints with the same physical Zigbee node ID - PR [#750](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/750).
 
 ## v4.0.1

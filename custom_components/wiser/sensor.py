@@ -638,8 +638,22 @@ class WiserBatterySensor(WiserSensor):
         """Initialise the battery sensor."""
         super().__init__(data, device_id, sensor_type)
         self._device_product_type = getattr(device, "product_type", None)
-        self._device = device or self._get_battery_device()
+        self._device_firmware_version = getattr(device, "firmware_version", None)
+        self._set_device(
+            device if device is not None else self._get_battery_device()
+        )
         self._state = self._get_battery_state()
+
+    def _set_device(self, device) -> None:
+        """Store the current device while retaining its registry metadata."""
+        self._device = device
+        if device is not None:
+            self._device_product_type = getattr(
+                device, "product_type", self._device_product_type
+            )
+            self._device_firmware_version = getattr(
+                device, "firmware_version", self._device_firmware_version
+            )
 
     def _get_battery_device(self):
         """Return the battery-capable API object for this physical device.
@@ -663,7 +677,7 @@ class WiserBatterySensor(WiserSensor):
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        self._device = self._get_battery_device()
+        self._set_device(self._get_battery_device())
         self._state = self._get_battery_state()
         self.async_write_ha_state()
 
@@ -704,10 +718,13 @@ class WiserBatterySensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the battery."""
-        attrs = {}
-        attrs["battery_voltage"] = self._device.battery.voltage
-        attrs[ATTR_BATTERY_LEVEL] = self._device.battery.level
-        return attrs
+        battery = getattr(self._device, "battery", None)
+        if battery is None:
+            return {}
+        return {
+            "battery_voltage": getattr(battery, "voltage", None),
+            ATTR_BATTERY_LEVEL: getattr(battery, "level", TEXT_UNKNOWN),
+        }
 
     @property
     def device_info(self):
@@ -716,8 +733,8 @@ class WiserBatterySensor(WiserSensor):
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
             "manufacturer": MANUFACTURER,
-            "model": self._device.product_type,
-            "sw_version": self._device.firmware_version,
+            "model": self._device_product_type,
+            "sw_version": self._device_firmware_version,
             **get_device_area_info(self._data, self._device_id),
             **get_hub_via_device_info(self._data),
         }

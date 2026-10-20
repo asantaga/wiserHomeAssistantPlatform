@@ -1147,6 +1147,24 @@ class WiserBatterySensorAvailabilityTest(unittest.TestCase):
         self.assertEqual(sensor._get_battery_state(), 0)
         self.assertFalse(sensor.available)
 
+    def test_missing_device_keeps_state_and_registry_properties_safe(self) -> None:
+        device = SimpleNamespace(
+            product_type="ButtonPanel",
+            firmware_version="1.2.3",
+            battery=SimpleNamespace(level="Normal", voltage=3.0, percent=100),
+        )
+        sensor = object.__new__(self.sensor_module.WiserBatterySensor)
+        sensor._data = SimpleNamespace()
+        sensor._device_id = 7
+        sensor._device_product_type = None
+        sensor._device_firmware_version = None
+        sensor._set_device(device)
+        sensor._set_device(None)
+
+        self.assertEqual(sensor.extra_state_attributes, {})
+        self.assertEqual(sensor.device_info["model"], "ButtonPanel")
+        self.assertEqual(sensor.device_info["sw_version"], "1.2.3")
+
     def test_battery_lookup_uses_matching_device_type_when_ids_collide(self) -> None:
         light = SimpleNamespace(id=7, product_type="Light")
         button_panel = SimpleNamespace(
