@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Varmt vand"
+      },
+      "ev_charger": {
+        "name": "Elbillader"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Varmt vand aktiveret"
+      },
+      "ac_mains": {
+        "name": "Netspænding"
+      },
+      "hush_mode": {
+        "name": "Lydløs tilstand"
+      },
+      "test_mode": {
+        "name": "Testtilstand"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Udstyr"
+      },
+      "current_schedule_temperature": {
+        "name": "Aktuel plantemperatur"
+      },
+      "report_count": {
+        "name": "Antal rapporter"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm-varmt vand"
       }
     }
   },

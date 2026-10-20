@@ -410,6 +410,9 @@
       },
       "hot_water": {
         "name": "Varmvatten"
+      },
+      "ev_charger": {
+        "name": "Elbilsladdare"
       }
     },
     "binary_sensor": {
@@ -514,6 +517,15 @@
       },
       "hw_enabled": {
         "name": "Varmvatten aktiverat"
+      },
+      "ac_mains": {
+        "name": "Nätström"
+      },
+      "hush_mode": {
+        "name": "Tyst läge"
+      },
+      "test_mode": {
+        "name": "Testläge"
       }
     },
     "sensor": {
@@ -669,6 +681,17 @@
       },
       "equipment_power": {
         "name": "Utrustning"
+      },
+      "current_schedule_temperature": {
+        "name": "Aktuell schematemperatur"
+      },
+      "report_count": {
+        "name": "Antal rapporter"
+      }
+    },
+    "water_heater": {
+      "opentherm_hot_water": {
+        "name": "OpenTherm-varmvatten"
       }
     }
   },
