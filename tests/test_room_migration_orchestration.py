@@ -127,9 +127,11 @@ def _load_wiser_init() -> ModuleType:
         "get_instance_count",
         "get_legacy_device_identifier",
         "get_legacy_room_identifier",
+        "get_legacy_unique_id",
         "get_physical_entity_unique_id",
         "get_room_entity_unique_id",
         "get_unique_id",
+        "get_uuid_unique_id",
     )
     helper_stubs = {name: Mock(name=name) for name in helper_names}
     helper_stubs["active_wiser_rooms"] = (
@@ -235,6 +237,39 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
             self.wiser._current_wiser_room_names(self.coordinator),
             {"7": "Lounge"},
         )
+
+    def test_legacy_room_entity_types_include_raw_and_uuid_ids(self) -> None:
+        legacy_id = self.wiser.get_legacy_unique_id
+        uuid_id = self.wiser.get_uuid_unique_id
+        legacy_id.side_effect = lambda _data, *parts: "-".join(
+            str(part) for part in parts
+        )
+        uuid_id.side_effect = lambda value: f"uuid:{value}"
+        try:
+            mapping = self.wiser._legacy_room_entity_types(
+                self.coordinator,
+                self.room,
+                "Living Room",
+            )
+        finally:
+            legacy_id.reset_mock(side_effect=True)
+            uuid_id.reset_mock(side_effect=True)
+
+        expected = {
+            "sensor-LTS Temperature Lounge-7": "current_temp",
+            "sensor-LTS Target Temperature Lounge-7": "current_target_temp",
+            "sensor-LTS Heating Demand Living Room-7": "heating_demand",
+            "room-switch-Wiser Lounge Window Detection": (
+                "switch_window_detection"
+            ),
+            "passive-mode-switch-Wiser Living Room Passive Mode-7": (
+                "switch_passive_mode"
+            ),
+            "WiserHeat123456-WiserRoom-7-Wiser Lounge": "climate",
+        }
+        for unique_id, entity_type in expected.items():
+            self.assertEqual(mapping[unique_id.casefold()], entity_type)
+            self.assertEqual(mapping[f"uuid:{unique_id}".casefold()], entity_type)
 
     def test_refresh_moves_areas_and_saves_names_without_config_reload(self) -> None:
         self.wiser._confirmed_deleted_room_ids = Mock(return_value=set())

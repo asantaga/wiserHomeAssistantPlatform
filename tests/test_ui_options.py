@@ -463,7 +463,32 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 saved["options"],
                 options | {"legacy_naming": expected},
             )
-            self.assertEqual(saved["minor_version"], 5)
+            self.assertEqual(saved["minor_version"], 6)
+
+    def test_semantic_entity_migrations_run_before_catch_all_uuid_migration(self):
+        config_migration_calls = {
+            name
+            for name, _line in function_call_lines(
+                "__init__.py", "async_migrate_entry"
+            )
+        }
+        self.assertNotIn("migrate_entity_unique_ids", config_migration_calls)
+
+        calls = function_call_lines("__init__.py", "async_setup_entry")
+        call_lines = {name: line for name, line in calls}
+
+        self.assertLess(
+            call_lines["migrate_room_device_registry"],
+            call_lines["migrate_entity_unique_ids"],
+        )
+        self.assertLess(
+            call_lines["async_migrate_physical_entity_unique_ids"],
+            call_lines["migrate_entity_unique_ids"],
+        )
+        self.assertLess(
+            call_lines["migrate_entity_unique_ids"],
+            call_lines["async_forward_entry_setups"],
+        )
 
     async def test_menu_available_without_opentherm(self):
         functions = load_functions("config_flow.py", {"async_step_init"}, self.namespace)

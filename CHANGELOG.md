@@ -18,6 +18,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 - Fixed the integration failing to load when Home Assistant temporarily has mixed `aiofiles` package files during dependency installation, and removed the schedule export service's reliance on the API importing `aiofiles.os` - issue [#763](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/763).
 - Fixed **Advance Schedule** failing when the next heating period is off - issue [#657](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/657).
+- Fixed 3.x upgrades hashing room entity unique IDs before they could be matched to their stable room IDs. Existing room temperature, target-temperature, heating-demand, window-detection, summer-comfort and passive-mode entities are now retained, and affected 4.0.x registries are repaired on setup - issue [#759](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/759).
 - Fixed battery sensors raising an error during hub refresh when a battery-powered device temporarily disappears.
 - Fixed the Zigbee network failing to load when multi-function or multi-gang devices expose several logical endpoints with the same physical Zigbee node ID - PR [#750](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/750).
 
