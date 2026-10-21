@@ -76,8 +76,10 @@ def migrate_entity_unique_ids(hass, config_entry_id: str) -> int:
 def repair_card_update_unique_ids(hass) -> int:
     """Restore card-update IDs converted by the catch-all v4 migration.
 
-    Preserve the older registry record (which was converted to UUIDv5 in
-    place) and remove the replacement subsequently created at the stable ID.
+    When a replacement already exists at the stable ID, keep that active
+    entity and remove only the obsolete UUIDv5 record. Home Assistant retains
+    the removed entity's unique-ID index during the current registry update,
+    so trying to reuse the ID immediately can otherwise fail setup.
     """
     registry = er.async_get(hass)
     # These entities are shared between all Wiser hubs and their owning
@@ -113,12 +115,12 @@ def repair_card_update_unique_ids(hass) -> int:
             None,
         )
         if replacement is not None:
-            registry.async_remove(replacement.entity_id)
-            entries.remove(replacement)
-
-        registry.async_update_entity(
-            historical.entity_id, new_unique_id=stable_unique_id
-        )
+            registry.async_remove(historical.entity_id)
+            entries.remove(historical)
+        else:
+            registry.async_update_entity(
+                historical.entity_id, new_unique_id=stable_unique_id
+            )
         repaired += 1
 
     return repaired

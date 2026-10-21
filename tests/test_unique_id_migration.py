@@ -177,7 +177,7 @@ class EntityUniqueIdMigrationTest(unittest.TestCase):
         self.assertEqual(entry.unique_id, "wiser_rooms_card_update")
         self.assertEqual(registry.updates, [])
 
-    def test_repairs_converted_card_update_and_removes_replacement(self) -> None:
+    def test_removes_converted_card_update_when_replacement_exists(self) -> None:
         stable_unique_id = "wiser_rooms_card_update"
         converted_unique_id = str(uuid5(NAMESPACE, stable_unique_id))
         historical = _entry(
@@ -197,10 +197,27 @@ class EntityUniqueIdMigrationTest(unittest.TestCase):
         self.assertEqual(
             migration.repair_card_update_unique_ids(object()), 1
         )
-        self.assertEqual(historical.unique_id, stable_unique_id)
         self.assertEqual(
-            registry.removed, ["update.wiser_controls_card_2"]
+            registry.removed, ["update.wiser_controls_card"]
         )
+        self.assertEqual(registry.updates, [])
+        self.assertEqual(replacement.unique_id, stable_unique_id)
+
+    def test_restores_converted_card_update_without_replacement(self) -> None:
+        stable_unique_id = "wiser_rooms_card_update"
+        historical = _entry(
+            "update.wiser_controls_card",
+            str(uuid5(NAMESPACE, stable_unique_id)),
+            domain="update",
+        )
+        registry = FakeRegistry([historical])
+        migration = _load_migration_module(registry)
+
+        self.assertEqual(
+            migration.repair_card_update_unique_ids(object()), 1
+        )
+        self.assertEqual(historical.unique_id, stable_unique_id)
+        self.assertEqual(registry.removed, [])
         self.assertEqual(
             registry.updates,
             [("update.wiser_controls_card", stable_unique_id)],
