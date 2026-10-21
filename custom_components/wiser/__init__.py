@@ -64,7 +64,10 @@ from .device import (
     remove_room_devices,
     room_names_with_pending_deletions,
 )
-from .entity_migration import migrate_entity_unique_ids
+from .entity_migration import (
+    migrate_entity_unique_ids,
+    repair_card_update_unique_ids,
+)
 from .frontend import JSModuleRegistration
 from .frontend.entry_updates import async_handle_entry_update, integration_reload_settings
 from .frontend.wiser_sidebar import async_update_wiser_panel
@@ -404,6 +407,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         coordinator,
         previous_room_names,
     )
+
+    repaired_card_updates = repair_card_update_unique_ids(
+        hass, config_entry.entry_id
+    )
+    if repaired_card_updates:
+        _LOGGER.info(
+            "Repaired %s Wiser card update entity unique IDs",
+            repaired_card_updates,
+        )
 
     # Run the catch-all conversion only after migrations that need to inspect
     # the meaning encoded in legacy unique IDs. Running this in
