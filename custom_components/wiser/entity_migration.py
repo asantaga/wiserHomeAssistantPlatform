@@ -73,16 +73,19 @@ def migrate_entity_unique_ids(hass, config_entry_id: str) -> int:
     return len(migrations)
 
 
-def repair_card_update_unique_ids(hass, config_entry_id: str) -> int:
+def repair_card_update_unique_ids(hass) -> int:
     """Restore card-update IDs converted by the catch-all v4 migration.
 
     Preserve the older registry record (which was converted to UUIDv5 in
     place) and remove the replacement subsequently created at the stable ID.
     """
     registry = er.async_get(hass)
+    # These entities are shared between all Wiser hubs and their owning
+    # config entry can change when a hub reloads or unloads. Scan the complete
+    # registry rather than only the entry currently being set up.
     entries = [
         entry
-        for entry in er.async_entries_for_config_entry(registry, config_entry_id)
+        for entry in registry.entities.values()
         if entry.platform == DOMAIN and entry.domain == "update"
     ]
     repaired = 0

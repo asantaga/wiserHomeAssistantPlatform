@@ -408,9 +408,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         previous_room_names,
     )
 
-    repaired_card_updates = repair_card_update_unique_ids(
-        hass, config_entry.entry_id
-    )
+    repaired_card_updates = repair_card_update_unique_ids(hass)
     if repaired_card_updates:
         _LOGGER.info(
             "Repaired %s Wiser card update entity unique IDs",

@@ -19,6 +19,7 @@ class FakeRegistry:
 
     def __init__(self, entries):
         self.entries = entries
+        self.entities = {entry.entity_id: entry for entry in entries}
         self.updates = []
         self.removed = []
 
@@ -45,16 +46,24 @@ class FakeRegistry:
         self.entries = [
             entry for entry in self.entries if entry.entity_id != entity_id
         ]
+        self.entities.pop(entity_id)
         self.removed.append(entity_id)
 
 
-def _entry(entity_id, unique_id, *, platform="wiser", domain="sensor"):
+def _entry(
+    entity_id,
+    unique_id,
+    *,
+    platform="wiser",
+    domain="sensor",
+    config_entry_id="entry-1",
+):
     return SimpleNamespace(
         entity_id=entity_id,
         unique_id=unique_id,
         platform=platform,
         domain=domain,
-        config_entry_id="entry-1",
+        config_entry_id=config_entry_id,
     )
 
 
@@ -175,6 +184,7 @@ class EntityUniqueIdMigrationTest(unittest.TestCase):
             "update.wiser_controls_card",
             converted_unique_id,
             domain="update",
+            config_entry_id="previous-owner",
         )
         replacement = _entry(
             "update.wiser_controls_card_2",
@@ -185,7 +195,7 @@ class EntityUniqueIdMigrationTest(unittest.TestCase):
         migration = _load_migration_module(registry)
 
         self.assertEqual(
-            migration.repair_card_update_unique_ids(object(), "entry-1"), 1
+            migration.repair_card_update_unique_ids(object()), 1
         )
         self.assertEqual(historical.unique_id, stable_unique_id)
         self.assertEqual(
