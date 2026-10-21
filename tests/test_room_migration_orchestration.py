@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 import sys
@@ -105,6 +106,7 @@ def _load_wiser_init() -> ModuleType:
     _module(
         "wiser_init_test.entity_migration",
         migrate_entity_unique_ids=Mock(),
+        repair_card_update_unique_ids=Mock(return_value=0),
     )
     _module("wiser_init_test.frontend", JSModuleRegistration=object)
     _module(
@@ -270,6 +272,45 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
         for unique_id, entity_type in expected.items():
             self.assertEqual(mapping[unique_id.casefold()], entity_type)
             self.assertEqual(mapping[f"uuid:{unique_id}".casefold()], entity_type)
+
+    def test_room_migration_precedes_catch_all_uuid_conversion(self) -> None:
+        """Protect the 3.x upgrade order that v4.0.1 accidentally reversed."""
+        tree = ast.parse(
+            (COMPONENT_PATH / "__init__.py").read_text(encoding="utf-8")
+        )
+        functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        def call_names(statement):
+            return {
+                node.func.id
+                for node in ast.walk(statement)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+            }
+
+        setup = functions["async_setup_entry"]
+        positions = {
+            call_name: index
+            for index, statement in enumerate(setup.body)
+            for call_name in call_names(statement)
+            if call_name
+            in {"migrate_room_device_registry", "migrate_entity_unique_ids"}
+        }
+
+        self.assertLess(
+            positions["migrate_room_device_registry"],
+            positions["migrate_entity_unique_ids"],
+        )
+        migrate_entry_calls = {
+            call_name
+            for statement in functions["async_migrate_entry"].body
+            for call_name in call_names(statement)
+        }
+        self.assertNotIn("migrate_entity_unique_ids", migrate_entry_calls)
 
     def test_refresh_moves_areas_and_saves_names_without_config_reload(self) -> None:
         self.wiser._confirmed_deleted_room_ids = Mock(return_value=set())

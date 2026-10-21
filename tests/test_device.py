@@ -27,6 +27,7 @@ class DeviceEntry:
     created_at: datetime | None = None
     identifiers: set = field(default_factory=set)
     connections: set = field(default_factory=set)
+    config_entry_id: str | None = None
 
 
 @dataclass
@@ -122,6 +123,17 @@ class DeviceRegistry:
 
     def async_get_device_by_identifier(self, identifier, config_entry_id):
         return self.devices.get((identifier, config_entry_id))
+
+    def async_get_devices(self, *, identifiers=None, connections=None):
+        matches = []
+        for (identifier, _config_entry_id), device in self.devices.items():
+            if identifiers and identifier not in identifiers:
+                continue
+            if connections and not connections.intersection(device.connections):
+                continue
+            if device not in matches:
+                matches.append(device)
+        return matches
 
     def async_remove_device(self, device_id) -> None:
         self.removed.append(device_id)
@@ -556,6 +568,63 @@ class MigrateRoomDeviceTest(unittest.TestCase):
         self.assertEqual(registry.updated[0][1]["name"], "Wiser Room")
         self.assertNotIn("area_id", registry.updated[0][1])
         self.assertEqual(registry.removed, [])
+
+    def test_recovers_legacy_room_owned_by_another_config_entry(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.legacy_identifier, "other-entry"): DeviceEntry(
+                    "room-device",
+                    area_id="airing_cupboard",
+                    config_entry_id="other-entry",
+                )
+            }
+        )
+
+        result = DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Room",
+        )
+
+        self.assertEqual(result.id, "room-device")
+        self.assertEqual(registry.created, [])
+        self.assertEqual(registry.updated[0][0], "room-device")
+        self.assertEqual(
+            registry.updated[0][1],
+            {
+                "new_identifiers": {self.identifier},
+                "name": "Wiser Room",
+                "new_config_entry_id": self.config_entry_id,
+            },
+        )
+
+    def test_does_not_recover_ambiguous_cross_entry_room(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.legacy_identifier, "first-entry"): DeviceEntry(
+                    "first-room", config_entry_id="first-entry"
+                ),
+                (self.legacy_identifier, "second-entry"): DeviceEntry(
+                    "second-room", config_entry_id="second-entry"
+                ),
+            }
+        )
+
+        result = DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Room",
+        )
+
+        self.assertEqual(result.id, "new-hub")
+        self.assertEqual(registry.updated, [])
+        self.assertEqual(len(registry.created), 1)
 
     def test_merges_duplicate_legacy_room_into_stable_room(self) -> None:
         registry = DeviceRegistry(
