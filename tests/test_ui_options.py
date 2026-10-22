@@ -88,6 +88,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "validate_input": AsyncMock(return_value={"title": "Wiser", "unique_id": "1"}),
             "MAJOR_VERSION": 2026,
             "MINOR_VERSION": 8,
+            "active_wiser_rooms": lambda data: [
+                room
+                for room in data.wiserhub.rooms.all
+                if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
+                != "nothingassigned"
+            ],
             "room_has_climate": lambda room: bool(room.devices),
         }
 
@@ -522,8 +528,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         functions = load_functions(
             "config_flow.py", {"_rooms_without_climate"}, self.namespace
         )
-        kitchen = SimpleNamespace(id=4, name="Kitchen", devices=[])
-        lounge = SimpleNamespace(id=5, name="Lounge", devices=[object()])
+        kitchen = SimpleNamespace(id=4, name="Kitchen", devices=[], _data={})
+        lounge = SimpleNamespace(id=5, name="Lounge", devices=[object()], _data={})
+        retired = SimpleNamespace(
+            id=6,
+            name="Airing Cupboard",
+            devices=[],
+            _data={"Invalid": "NothingAssigned"},
+        )
         flow = SimpleNamespace(
             hass=SimpleNamespace(
                 data={
@@ -531,7 +543,9 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                         "entry": {
                             "data": SimpleNamespace(
                                 wiserhub=SimpleNamespace(
-                                    rooms=SimpleNamespace(all=[kitchen, lounge])
+                                    rooms=SimpleNamespace(
+                                        all=[kitchen, lounge, retired]
+                                    )
                                 )
                             )
                         }

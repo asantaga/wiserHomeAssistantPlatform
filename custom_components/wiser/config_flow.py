@@ -93,7 +93,7 @@ from .opentherm_detection import (
     opentherm_hot_water_limits,
     opentherm_is_detected,
 )
-from .helpers import room_has_climate
+from .helpers import active_wiser_rooms, room_has_climate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -405,7 +405,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             return []
         return [
             room
-            for room in entry_data[DATA].wiserhub.rooms.all
+            for room in active_wiser_rooms(entry_data[DATA])
             if not room_has_climate(room)
         ]
 

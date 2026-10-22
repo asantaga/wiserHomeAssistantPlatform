@@ -51,6 +51,7 @@ from .const import (
 from .events import fire_events
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_name,
     get_hub_via_device_info,
     get_identifier,
@@ -142,7 +143,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Room climate entities")
         wiser_rooms = [
             WiserRoom(hass, coordinator, room.id)
-            for room in coordinator.wiserhub.rooms.all
+            for room in active_wiser_rooms(coordinator)
             if room_has_climate(room)
         ]
         async_add_entities(wiser_rooms, True)

@@ -504,38 +504,14 @@ def migrate_room_device(
     if get_by_identifier:
         room_device = get_by_identifier(identifier, config_entry_id)
         legacy_device = get_by_identifier(legacy_identifier, config_entry_id)
-
-        # HA 2026.8 split devices shared by multiple config entries. A legacy
-        # Wiser room can consequently be owned by the wrong entry even though
-        # its identifier contains the hub name and is unique. Recover only an
-        # unambiguous cross-entry match, then move it to the current entry.
-        get_devices = getattr(device_registry, "async_get_devices", None)
-        if get_devices:
-            if room_device is None:
-                matches = get_devices(identifiers={identifier})
-                room_device = matches[0] if len(matches) == 1 else None
-            if legacy_device is None:
-                matches = get_devices(identifiers={legacy_identifier})
-                legacy_device = matches[0] if len(matches) == 1 else None
     else:
         room_device = device_registry.async_get_device(identifiers={identifier})
         legacy_device = device_registry.async_get_device(
             identifiers={legacy_identifier}
         )
 
-    def config_entry_move(device):
-        """Return the HA 2026.8+ update needed to correct device ownership."""
-        owner = getattr(device, "config_entry_id", None)
-        if owner is not None and owner != config_entry_id:
-            return {"new_config_entry_id": config_entry_id}
-        return {}
-
     if room_device is not None:
-        updates = {
-            "new_identifiers": {identifier},
-            "name": name,
-            **config_entry_move(room_device),
-        }
+        updates = {"new_identifiers": {identifier}, "name": name}
         if (
             room_device.area_id is None
             and legacy_device is not None
@@ -557,7 +533,6 @@ def migrate_room_device(
             legacy_device.id,
             new_identifiers={identifier},
             name=name,
-            **config_entry_move(legacy_device),
         )
 
     return device_registry.async_get_or_create(
