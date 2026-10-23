@@ -49,6 +49,26 @@ def room_has_climate(room):
     )
 
 
+def room_supports_temperature_control(room):
+    """Return whether a Wiser room can participate in temperature control."""
+    capabilities = getattr(room, "capabilities", None)
+    if capabilities is not None:
+        temperature_control = getattr(capabilities, "temperature_control", None)
+        if temperature_control is not None:
+            return bool(temperature_control)
+
+        if getattr(capabilities, "heating_supported", False) or getattr(
+            capabilities, "cooling_supported", False
+        ):
+            return True
+
+    return bool(
+        getattr(room, "number_of_smartvalves", 0)
+        or getattr(room, "number_of_heating_actuators", 0)
+        or getattr(room, "roomstat_id", None)
+    )
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address

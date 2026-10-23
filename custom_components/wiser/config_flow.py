@@ -105,7 +105,11 @@ from .opentherm_detection import (
     opentherm_hot_water_limits,
     opentherm_is_detected,
 )
-from .helpers import active_wiser_rooms, room_has_climate
+from .helpers import (
+    active_wiser_rooms,
+    room_has_climate,
+    room_supports_temperature_control,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -594,12 +598,17 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         return entities_by_room
 
     def _external_room_control_form_rooms(self):
-        """Return form rooms that have at least one eligible external entity."""
+        """Return temperature-controlled rooms and their external entities."""
         entities_by_room = self._external_room_control_entities_by_room()
+        temperature_control_room_ids = {
+            str(room.id)
+            for room in self._wiser_rooms()
+            if room_supports_temperature_control(room)
+        }
         room_fields = {
             field_name: room_id
             for field_name, room_id in self._external_room_control_room_fields().items()
-            if entities_by_room.get(room_id)
+            if room_id in temperature_control_room_ids
         }
         return room_fields, entities_by_room
 
