@@ -31,6 +31,7 @@ from .const import (
     CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
     CONF_AUTOMATIONS_PASSIVE_TYPE,
     CONF_CONTROL_STRATEGY,
+    CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS,
     CONF_LEGACY_PASSIVE_TEMP_INCREMENT,
     CONF_TEMPERATURE_INCREMENT,
     CONF_DEPRECATED_HW_TARGET_TEMP,
@@ -40,9 +41,12 @@ from .const import (
     CONF_OPENTHERM_HOT_WATER_CONTROL,
     CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     CONF_OPENTHERM_HOT_WATER_PRESETS,
+    CONF_PASSIVE_ROOM_STRATEGIES,
     CONF_WISER_ROOM_NAMES,
     DEFAULT_PASSIVE_CONTROL_STRATEGY,
     DEFAULT_PASSIVE_TYPE,
+    CONTROL_STRATEGY_TEMPERATURE_LIMITER,
+    PASSIVE_TYPE_EXTERNAL,
     DATA,
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DOMAIN,
@@ -285,8 +289,46 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 passive_options.pop(CONF_CONTROL_STRATEGY, None)
                 new_options[CONF_AUTOMATIONS_PASSIVE] = passive_options
 
+        if config_entry.minor_version < 9:
+            stored_passive_options = new_options.get(CONF_AUTOMATIONS_PASSIVE)
+            if isinstance(stored_passive_options, dict):
+                passive_options = dict(stored_passive_options)
+                legacy_type = passive_options.pop(
+                    CONF_AUTOMATIONS_PASSIVE_TYPE, DEFAULT_PASSIVE_TYPE
+                )
+                legacy_strategy = passive_options.pop(
+                    CONF_CONTROL_STRATEGY, DEFAULT_PASSIVE_CONTROL_STRATEGY
+                )
+                external_options = new_options.get(
+                    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {}
+                )
+                if not isinstance(external_options, dict):
+                    external_options = {}
+                assignments = external_options.get(
+                    CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS, {}
+                )
+                if not isinstance(assignments, dict):
+                    assignments = {}
+                external_enabled = external_options.get(
+                    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
+                )
+                limiter_rooms = {}
+                if (
+                    external_enabled
+                    and legacy_type == PASSIVE_TYPE_EXTERNAL
+                    and legacy_strategy
+                    == CONTROL_STRATEGY_TEMPERATURE_LIMITER
+                ):
+                    limiter_rooms = {
+                        str(room_id): CONTROL_STRATEGY_TEMPERATURE_LIMITER
+                        for room_id, entity_ids in assignments.items()
+                        if entity_ids
+                    }
+                passive_options[CONF_PASSIVE_ROOM_STRATEGIES] = limiter_rooms
+                new_options[CONF_AUTOMATIONS_PASSIVE] = passive_options
+
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=8, version=1
+            config_entry, options=new_options, minor_version=9, version=1
         )
 
     _LOGGER.debug(

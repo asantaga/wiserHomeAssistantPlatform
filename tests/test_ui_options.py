@@ -77,6 +77,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             ),
             "CONF_AUTOMATIONS_PASSIVE": "automations_passive_mode",
             "CONF_AUTOMATIONS_PASSIVE_TYPE": "passive_type",
+            "CONF_PASSIVE_ROOM_STRATEGIES": "room_strategies",
             "CONF_CONTROL_STRATEGY": "control_strategy",
             "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": (
                 "external_room_control_assignments"
@@ -97,10 +98,10 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "DATA": "data",
             "DOMAIN": "wiser",
             "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
+            "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
             "DEFAULT_PASSIVE_TYPE": "internal",
             "PASSIVE_TYPE_EXTERNAL": "external",
-            "PASSIVE_TYPE_INTERNAL": "internal",
-            "PASSIVE_TYPES": ["internal", "external"],
+            "CONTROL_STRATEGIES": ["modulating", "temperature_limiter"],
             "HomeAssistant": object,
             "ConfigEntry": object,
             "FlowResult": dict,
@@ -119,9 +120,16 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "room_supports_temperature_control": lambda room: bool(
                 room.temperature_control
             ),
+            "_passive_room_strategies": lambda strategies, assignments, enabled: {
+                str(room_id): strategy
+                for room_id, strategy in strategies.items()
+                if enabled
+                and strategy in {"modulating", "temperature_limiter"}
+                and assignments.get(str(room_id))
+            },
         }
 
-    def test_passive_type_constants_are_imported(self):
+    def test_per_room_strategy_constants_are_imported(self):
         tree = ast.parse((COMPONENT / "config_flow.py").read_text())
         const_import = next(
             node
@@ -132,8 +140,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         imported_names = {alias.name for alias in const_import.names}
 
-        self.assertIn("PASSIVE_TYPE_INTERNAL", imported_names)
-        self.assertIn("PASSIVE_TYPE_EXTERNAL", imported_names)
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", imported_names)
+        self.assertIn("CONTROL_STRATEGIES", imported_names)
 
     def test_opentherm_detection_uses_live_or_remembered_connection(self):
         functions = load_functions(
@@ -614,7 +622,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 saved["options"],
                 options | {"legacy_naming": expected},
             )
-            self.assertEqual(saved["minor_version"], 8)
+            self.assertEqual(saved["minor_version"], 9)
 
     def test_semantic_entity_migrations_run_before_catch_all_uuid_migration(self):
         config_migration_calls = {
@@ -660,14 +668,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             saved["options"]["automations_passive_mode"],
             {
                 "automations_passive_mode": True,
-                "passive_type": "internal",
                 "temperature_increment": 1.5,
+                "room_strategies": {},
             },
         )
         self.assertNotIn(
             "automations_external_passive_mode", saved["options"]
         )
-        self.assertEqual(saved["minor_version"], 8)
+        self.assertEqual(saved["minor_version"], 9)
 
     async def test_migration_keeps_original_passive_internal(self):
         functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
@@ -697,14 +705,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             saved["options"]["automations_passive_mode"],
             {
                 "automations_passive_mode": True,
-                "passive_type": "internal",
                 "temperature_increment": 0.5,
+                "room_strategies": {},
             },
         )
         self.assertNotIn(
             "automations_external_passive_mode", saved["options"]
         )
-        self.assertEqual(saved["minor_version"], 8)
+        self.assertEqual(saved["minor_version"], 9)
 
     async def test_migration_ignores_experimental_external_passive(self):
         functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
@@ -737,7 +745,47 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             saved["options"]["automations_external_room_control"],
             {"automations_external_room_control": True},
         )
-        self.assertEqual(saved["minor_version"], 8)
+        self.assertEqual(saved["minor_version"], 9)
+
+    async def test_migration_expands_global_external_type_to_assigned_rooms(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        entry = SimpleNamespace(
+            version=1,
+            minor_version=8,
+            options={
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                    "passive_type": "external",
+                    "control_strategy": "temperature_limiter",
+                },
+                "automations_external_room_control": {
+                    "automations_external_room_control": True,
+                    "external_room_control_assignments": {
+                        "1": ["climate.office"],
+                        "2": ["climate.kitchen"],
+                    },
+                },
+            },
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertEqual(
+            saved["options"]["automations_passive_mode"],
+            {
+                "automations_passive_mode": True,
+                "room_strategies": {
+                    "1": "temperature_limiter",
+                    "2": "temperature_limiter",
+                },
+            },
+        )
+        self.assertEqual(saved["minor_version"], 9)
 
     async def test_menu_available_without_opentherm(self):
         functions = load_functions("config_flow.py", {"async_step_init"}, self.namespace)
@@ -1012,28 +1060,27 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(duplicates, {"climate.shared_trv"})
 
-    def test_external_passive_type_requires_an_assignment(self):
+    def test_passive_strategies_require_room_assignments(self):
         functions = load_functions(
-            "config_flow.py", {"_passive_types_for_assignments"}, self.namespace
-        )
-
-        self.assertEqual(
-            functions._passive_types_for_assignments({}, True), ["internal"]
+            "config_flow.py",
+            {"_passive_room_strategies"},
+            self.namespace,
         )
         self.assertEqual(
-            functions._passive_types_for_assignments({"1": []}, True), ["internal"]
-        )
-        self.assertEqual(
-            functions._passive_types_for_assignments(
-                {"1": ["climate.external_trv"]}, False
+            functions._passive_room_strategies(
+                {"1": "temperature_limiter", "2": "modulating"},
+                {"1": ["climate.office"]},
+                True,
             ),
-            ["internal"],
+            {"1": "temperature_limiter"},
         )
         self.assertEqual(
-            functions._passive_types_for_assignments(
-                {"1": ["climate.external_trv"]}, True
+            functions._passive_room_strategies(
+                {"1": "temperature_limiter"},
+                {"1": ["climate.office"]},
+                False,
             ),
-            ["internal", "external"],
+            {},
         )
 
     async def test_external_room_control_has_no_passive_strategy_settings(self):
@@ -1060,7 +1107,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("CONF_CONTROL_STRATEGY", schema_source)
         self.assertNotIn("CONF_TEMPERATURE_INCREMENT", schema_source)
 
-    async def test_passive_type_owns_control_strategy(self):
+    async def test_passive_strategy_is_not_exposed_in_integration_options(self):
         source = (COMPONENT / "config_flow.py").read_text()
         tree = ast.parse(source)
         function = next(
@@ -1073,45 +1120,72 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(
             "vol.Required(CONF_AUTOMATIONS_EXTERNAL_PASSIVE)", function_source
         )
-        self.assertIn("CONF_AUTOMATIONS_PASSIVE_TYPE", function_source)
-        self.assertIn("SelectSelectorMode.LIST", function_source)
-        self.assertIn("CompactSelectSelector", function_source)
-        self.assertIn("CONF_CONTROL_STRATEGY", function_source)
-        self.assertIn("_passive_types_for_assignments", function_source)
-        self.assertIn("if len(passive_types) > 1", function_source)
-        self.assertIn("ConditionalSelectSelector", function_source)
-        self.assertIn('"field": CONF_AUTOMATIONS_PASSIVE_TYPE', function_source)
-        self.assertIn('"value": PASSIVE_TYPE_EXTERNAL', function_source)
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", function_source)
+        self.assertNotIn("_passive_strategy_room_fields", function_source)
+        self.assertNotIn('f"{field_name} strategy"', function_source)
+        self.assertNotIn("CompactSelectSelector", function_source)
 
-    async def test_passive_type_switch_preserves_or_defaults_strategy(self):
+    def test_passive_strategy_is_exposed_as_an_eligible_room_select(self):
+        source = (COMPONENT / "select.py").read_text()
+        tree = ast.parse(source)
+        setup = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_setup_entry"
+        )
+        setup_source = ast.get_source_segment(source, setup)
+        strategy_select = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserPassiveModeStrategySelect"
+        )
+        select_source = ast.get_source_segment(source, strategy_select)
+
+        self.assertIn("data.passive_mode_enabled", setup_source)
+        self.assertIn("data.external_room_control.is_enabled(room.id)", setup_source)
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", select_source)
+        self.assertIn("select_passive_mode_strategy", select_source)
+        self.assertIn("get_identifier", select_source)
+
+    async def test_room_passive_strategy_is_preserved_by_options_flow(self):
         functions = load_functions(
             "config_flow.py", {"async_step_automation_params"}, self.namespace
         )
         flow = SimpleNamespace(
+            _external_room_control_form_rooms=lambda: (
+                {"Office": "1"},
+                {"1": ["climate.external_trv"]},
+            ),
             config_entry=SimpleNamespace(
                 options={
+                    "automations_external_room_control": {
+                        "automations_external_room_control": True,
+                        "external_room_control_assignments": {
+                            "1": ["climate.external_trv"]
+                        },
+                    },
                     "automations_passive_mode": {
                         "automations_passive_mode": True,
-                        "passive_type": "external",
-                        "control_strategy": "temperature_limiter",
+                        "room_strategies": {"1": "temperature_limiter"},
                     }
                 }
             ),
             async_create_entry=lambda **kwargs: kwargs,
         )
 
-        internal = await functions.async_step_automation_params(
+        preserved = await functions.async_step_automation_params(
             flow,
             {
                 "automations_passive_mode": {
                     "automations_passive_mode": True,
-                    "passive_type": "internal",
                 }
             },
         )
-        self.assertNotIn(
-            "control_strategy",
-            internal["data"]["automations_passive_mode"],
+        self.assertEqual(
+            preserved["data"]["automations_passive_mode"]["room_strategies"],
+            {"1": "temperature_limiter"},
         )
 
         flow.config_entry.options = {
@@ -1120,39 +1194,22 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 "external_room_control_assignments": {
                     "1": ["climate.external_trv"]
                 }
-            }
+            },
+            "automations_passive_mode": {
+                "automations_passive_mode": True,
+            },
         }
-        external = await functions.async_step_automation_params(
+        defaulted = await functions.async_step_automation_params(
             flow,
             {
                 "automations_passive_mode": {
                     "automations_passive_mode": True,
-                    "passive_type": "external",
                 }
             },
         )
         self.assertEqual(
-            external["data"]["automations_passive_mode"]["control_strategy"],
-            "modulating",
-        )
-
-        flow.config_entry.options = {}
-        unavailable = await functions.async_step_automation_params(
-            flow,
-            {
-                "automations_passive_mode": {
-                    "automations_passive_mode": True,
-                    "passive_type": "external",
-                }
-            },
-        )
-        self.assertEqual(
-            unavailable["data"]["automations_passive_mode"]["passive_type"],
-            "internal",
-        )
-        self.assertNotIn(
-            "control_strategy",
-            unavailable["data"]["automations_passive_mode"],
+            defaulted["data"]["automations_passive_mode"]["room_strategies"],
+            {},
         )
 
     async def test_external_room_control_assignments_save_with_automation_options(self):
@@ -1222,7 +1279,6 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             {
                 "automations_passive_mode": {
                     "automations_passive_mode": True,
-                    "passive_type": "external",
                 },
                 "external": {
                     "external": True,
@@ -1232,12 +1288,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             },
         )
         self.assertEqual(
-            removed["data"]["automations_passive_mode"]["passive_type"],
-            "internal",
-        )
-        self.assertNotIn(
-            "control_strategy",
-            removed["data"]["automations_passive_mode"],
+            removed["data"]["automations_passive_mode"]["room_strategies"], {}
         )
 
         disabled = await functions.async_step_automation_params(
@@ -1245,8 +1296,6 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             {
                 "automations_passive_mode": {
                     "automations_passive_mode": True,
-                    "passive_type": "external",
-                    "control_strategy": "temperature_limiter",
                 },
                 "external": {
                     "external": False,
@@ -1256,12 +1305,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             },
         )
         self.assertEqual(
-            disabled["data"]["automations_passive_mode"]["passive_type"],
-            "internal",
-        )
-        self.assertNotIn(
-            "control_strategy",
-            disabled["data"]["automations_passive_mode"],
+            disabled["data"]["automations_passive_mode"]["room_strategies"], {}
         )
 
     async def test_equipment_menu_is_below_opentherm(self):

@@ -33,9 +33,8 @@ from .const import (
     CONF_AUTOMATIONS_HW_HEAT_MODE,
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
-    CONF_AUTOMATIONS_PASSIVE_TYPE,
+    CONF_PASSIVE_ROOM_STRATEGIES,
     CONF_TEMPERATURE_INCREMENT,
-    CONF_CONTROL_STRATEGY,
     CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
@@ -50,9 +49,7 @@ from .const import (
     DEFAULT_HW_BOOST_MODE,
     DEFAULT_HW_HEAT_MODE,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
-    DEFAULT_PASSIVE_TYPE,
-    PASSIVE_TYPE_EXTERNAL,
-    PASSIVE_TYPE_INTERNAL,
+    CONTROL_STRATEGIES,
     DEFAULT_PASSIVE_CONTROL_STRATEGY,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETPOINT_MODE,
@@ -141,22 +138,23 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         # Passive Mode Automation option params
         passive_options = config_entry.options.get(CONF_AUTOMATIONS_PASSIVE, {})
-        passive_enabled = passive_options.get(CONF_AUTOMATIONS_PASSIVE, False)
-        passive_type = passive_options.get(
-            CONF_AUTOMATIONS_PASSIVE_TYPE, DEFAULT_PASSIVE_TYPE
+        self.passive_mode_enabled = bool(
+            passive_options.get(CONF_AUTOMATIONS_PASSIVE, False)
         )
-        self.enable_automations_passive_mode = bool(
-            passive_enabled and passive_type == PASSIVE_TYPE_INTERNAL
+        configured_room_strategies = passive_options.get(
+            CONF_PASSIVE_ROOM_STRATEGIES, {}
         )
-        self.enable_external_passive_mode = bool(
-            passive_enabled and passive_type == PASSIVE_TYPE_EXTERNAL
+        self.passive_room_strategies = (
+            {
+                str(room_id): strategy
+                for room_id, strategy in configured_room_strategies.items()
+                if strategy in CONTROL_STRATEGIES
+            }
+            if isinstance(configured_room_strategies, dict)
+            else {}
         )
-
         self.passive_temperature_increment = passive_options.get(
             CONF_TEMPERATURE_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
-        )
-        self.external_passive_control_strategy = passive_options.get(
-            CONF_CONTROL_STRATEGY, DEFAULT_PASSIVE_CONTROL_STRATEGY
         )
 
         # External Room Control and Passive schedule runtime controller
@@ -189,10 +187,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             port=config_entry.data.get(CONF_PORT, 80),
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
-            enable_automations=(
-                self.enable_automations_passive_mode
-                or self.enable_external_passive_mode
-            ),
+            enable_automations=self.passive_mode_enabled,
         )
 
         # Initialise api parameters
@@ -216,6 +211,12 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
         # HW climate mode
         self.wiserhub.api_parameters.hw_climate_mode = self.enable_hw_climate
+
+    def passive_room_strategy(self, room_id) -> str:
+        """Return the Passive Mode strategy for an externally controlled room."""
+        return self.passive_room_strategies.get(
+            str(room_id), DEFAULT_PASSIVE_CONTROL_STRATEGY
+        )
 
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""

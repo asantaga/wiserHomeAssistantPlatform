@@ -77,12 +77,10 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Mode passif",
-            "description": "Active le mode passif et choisit s’il contrôle les appareils Wiser internes ou les appareils climatiques externes affectés.",
+            "description": "Active le mode passif. Configurez Modulation ou Limiteur de température sur chaque appareil de pièce éligible.",
             "data": {
               "automations_passive_mode": "Mode passif",
-              "passive_type": "Type",
-              "temperature_increment": "Incrément de température",
-              "control_strategy": "Stratégie de contrôle"
+              "temperature_increment": "Incrément de température"
             }
           },
           "automations_external_room_control": {
@@ -258,18 +256,6 @@
     }
   },
   "selector": {
-    "passive_mode_type": {
-      "options": {
-        "internal": "Interne",
-        "external": "Externe"
-      }
-    },
-    "room_control_strategy": {
-      "options": {
-        "modulating": "Modulant",
-        "temperature_limiter": "Limiteur de température"
-      }
-    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Consigne basse active du chauffage central",
@@ -323,7 +309,14 @@
     "select": {
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Comportement à la mise sous tension" },
-      "led_indicator": { "name": "Voyant LED" }
+      "led_indicator": { "name": "Voyant LED" },
+      "passive_mode_strategy": {
+        "name": "Stratégie du mode passif",
+        "state": {
+          "modulating": "Modulation",
+          "temperature_limiter": "Limiteur de température"
+        }
+      }
     },
     "button": {
       "boost_all_heating": { "name": "Booster tout le chauffage" },

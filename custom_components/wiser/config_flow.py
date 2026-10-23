@@ -53,6 +53,7 @@ from .const import (
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
     CONF_AUTOMATIONS_PASSIVE_TYPE,
+    CONF_PASSIVE_ROOM_STRATEGIES,
     CONF_TEMPERATURE_INCREMENT,
     CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
     CONF_CONTROL_STRATEGY,
@@ -76,12 +77,7 @@ from .const import (
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
-    DEFAULT_PASSIVE_TYPE,
-    PASSIVE_TYPE_EXTERNAL,
-    PASSIVE_TYPE_INTERNAL,
-    PASSIVE_TYPES,
     CONTROL_STRATEGIES,
-    DEFAULT_PASSIVE_CONTROL_STRATEGY,
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP,
     DEFAULT_SCAN_INTERVAL,
@@ -127,38 +123,15 @@ def _external_room_control_duplicate_entities(assignments):
     }
 
 
-def _passive_types_for_assignments(assignments, external_control_enabled):
-    """Return Passive Mode types supported by the current assignments."""
-    if external_control_enabled and any(assignments.values()):
-        return PASSIVE_TYPES
-    return [PASSIVE_TYPE_INTERNAL]
-
-
-class ConditionalSelectSelector(SelectSelector):
-    """Select selector with a frontend field-visibility condition."""
-
-    def __init__(self, config, visible):
-        """Initialise the selector and its visibility condition."""
-        super().__init__(config)
-        self._visible = visible
-
-    def serialize(self):
-        """Serialize the selector with a top-level visibility condition."""
-        serialized = super().serialize()
-        serialized["visible"] = self._visible
-        return serialized
-
-
-class CompactSelectSelector(SelectSelector):
-    """Select selector rendered as a compact option box by the frontend."""
-
-    def serialize(self):
-        """Request the frontend's horizontal option-box presentation."""
-        serialized = super().serialize()
-        select_config = serialized["selector"]["select"]
-        select_config["mode"] = "box"
-        select_config["box_max_columns"] = 2
-        return serialized
+def _passive_room_strategies(strategies, assignments, external_control_enabled):
+    """Return valid per-room Passive Mode strategies."""
+    if not external_control_enabled or not isinstance(strategies, dict):
+        return {}
+    return {
+        str(room_id): strategy
+        for room_id, strategy in strategies.items()
+        if strategy in CONTROL_STRATEGIES and assignments.get(str(room_id))
+    }
 
 
 def _default_opentherm_hot_water_presets(minimum=35.0, maximum=55.0):
@@ -337,7 +310,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 6
+    MINOR_VERSION = 9
 
     def __init__(self) -> None:
         """Initialize the wiser flow."""
@@ -934,6 +907,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_automation_params(self, user_input=None):
         """Automation options."""
+        room_fields, external_entities_by_room = (
+            self._external_room_control_form_rooms()
+            if hasattr(self, "_external_room_control_form_rooms")
+            else ({}, {})
+        )
         saved_external_options = dict(
             self.config_entry.options.get(CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {})
         )
@@ -943,47 +921,33 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS, {}
             ).items()
         }
+        saved_passive_options = self.config_entry.options.get(
+            CONF_AUTOMATIONS_PASSIVE, {}
+        )
+        if not isinstance(saved_passive_options, dict):
+            saved_passive_options = {}
+        saved_passive_options = dict(saved_passive_options)
+        saved_room_strategies = _passive_room_strategies(
+            saved_passive_options.get(CONF_PASSIVE_ROOM_STRATEGIES, {}),
+            saved_assignments,
+            saved_external_options.get(
+                CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
+            ),
+        )
         if user_input is not None and CONF_AUTOMATIONS_PASSIVE in user_input:
             user_input = dict(user_input)
             submitted_passive = dict(user_input[CONF_AUTOMATIONS_PASSIVE])
-            previous_passive = self.config_entry.options.get(
-                CONF_AUTOMATIONS_PASSIVE, {}
-            )
-            if not isinstance(previous_passive, dict):
-                previous_passive = {}
-            if (
-                submitted_passive.get(CONF_AUTOMATIONS_PASSIVE_TYPE)
-                == PASSIVE_TYPE_EXTERNAL
-            ):
-                if (
-                    previous_passive.get(CONF_AUTOMATIONS_PASSIVE_TYPE)
-                    == PASSIVE_TYPE_EXTERNAL
-                    and CONF_CONTROL_STRATEGY in previous_passive
-                ):
-                    submitted_passive.setdefault(
-                        CONF_CONTROL_STRATEGY,
-                        previous_passive[CONF_CONTROL_STRATEGY],
-                    )
-                else:
-                    submitted_passive.setdefault(
-                        CONF_CONTROL_STRATEGY,
-                        DEFAULT_PASSIVE_CONTROL_STRATEGY,
-                    )
-            else:
-                submitted_passive.pop(CONF_CONTROL_STRATEGY, None)
-            if (
-                CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL not in user_input
-                and (
-                    not saved_external_options.get(
+            submitted_passive.pop(CONF_AUTOMATIONS_PASSIVE_TYPE, None)
+            submitted_passive.pop(CONF_CONTROL_STRATEGY, None)
+            submitted_passive[CONF_PASSIVE_ROOM_STRATEGIES] = (
+                _passive_room_strategies(
+                    saved_room_strategies,
+                    saved_assignments,
+                    saved_external_options.get(
                         CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
-                    )
-                    or not any(saved_assignments.values())
+                    ),
                 )
-            ):
-                submitted_passive[CONF_AUTOMATIONS_PASSIVE_TYPE] = (
-                    PASSIVE_TYPE_INTERNAL
-                )
-                submitted_passive.pop(CONF_CONTROL_STRATEGY, None)
+            )
             user_input[CONF_AUTOMATIONS_PASSIVE] = submitted_passive
         if (
             user_input is not None
@@ -993,11 +957,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 data=self.config_entry.options | user_input
             )
 
-        room_fields, external_entities_by_room = (
-            self._external_room_control_form_rooms()
-        )
         display_external_options = saved_external_options
-        display_assignments = saved_assignments
         errors = {}
         if user_input is not None:
             display_external_options = dict(
@@ -1016,8 +976,6 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     errors["base"] = "external_climate_must_not_be_wiser"
                 if entity_ids:
                     assignments[room_id] = entity_ids
-            display_assignments = assignments
-
             if _external_room_control_duplicate_entities(assignments):
                 errors["base"] = "external_climate_duplicate_assignment"
 
@@ -1026,16 +984,23 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 user_input = dict(user_input)
                 user_input[CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL] = external_options
                 submitted_passive = dict(
-                    user_input.get(CONF_AUTOMATIONS_PASSIVE, {})
-                )
-                if not external_options.get(
-                    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
-                ) or not assignments:
-                    submitted_passive[CONF_AUTOMATIONS_PASSIVE_TYPE] = (
-                        PASSIVE_TYPE_INTERNAL
+                    user_input.get(
+                        CONF_AUTOMATIONS_PASSIVE, saved_passive_options
                     )
-                    submitted_passive.pop(CONF_CONTROL_STRATEGY, None)
-                    user_input[CONF_AUTOMATIONS_PASSIVE] = submitted_passive
+                )
+                submitted_room_strategies = _passive_room_strategies(
+                    submitted_passive.get(CONF_PASSIVE_ROOM_STRATEGIES, {}),
+                    assignments,
+                    external_options.get(
+                        CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
+                    ),
+                )
+                submitted_passive.pop(CONF_AUTOMATIONS_PASSIVE_TYPE, None)
+                submitted_passive.pop(CONF_CONTROL_STRATEGY, None)
+                submitted_passive[CONF_PASSIVE_ROOM_STRATEGIES] = (
+                    submitted_room_strategies
+                )
+                user_input[CONF_AUTOMATIONS_PASSIVE] = submitted_passive
                 options = self.config_entry.options | user_input
                 return self.async_create_entry(data=options)
 
@@ -1068,42 +1033,18 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 )
             )
 
-        passive_options = dict(options.get(CONF_AUTOMATIONS_PASSIVE, {}))
+        passive_options = dict(saved_passive_options)
         if user_input is not None:
             passive_options = dict(
                 user_input.get(CONF_AUTOMATIONS_PASSIVE, passive_options)
             )
         passive_enabled = passive_options.get(CONF_AUTOMATIONS_PASSIVE, False)
-        passive_types = _passive_types_for_assignments(
-            display_assignments,
-            display_external_options.get(
-                CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False
-            ),
-        )
-        selected_passive_type = passive_options.get(
-            CONF_AUTOMATIONS_PASSIVE_TYPE, DEFAULT_PASSIVE_TYPE
-        )
-        if selected_passive_type not in passive_types:
-            selected_passive_type = PASSIVE_TYPE_INTERNAL
         passive_section_schema = {
             vol.Optional(
                 CONF_AUTOMATIONS_PASSIVE,
                 default=passive_enabled,
             ): bool,
         }
-        if len(passive_types) > 1:
-            passive_section_schema[
-                vol.Optional(
-                    CONF_AUTOMATIONS_PASSIVE_TYPE,
-                    default=selected_passive_type,
-                )
-            ] = CompactSelectSelector(
-                {
-                    "options": passive_types,
-                    "mode": SelectSelectorMode.LIST,
-                    "translation_key": "passive_mode_type",
-                }
-            )
         passive_section_schema[
             vol.Optional(
                 CONF_TEMPERATURE_INCREMENT,
@@ -1123,28 +1064,6 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 }
             }
         )
-        if len(passive_types) > 1:
-            passive_section_schema[
-                vol.Optional(
-                    CONF_CONTROL_STRATEGY,
-                    default=passive_options.get(
-                        CONF_CONTROL_STRATEGY,
-                        DEFAULT_PASSIVE_CONTROL_STRATEGY,
-                    ),
-                )
-            ] = ConditionalSelectSelector(
-                {
-                    "options": CONTROL_STRATEGIES,
-                    "mode": SelectSelectorMode.DROPDOWN,
-                    "translation_key": "room_control_strategy",
-                },
-                {
-                    "field": CONF_AUTOMATIONS_PASSIVE_TYPE,
-                    "operator": "eq",
-                    "value": PASSIVE_TYPE_EXTERNAL,
-                },
-            )
-
         data_schema = {
             vol.Required(CONF_AUTOMATIONS_PASSIVE): section(
                 vol.Schema(passive_section_schema),

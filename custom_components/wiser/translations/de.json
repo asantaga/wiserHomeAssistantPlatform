@@ -77,12 +77,10 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivmodus",
-            "description": "Aktiviert den Passivmodus und legt fest, ob interne Wiser-Geräte oder zugewiesene externe Klimageräte gesteuert werden.",
+            "description": "Aktiviert den Passivmodus. Konfigurieren Sie Modulierend oder Temperaturbegrenzer am jeweiligen Raumgerät.",
             "data": {
               "automations_passive_mode": "Passivmodus",
-              "passive_type": "Typ",
-              "temperature_increment": "Temperaturschritt",
-              "control_strategy": "Regelstrategie"
+              "temperature_increment": "Temperaturschritt"
             }
           },
           "automations_external_room_control": {
@@ -258,18 +256,6 @@
     }
   },
   "selector": {
-    "passive_mode_type": {
-      "options": {
-        "internal": "Intern",
-        "external": "Extern"
-      }
-    },
-    "room_control_strategy": {
-      "options": {
-        "modulating": "Modulierend",
-        "temperature_limiter": "Temperaturbegrenzer"
-      }
-    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",
@@ -323,7 +309,14 @@
     "select": {
       "mode": { "name": "Modus" },
       "power_on_behavior": { "name": "Einschaltverhalten" },
-      "led_indicator": { "name": "LED-Anzeige" }
+      "led_indicator": { "name": "LED-Anzeige" },
+      "passive_mode_strategy": {
+        "name": "Passivmodus-Strategie",
+        "state": {
+          "modulating": "Modulierend",
+          "temperature_limiter": "Temperaturbegrenzer"
+        }
+      }
     },
     "button": {
       "boost_all_heating": { "name": "Alle Heizungen verstärken" },
