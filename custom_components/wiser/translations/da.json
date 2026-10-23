@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passiv tilstand",
-            "description": "Aktivér passiv TRV-funktion. Hvert rum skal aktiveres, før funktionen virker.",
+            "description": "Aktivér passiv tilstand. Konfigurer modulerende styring eller temperaturbegrænsning på hver kvalificeret rumenhed.",
             "data": {
               "automations_passive_mode": "Passiv tilstand",
-              "passive_mode_temperature_increments": "Temperaturtrin for passiv tilstand"
+              "temperature_increment": "Temperaturtrin"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Ekstern rumstyring",
+            "description": "Tildel eksterne klimaenheder til deres Wiser-rum, så de følger rummets aktuelle måltemperatur, med eller uden passiv tilstand.",
+            "data": {
+              "automations_external_room_control": "Ekstern rumstyring"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-data er ikke tilgængelige for denne Wiser-hub.",
       "equipment_not_available": "Udstyrsdata er ikke tilgængelige for denne Wiser-hub."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Vælg en ekstern klimaenhed. En Wiser-klimaenhed kan ikke styres som en ekstern enhed.",
+      "external_climate_duplicate_assignment": "En ekstern klimaenhed kan kun tildeles ét Wiser-rum."
     }
   },
   "services": {
@@ -296,6 +307,9 @@
         "name": "Gulvtemperatur"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm-varmt vand" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Måltemperatur for fraværstilstand"
@@ -319,6 +333,13 @@
       },
       "led_indicator": {
         "name": "LED-indikator"
+      },
+      "passive_mode_strategy": {
+        "name": "Strategi for passiv tilstand",
+        "state": {
+          "modulating": "Modulerende",
+          "temperature_limiter": "Temperaturbegrænser"
+        }
       }
     },
     "button": {
@@ -378,6 +399,7 @@
       "outlet": {
         "name": "Stikkontakt"
       },
+      "ev_charger": { "name": "EV-oplader" },
       "away_mode_turns_off": {
         "name": "Fraværstilstand slukker"
       },
@@ -440,6 +462,9 @@
       "battery_defect": {
         "name": "Batterifejl"
       },
+      "ac_mains": { "name": "Netspænding" },
+      "test_mode": { "name": "Testtilstand" },
+      "hush_mode": { "name": "Lydløs tilstand" },
       "controllable": {
         "name": "Kan styres"
       },
@@ -520,6 +545,7 @@
       "signal": {
         "name": "Signal"
       },
+      "report_count": { "name": "Rapportantal" },
       "cloud": {
         "name": "Sky"
       },
@@ -553,6 +579,7 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
+      "current_schedule_temperature": { "name": "Aktuel skematemperatur" },
       "floor_temperature": {
         "name": "Gulvtemperatur"
       },

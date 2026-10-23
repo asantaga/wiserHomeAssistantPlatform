@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passzív mód",
-            "description": "A passzív termosztatikus radiátorszelep (TRV) funkció engedélyezése. A működéshez helyiségenként külön engedélyezni kell.",
+            "description": "A passzív mód engedélyezése. Állítsa be a moduláló vezérlést vagy a hőmérséklet-korlátozót minden alkalmas helyiségeszközön.",
             "data": {
               "automations_passive_mode": "Passzív mód",
-              "passive_mode_temperature_increments": "Passzív mód hőmérsékleti lépésköze"
+              "temperature_increment": "Hőmérséklet-növekmény"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Külső helyiségvezérlés",
+            "description": "Rendelje hozzá a külső klímaeszközöket a Wiser-helyiségükhöz, hogy kövessék a helyiség aktuális célhőmérsékletét passzív móddal vagy anélkül.",
+            "data": {
+              "automations_external_room_control": "Külső helyiségvezérlés"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "Ehhez a Wiser központhoz nem érhetők el OpenTherm-adatok.",
       "equipment_not_available": "Ehhez a Wiser központhoz nem érhetők el berendezésadatok."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Válasszon külső klímaentitást. A Wiser klímaentitás nem vezérelhető külső eszközként.",
+      "external_climate_duplicate_assignment": "Egy külső klímaentitás csak egy Wiser-helyiséghez rendelhető."
     }
   },
   "services": {
@@ -296,6 +307,9 @@
         "name": "Padlóhőmérséklet"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm meleg víz" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Távolléti mód célhőmérséklete"
@@ -319,6 +333,13 @@
       },
       "led_indicator": {
         "name": "LED-jelzőfény"
+      },
+      "passive_mode_strategy": {
+        "name": "Passzív mód stratégiája",
+        "state": {
+          "modulating": "Moduláló",
+          "temperature_limiter": "Hőmérséklet-korlátozó"
+        }
       }
     },
     "button": {
@@ -378,6 +399,7 @@
       "outlet": {
         "name": "Aljzat"
       },
+      "ev_charger": { "name": "Elektromosjármű-töltő" },
       "away_mode_turns_off": {
         "name": "Távolléti módban kikapcsol"
       },
@@ -440,6 +462,9 @@
       "battery_defect": {
         "name": "Akkumulátorhiba"
       },
+      "ac_mains": { "name": "Hálózati tápellátás" },
+      "test_mode": { "name": "Tesztmód" },
+      "hush_mode": { "name": "Csendes mód" },
       "controllable": {
         "name": "Vezérelhető"
       },
@@ -520,6 +545,7 @@
       "signal": {
         "name": "Jel"
       },
+      "report_count": { "name": "Jelentések száma" },
       "cloud": {
         "name": "Felhő"
       },
@@ -553,6 +579,7 @@
       "target_temperature": {
         "name": "Célhőmérséklet"
       },
+      "current_schedule_temperature": { "name": "Aktuális ütemezett hőmérséklet" },
       "floor_temperature": {
         "name": "Padlóhőmérséklet"
       },

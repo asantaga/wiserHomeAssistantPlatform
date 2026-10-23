@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivt läge",
-            "description": "Aktivera passiv TRV-funktion. Varje rum måste aktiveras för att funktionen ska fungera.",
+            "description": "Aktivera passivt läge. Konfigurera modulerande styrning eller temperaturbegränsning på varje kvalificerad rumsenhet.",
             "data": {
               "automations_passive_mode": "Passivt läge",
-              "passive_mode_temperature_increments": "Temperatursteg för passivt läge"
+              "temperature_increment": "Temperatursteg"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Extern rumsstyrning",
+            "description": "Tilldela externa klimatenheter till sina Wiser-rum så att de följer rummets aktuella måltemperatur, med eller utan passivt läge.",
+            "data": {
+              "automations_external_room_control": "Extern rumsstyrning"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-data är inte tillgängliga för denna Wiser-hubb.",
       "equipment_not_available": "Utrustningsdata är inte tillgängliga för denna Wiser-hubb."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Välj en extern klimatenhet. En Wiser-klimatenhet kan inte styras som en extern enhet.",
+      "external_climate_duplicate_assignment": "En extern klimatenhet kan endast tilldelas ett Wiser-rum."
     }
   },
   "services": {
@@ -296,6 +307,9 @@
         "name": "Golvtemperatur"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm-varmvatten" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Måltemperatur för bortaläge"
@@ -319,6 +333,13 @@
       },
       "led_indicator": {
         "name": "LED-indikator"
+      },
+      "passive_mode_strategy": {
+        "name": "Strategi för passivt läge",
+        "state": {
+          "modulating": "Modulerande",
+          "temperature_limiter": "Temperaturbegränsare"
+        }
       }
     },
     "button": {
@@ -378,6 +399,7 @@
       "outlet": {
         "name": "Eluttag"
       },
+      "ev_charger": { "name": "Elbilsladdare" },
       "away_mode_turns_off": {
         "name": "Bortaläge stänger av"
       },
@@ -440,6 +462,9 @@
       "battery_defect": {
         "name": "Batterifel"
       },
+      "ac_mains": { "name": "Nätspänning" },
+      "test_mode": { "name": "Testläge" },
+      "hush_mode": { "name": "Tyst läge" },
       "controllable": {
         "name": "Styrbar"
       },
@@ -520,6 +545,7 @@
       "signal": {
         "name": "Signal"
       },
+      "report_count": { "name": "Rapportantal" },
       "cloud": {
         "name": "Moln"
       },
@@ -553,6 +579,7 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
+      "current_schedule_temperature": { "name": "Aktuell schematemperatur" },
       "floor_temperature": {
         "name": "Golvtemperatur"
       },
