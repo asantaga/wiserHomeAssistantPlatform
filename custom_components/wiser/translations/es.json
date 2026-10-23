@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Modo pasivo",
-            "description": "Habilitar la capacidad TRV pasiva. Cada habitación necesita estar habilitada para su funcionamiento.",
+            "description": "Activa el modo pasivo. Configura el control modulante o el limitador de temperatura en cada dispositivo de habitación compatible.",
             "data": {
               "automations_passive_mode": "Modo pasivo",
-              "passive_mode_temperature_increments": "Incrementos de temperatura en modo pasivo"
+              "temperature_increment": "Incremento de temperatura"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Control externo de habitación",
+            "description": "Asigna dispositivos climáticos externos a su habitación Wiser para que sigan la temperatura objetivo actual de la habitación, con o sin modo pasivo.",
+            "data": {
+              "automations_external_room_control": "Control externo de habitación"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "Los datos de OpenTherm no están disponibles para este concentrador Wiser.",
       "equipment_not_available": "Los datos del equipo no están disponibles para este concentrador Wiser."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Seleccione una entidad climática externa. Una entidad climática Wiser no se puede controlar como dispositivo externo.",
+      "external_climate_duplicate_assignment": "Una entidad climática externa solo se puede asignar a una habitación Wiser."
     }
   },
   "services": {
@@ -308,6 +319,9 @@
         "name": "Temperatura del suelo"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "Agua caliente OpenTherm" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Temperatura objetivo del modo ausente"
@@ -331,6 +345,13 @@
       },
       "led_indicator": {
         "name": "Indicador LED"
+      },
+      "passive_mode_strategy": {
+        "name": "Estrategia del modo pasivo",
+        "state": {
+          "modulating": "Modulante",
+          "temperature_limiter": "Limitador de temperatura"
+        }
       }
     },
     "button": {
@@ -390,6 +411,7 @@
       "outlet": {
         "name": "Toma de corriente"
       },
+      "ev_charger": { "name": "Cargador de vehículo eléctrico" },
       "away_mode_turns_off": {
         "name": "El modo Ausente apaga"
       },
@@ -455,6 +477,9 @@
       "battery_defect": {
         "name": "Defecto de batería"
       },
+      "ac_mains": { "name": "Red eléctrica" },
+      "test_mode": { "name": "Modo de prueba" },
+      "hush_mode": { "name": "Modo silencioso" },
       "controllable": {
         "name": "Controlable"
       },
@@ -544,6 +569,7 @@
       "signal": {
         "name": "Señal"
       },
+      "report_count": { "name": "Número de informes" },
       "cloud": {
         "name": "Nube"
       },
@@ -577,6 +603,7 @@
       "target_temperature": {
         "name": "Temperatura objetivo"
       },
+      "current_schedule_temperature": { "name": "Temperatura programada actual" },
       "floor_temperature": {
         "name": "Temperatura del suelo"
       },

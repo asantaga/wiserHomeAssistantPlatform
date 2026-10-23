@@ -138,7 +138,7 @@ def _remove_disabled_passive_mode_entities(hass: HomeAssistant, data) -> None:
         return
 
     entity_registry = er.async_get(hass)
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         entity_id = entity_registry.async_get_entity_id(
             "switch",
             DOMAIN,

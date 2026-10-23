@@ -531,7 +531,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         entry_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
         if not entry_data:
             return []
-        return entry_data[DATA].wiserhub.rooms.all
+        return active_wiser_rooms(entry_data[DATA])
 
     def _external_room_control_room_fields(self):
         """Return unique form field labels mapped to Wiser room IDs."""
