@@ -110,6 +110,9 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "MAJOR_VERSION": 2026,
             "MINOR_VERSION": 8,
             "room_has_climate": lambda room: bool(room.devices),
+            "room_supports_temperature_control": lambda room: bool(
+                room.temperature_control
+            ),
         }
 
     def test_passive_type_constants_are_imported(self):
@@ -772,7 +775,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-    def test_external_room_control_form_hides_rooms_without_external_entities(self):
+    def test_external_room_control_form_shows_only_temperature_control_rooms(self):
         functions = load_functions(
             "config_flow.py",
             {"_external_room_control_form_rooms"},
@@ -782,25 +785,69 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             _external_room_control_room_fields=lambda: {
                 "Bedroom": "2",
                 "Kitchen": "3",
+                "Utility": "4",
                 "Office": "1",
             },
             _external_room_control_entities_by_room=lambda: {
                 "1": ["climate.office_trv"],
                 "2": [],
                 "3": [],
+                "4": [],
             },
+            _wiser_rooms=lambda: [
+                SimpleNamespace(id=1, temperature_control=True),
+                SimpleNamespace(id=2, temperature_control=True),
+                SimpleNamespace(id=3, temperature_control=True),
+                SimpleNamespace(id=4, temperature_control=False),
+            ],
         )
 
         room_fields, entities_by_room = functions._external_room_control_form_rooms(flow)
 
-        self.assertEqual(room_fields, {"Office": "1"})
+        self.assertEqual(
+            room_fields,
+            {
+                "Bedroom": "2",
+                "Kitchen": "3",
+                "Office": "1",
+            },
+        )
         self.assertEqual(
             entities_by_room,
             {
                 "1": ["climate.office_trv"],
                 "2": [],
                 "3": [],
+                "4": [],
             },
+        )
+
+    def test_room_supports_temperature_control_uses_capability_and_fallbacks(self):
+        functions = load_functions(
+            "helpers.py", {"room_supports_temperature_control"}, {}
+        )
+
+        self.assertTrue(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(
+                    capabilities=SimpleNamespace(temperature_control=True)
+                )
+            )
+        )
+        self.assertFalse(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(
+                    capabilities=SimpleNamespace(temperature_control=False),
+                    number_of_smartvalves=0,
+                    number_of_heating_actuators=0,
+                    roomstat_id=None,
+                )
+            )
+        )
+        self.assertTrue(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(capabilities=None, number_of_smartvalves=1)
+            )
         )
 
     def test_external_room_control_rejects_duplicate_room_assignments(self):
