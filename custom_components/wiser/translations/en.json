@@ -77,12 +77,10 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passive Mode",
-            "description": "Enable Passive Mode and choose whether it controls internal Wiser devices or assigned external climate devices.",
+            "description": "Enable Passive Mode. Configure Modulating or Temperature limiter control on each eligible room device.",
             "data": {
               "automations_passive_mode": "Passive Mode",
-              "passive_type": "Type",
-              "temperature_increment": "Temperature increment",
-              "control_strategy": "Control strategy"
+              "temperature_increment": "Temperature increment"
             }
           },
           "automations_external_room_control": {
@@ -258,18 +256,6 @@
     }
   },
   "selector": {
-    "passive_mode_type": {
-      "options": {
-        "internal": "Internal",
-        "external": "External"
-      }
-    },
-    "room_control_strategy": {
-      "options": {
-        "modulating": "Modulating",
-        "temperature_limiter": "Temperature limiter"
-      }
-    },
     "opentherm_parameter": {
       "options": {
         "chFlowActiveLowerSetpoint": "Active central-heating lower setpoint",
@@ -311,7 +297,14 @@
     "select": {
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Power-on behavior" },
-      "led_indicator": { "name": "LED indicator" }
+      "led_indicator": { "name": "LED indicator" },
+      "passive_mode_strategy": {
+        "name": "Passive mode strategy",
+        "state": {
+          "modulating": "Modulating",
+          "temperature_limiter": "Temperature limiter"
+        }
+      }
     },
     "button": {
       "boost_all_heating": { "name": "Boost all heating" },

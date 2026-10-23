@@ -220,8 +220,7 @@ class WiserPassiveModeRoomSupportTest(unittest.TestCase):
         registry = EntityRegistry()
         self.switch_module.er.async_get = lambda _hass: registry
         data = SimpleNamespace(
-            enable_automations_passive_mode=False,
-            enable_external_passive_mode=False,
+            passive_mode_enabled=False,
             wiserhub=SimpleNamespace(
                 rooms=SimpleNamespace(
                     all=[SimpleNamespace(id=1), SimpleNamespace(id=2)]
@@ -251,8 +250,7 @@ class WiserPassiveModeRoomSupportTest(unittest.TestCase):
 
         self.switch_module.er.async_get = fail_if_registry_is_requested
         data = SimpleNamespace(
-            enable_automations_passive_mode=True,
-            enable_external_passive_mode=False,
+            passive_mode_enabled=True,
         )
 
         self.switch_module._remove_disabled_passive_mode_entities(object(), data)

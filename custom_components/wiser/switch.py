@@ -133,10 +133,7 @@ def _room_supports_passive_mode(room) -> bool:
 
 def _remove_disabled_passive_mode_entities(hass: HomeAssistant, data) -> None:
     """Remove room Passive Mode entities when the automation is disabled."""
-    if (
-        data.enable_automations_passive_mode
-        or data.enable_external_passive_mode
-    ):
+    if data.passive_mode_enabled:
         return
 
     entity_registry = er.async_get(hass)
@@ -282,11 +279,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Both control types use Wiser's native per-room Passive Mode. External
     # control changes only how assigned climate devices follow that room.
-    if data.enable_automations_passive_mode or data.enable_external_passive_mode:
+    if data.passive_mode_enabled:
         for room in data.wiserhub.rooms.all:
             if _room_supports_passive_mode(room) or (
-                data.enable_external_passive_mode
-                and data.external_room_control.is_enabled(room.id)
+                data.external_room_control.is_enabled(room.id)
             ):
                 wiser_switches.append(
                     WiserPassiveModeSwitch(

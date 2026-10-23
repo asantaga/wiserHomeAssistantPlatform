@@ -53,7 +53,7 @@ class ExternalRoomControlClimateContractTest(unittest.TestCase):
             (COMPONENT / "switch.py").read_text(),
         )
         self.assertIn(
-            "data.enable_automations_passive_mode or data.enable_external_passive_mode",
+            "if data.passive_mode_enabled",
             (COMPONENT / "switch.py").read_text(),
         )
 
@@ -180,17 +180,16 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
                 }
             },
         )
-        self.controller = controller_class(
-            self.hass,
-            config_entry,
-            SimpleNamespace(
-                wiserhub=wiserhub,
-                enable_automations_passive_mode=True,
-                enable_external_passive_mode=True,
-                external_passive_control_strategy="modulating",
-                passive_temperature_increment=0.5,
-            ),
+        coordinator = SimpleNamespace(
+            wiserhub=wiserhub,
+            passive_mode_enabled=True,
+            passive_room_strategies={},
+            passive_temperature_increment=0.5,
         )
+        coordinator.passive_room_strategy = lambda room_id: (
+            coordinator.passive_room_strategies.get(str(room_id), "modulating")
+        )
+        self.controller = controller_class(self.hass, config_entry, coordinator)
         self.controller._rooms = {
             "1": {
                 "passive_upper_override": None,
@@ -226,9 +225,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_temperature_limiter_opens_external_trv_below_upper(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.current_temperature = 17.0
@@ -244,9 +243,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_external_limiter_uses_native_passive_flag(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = False
         self.room.passive_mode_enabled = False
         self.room.current_temperature = 17.0
@@ -265,9 +264,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_external_limiter_respects_room_off(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.mode = "Off"
         self.room.current_target_temperature = -20.0
         self.room.passive_mode_lower_temp = 15.0
@@ -284,9 +283,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_temperature_limiter_closes_external_trv_at_upper(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.current_temperature = 20.0
@@ -302,9 +301,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_temperature_limiter_uses_hysteresis_before_reopening(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.passive_mode_upper_temp = 20.0
@@ -328,9 +327,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_temperature_limiter_uses_immediate_upper_override(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.current_temperature = 20.0
@@ -349,9 +348,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_auto_upper_override_clears_at_next_schedule(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.schedule = SimpleNamespace(
             id=7,
@@ -373,9 +372,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.controller.has_passive_override(1))
 
     async def test_auto_lower_slider_creates_schedule_override(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.schedule = SimpleNamespace(
@@ -393,9 +392,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.controller.has_passive_override(1))
 
     async def test_auto_lower_override_clears_at_next_schedule(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.schedule = SimpleNamespace(
@@ -420,9 +419,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_combined_auto_range_change_keeps_new_lower_override(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.schedule = SimpleNamespace(
@@ -440,9 +439,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_lower_override_keeps_external_upper_limit(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_override = True
         self.room.passive_mode_enabled = True
         self.room.passive_mode_upper_temp = 17.5
@@ -459,9 +458,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_auto_upper_slider_is_external_limiter_only(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.is_passive_mode = True
         self.room.passive_mode_enabled = True
         self.room.schedule = SimpleNamespace(id=7)
@@ -565,18 +564,27 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(self.controller.is_enabled(1))
 
-    async def test_limiter_requires_external_passive_mode(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
-        self.controller.coordinator.enable_external_passive_mode = False
+    async def test_limiter_requires_room_strategy(self):
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        self.controller.coordinator.passive_room_strategies = {}
 
         self.assertFalse(self.controller.uses_temperature_limiter(self.room))
 
+    async def test_limiter_strategy_is_selected_per_room(self):
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        self.controller.assignments["2"] = ["climate.second_trv"]
+
+        self.assertTrue(self.controller.uses_temperature_limiter(1))
+        self.assertFalse(self.controller.uses_temperature_limiter(2))
+
     async def test_native_passive_state_gates_limiter_runtime(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
 
         self.assertTrue(self.controller.uses_temperature_limiter(self.room))
         self.assertFalse(self.room.is_passive_mode)
@@ -640,7 +648,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_native_passive_schedule_works_when_native_type_selected(self):
-        self.controller.coordinator.enable_external_passive_mode = False
+        self.controller.coordinator.passive_room_strategies = {}
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,
@@ -668,7 +676,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_native_passive_lower_uses_local_schedule(self):
-        self.controller.coordinator.enable_external_passive_mode = False
+        self.controller.coordinator.passive_room_strategies = {}
         self.room.passive_mode_enabled = True
         self.room.is_passive_mode = True
         schedule = SimpleNamespace(
@@ -697,9 +705,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_external_passive_schedule_works_when_external_type_selected(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,
@@ -725,9 +733,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_external_passive_schedule_uses_room_schedule_link(self):
         """Expose the range when the API assignment cache is not populated."""
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,
@@ -754,10 +762,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_shared_schedule_does_not_become_external_range(self):
         """Do not change normal rooms through a shared limiter schedule."""
-        self.controller.coordinator.enable_automations_passive_mode = False
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,
@@ -802,9 +809,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_external_limiter_lower_uses_hub_schedule_target(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.passive_mode_enabled = True
         self.room.is_passive_mode = True
         self.room.schedule = SimpleNamespace(
@@ -851,9 +858,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             self.controller.validated_upper_schedule(7, schedule)
 
     async def test_migrates_experimental_lower_schedule_to_hub(self):
-        self.controller.coordinator.external_passive_control_strategy = (
-            "temperature_limiter"
-        )
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,
@@ -896,8 +903,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.controller._lower_schedules, {})
 
     async def test_switching_back_to_native_restores_upper_to_hub(self):
-        self.controller.coordinator.enable_external_passive_mode = False
-        self.controller.coordinator.enable_automations_passive_mode = True
+        self.controller.coordinator.passive_room_strategies = {}
         self.room.passive_mode_enabled = True
         schedule = SimpleNamespace(
             id=7,

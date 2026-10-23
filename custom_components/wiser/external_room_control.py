@@ -301,9 +301,9 @@ class ExternalRoomControlController:
         """Return whether an assigned room uses the Passive temperature limiter."""
         room_id = getattr(room_id, "id", room_id)
         return bool(
-            self.is_enabled(room_id)
-            and self.coordinator.enable_external_passive_mode
-            and self.coordinator.external_passive_control_strategy
+            self.coordinator.passive_mode_enabled
+            and self.is_enabled(room_id)
+            and self.coordinator.passive_room_strategy(room_id)
             == CONTROL_STRATEGY_TEMPERATURE_LIMITER
         )
 
@@ -358,16 +358,21 @@ class ExternalRoomControlController:
         }
 
     def _schedule_passive_room_ids(self, schedule) -> set[str]:
-        """Return native Passive Mode rooms assigned to a schedule."""
-        if not (
-            self.coordinator.enable_automations_passive_mode
-            or self.coordinator.enable_external_passive_mode
-        ):
+        """Return enabled Passive Mode rooms assigned to a schedule."""
+        if not self.coordinator.passive_mode_enabled:
             return set()
         return {
             room_id
             for room_id in self._schedule_room_ids(schedule)
             if self._room(room_id).passive_mode_enabled
+        }
+
+    def _schedule_native_passive_room_ids(self, schedule) -> set[str]:
+        """Return schedule rooms using the normal modulating Passive strategy."""
+        return {
+            room_id
+            for room_id in self._schedule_passive_room_ids(schedule)
+            if not self.uses_temperature_limiter(room_id)
         }
 
     def schedule_uses_external_range(self, schedule) -> bool:
@@ -387,9 +392,9 @@ class ExternalRoomControlController:
     def schedule_uses_native_range(self, schedule) -> bool:
         """Return whether a schedule has native Passive Mode rooms."""
         return bool(
-            self.coordinator.enable_automations_passive_mode
+            self.coordinator.passive_mode_enabled
             and str(schedule.schedule_type).casefold() == "heating"
-            and self._schedule_passive_room_ids(schedule)
+            and self._schedule_native_passive_room_ids(schedule)
         )
 
     def schedule_data(self, schedule) -> dict:
@@ -403,7 +408,7 @@ class ExternalRoomControlController:
             return data
 
         if uses_native_range:
-            room_ids = self._schedule_passive_room_ids(schedule)
+            room_ids = self._schedule_native_passive_room_ids(schedule)
             default_lower = max(
                 float(self._room(room_id).passive_mode_lower_temp)
                 for room_id in room_ids
