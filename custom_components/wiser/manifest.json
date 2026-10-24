@@ -19,7 +19,7 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/asantaga/wiserHomeAssistantPlatform/issues",
   "requirements": [
-    "aioWiserHeatAPI==1.7.6"
+    "aioWiserHeatAPI==1.7.7"
   ],
   "version": "4.0.2b0",
   "zeroconf": [
