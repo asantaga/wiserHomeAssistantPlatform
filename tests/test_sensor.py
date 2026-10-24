@@ -106,7 +106,12 @@ def _load_sensor_module() -> ModuleType:
     )
     _module(
         "wiser.helpers",
-        active_wiser_rooms=lambda data: data.wiserhub.rooms.all,
+        active_wiser_rooms=lambda data: [
+            room
+            for room in data.wiserhub.rooms.all
+            if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
+            != "nothingassigned"
+        ],
         get_device_area_info=lambda _data, _device_id: {},
         get_device_name=lambda _data, device_id, device_type="device": (
             "Wiser HeatHub"
@@ -679,6 +684,23 @@ class WiserRoomScheduledSetpointSensorTest(unittest.TestCase):
         )
         self.assertEqual(len(sensors), 1)
         self.assertEqual(sensors[0]._device_id, empty.id)
+
+    def test_inactive_smartplug_only_room_does_not_get_sensor(self) -> None:
+        retired = SimpleNamespace(
+            id=6,
+            name="Airing Cupboard",
+            devices=[SimpleNamespace(id=12, product_type="SmartPlug")],
+            scheduled_target_temperature=18,
+            _data={"Invalid": "NothingAssigned"},
+        )
+        data = self._data([retired])
+
+        self.assertEqual(
+            self.sensor_module._selected_room_scheduled_setpoint_sensors(
+                data, [str(retired.id)]
+            ),
+            [],
+        )
 
 
 class WiserDeviceSignalSensorNameTest(unittest.TestCase):

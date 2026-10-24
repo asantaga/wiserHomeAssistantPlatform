@@ -30,7 +30,7 @@ ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
 
 
 def active_wiser_rooms(data):
-    """Return rooms that still have a device or controller assigned."""
+    """Return rooms the hub still considers actively assigned."""
     return [
         room
         for room in data.wiserhub.rooms.all

@@ -42,6 +42,7 @@ class EntityEntry:
     translation_key: str | None = None
     device_class: str | None = None
     original_device_class: str | None = None
+    original_name: str | None = None
 
 
 @dataclass
@@ -102,9 +103,12 @@ class EntityRegistry:
 
     def async_update_entity(self, entity_id, **kwargs) -> None:
         self.updated.append((entity_id, kwargs))
+        if "new_unique_id" in kwargs:
+            self.entities[entity_id].unique_id = kwargs["new_unique_id"]
 
     def async_remove(self, entity_id) -> None:
         self.removed.append(entity_id)
+        self.entities.pop(entity_id, None)
 
 
 class DeviceRegistry:
@@ -967,4 +971,84 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
         self.assertEqual(
             {update[1]["new_unique_id"] for update in registry.updated},
             {f"stable-{definition[3]}" for definition in definitions},
+        )
+
+    def test_repairs_room_entities_misclassified_by_v4_upgrade(self) -> None:
+        old_target = EntityEntry(
+            "sensor.custom_room_setpoint",
+            "room-device",
+            unique_id="stable-current_temp",
+            device_class="temperature",
+        )
+        old_temperature = EntityEntry(
+            "sensor.wiser_lts_temperature_lounge",
+            "room-device",
+            unique_id="hashed-legacy-temperature",
+            device_class="temperature",
+        )
+        new_target = EntityEntry(
+            "sensor.lounge_wiser_lounge_target_temperature",
+            "room-device",
+            unique_id="stable-current_target_temp",
+            translation_key="target_temperature",
+            device_class="temperature",
+        )
+        old_demand = EntityEntry(
+            "sensor.wiser_lts_heating_demand_lounge",
+            "room-device",
+            unique_id="hashed-legacy-demand",
+            original_device_class="power_factor",
+        )
+        new_demand = EntityEntry(
+            "sensor.lounge_wiser_lounge_heating_demand",
+            "room-device",
+            unique_id="stable-heating_demand",
+            translation_key="heating_demand",
+        )
+        registry = EntityRegistry(
+            {
+                entry.entity_id: entry
+                for entry in (
+                    old_target,
+                    old_temperature,
+                    new_target,
+                    old_demand,
+                    new_demand,
+                )
+            }
+        )
+
+        DEVICE.migrate_room_entities(
+            registry,
+            "room-device",
+            lambda entity_type: f"stable-{entity_type}",
+            {
+                "hashed-legacy-temperature": "current_temp",
+                "hashed-legacy-demand": "heating_demand",
+            },
+        )
+
+        self.assertEqual(
+            registry.removed,
+            [
+                "sensor.lounge_wiser_lounge_target_temperature",
+                "sensor.lounge_wiser_lounge_heating_demand",
+            ],
+        )
+        self.assertEqual(
+            registry.updated,
+            [
+                (
+                    "sensor.custom_room_setpoint",
+                    {"new_unique_id": "stable-current_target_temp"},
+                ),
+                (
+                    "sensor.wiser_lts_temperature_lounge",
+                    {"new_unique_id": "stable-current_temp"},
+                ),
+                (
+                    "sensor.wiser_lts_heating_demand_lounge",
+                    {"new_unique_id": "stable-heating_demand"},
+                ),
+            ],
         )

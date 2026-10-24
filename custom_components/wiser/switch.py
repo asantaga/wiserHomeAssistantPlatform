@@ -25,6 +25,7 @@ from .const import (
 )
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_name,
     get_hub_device_info,
     get_hub_via_device_info,
@@ -139,7 +140,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     for switch in WISER_SWITCHES:
         if switch["type"] == "room":
             for room in [
-                room for room in data.wiserhub.rooms.all if len(room.devices) > 0
+                room for room in active_wiser_rooms(data) if len(room.devices) > 0
             ]:
                 if getattr(room, switch["key"]) is not None:
                     wiser_switches.append(
@@ -256,7 +257,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
-        for room in data.wiserhub.rooms.all:
+        for room in active_wiser_rooms(data):
             if _room_supports_passive_mode(room):
                 wiser_switches.append(
                     WiserPassiveModeSwitch(

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN
+from .const import CARD_MANIFEST, DOMAIN
 from .helpers import get_uuid_unique_id
 
 
@@ -30,7 +30,15 @@ def migrate_entity_unique_ids(hass, config_entry_id: str) -> int:
     target_entity_ids: dict[tuple[str, str], str] = {}
 
     for entry in er.async_entries_for_config_entry(registry, config_entry_id):
-        if entry.platform != DOMAIN or _is_uuid(entry.unique_id):
+        # Card update entities are shared across hubs and deliberately use
+        # stable, human-readable unique IDs. Converting them prevents the
+        # update coordinator from finding the existing registry records and
+        # creates a duplicate set on the next platform setup.
+        if (
+            entry.platform != DOMAIN
+            or entry.domain == "update"
+            or _is_uuid(entry.unique_id)
+        ):
             continue
 
         if not isinstance(entry.unique_id, str):
@@ -63,3 +71,56 @@ def migrate_entity_unique_ids(hass, config_entry_id: str) -> int:
         registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
 
     return len(migrations)
+
+
+def repair_card_update_unique_ids(hass) -> int:
+    """Restore card-update IDs converted by the catch-all v4 migration.
+
+    When a replacement already exists at the stable ID, keep that active
+    entity and remove only the obsolete UUIDv5 record. Home Assistant retains
+    the removed entity's unique-ID index during the current registry update,
+    so trying to reuse the ID immediately can otherwise fail setup.
+    """
+    registry = er.async_get(hass)
+    # These entities are shared between all Wiser hubs and their owning
+    # config entry can change when a hub reloads or unloads. Scan the complete
+    # registry rather than only the entry currently being set up.
+    entries = [
+        entry
+        for entry in registry.entities.values()
+        if entry.platform == DOMAIN and entry.domain == "update"
+    ]
+    repaired = 0
+
+    for card in CARD_MANIFEST:
+        stable_unique_id = f"wiser_{card['id']}_card_update"
+        migrated_unique_id = get_uuid_unique_id(stable_unique_id)
+        historical = next(
+            (
+                entry
+                for entry in entries
+                if entry.unique_id == migrated_unique_id
+            ),
+            None,
+        )
+        if historical is None:
+            continue
+
+        replacement = next(
+            (
+                entry
+                for entry in entries
+                if entry.unique_id == stable_unique_id
+            ),
+            None,
+        )
+        if replacement is not None:
+            registry.async_remove(historical.entity_id)
+            entries.remove(historical)
+        else:
+            registry.async_update_entity(
+                historical.entity_id, new_unique_id=stable_unique_id
+            )
+        repaired += 1
+
+    return repaired

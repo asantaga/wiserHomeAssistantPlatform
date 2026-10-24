@@ -64,7 +64,10 @@ from .device import (
     remove_room_devices,
     room_names_with_pending_deletions,
 )
-from .entity_migration import migrate_entity_unique_ids
+from .entity_migration import (
+    migrate_entity_unique_ids,
+    repair_card_update_unique_ids,
+)
 from .frontend import JSModuleRegistration
 from .frontend.entry_updates import async_handle_entry_update, integration_reload_settings
 from .frontend.wiser_sidebar import async_update_wiser_panel
@@ -79,9 +82,11 @@ from .helpers import (
     get_instance_count,
     get_legacy_device_identifier,
     get_legacy_room_identifier,
+    get_legacy_unique_id,
     get_physical_entity_unique_id,
     get_room_entity_unique_id,
     get_unique_id,
+    get_uuid_unique_id,
 )
 from .local_schedule import OpenThermHotWaterSchedule
 from .opentherm_detection import (
@@ -164,19 +169,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                             new_options[CONF_AUTOMATIONS_HW_CLIMATE][item] = value
                             del new_options[item]
 
-        if config_entry.minor_version < 4:
-            migrated_count = migrate_entity_unique_ids(hass, config_entry.entry_id)
-            _LOGGER.info(
-                "Migrated %s Wiser entity unique IDs to UUIDv5",
-                migrated_count,
-            )
-
         if config_entry.minor_version < 5:
             # Keep room context visible for installations upgrading to UI options.
             new_options.setdefault(CONF_LEGACY_NAMING, True)
 
         hass.config_entries.async_update_entry(
-            config_entry, options=new_options, minor_version=5, version=1
+            config_entry, options=new_options, minor_version=6, version=1
         )
 
     _LOGGER.debug(
@@ -215,6 +213,11 @@ async def async_migrate_physical_entity_unique_ids(
     @callback
     def _migrate(entry: er.RegistryEntry) -> dict | None:
         new_unique_id = mapping.get(entry.unique_id)
+        if not new_unique_id and isinstance(entry.unique_id, str):
+            # A clean 3.x upgrade still has the raw name-based ID here. The
+            # migration map contains its UUIDv5 form because current helper
+            # functions return UUIDs.
+            new_unique_id = mapping.get(get_uuid_unique_id(entry.unique_id))
         if not new_unique_id:
             return None
         # The original migration could create the target entry while the
@@ -351,7 +354,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     merge_legacy_hub_device_registry(hass, config_entry)
 
     # Give logical room devices stable IDs and concise device names.
-    migrate_room_device_registry(hass, config_entry)
+    migrate_room_device_registry(hass, config_entry, previous_room_names)
 
     current_room_names = _current_wiser_room_names(coordinator)
     confirmed_deleted_ids = _confirmed_deleted_room_ids(
@@ -403,6 +406,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         config_entry,
         coordinator,
         previous_room_names,
+    )
+
+    repaired_card_updates = repair_card_update_unique_ids(hass)
+    if repaired_card_updates:
+        _LOGGER.info(
+            "Repaired %s Wiser card update entity unique IDs",
+            repaired_card_updates,
+        )
+
+    # Run the catch-all conversion only after migrations that need to inspect
+    # the meaning encoded in legacy unique IDs. Running this in
+    # async_migrate_entry used to erase that information before room and
+    # physical entities could be matched to their stable IDs.
+    migrated_count = migrate_entity_unique_ids(hass, config_entry.entry_id)
+    _LOGGER.info(
+        "Migrated %s remaining Wiser entity unique IDs to UUIDv5",
+        migrated_count,
     )
 
     # Setup services
@@ -583,6 +603,14 @@ def migrate_physical_device_registry(
             entity_registry, config_entry.entry_id
         )
     )
+
+    def _matches_unique_id(unique_id, expected_ids):
+        """Match both raw 3.x IDs and their UUIDv5 replacements."""
+        return unique_id in expected_ids or (
+            isinstance(unique_id, str)
+            and get_uuid_unique_id(unique_id) in expected_ids
+        )
+
     itrv_identifier_prefix = (
         f"{data.wiserhub.system.name} {ENTITY_PREFIX} iTRV "
     )
@@ -617,6 +645,11 @@ def migrate_physical_device_registry(
                 )
             }
         )
+        stable_entity_ids.update(
+            entry.unique_id
+            for entry in registry_entities
+            if _matches_unique_id(entry.unique_id, stable_entity_ids)
+        )
         possible_devices = find_physical_device_candidates(
             registry_devices,
             registry_entities,
@@ -643,7 +676,9 @@ def migrate_physical_device_registry(
                 entry
                 for entry in registry_entities
                 if entry.platform == DOMAIN
-                and entry.unique_id in {old_unique_id, new_unique_id}
+                and _matches_unique_id(
+                    entry.unique_id, {old_unique_id, new_unique_id}
+                )
             ]
             migrate_entity_unique_id_duplicates(
                 entity_registry,
@@ -736,8 +771,9 @@ def migrate_physical_device_registry(
                 for entry in registry_entities
                 if entry.domain == "sensor"
                 and entry.platform == DOMAIN
-                and entry.unique_id
-                in old_sensor_ids | {stable_sensor_id}
+                and _matches_unique_id(
+                    entry.unique_id, old_sensor_ids | {stable_sensor_id}
+                )
             ]
             matching_device_ids = {
                 entry.device_id
@@ -780,7 +816,84 @@ def migrate_physical_device_registry(
             )
 
 
-def migrate_room_device_registry(hass: HomeAssistant, config_entry):
+def _legacy_room_entity_types(data, room, previous_room_name=None):
+    """Return pre-v4 room entity IDs and their semantic entity types."""
+    room_names = {room.name}
+    if previous_room_name:
+        room_names.add(previous_room_name)
+
+    legacy_ids_by_type = {
+        "binary_sensor_window_detection_active": {
+            get_legacy_unique_id(
+                data, "sensor", "Window Detection Active", room.id
+            )
+        },
+    }
+    for room_name in room_names:
+        wiser_room_name = f"{ENTITY_PREFIX} {room_name}"
+        legacy_ids_by_type.setdefault("climate", set()).add(
+            f"{data.wiserhub.system.name}-WiserRoom-"
+            f"{room.id}-{wiser_room_name}"
+        )
+        legacy_ids_by_type.setdefault("current_temp", set()).add(
+            get_legacy_unique_id(
+                data, "sensor", f"LTS Temperature {room_name}", room.id
+            )
+        )
+        legacy_ids_by_type.setdefault("current_target_temp", set()).add(
+            get_legacy_unique_id(
+                data,
+                "sensor",
+                f"LTS Target Temperature {room_name}",
+                room.id,
+            )
+        )
+        legacy_ids_by_type.setdefault("heating_demand", set()).add(
+            get_legacy_unique_id(
+                data,
+                "sensor",
+                f"LTS Heating Demand {room_name}",
+                room.id,
+            )
+        )
+        legacy_ids_by_type.setdefault("switch_window_detection", set()).add(
+            get_legacy_unique_id(
+                data,
+                "room",
+                "switch",
+                f"{wiser_room_name} Window Detection",
+            )
+        )
+        legacy_ids_by_type.setdefault(
+            "switch_include_in_summer_comfort", set()
+        ).add(
+            get_legacy_unique_id(
+                data,
+                "room",
+                "switch",
+                f"{wiser_room_name} Include In Summer Comfort",
+            )
+        )
+        legacy_ids_by_type.setdefault("switch_passive_mode", set()).add(
+            get_legacy_unique_id(
+                data,
+                "passive-mode-switch",
+                f"{wiser_room_name} Passive Mode",
+                room.id,
+            )
+        )
+
+    return {
+        unique_id.casefold(): entity_type
+        for entity_type, unique_ids in legacy_ids_by_type.items()
+        for legacy_id in unique_ids
+        for unique_id in (legacy_id, get_uuid_unique_id(legacy_id))
+    }
+
+
+def migrate_room_device_registry(
+    hass: HomeAssistant, config_entry, previous_room_names=None
+):
     """Migrate all logical room devices away from name-derived identifiers."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     area_registry = ar.async_get(hass)
@@ -805,6 +918,11 @@ def migrate_room_device_registry(hass: HomeAssistant, config_entry):
             device_entry.id,
             lambda entity_type: get_room_entity_unique_id(
                 data, room.id, entity_type
+            ),
+            _legacy_room_entity_types(
+                data,
+                room,
+                (previous_room_names or {}).get(str(room.id)),
             ),
         )
 

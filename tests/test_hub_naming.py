@@ -12,6 +12,7 @@ from uuid import UUID
 
 SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/helpers.py"
 ENTITY_SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/entity.py"
+COMPONENT_PATH = SOURCE_PATH.parent
 
 
 def _load_helpers_module() -> ModuleType:
@@ -135,6 +136,19 @@ class HubNamingTest(unittest.TestCase):
         self.data.wiserhub.rooms.all = [active, deleted]
 
         self.assertEqual(self.helpers.active_wiser_rooms(self.data), [active])
+
+    def test_room_consumers_do_not_iterate_unfiltered_rooms(self) -> None:
+        """Keep entity setup, options and frontend room lists in sync."""
+        for filename in (
+            "climate.py",
+            "config_flow.py",
+            "sensor.py",
+            "switch.py",
+            "websockets.py",
+        ):
+            with self.subTest(filename=filename):
+                source = (COMPONENT_PATH / filename).read_text(encoding="utf-8")
+                self.assertNotIn("wiserhub.rooms.all", source)
 
     def test_hub_parent_uses_compatible_identifier(self) -> None:
         self.assertEqual(

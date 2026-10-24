@@ -56,6 +56,7 @@ from .const import (
 )
 from .entity import WiserEntityMixin
 from .helpers import (
+    active_wiser_rooms,
     get_device_area_info,
     get_device_name,
     get_hub_device_info,
@@ -147,7 +148,7 @@ def _selected_room_scheduled_setpoint_sensors(data, selected_room_ids):
     selected_room_ids = {str(room_id) for room_id in selected_room_ids or ()}
     return [
         WiserRoomScheduledSetpointSensor(data, room.id)
-        for room in data.wiserhub.rooms.all
+        for room in active_wiser_rooms(data)
         if str(room.id) in selected_room_ids and not room_has_climate(room)
     ]
 
@@ -443,7 +444,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
-    for room in data.wiserhub.rooms.all:
+    for room in active_wiser_rooms(data):
         if room.devices:
             wiser_sensors.extend(
                 [

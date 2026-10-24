@@ -18,6 +18,7 @@ from .frontend.wiser_sidebar import (
     save_panel_config,
     save_wiser_panel_tabs,
 )
+from .helpers import active_wiser_rooms
 from .zigbee import build_zigbee_network_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -300,7 +301,7 @@ async def async_register_websockets(hass, data):
         """Publish room list"""
         d = get_api_for_hub(msg.get("hub"))
         if d:
-            rooms = d.wiserhub.rooms.all
+            rooms = active_wiser_rooms(d)
             room_list = []
             for room in rooms:
                 room_list.append({"Id": room.id, "Name": room.name})
