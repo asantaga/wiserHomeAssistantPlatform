@@ -1,9 +1,10 @@
 # Initialise global services
 import asyncio
-import os
-import aiofiles
-import voluptuous as vol
+from functools import partial
 import logging
+import os
+
+import voluptuous as vol
 from aioWiserHeatAPI.exceptions import (
     WiserHubAuthenticationError,
     WiserHubConnectionError,
@@ -151,10 +152,12 @@ async def async_setup_services(hass: HomeAssistant, data):
                 if hasattr(entity, "get_schedule"):
                     # Remove leading slash on config if exists
                     filename = str(filename).replace("/config", "config")
-                    # Check if dir exists, if not create it.
+                    # Create the parent directory outside the event loop.
                     file_dir = os.path.dirname(filename)
-                    if file_dir and not os.path.exists(file_dir):
-                        await aiofiles.os.makedirs(file_dir, exist_ok=True)
+                    if file_dir:
+                        await hass.async_add_executor_job(
+                            partial(os.makedirs, file_dir, exist_ok=True)
+                        )
                     fn = getattr(entity, "get_schedule")
                     await fn(filename)
                 else:
