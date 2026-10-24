@@ -968,3 +968,45 @@ class MigratePhysicalDeviceTest(unittest.TestCase):
             {update[1]["new_unique_id"] for update in registry.updated},
             {f"stable-{definition[3]}" for definition in definitions},
         )
+
+    def test_removes_obsolete_external_room_switches(self) -> None:
+        registry = EntityRegistry(
+            {
+                "switch.external_passive_mode": EntityEntry(
+                    "switch.external_passive_mode",
+                    "room-device",
+                    domain="switch",
+                    translation_key="external_passive_mode",
+                ),
+                "switch.external_room_control": EntityEntry(
+                    "switch.external_room_control",
+                    "room-device",
+                    domain="switch",
+                    translation_key="external_room_control",
+                ),
+                "switch.legacy_external_passive_mode": EntityEntry(
+                    "switch.legacy_external_passive_mode",
+                    "room-device",
+                    domain="switch",
+                    unique_id=(
+                        "WiserHeat-external-passive-mode-switch-Wiser Lounge-1"
+                    ),
+                ),
+            }
+        )
+
+        DEVICE.migrate_room_entities(
+            registry,
+            "room-device",
+            lambda entity_type: f"stable-{entity_type}",
+        )
+
+        self.assertEqual(
+            registry.removed,
+            [
+                "switch.external_passive_mode",
+                "switch.external_room_control",
+                "switch.legacy_external_passive_mode",
+            ],
+        )
+        self.assertEqual(registry.updated, [])

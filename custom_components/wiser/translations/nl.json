@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passieve modus",
-            "description": "Passieve TRV-mogelijkheden inschakelen. Elke kamer moet worden ingeschakeld om te kunnen functioneren.",
+            "description": "Schakel de passieve modus in. Configureer modulerende regeling of temperatuurbegrenzing op elk geschikt kamerapparaat.",
             "data": {
               "automations_passive_mode": "Passieve modus",
-              "passive_mode_temperature_increments": "Temperatuurstappen voor passieve modus"
+              "temperature_increment": "Temperatuurstap"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Externe kamerregeling",
+            "description": "Wijs externe klimaatapparaten toe aan hun Wiser-kamer, zodat ze de huidige doeltemperatuur van de kamer volgen, met of zonder passieve modus.",
+            "data": {
+              "automations_external_room_control": "Externe kamerregeling"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-gegevens zijn niet beschikbaar voor deze Wiser-hub.",
       "equipment_not_available": "Apparatuurgegevens zijn niet beschikbaar voor deze Wiser-hub."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Selecteer een externe klimaatentiteit. Een Wiser-klimaatentiteit kan niet als extern apparaat worden aangestuurd.",
+      "external_climate_duplicate_assignment": "Een externe klimaatentiteit kan slechts aan één Wiser-kamer worden toegewezen."
     }
   },
   "services": {
@@ -296,6 +307,9 @@
         "name": "Vloertemperatuur"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm-warm water" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Doeltemperatuur afwezigheidsmodus"
@@ -319,6 +333,13 @@
       },
       "led_indicator": {
         "name": "LED-indicator"
+      },
+      "passive_mode_strategy": {
+        "name": "Strategie voor passieve modus",
+        "state": {
+          "modulating": "Modulerend",
+          "temperature_limiter": "Temperatuurbegrenzer"
+        }
       }
     },
     "button": {
@@ -378,6 +399,7 @@
       "outlet": {
         "name": "Stopcontact"
       },
+      "ev_charger": { "name": "EV-lader" },
       "away_mode_turns_off": {
         "name": "Schakelt uit in afwezigheidsmodus"
       },
@@ -443,6 +465,9 @@
       "battery_defect": {
         "name": "Batterij defect"
       },
+      "ac_mains": { "name": "Netspanning" },
+      "test_mode": { "name": "Testmodus" },
+      "hush_mode": { "name": "Stille modus" },
       "controllable": {
         "name": "Bestuurbaar"
       },
@@ -532,6 +557,7 @@
       "signal": {
         "name": "Signaal"
       },
+      "report_count": { "name": "Aantal rapporten" },
       "cloud": {
         "name": "Cloud"
       },
@@ -565,6 +591,7 @@
       "target_temperature": {
         "name": "Streeftemperatuur"
       },
+      "current_schedule_temperature": { "name": "Huidige programmatemperatuur" },
       "floor_temperature": {
         "name": "Vloertemperatuur"
       },

@@ -1,4 +1,6 @@
+from copy import deepcopy
 import logging
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
@@ -275,7 +277,7 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                schedule = schedule.ws_schedule_data
+                schedule = d.external_room_control.schedule_data(schedule)
                 connection.send_result(msg["id"], schedule)
             else:
                 connection.send_error(
@@ -500,6 +502,8 @@ async def async_register_websockets(hass, data):
                     )
                 else:
                     await d.async_refresh()
+                await d.external_room_control.async_delete_upper_schedule(schedule_id)
+                await d.external_room_control.async_delete_lower_schedule(schedule_id)
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(
@@ -544,7 +548,80 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                await schedule.set_schedule_from_ws_data(new_schedule)
+                previous_native_schedule = deepcopy(schedule.ws_schedule_data)
+                upper_schedule = None
+                lower_schedule = None
+                passive_range_type = new_schedule.get("PassiveRangeType")
+                if new_schedule.get("PassiveRange") and passive_range_type == "external":
+                    if not d.external_room_control.schedule_uses_external_range(schedule):
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Passive Mode assignments changed; reload the schedule",
+                        )
+                        return
+                    try:
+                        upper_schedule = d.external_room_control.validated_upper_schedule(
+                            schedule_id, new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                elif new_schedule.get("PassiveRange") and passive_range_type == "native":
+                    if not d.external_room_control.schedule_uses_native_range(schedule):
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Passive Mode assignments changed; reload the schedule",
+                        )
+                        return
+                    try:
+                        lower_schedule = d.external_room_control.validated_lower_schedule(
+                            schedule_id, new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                native_schedule = deepcopy(new_schedule)
+                native_schedule.pop("PassiveRange", None)
+                native_schedule.pop("PassiveRangeType", None)
+                native_schedule.pop("MinUpperSetpoint", None)
+                native_schedule.pop("MaxUpperSetpoint", None)
+                for day in native_schedule.get("ScheduleData", []):
+                    for slot in day.get("slots") or []:
+                        if lower_schedule is not None:
+                            slot["Setpoint"] = slot.get("UpperSetpoint")
+                        slot.pop("UpperSetpoint", None)
+                await schedule.set_schedule_from_ws_data(native_schedule)
+                try:
+                    if upper_schedule is not None:
+                        await d.external_room_control.async_save_upper_schedule(
+                            schedule_id, upper_schedule
+                        )
+                    if lower_schedule is not None:
+                        await d.external_room_control.async_save_lower_schedule(
+                            schedule_id, lower_schedule
+                        )
+                except Exception as err:
+                    try:
+                        await schedule.set_schedule_from_ws_data(
+                            previous_native_schedule
+                        )
+                    except Exception as rollback_err:
+                        _LOGGER.error(
+                            "Unable to restore Wiser schedule %s after saving "
+                            "its Passive Mode range failed: %s",
+                            schedule_id,
+                            rollback_err,
+                        )
+                    connection.send_error(
+                        msg["id"], "wiser error", str(err)
+                    )
+                    return
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:
@@ -586,6 +663,12 @@ async def async_register_websockets(hass, data):
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
                 await schedule.copy_schedule(to_schedule_id)
+                await d.external_room_control.async_copy_upper_schedule(
+                    schedule_id, to_schedule_id
+                )
+                await d.external_room_control.async_copy_lower_schedule(
+                    schedule_id, to_schedule_id
+                )
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:
