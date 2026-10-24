@@ -48,7 +48,7 @@ class BuildTest(unittest.TestCase):
             json.dumps(
                 {
                     "domain": "wiser",
-                    "requirements": ["aioWiserHeatAPI==1.7.5"],
+                    "requirements": ["aioWiserHeatAPI==1.7.6"],
                     "version": "4.0.0-rc2",
                 }
             ),
@@ -122,7 +122,7 @@ class BuildTest(unittest.TestCase):
         )
         self.assertEqual(
             json.loads((self.source / "manifest.json").read_text())["requirements"],
-            ["aioWiserHeatAPI==1.7.5"],
+            ["aioWiserHeatAPI==1.7.6"],
         )
         with ZipFile(self.output) as archive:
             self.assertFalse(
@@ -147,7 +147,7 @@ class BuildTest(unittest.TestCase):
 
     def test_dev_build_prefers_published_api_prerelease(self):
         with patch.object(FETCH, "list_releases", return_value=[]), patch.object(
-            BUILD, "latest_api_prerelease", return_value=BUILD.Version("1.7.6b1")
+            BUILD, "latest_api_prerelease", return_value=BUILD.Version("1.7.7b1")
         ):
             BUILD.build(
                 self.source,
@@ -159,7 +159,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.6b1"],
+            ["aioWiserHeatAPI==1.7.7b1"],
         )
         with ZipFile(self.output) as archive:
             self.assertFalse(
@@ -180,7 +180,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.5"],
+            ["aioWiserHeatAPI==1.7.6"],
         )
 
     def test_release_build_rejects_installed_api_flag(self):
@@ -214,7 +214,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             self.packaged_manifest()["requirements"],
-            ["aioWiserHeatAPI==1.7.5"],
+            ["aioWiserHeatAPI==1.7.6"],
         )
         prerelease.assert_not_called()
 
