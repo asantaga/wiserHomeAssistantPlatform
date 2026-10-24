@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passiv modus",
-            "description": "Aktiver passiv TRV-funksjon. Hvert rom må aktiveres for at den skal fungere.",
+            "description": "Aktiver passiv modus. Konfigurer modulerende styring eller temperaturbegrenser på hver kvalifiserte romenhet.",
             "data": {
               "automations_passive_mode": "Passiv modus",
-              "passive_mode_temperature_increments": "Temperaturtrinn for passiv modus"
+              "temperature_increment": "Temperaturtrinn"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Ekstern romstyring",
+            "description": "Tilordne eksterne klimaenheter til Wiser-rommet sitt, slik at de følger rommets gjeldende måltemperatur, med eller uten passiv modus.",
+            "data": {
+              "automations_external_room_control": "Ekstern romstyring"
             }
           },
           "hotwater_climate": {
@@ -222,6 +229,10 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-data er ikke tilgjengelige for denne Wiser-huben.",
       "equipment_not_available": "Utstyrsdata er ikke tilgjengelige for denne Wiser-huben."
+    },
+    "error": {
+      "external_climate_must_not_be_wiser": "Velg en ekstern klimaenhet. En Wiser-klimaenhet kan ikke styres som en ekstern enhet.",
+      "external_climate_duplicate_assignment": "En ekstern klimaenhet kan bare tilordnes ett Wiser-rom."
     }
   },
   "services": {
@@ -296,6 +307,9 @@
         "name": "Gulvtemperatur"
       }
     },
+    "water_heater": {
+      "opentherm_hot_water": { "name": "OpenTherm-varmtvann" }
+    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Måltemperatur for bortemodus"
@@ -319,6 +333,13 @@
       },
       "led_indicator": {
         "name": "LED-indikator"
+      },
+      "passive_mode_strategy": {
+        "name": "Strategi for passiv modus",
+        "state": {
+          "modulating": "Modulerende",
+          "temperature_limiter": "Temperaturbegrenser"
+        }
       }
     },
     "button": {
@@ -378,6 +399,7 @@
       "outlet": {
         "name": "Stikkontakt"
       },
+      "ev_charger": { "name": "Elbillader" },
       "away_mode_turns_off": {
         "name": "Bortemodus slår av"
       },
@@ -443,6 +465,9 @@
       "battery_defect": {
         "name": "Batterifeil"
       },
+      "ac_mains": { "name": "Nettstrøm" },
+      "test_mode": { "name": "Testmodus" },
+      "hush_mode": { "name": "Stillemodus" },
       "controllable": {
         "name": "Styrbar"
       },
@@ -532,6 +557,7 @@
       "signal": {
         "name": "Signal"
       },
+      "report_count": { "name": "Rapportantall" },
       "cloud": {
         "name": "Sky"
       },
@@ -565,6 +591,7 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
+      "current_schedule_temperature": { "name": "Gjeldende planlagte temperatur" },
       "floor_temperature": {
         "name": "Gulvtemperatur"
       },

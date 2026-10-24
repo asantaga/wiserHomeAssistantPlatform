@@ -69,6 +69,23 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_ADDITIONAL_SENSORS": "additional_sensors",
+            "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": (
+                "automations_external_room_control"
+            ),
+            "CONF_AUTOMATIONS_EXTERNAL_PASSIVE": (
+                "automations_external_passive_mode"
+            ),
+            "CONF_AUTOMATIONS_PASSIVE": "automations_passive_mode",
+            "CONF_AUTOMATIONS_PASSIVE_TYPE": "passive_type",
+            "CONF_PASSIVE_ROOM_STRATEGIES": "room_strategies",
+            "CONF_CONTROL_STRATEGY": "control_strategy",
+            "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": (
+                "external_room_control_assignments"
+            ),
+            "CONF_LEGACY_PASSIVE_TEMP_INCREMENT": (
+                "passive_mode_temperature_increments"
+            ),
+            "CONF_TEMPERATURE_INCREMENT": "temperature_increment",
             "CONF_LEGACY_NAMING": "legacy_naming",
             "CONF_EQUIPMENT_SENSORS": "equipment_sensors",
             "CONF_SCHEDULE_SETPOINT_ROOMS": "schedule_setpoint_rooms",
@@ -80,6 +97,11 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_NAME": "name",
             "DATA": "data",
             "DOMAIN": "wiser",
+            "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
+            "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
+            "DEFAULT_PASSIVE_TYPE": "internal",
+            "PASSIVE_TYPE_EXTERNAL": "external",
+            "CONTROL_STRATEGIES": ["modulating", "temperature_limiter"],
             "HomeAssistant": object,
             "ConfigEntry": object,
             "FlowResult": dict,
@@ -89,7 +111,31 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "MAJOR_VERSION": 2026,
             "MINOR_VERSION": 8,
             "room_has_climate": lambda room: bool(room.devices),
+            "room_supports_temperature_control": lambda room: bool(
+                room.temperature_control
+            ),
+            "_passive_room_strategies": lambda strategies, assignments, enabled: {
+                str(room_id): strategy
+                for room_id, strategy in strategies.items()
+                if enabled
+                and strategy in {"modulating", "temperature_limiter"}
+                and assignments.get(str(room_id))
+            },
         }
+
+    def test_per_room_strategy_constants_are_imported(self):
+        tree = ast.parse((COMPONENT / "config_flow.py").read_text())
+        const_import = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom)
+            and node.level == 1
+            and node.module == "const"
+        )
+        imported_names = {alias.name for alias in const_import.names}
+
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", imported_names)
+        self.assertIn("CONTROL_STRATEGIES", imported_names)
 
     def test_opentherm_detection_uses_live_or_remembered_connection(self):
         functions = load_functions(
@@ -463,7 +509,146 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 saved["options"],
                 options | {"legacy_naming": expected},
             )
-            self.assertEqual(saved["minor_version"], 5)
+            self.assertEqual(saved["minor_version"], 9)
+
+    async def test_migration_preserves_native_passive_settings(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        options = {
+            "automations_passive_mode": {
+                "automations_passive_mode": True,
+                "passive_mode_temperature_increments": 1.5,
+            },
+            "automations_external_passive_mode": {"ignored": True},
+        }
+        entry = SimpleNamespace(version=1, minor_version=5, options=options)
+        update = Mock()
+        hass = SimpleNamespace(config_entries=SimpleNamespace(async_update_entry=update))
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertEqual(
+            saved["options"]["automations_passive_mode"],
+            {
+                "automations_passive_mode": True,
+                "temperature_increment": 1.5,
+                "room_strategies": {},
+            },
+        )
+        self.assertNotIn(
+            "automations_external_passive_mode", saved["options"]
+        )
+        self.assertEqual(saved["minor_version"], 9)
+
+    async def test_migration_keeps_original_passive_internal(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        entry = SimpleNamespace(
+            version=1,
+            minor_version=6,
+            options={
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                    "temperature_increment": 0.5,
+                    "control_strategy": "temperature_limiter",
+                },
+                "automations_external_room_control": {
+                    "automations_external_room_control": True,
+                },
+            },
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertEqual(
+            saved["options"]["automations_passive_mode"],
+            {
+                "automations_passive_mode": True,
+                "temperature_increment": 0.5,
+                "room_strategies": {},
+            },
+        )
+        self.assertNotIn(
+            "automations_external_passive_mode", saved["options"]
+        )
+        self.assertEqual(saved["minor_version"], 9)
+
+    async def test_migration_ignores_experimental_external_passive(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        entry = SimpleNamespace(
+            version=1,
+            minor_version=7,
+            options={
+                "automations_external_passive_mode": {
+                    "automations_external_passive_mode": True,
+                    "control_strategy": "temperature_limiter",
+                },
+                "automations_external_room_control": {
+                    "automations_external_room_control": True,
+                },
+            },
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertNotIn("automations_passive_mode", saved["options"])
+        self.assertNotIn(
+            "automations_external_passive_mode", saved["options"]
+        )
+        self.assertEqual(
+            saved["options"]["automations_external_room_control"],
+            {"automations_external_room_control": True},
+        )
+        self.assertEqual(saved["minor_version"], 9)
+
+    async def test_migration_expands_global_external_type_to_assigned_rooms(self):
+        functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
+        entry = SimpleNamespace(
+            version=1,
+            minor_version=8,
+            options={
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                    "passive_type": "external",
+                    "control_strategy": "temperature_limiter",
+                },
+                "automations_external_room_control": {
+                    "automations_external_room_control": True,
+                    "external_room_control_assignments": {
+                        "1": ["climate.office"],
+                        "2": ["climate.kitchen"],
+                    },
+                },
+            },
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertEqual(
+            saved["options"]["automations_passive_mode"],
+            {
+                "automations_passive_mode": True,
+                "room_strategies": {
+                    "1": "temperature_limiter",
+                    "2": "temperature_limiter",
+                },
+            },
+        )
+        self.assertEqual(saved["minor_version"], 9)
 
     async def test_menu_available_without_opentherm(self):
         functions = load_functions("config_flow.py", {"async_step_init"}, self.namespace)
@@ -476,6 +661,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         result = await functions.async_step_init(flow)
         self.assertIn("ui_options", result["menu_options"])
         self.assertNotIn("opentherm", result["menu_options"])
+        self.assertNotIn("external_room_control_assignments", result["menu_options"])
         self.assertNotIn("equipment_sensors", result["menu_options"])
         self.assertNotIn("additional_sensors", result["menu_options"])
 
@@ -520,7 +706,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_additional_sensor_section_preserves_other_options(self):
         functions = load_functions(
-            "config_flow.py", {"async_step_automation_params"}, self.namespace
+            "config_flow.py",
+            {
+                "async_step_automation_params",
+                "_external_room_control_duplicate_entities",
+            },
+            self.namespace,
         )
         flow = SimpleNamespace(
             config_entry=SimpleNamespace(options={"scan_interval": 30}),
@@ -543,6 +734,433 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                     "schedule_setpoint_rooms": ["4"]
                 },
             },
+        )
+
+    def test_external_room_control_room_fields_are_unique_and_readable(self):
+        functions = load_functions(
+            "config_flow.py", {"_external_room_control_room_fields"}, self.namespace
+        )
+        rooms = [
+            SimpleNamespace(id=1, name="Office"),
+            SimpleNamespace(id=3, name="Bedroom"),
+            SimpleNamespace(id=4, name="andys Bedroom"),
+            SimpleNamespace(id=2, name="Bedroom"),
+        ]
+        flow = SimpleNamespace(_wiser_rooms=lambda: rooms)
+
+        fields = functions._external_room_control_room_fields(flow)
+
+        self.assertEqual(
+            list(fields.items()),
+            [
+                ("andys Bedroom", "4"),
+                ("Bedroom (2)", "2"),
+                ("Bedroom (3)", "3"),
+                ("Office", "1"),
+            ],
+        )
+        self.assertEqual(
+            fields,
+            {
+                "andys Bedroom": "4",
+                "Bedroom (2)": "2",
+                "Bedroom (3)": "3",
+                "Office": "1",
+            },
+        )
+
+    def test_external_room_control_selector_uses_external_climates_in_room_area(self):
+        rooms = [
+            SimpleNamespace(id=1, name="Office"),
+            SimpleNamespace(id=2, name="Bedroom"),
+        ]
+        entries = [
+            SimpleNamespace(
+                entity_id="climate.office_wiser", platform="wiser", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="climate.office_trv", platform="mqtt", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="switch.office", platform="mqtt", area_id="office"
+            ),
+            SimpleNamespace(
+                entity_id="climate.bedroom_trv", platform="zha", area_id="bedroom"
+            ),
+            SimpleNamespace(
+                entity_id="climate.other", platform="mqtt", area_id="other"
+            ),
+        ]
+        entity_registry = SimpleNamespace(
+            entities=SimpleNamespace(values=lambda: entries)
+        )
+        areas = {
+            "Office": SimpleNamespace(id="office"),
+            "Bedroom": SimpleNamespace(id="bedroom"),
+        }
+        area_registry = SimpleNamespace(
+            async_get_area_by_name=lambda name: areas.get(name)
+        )
+        self.namespace.update(
+            ar=SimpleNamespace(async_get=lambda _hass: area_registry),
+            er=SimpleNamespace(
+                async_get=lambda _hass: entity_registry,
+                async_get_effective_area_id=lambda _hass, entry: entry.area_id,
+            ),
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_room_control_entities_by_room"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(hass=object(), _wiser_rooms=lambda: rooms)
+
+        self.assertEqual(
+            functions._external_room_control_entities_by_room(flow),
+            {
+                "1": ["climate.office_trv"],
+                "2": ["climate.bedroom_trv"],
+            },
+        )
+
+    def test_external_room_control_form_shows_only_temperature_control_rooms(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_room_control_form_rooms"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_room_control_room_fields=lambda: {
+                "Bedroom": "2",
+                "Kitchen": "3",
+                "Utility": "4",
+                "Office": "1",
+            },
+            _external_room_control_entities_by_room=lambda: {
+                "1": ["climate.office_trv"],
+                "2": [],
+                "3": [],
+                "4": [],
+            },
+            _wiser_rooms=lambda: [
+                SimpleNamespace(id=1, temperature_control=True),
+                SimpleNamespace(id=2, temperature_control=True),
+                SimpleNamespace(id=3, temperature_control=True),
+                SimpleNamespace(id=4, temperature_control=False),
+            ],
+        )
+
+        room_fields, entities_by_room = functions._external_room_control_form_rooms(flow)
+
+        self.assertEqual(
+            room_fields,
+            {
+                "Bedroom": "2",
+                "Kitchen": "3",
+                "Office": "1",
+            },
+        )
+        self.assertEqual(
+            entities_by_room,
+            {
+                "1": ["climate.office_trv"],
+                "2": [],
+                "3": [],
+                "4": [],
+            },
+        )
+
+    def test_room_supports_temperature_control_uses_capability_and_fallbacks(self):
+        functions = load_functions(
+            "helpers.py", {"room_supports_temperature_control"}, {}
+        )
+
+        self.assertTrue(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(
+                    capabilities=SimpleNamespace(temperature_control=True)
+                )
+            )
+        )
+        self.assertFalse(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(
+                    capabilities=SimpleNamespace(temperature_control=False),
+                    number_of_smartvalves=0,
+                    number_of_heating_actuators=0,
+                    roomstat_id=None,
+                )
+            )
+        )
+        self.assertTrue(
+            functions.room_supports_temperature_control(
+                SimpleNamespace(capabilities=None, number_of_smartvalves=1)
+            )
+        )
+
+    def test_external_room_control_rejects_duplicate_room_assignments(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_room_control_duplicate_entities"},
+            self.namespace,
+        )
+
+        duplicates = functions._external_room_control_duplicate_entities(
+            {
+                "1": ["climate.office_trv", "climate.shared_trv"],
+                "2": ["climate.shared_trv"],
+                "3": ["climate.bedroom_trv"],
+            }
+        )
+
+        self.assertEqual(duplicates, {"climate.shared_trv"})
+
+    def test_passive_strategies_require_room_assignments(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_passive_room_strategies"},
+            self.namespace,
+        )
+        self.assertEqual(
+            functions._passive_room_strategies(
+                {"1": "temperature_limiter", "2": "modulating"},
+                {"1": ["climate.office"]},
+                True,
+            ),
+            {"1": "temperature_limiter"},
+        )
+        self.assertEqual(
+            functions._passive_room_strategies(
+                {"1": "temperature_limiter"},
+                {"1": ["climate.office"]},
+                False,
+            ),
+            {},
+        )
+
+    async def test_external_room_control_has_no_passive_strategy_settings(self):
+        source = (COMPONENT / "config_flow.py").read_text()
+        tree = ast.parse(source)
+        function = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_step_automation_params"
+        )
+        external_schema = next(
+            node
+            for node in function.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "external_section_schema"
+                for target in node.targets
+            )
+        )
+        schema_source = ast.get_source_segment(source, external_schema)
+
+        self.assertNotIn("CONF_CONTROL_STRATEGY", schema_source)
+        self.assertNotIn("CONF_TEMPERATURE_INCREMENT", schema_source)
+
+    async def test_passive_strategy_is_not_exposed_in_integration_options(self):
+        source = (COMPONENT / "config_flow.py").read_text()
+        tree = ast.parse(source)
+        function = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_step_automation_params"
+        )
+        function_source = ast.get_source_segment(source, function)
+        self.assertNotIn(
+            "vol.Required(CONF_AUTOMATIONS_EXTERNAL_PASSIVE)", function_source
+        )
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", function_source)
+        self.assertNotIn("_passive_strategy_room_fields", function_source)
+        self.assertNotIn('f"{field_name} strategy"', function_source)
+        self.assertNotIn("CompactSelectSelector", function_source)
+
+    def test_passive_strategy_is_exposed_as_an_eligible_room_select(self):
+        source = (COMPONENT / "select.py").read_text()
+        tree = ast.parse(source)
+        setup = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "async_setup_entry"
+        )
+        setup_source = ast.get_source_segment(source, setup)
+        strategy_select = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserPassiveModeStrategySelect"
+        )
+        select_source = ast.get_source_segment(source, strategy_select)
+
+        self.assertIn("data.passive_mode_enabled", setup_source)
+        self.assertIn("data.external_room_control.is_enabled(room.id)", setup_source)
+        self.assertIn("CONF_PASSIVE_ROOM_STRATEGIES", select_source)
+        self.assertIn("select_passive_mode_strategy", select_source)
+        self.assertIn("get_identifier", select_source)
+
+    async def test_room_passive_strategy_is_preserved_by_options_flow(self):
+        functions = load_functions(
+            "config_flow.py", {"async_step_automation_params"}, self.namespace
+        )
+        flow = SimpleNamespace(
+            _external_room_control_form_rooms=lambda: (
+                {"Office": "1"},
+                {"1": ["climate.external_trv"]},
+            ),
+            config_entry=SimpleNamespace(
+                options={
+                    "automations_external_room_control": {
+                        "automations_external_room_control": True,
+                        "external_room_control_assignments": {
+                            "1": ["climate.external_trv"]
+                        },
+                    },
+                    "automations_passive_mode": {
+                        "automations_passive_mode": True,
+                        "room_strategies": {"1": "temperature_limiter"},
+                    }
+                }
+            ),
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+
+        preserved = await functions.async_step_automation_params(
+            flow,
+            {
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                }
+            },
+        )
+        self.assertEqual(
+            preserved["data"]["automations_passive_mode"]["room_strategies"],
+            {"1": "temperature_limiter"},
+        )
+
+        flow.config_entry.options = {
+            "automations_external_room_control": {
+                "automations_external_room_control": True,
+                "external_room_control_assignments": {
+                    "1": ["climate.external_trv"]
+                }
+            },
+            "automations_passive_mode": {
+                "automations_passive_mode": True,
+            },
+        }
+        defaulted = await functions.async_step_automation_params(
+            flow,
+            {
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                }
+            },
+        )
+        self.assertEqual(
+            defaulted["data"]["automations_passive_mode"]["room_strategies"],
+            {},
+        )
+
+    async def test_external_room_control_assignments_save_with_automation_options(self):
+        registry = SimpleNamespace(async_get=lambda entity_id: None)
+        self.namespace.update(
+            CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL="external",
+            CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS="assignments",
+            DATA="data",
+            DOMAIN="wiser",
+            er=SimpleNamespace(async_get=lambda hass: registry),
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {
+                "async_step_automation_params",
+                "_external_room_control_duplicate_entities",
+            },
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_room_control_form_rooms=lambda: (
+                {
+                    "Office": "1",
+                    "Bedroom": "2",
+                },
+                {
+                    "1": ["climate.office"],
+                    "2": ["climate.bedroom"],
+                },
+            ),
+            config_entry=SimpleNamespace(
+                entry_id="entry",
+                options={
+                    "external": {
+                        "external": True,
+                        "assignments": {"1": ["climate.old_office"]},
+                    }
+                },
+            ),
+            hass=SimpleNamespace(data={}),
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+
+        result = await functions.async_step_automation_params(
+            flow,
+            {
+                "external": {
+                    "external": True,
+                    "Office": ["climate.office"],
+                    "Bedroom": ["climate.bedroom"],
+                }
+            },
+        )
+
+        self.assertEqual(
+            result["data"]["external"]["assignments"],
+            {
+                "1": ["climate.office"],
+                "2": ["climate.bedroom"],
+            },
+        )
+        self.assertNotIn("Office", result["data"]["external"])
+        self.assertNotIn("Bedroom", result["data"]["external"])
+
+        removed = await functions.async_step_automation_params(
+            flow,
+            {
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                },
+                "external": {
+                    "external": True,
+                    "Office": [],
+                    "Bedroom": [],
+                },
+            },
+        )
+        self.assertEqual(
+            removed["data"]["automations_passive_mode"]["room_strategies"], {}
+        )
+
+        disabled = await functions.async_step_automation_params(
+            flow,
+            {
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                },
+                "external": {
+                    "external": False,
+                    "Office": ["climate.office"],
+                    "Bedroom": ["climate.bedroom"],
+                },
+            },
+        )
+        self.assertEqual(
+            disabled["data"]["automations_passive_mode"]["room_strategies"], {}
         )
 
     async def test_equipment_menu_is_below_opentherm(self):

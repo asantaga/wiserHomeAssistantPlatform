@@ -77,10 +77,17 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivmodus",
-            "description": "Aktiviert die passive TRV-Funktion. Sie muss für jeden Raum einzeln aktiviert werden.",
+            "description": "Aktiviert den Passivmodus. Konfigurieren Sie Modulierend oder Temperaturbegrenzer am jeweiligen Raumgerät.",
             "data": {
               "automations_passive_mode": "Passivmodus",
-              "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
+              "temperature_increment": "Temperaturschritt"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Externe Raumregelung",
+            "description": "Weisen Sie externe Klima-Geräte ihrem Wiser-Raum zu, damit sie dem aktuellen Raum-Sollwert mit oder ohne Passivmodus folgen.",
+            "data": {
+              "automations_external_room_control": "Externe Raumregelung"
             }
           },
           "hotwater_climate": {
@@ -219,6 +226,10 @@
         }
       }
     },
+    "error": {
+      "external_climate_must_not_be_wiser": "Wählen Sie eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes Gerät gesteuert werden.",
+      "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden."
+    },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
       "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar."
@@ -286,7 +297,14 @@
     "select": {
       "mode": { "name": "Modus" },
       "power_on_behavior": { "name": "Einschaltverhalten" },
-      "led_indicator": { "name": "LED-Anzeige" }
+      "led_indicator": { "name": "LED-Anzeige" },
+      "passive_mode_strategy": {
+        "name": "Passivmodus-Strategie",
+        "state": {
+          "modulating": "Modulierend",
+          "temperature_limiter": "Temperaturbegrenzer"
+        }
+      }
     },
     "button": {
       "boost_all_heating": { "name": "Alle Heizungen verstärken" },
