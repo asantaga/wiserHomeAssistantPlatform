@@ -16,6 +16,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed the integration failing to load when Home Assistant temporarily has mixed `aiofiles` package files during dependency installation, and removed the schedule export service's reliance on the API importing `aiofiles.os` - issue [#763](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/763).
 - Fixed battery sensors raising an error during hub refresh when a battery-powered device temporarily disappears.
 - Fixed the Zigbee network failing to load when multi-function or multi-gang devices expose several logical endpoints with the same physical Zigbee node ID - PR [#750](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/750).
 
