@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-panel 1.0.5 */
+/*! WISER-CARD-VERSION wiser-panel 1.1.0 */
 
 const WISER_ACTIVE_PANEL_KEY = "wiser-active-panel";
 
@@ -20,9 +20,10 @@ class WiserPanel extends HTMLElement {
         #panel-tabs { display:flex; flex:1; min-width:0; margin-inline-start:24px;
           align-self:stretch; overflow-x:auto; }
         #panel-tabs[hidden], .panel-view[hidden] { display:none; }
-        #settings { flex-shrink:0; margin-inline-start:auto; color:inherit; }
-        #settings[hidden] { display:none; }
-        #settings ha-icon { color:var(--app-header-text-color, var(--primary-text-color)); }
+        #panel-actions { display:flex; flex-shrink:0; margin-inline-start:auto; }
+        #panel-actions[hidden], #settings[hidden] { display:none; }
+        #panel-actions ha-button { color:inherit; }
+        #panel-actions ha-icon { color:var(--app-header-text-color, var(--primary-text-color)); }
         .panel-tab { flex:0 0 auto; min-height:48px; padding:0 24px; border:0;
           border-bottom:2px solid transparent; background:transparent;
           color:var(--secondary-text-color); font:inherit; cursor:pointer; }
@@ -40,6 +41,22 @@ class WiserPanel extends HTMLElement {
         main { display:flex; flex:1; min-width:0; min-height:0; overflow:hidden; }
         .panel-view { flex:1; min-width:0; min-height:0; }
         .message { padding:24px; }
+        dialog { box-sizing:border-box; width:min(560px, calc(100vw - 32px));
+          max-height:min(720px, calc(100vh - 32px)); padding:0; border:0;
+          border-radius:12px; color:var(--primary-text-color);
+          background:var(--card-background-color, var(--primary-background-color));
+          box-shadow:var(--ha-card-box-shadow, 0 8px 32px rgba(0,0,0,.35)); }
+        dialog::backdrop { background:rgba(0,0,0,.45); }
+        .dialog-content { display:flex; flex-direction:column; max-height:inherit; }
+        .dialog-header { padding:20px 24px 12px; font-size:22px; font-weight:500; }
+        .dialog-body { overflow:auto; padding:8px 24px 16px; }
+        .dialog-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; }
+        .selection-actions { display:flex; gap:8px; margin:12px 0; }
+        #import-panels { display:grid; gap:8px; margin:12px 0; }
+        .import-panel { display:flex; align-items:center; gap:10px; min-height:36px; }
+        .import-panel small { color:var(--secondary-text-color); }
+        .import-warning { color:var(--warning-color, #ff9800); }
+        .layout-option { display:flex; align-items:center; gap:10px; margin-top:16px; }
         @media (max-width:600px) {
           header { gap:8px; padding:0 8px; }
           .brand { display:none; }
@@ -53,17 +70,71 @@ class WiserPanel extends HTMLElement {
         </ha-button>
         <img class="brand" src="/wiser/wiser-logo.png" alt="Wiser">
         <nav id="panel-tabs" role="tablist" aria-label="Wiser panels" hidden></nav>
-        <ha-button id="settings" appearance="plain" aria-label="Configure panel" title="Configure panel" hidden>
-          <ha-icon icon="mdi:cog"></ha-icon>
-        </ha-button>
+        <div id="panel-actions" hidden>
+          <ha-button id="export-config" appearance="plain" aria-label="Export panel configuration" title="Export panel configuration">
+            <ha-icon icon="mdi:download"></ha-icon>
+          </ha-button>
+          <ha-button id="import-config" appearance="plain" aria-label="Import panel configuration" title="Import panel configuration">
+            <ha-icon icon="mdi:upload"></ha-icon>
+          </ha-button>
+          <ha-button id="settings" appearance="plain" aria-label="Configure panel" title="Configure panel" hidden>
+            <ha-icon icon="mdi:cog"></ha-icon>
+          </ha-button>
+        </div>
       </header>
-      <main><p class="message" role="status">Loading Wiser…</p></main>`;
+      <main><p class="message" role="status">Loading Wiser…</p></main>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <dialog id="import-dialog" aria-labelledby="import-title">
+        <div class="dialog-content">
+          <div class="dialog-header" id="import-title">Import panel configuration</div>
+          <div class="dialog-body">
+            <div id="import-summary"></div>
+            <div class="selection-actions">
+              <ha-button id="select-all" appearance="plain">Select all</ha-button>
+              <ha-button id="select-none" appearance="plain">Select none</ha-button>
+            </div>
+            <div id="import-panels"></div>
+            <label class="layout-option">
+              <input id="import-layout" type="checkbox">
+              Restore panel order and titles
+            </label>
+            <p id="import-warning" class="import-warning" hidden></p>
+          </div>
+          <div class="dialog-actions">
+            <ha-button id="cancel-import" appearance="plain">Cancel</ha-button>
+            <ha-button id="confirm-import">Import selected</ha-button>
+          </div>
+        </div>
+      </dialog>`;
     this.shadowRoot.getElementById("menu").addEventListener("click", () => {
       this.dispatchEvent(new CustomEvent("hass-toggle-menu", { bubbles:true, composed:true }));
     });
     this.shadowRoot.getElementById("settings").addEventListener("click", () => {
       const view = this._views.find((candidate) => !candidate.hidden);
       if (typeof view?._openEditor === "function") void view._openEditor();
+    });
+    this.shadowRoot.getElementById("export-config").addEventListener("click", () => {
+      this._exportConfiguration();
+    });
+    this.shadowRoot.getElementById("import-config").addEventListener("click", () => {
+      this.shadowRoot.getElementById("import-file").click();
+    });
+    this.shadowRoot.getElementById("import-file").addEventListener("change", (event) => {
+      const [file] = event.target.files || [];
+      event.target.value = "";
+      if (file) void this._prepareImport(file);
+    });
+    this.shadowRoot.getElementById("select-all").addEventListener("click", () => {
+      this._selectImportPanels(true);
+    });
+    this.shadowRoot.getElementById("select-none").addEventListener("click", () => {
+      this._selectImportPanels(false);
+    });
+    this.shadowRoot.getElementById("cancel-import").addEventListener("click", () => {
+      this.shadowRoot.getElementById("import-dialog").close();
+    });
+    this.shadowRoot.getElementById("confirm-import").addEventListener("click", () => {
+      void this._importConfiguration();
     });
     this._views = [];
     this._tabs = [];
@@ -140,9 +211,196 @@ class WiserPanel extends HTMLElement {
 
   _syncSettings() {
     const view = this._views.find((candidate) => !candidate.hidden);
+    this.shadowRoot.getElementById("panel-actions").hidden = !(
+      this._hass?.user?.is_admin && this._config?.panels?.length
+    );
     this.shadowRoot.getElementById("settings").hidden = !(
       this._hass?.user?.is_admin && typeof view?._openEditor === "function"
     );
+  }
+
+  _notify(message) {
+    this.dispatchEvent(
+      new CustomEvent("hass-notification", {
+        bubbles: true,
+        composed: true,
+        detail: { message },
+      })
+    );
+  }
+
+  _exportConfiguration() {
+    if (!this._hass?.user?.is_admin || !this._config?.panels) return;
+    const panels = Object.fromEntries(
+      this._config.panels.map((panel) => [
+        panel.id,
+        {
+          title: panel.title,
+          configs: panel.config?.card_configs || {},
+        },
+      ])
+    );
+    const payload = {
+      format: this._config.export_format || "wiser-panel-config",
+      version: this._config.export_version || 1,
+      exported_at: new Date().toISOString(),
+      tabs: this._config.panels.map(({ id, title }) => ({ id, title })),
+      panels,
+    };
+    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `wiser-panels-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async _prepareImport(file) {
+    try {
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error("The Wiser panel configuration file is too large.");
+      }
+      const payload = JSON.parse(await file.text());
+      const format = this._config.export_format || "wiser-panel-config";
+      const version = this._config.export_version || 1;
+      if (
+        !payload ||
+        Array.isArray(payload) ||
+        payload.format !== format ||
+        payload.version !== version ||
+        !payload.panels ||
+        Array.isArray(payload.panels) ||
+        typeof payload.panels !== "object"
+      ) {
+        throw new Error("This is not a supported Wiser panel configuration file.");
+      }
+      this._importPayload = payload;
+      this._renderImportOptions();
+      this.shadowRoot.getElementById("import-dialog").showModal();
+    } catch (error) {
+      this._notify(error?.message || "Unable to read the Wiser panel configuration file.");
+    }
+  }
+
+  _renderImportOptions() {
+    const container = this.shadowRoot.getElementById("import-panels");
+    const currentPanels = new Map(
+      this._config.panels.map((panel) => [panel.id, panel])
+    );
+    const rows = [];
+    let available = 0;
+    for (const [panelId, saved] of Object.entries(this._importPayload.panels)) {
+      const current = currentPanels.get(panelId);
+      const row = document.createElement("label");
+      row.className = "import-panel";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.panelId = panelId;
+      checkbox.disabled = !current;
+      checkbox.checked = Boolean(current);
+      const label = document.createElement("span");
+      label.textContent = saved?.title || current?.title || panelId;
+      row.append(checkbox, label);
+      if (!current) {
+        const unavailable = document.createElement("small");
+        unavailable.textContent = "Not installed";
+        row.append(unavailable);
+      } else {
+        available += 1;
+      }
+      rows.push(row);
+    }
+    container.replaceChildren(...rows);
+    const total = Object.keys(this._importPayload.panels).length;
+    this.shadowRoot.getElementById("import-summary").textContent =
+      `${available} of ${total} saved panels are available to import.`;
+    const hasLayout = Array.isArray(this._importPayload.tabs);
+    const layout = this.shadowRoot.getElementById("import-layout");
+    layout.checked = hasLayout;
+    layout.disabled = !hasLayout;
+    this.shadowRoot.getElementById("import-warning").hidden = true;
+  }
+
+  _selectImportPanels(selected) {
+    for (const checkbox of this.shadowRoot.querySelectorAll(
+      '#import-panels input[type="checkbox"]:not(:disabled)'
+    )) {
+      checkbox.checked = selected;
+    }
+  }
+
+  async _importConfiguration() {
+    if (!this._hass?.user?.is_admin || !this._importPayload) return;
+    const button = this.shadowRoot.getElementById("confirm-import");
+    const warning = this.shadowRoot.getElementById("import-warning");
+    const currentPanelIds = new Set(this._config.panels.map((panel) => panel.id));
+    const currentHubs = new Set(
+      this._config.panels.flatMap((panel) => panel.config?.hubs || [])
+    );
+    const selected = [...this.shadowRoot.querySelectorAll(
+      '#import-panels input[type="checkbox"]:checked:not(:disabled)'
+    )].map((checkbox) => checkbox.dataset.panelId);
+    const panels = {};
+    const skippedHubs = new Set();
+    for (const panelId of selected) {
+      const saved = this._importPayload.panels[panelId];
+      if (
+        !saved ||
+        !saved.configs ||
+        typeof saved.configs !== "object" ||
+        Array.isArray(saved.configs)
+      ) {
+        warning.textContent = `The saved ${panelId} panel configuration is invalid.`;
+        warning.hidden = false;
+        return;
+      }
+      panels[panelId] = {};
+      for (const [hub, config] of Object.entries(saved.configs)) {
+        if (currentHubs.has(hub)) panels[panelId][hub] = config;
+        else skippedHubs.add(hub);
+      }
+    }
+
+    const restoreLayout = this.shadowRoot.getElementById("import-layout").checked;
+    let tabs;
+    if (restoreLayout) {
+      const importedTabs = this._importPayload.tabs
+        .filter((tab) => currentPanelIds.has(tab?.id) && typeof tab?.title === "string")
+        .map(({ id, title }) => ({ id, title }));
+      const importedIds = new Set(importedTabs.map((tab) => tab.id));
+      tabs = [
+        ...importedTabs,
+        ...this._config.panels
+          .filter((panel) => !importedIds.has(panel.id))
+          .map(({ id, title }) => ({ id, title })),
+      ];
+    }
+    if (selected.length === 0 && !tabs) {
+      warning.textContent = "Select at least one panel or restore the panel layout.";
+      warning.hidden = false;
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const message = { type: "wiser/panel/import", panels };
+      if (tabs) message.tabs = tabs;
+      await this._hass.callWS(message);
+      if (tabs) this._tabPreferences = tabs;
+      this.shadowRoot.getElementById("import-dialog").close();
+      const skipped = skippedHubs.size
+        ? ` Settings for unavailable hubs were skipped: ${[...skippedHubs].join(", ")}.`
+        : "";
+      this._notify(`Imported ${selected.length} Wiser panel configuration(s).${skipped}`);
+    } catch (error) {
+      warning.textContent = error?.message || "Unable to import panel configuration.";
+      warning.hidden = false;
+    } finally {
+      button.disabled = false;
+    }
   }
 
   _syncTabEditing() {

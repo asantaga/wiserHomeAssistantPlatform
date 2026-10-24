@@ -24,6 +24,8 @@ PANEL_STATE = "wiser_sidebar_panel"
 PANEL_COMPONENT = "wiser-panel"
 PANEL_FILENAME = "wiser-panel.js"
 _PANEL_TABS_CONFIG = "_panel_tabs"
+PANEL_CONFIG_EXPORT_FORMAT = "wiser-panel-config"
+PANEL_CONFIG_EXPORT_VERSION = 1
 
 
 def _panel_enabled(options):
@@ -155,7 +157,12 @@ async def async_update_wiser_panel(hass):
     panel_version = await hass.async_add_executor_job(card_version, panel_path)
     panel_url = f"{URL_BASE}/{PANEL_FILENAME}?v={panel_version}"
     # Include the shell URL so an integration reload refreshes a changed shell bundle.
-    state = {"panels": panels, "module_url": panel_url}
+    state = {
+        "panels": panels,
+        "module_url": panel_url,
+        "export_format": PANEL_CONFIG_EXPORT_FORMAT,
+        "export_version": PANEL_CONFIG_EXPORT_VERSION,
+    }
     if state == hass.data.get(PANEL_STATE):
         return
 
@@ -209,42 +216,28 @@ def _is_json_value(value, depth=0):
     return False
 
 
-def save_panel_config(hass, panel_id, configs):
-    """Save settings for any registry-defined panel using the shared option."""
-    if panel_id not in {card["id"] for card in get_manifest(hass) if card.get("panel")}:
-        raise ValueError("Unknown Wiser panel")
-    if type(configs) is not dict:
+def _known_panel_ids(hass):
+    """Return the registry-defined panels that can store settings."""
+    return {card["id"] for card in get_manifest(hass) if card.get("panel")}
+
+
+def _clean_panel_settings(config):
+    """Validate and remove runtime-only values from panel settings."""
+    if type(config) is not dict or not _is_json_value(config):
         raise ValueError("Invalid panel setting")
-    entries = dict(_enabled_entries(hass))
-    updates = []
-    for hub, config in configs.items():
-        if hub not in entries:
-            raise ValueError("Hub is not available in the Wiser panel")
-        if type(config) is not dict or not _is_json_value(config):
-            raise ValueError("Invalid panel setting")
-        settings = {
-            key: value
-            for key, value in config.items()
-            if key not in {"type", "hub", "hubs", "_panel_hide_title"}
-        }
-        entry = entries[hub]
-        generic = entry.options.get(CONF_WISER_PANEL_CONFIG, {})
-        if not isinstance(generic, dict):
-            generic = {}
-        updates.append((entry, {**generic, panel_id: settings}))
-    for entry, generic in updates:
-        hass.config_entries.async_update_entry(
-            entry,
-            options={**entry.options, CONF_WISER_PANEL_CONFIG: generic},
-        )
+    return {
+        key: value
+        for key, value in config.items()
+        if key not in {"type", "hub", "hubs", "_panel_hide_title"}
+    }
 
 
-def save_wiser_panel_tabs(hass, tabs):
-    """Save the shared panel tab order and custom titles for every hub."""
+def _validated_panel_tabs(hass, tabs):
+    """Validate and normalise shared panel tab preferences."""
     if type(tabs) is not list:
         raise ValueError("Invalid Wiser panel tabs")
 
-    known_ids = {module["id"] for module in get_manifest(hass) if module.get("panel")}
+    known_ids = _known_panel_ids(hass)
     saved_tabs = []
     seen = set()
     for tab in tabs:
@@ -263,6 +256,36 @@ def save_wiser_panel_tabs(hass, tabs):
             raise ValueError("Invalid Wiser panel tab")
         seen.add(panel_id)
         saved_tabs.append({"id": panel_id, "title": title.strip()})
+    return saved_tabs
+
+
+def save_panel_config(hass, panel_id, configs):
+    """Save settings for any registry-defined panel using the shared option."""
+    if panel_id not in _known_panel_ids(hass):
+        raise ValueError("Unknown Wiser panel")
+    if type(configs) is not dict:
+        raise ValueError("Invalid panel setting")
+    entries = dict(_enabled_entries(hass))
+    updates = []
+    for hub, config in configs.items():
+        if hub not in entries:
+            raise ValueError("Hub is not available in the Wiser panel")
+        settings = _clean_panel_settings(config)
+        entry = entries[hub]
+        generic = entry.options.get(CONF_WISER_PANEL_CONFIG, {})
+        if not isinstance(generic, dict):
+            generic = {}
+        updates.append((entry, {**generic, panel_id: settings}))
+    for entry, generic in updates:
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**entry.options, CONF_WISER_PANEL_CONFIG: generic},
+        )
+
+
+def save_wiser_panel_tabs(hass, tabs):
+    """Save the shared panel tab order and custom titles for every hub."""
+    saved_tabs = _validated_panel_tabs(hass, tabs)
 
     entries = list(_enabled_entries(hass))
     for _, entry in entries:
@@ -279,3 +302,51 @@ def save_wiser_panel_tabs(hass, tabs):
                 },
             },
         )
+
+
+def import_panel_config_bundle(hass, panels, tabs=None):
+    """Atomically validate and import selected registry-defined panel settings."""
+    if type(panels) is not dict:
+        raise ValueError("Invalid Wiser panel configuration file")
+
+    known_ids = _known_panel_ids(hass)
+    entries = dict(_enabled_entries(hass))
+    updates = {
+        hub: dict(entry.options.get(CONF_WISER_PANEL_CONFIG, {}))
+        if isinstance(entry.options.get(CONF_WISER_PANEL_CONFIG), dict)
+        else {}
+        for hub, entry in entries.items()
+    }
+
+    for panel_id, configs in panels.items():
+        if type(panel_id) is not str or panel_id not in known_ids:
+            raise ValueError("Unknown Wiser panel")
+        if type(configs) is not dict:
+            raise ValueError("Invalid panel setting")
+        for hub, config in configs.items():
+            if hub not in entries:
+                raise ValueError("Hub is not available in the Wiser panel")
+            updates[hub][panel_id] = _clean_panel_settings(config)
+
+    saved_tabs = None if tabs is None else _validated_panel_tabs(hass, tabs)
+    if saved_tabs is not None:
+        for generic in updates.values():
+            generic[_PANEL_TABS_CONFIG] = saved_tabs
+
+    # Nothing is written until every panel, hub, value and tab has validated.
+    for hub, entry in entries.items():
+        if updates[hub] == entry.options.get(CONF_WISER_PANEL_CONFIG, {}):
+            continue
+        hass.config_entries.async_update_entry(
+            entry,
+            options={
+                **entry.options,
+                CONF_WISER_PANEL_CONFIG: updates[hub],
+            },
+        )
+
+    return {
+        "panels": len(panels),
+        "hubs": len(entries),
+        "tabs": saved_tabs is not None,
+    }

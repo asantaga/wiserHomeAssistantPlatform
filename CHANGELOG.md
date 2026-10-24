@@ -8,6 +8,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added a registry-driven Wiser panel configuration export/import workflow. Administrators can save every panel to one JSON file and selectively restore individual panels or the shared tab order and titles; future registry panels are included automatically.
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
 
 ### Changed

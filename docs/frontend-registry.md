@@ -158,4 +158,13 @@ await hass.callWS({
 
 The integration stores this example under `wiser_panel_config.energy` in each selected hub's options and refreshes the panel without reloading the hub. Tab ordering and custom titles continue to use `wiser/panel/configure_tabs`.
 
+The shared shell exports all current registry panels to one versioned JSON file.
+It treats each panel's settings as opaque JSON keyed by the stable registry
+`id`, so newly registered panels participate without export-specific code. On
+import, administrators can restore all or selected installed panels and can
+independently restore tab order and titles. The generic
+`wiser/panel/import` command validates the complete selection before updating
+any config entry; settings for panels that are not currently installed remain
+visible in the import preview but cannot be selected.
+
 The shared panel shell and backend APIs ship with the integration. A panel that needs new backend commands, hub data or shared-shell behavior must include those changes in its integration pull request.
