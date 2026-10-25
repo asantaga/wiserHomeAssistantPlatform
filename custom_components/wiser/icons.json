@@ -1,7 +1,7 @@
 {
     "entity": {
         "climate": {
-            "wiser": {
+            "heating": {
                 "state_attributes": {
                     "preset_mode": {
                         "default": "mdi:tune-variant",
