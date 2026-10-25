@@ -16,6 +16,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed preset-mode icons not appearing for Wiser room climate entities in Home Assistant thermostat cards - issue [#767](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/767).
 - Fixed rooms without heating capability incorrectly creating climate entities - issue [#762](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/762).
 - Fixed the integration failing to load when Home Assistant temporarily has mixed `aiofiles` package files during dependency installation, and removed the schedule export service's reliance on the API importing `aiofiles.os` - issue [#763](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/763).
 - Fixed **Advance Schedule** failing when the next heating period is off - issue [#657](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/657).
