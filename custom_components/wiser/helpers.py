@@ -41,7 +41,12 @@ def active_wiser_rooms(data):
 
 def room_has_climate(room):
     """Return whether the integration creates a climate entity for a room."""
-    return bool(room.devices)
+    if not room.devices:
+        return False
+    capabilities = getattr(room, "capabilities", None)
+    return capabilities is None or bool(
+        getattr(capabilities, "heating_supported", True)
+    )
 
 
 def get_hub_mac_suffix(data):
