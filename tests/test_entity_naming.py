@@ -247,6 +247,25 @@ class EntityNamingTest(unittest.TestCase):
                 filename,
             )
 
+    def test_room_climate_preset_icons_use_entity_translation_key(self) -> None:
+        icons = json.loads((COMPONENT_PATH / "icons.json").read_text())
+        preset_icons = icons["entity"]["climate"]["heating"][
+            "state_attributes"
+        ]["preset_mode"]
+
+        self.assertEqual(preset_icons["default"], "mdi:tune-variant")
+        self.assertEqual(
+            set(preset_icons["state"]),
+            {
+                "Advance Schedule",
+                "Cancel Overrides",
+                "Boost 30m",
+                "Boost 1h",
+                "Boost 2h",
+                "Boost 3h",
+            },
+        )
+
     def test_smart_plug_control_is_presented_as_an_outlet(self) -> None:
         tree = ast.parse((COMPONENT_PATH / "switch.py").read_text())
         smart_plug = next(
