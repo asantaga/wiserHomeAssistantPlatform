@@ -158,7 +158,9 @@ class WiserOpenThermHotWater(
 
     _attr_has_entity_name = True
     _attr_translation_key = "opentherm_hot_water"
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    if not hasattr(WaterHeaterEntity, "native_temperature_unit"):
+        _attr_temperature_unit = _attr_native_temperature_unit
     _attr_target_temperature_step = 0.5
     _attr_supported_features = (
         WaterHeaterEntityFeature.TARGET_TEMPERATURE
@@ -236,7 +238,7 @@ class WiserOpenThermHotWater(
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the measured domestic-hot-water temperature."""
         if self._temperature_sensor_entity_id:
             sensor_state = self.hass.states.get(
@@ -263,14 +265,20 @@ class WiserOpenThermHotWater(
         operational_data = getattr(self._opentherm, "operational_data", None)
         return _finite_float(getattr(operational_data, "hw_temperature", None))
 
+    if not hasattr(WaterHeaterEntity, "native_current_temperature"):
+        current_temperature = native_current_temperature
+
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the setpoint reported by Wiser."""
         boiler_parameters = getattr(self._opentherm, "boiler_parameters", None)
         value = getattr(boiler_parameters, "hw_setpoint", None)
         if value is None:
             value = getattr(self._opentherm, "hw_flow_setpoint", None)
         return _finite_float(value)
+
+    if not hasattr(WaterHeaterEntity, "native_target_temperature"):
+        target_temperature = native_target_temperature
 
     @property
     def min_temp(self):
