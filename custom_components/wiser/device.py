@@ -217,8 +217,9 @@ def migrate_entity_unique_id_duplicates(
     entity_registry,
     entries,
     new_unique_id,
+    preferred_entries=None,
 ):
-    """Migrate one entity while retaining historical duplicates."""
+    """Migrate one entity, preferring a supplied historical registry record."""
     entries = list({entry.entity_id: entry for entry in entries}.values())
     if not entries:
         return None
@@ -235,14 +236,25 @@ def migrate_entity_unique_id_duplicates(
         entry.entity_id != existing.entity_id for entry in entries
     ):
         entries.append(existing)
-    canonical = existing or min(
-        entries,
+    preferred_entity_ids = {
+        entry.entity_id for entry in (preferred_entries or ())
+    }
+    preferred = [
+        entry for entry in entries if entry.entity_id in preferred_entity_ids
+    ]
+    canonical = min(
+        preferred or ([existing] if existing is not None else entries),
         key=lambda entry: (
             getattr(entry, "created_at", None) is None,
             getattr(entry, "created_at", None),
             entry.entity_id,
         ),
     )
+    if existing is not None and existing.entity_id != canonical.entity_id:
+        # A v4.0.0/4.0.1 setup may already have created a replacement at the
+        # stable ID. Prefer the pre-v4 registry record so its entity_id,
+        # customisations, and long-term history continue in place.
+        entity_registry.async_remove(existing.entity_id)
     if canonical.unique_id != new_unique_id:
         entity_registry.async_update_entity(
             canonical.entity_id, new_unique_id=new_unique_id
@@ -254,17 +266,53 @@ def migrate_room_entities(
     entity_registry,
     room_device_id,
     unique_id_for_type,
+    legacy_unique_id_types=None,
 ):
     """Migrate room-name-derived entities and remove their duplicates."""
     groups = {}
-    for entry in list(entity_registry.entities.values()):
-        if entry.device_id != room_device_id or entry.platform != "wiser":
-            continue
+    preferred = {}
+    legacy_unique_id_types = legacy_unique_id_types or {}
+    room_entries = [
+        entry
+        for entry in list(entity_registry.entities.values())
+        if entry.device_id == room_device_id and entry.platform == "wiser"
+    ]
+    stable_current_temp = unique_id_for_type("current_temp").casefold()
+    stable_target_temp = unique_id_for_type("current_target_temp").casefold()
+    has_legacy_current_temp = any(
+        legacy_unique_id_types.get(
+            str(getattr(entry, "unique_id", "")).casefold()
+        )
+        == "current_temp"
+        for entry in room_entries
+    )
+    has_stable_target_temp = any(
+        str(getattr(entry, "unique_id", "")).casefold() == stable_target_temp
+        for entry in room_entries
+    )
+    inferred_misclassified_targets = {
+        entry.entity_id
+        for entry in room_entries
+        if has_legacy_current_temp
+        and has_stable_target_temp
+        and getattr(entry, "translation_key", None) is None
+        and str(getattr(entry, "unique_id", "")).casefold()
+        == stable_current_temp
+    }
 
+    for entry in room_entries:
         entity_type = None
         translation_key = getattr(entry, "translation_key", None)
         unique_id = str(getattr(entry, "unique_id", "")).casefold()
-        if entry.domain == "climate":
+        original_name = str(getattr(entry, "original_name", "")).casefold()
+        entity_id = entry.entity_id.casefold()
+        is_historical = unique_id in legacy_unique_id_types
+        if entry.entity_id in inferred_misclassified_targets:
+            entity_type = "current_target_temp"
+            is_historical = True
+        elif is_historical:
+            entity_type = legacy_unique_id_types[unique_id]
+        elif entry.domain == "climate":
             entity_type = "climate"
         elif entry.domain == "binary_sensor":
             if (
@@ -273,7 +321,22 @@ def migrate_room_entities(
             ):
                 entity_type = "binary_sensor_window_detection_active"
         elif entry.domain == "switch":
-            if translation_key:
+            if "passive mode" in original_name or "passive_mode" in entity_id:
+                entity_type = "switch_passive_mode"
+                is_historical = translation_key is None
+            elif (
+                "include in summer comfort" in original_name
+                or "include_in_summer_comfort" in entity_id
+            ):
+                entity_type = "switch_include_in_summer_comfort"
+                is_historical = translation_key is None
+            elif (
+                "window detection" in original_name
+                or "window_detection" in entity_id
+            ):
+                entity_type = "switch_window_detection"
+                is_historical = translation_key is None
+            elif translation_key:
                 entity_type = f"switch_{translation_key}"
             elif "-passive-mode-switch-" in unique_id:
                 entity_type = "switch_passive_mode"
@@ -283,7 +346,25 @@ def migrate_room_entities(
                 elif unique_id.endswith(" include in summer comfort"):
                     entity_type = "switch_include_in_summer_comfort"
         elif entry.domain == "sensor":
-            if translation_key == "heating_demand":
+            if (
+                "lts target temperature" in original_name
+                or "lts_target_temperature" in entity_id
+            ):
+                entity_type = "current_target_temp"
+                is_historical = translation_key is None
+            elif (
+                "lts heating demand" in original_name
+                or "lts_heating_demand" in entity_id
+            ):
+                entity_type = "heating_demand"
+                is_historical = translation_key is None
+            elif (
+                "lts temperature" in original_name
+                or "lts_temperature" in entity_id
+            ):
+                entity_type = "current_temp"
+                is_historical = translation_key is None
+            elif translation_key == "heating_demand":
                 entity_type = "heating_demand"
             elif translation_key == "target_temperature":
                 entity_type = "current_target_temp"
@@ -305,12 +386,24 @@ def migrate_room_entities(
 
         if entity_type is not None:
             groups.setdefault(entity_type, []).append(entry)
+            if is_historical:
+                preferred.setdefault(entity_type, []).append(entry)
 
-    for entity_type, entries in groups.items():
+    # Repair target temperature first: in the affected v4.0 migration its old
+    # registry entry temporarily owns the current-temperature stable ID.
+    ordered_types = ["current_target_temp"]
+    ordered_types.extend(
+        entity_type for entity_type in groups if entity_type not in ordered_types
+    )
+    for entity_type in ordered_types:
+        entries = groups.get(entity_type)
+        if not entries:
+            continue
         migrate_entity_unique_id_duplicates(
             entity_registry,
             entries,
             unique_id_for_type(entity_type),
+            preferred.get(entity_type),
         )
 
 

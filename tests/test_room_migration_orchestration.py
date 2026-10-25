@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 import sys
@@ -105,6 +106,7 @@ def _load_wiser_init() -> ModuleType:
     _module(
         "wiser_init_test.entity_migration",
         migrate_entity_unique_ids=Mock(),
+        repair_card_update_unique_ids=Mock(return_value=0),
     )
     _module("wiser_init_test.frontend", JSModuleRegistration=object)
     _module(
@@ -127,9 +129,11 @@ def _load_wiser_init() -> ModuleType:
         "get_instance_count",
         "get_legacy_device_identifier",
         "get_legacy_room_identifier",
+        "get_legacy_unique_id",
         "get_physical_entity_unique_id",
         "get_room_entity_unique_id",
         "get_unique_id",
+        "get_uuid_unique_id",
     )
     helper_stubs = {name: Mock(name=name) for name in helper_names}
     helper_stubs["active_wiser_rooms"] = (
@@ -235,6 +239,78 @@ class RoomMigrationOrchestrationTest(unittest.TestCase):
             self.wiser._current_wiser_room_names(self.coordinator),
             {"7": "Lounge"},
         )
+
+    def test_legacy_room_entity_types_include_raw_and_uuid_ids(self) -> None:
+        legacy_id = self.wiser.get_legacy_unique_id
+        uuid_id = self.wiser.get_uuid_unique_id
+        legacy_id.side_effect = lambda _data, *parts: "-".join(
+            str(part) for part in parts
+        )
+        uuid_id.side_effect = lambda value: f"uuid:{value}"
+        try:
+            mapping = self.wiser._legacy_room_entity_types(
+                self.coordinator,
+                self.room,
+                "Living Room",
+            )
+        finally:
+            legacy_id.reset_mock(side_effect=True)
+            uuid_id.reset_mock(side_effect=True)
+
+        expected = {
+            "sensor-LTS Temperature Lounge-7": "current_temp",
+            "sensor-LTS Target Temperature Lounge-7": "current_target_temp",
+            "sensor-LTS Heating Demand Living Room-7": "heating_demand",
+            "room-switch-Wiser Lounge Window Detection": (
+                "switch_window_detection"
+            ),
+            "passive-mode-switch-Wiser Living Room Passive Mode-7": (
+                "switch_passive_mode"
+            ),
+            "WiserHeat123456-WiserRoom-7-Wiser Lounge": "climate",
+        }
+        for unique_id, entity_type in expected.items():
+            self.assertEqual(mapping[unique_id.casefold()], entity_type)
+            self.assertEqual(mapping[f"uuid:{unique_id}".casefold()], entity_type)
+
+    def test_room_migration_precedes_catch_all_uuid_conversion(self) -> None:
+        """Protect the 3.x upgrade order that v4.0.1 accidentally reversed."""
+        tree = ast.parse(
+            (COMPONENT_PATH / "__init__.py").read_text(encoding="utf-8")
+        )
+        functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        def call_names(statement):
+            return {
+                node.func.id
+                for node in ast.walk(statement)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+            }
+
+        setup = functions["async_setup_entry"]
+        positions = {
+            call_name: index
+            for index, statement in enumerate(setup.body)
+            for call_name in call_names(statement)
+            if call_name
+            in {"migrate_room_device_registry", "migrate_entity_unique_ids"}
+        }
+
+        self.assertLess(
+            positions["migrate_room_device_registry"],
+            positions["migrate_entity_unique_ids"],
+        )
+        migrate_entry_calls = {
+            call_name
+            for statement in functions["async_migrate_entry"].body
+            for call_name in call_names(statement)
+        }
+        self.assertNotIn("migrate_entity_unique_ids", migrate_entry_calls)
 
     def test_refresh_moves_areas_and_saves_names_without_config_reload(self) -> None:
         self.wiser._confirmed_deleted_room_ids = Mock(return_value=set())

@@ -19,7 +19,9 @@ class FakeRegistry:
 
     def __init__(self, entries):
         self.entries = entries
+        self.entities = {entry.entity_id: entry for entry in entries}
         self.updates = []
+        self.removed = []
 
     def async_get_entity_id(self, domain, platform, unique_id):
         return next(
@@ -40,14 +42,28 @@ class FakeRegistry:
         entry.unique_id = new_unique_id
         self.updates.append((entity_id, new_unique_id))
 
+    def async_remove(self, entity_id):
+        self.entries = [
+            entry for entry in self.entries if entry.entity_id != entity_id
+        ]
+        self.entities.pop(entity_id)
+        self.removed.append(entity_id)
 
-def _entry(entity_id, unique_id, *, platform="wiser", domain="sensor"):
+
+def _entry(
+    entity_id,
+    unique_id,
+    *,
+    platform="wiser",
+    domain="sensor",
+    config_entry_id="entry-1",
+):
     return SimpleNamespace(
         entity_id=entity_id,
         unique_id=unique_id,
         platform=platform,
         domain=domain,
-        config_entry_id="entry-1",
+        config_entry_id=config_entry_id,
     )
 
 
@@ -57,6 +73,12 @@ def _load_migration_module(registry):
     sys.modules[package.__name__] = package
 
     const = ModuleType("wiser_unique_id_test.const")
+    const.CARD_MANIFEST = [
+        {"id": "schedule"},
+        {"id": "zigbee"},
+        {"id": "rooms"},
+        {"id": "hub"},
+    ]
     const.DOMAIN = "wiser"
     sys.modules[const.__name__] = const
 
@@ -139,6 +161,67 @@ class EntityUniqueIdMigrationTest(unittest.TestCase):
             migration.migrate_entity_unique_ids(object(), "entry-1"), 0
         )
         self.assertEqual(entry.unique_id, "other-unique-id")
+
+    def test_does_not_convert_card_update_unique_ids(self) -> None:
+        entry = _entry(
+            "update.wiser_controls_card",
+            "wiser_rooms_card_update",
+            domain="update",
+        )
+        registry = FakeRegistry([entry])
+        migration = _load_migration_module(registry)
+
+        self.assertEqual(
+            migration.migrate_entity_unique_ids(object(), "entry-1"), 0
+        )
+        self.assertEqual(entry.unique_id, "wiser_rooms_card_update")
+        self.assertEqual(registry.updates, [])
+
+    def test_removes_converted_card_update_when_replacement_exists(self) -> None:
+        stable_unique_id = "wiser_rooms_card_update"
+        converted_unique_id = str(uuid5(NAMESPACE, stable_unique_id))
+        historical = _entry(
+            "update.wiser_controls_card",
+            converted_unique_id,
+            domain="update",
+            config_entry_id="previous-owner",
+        )
+        replacement = _entry(
+            "update.wiser_controls_card_2",
+            stable_unique_id,
+            domain="update",
+        )
+        registry = FakeRegistry([historical, replacement])
+        migration = _load_migration_module(registry)
+
+        self.assertEqual(
+            migration.repair_card_update_unique_ids(object()), 1
+        )
+        self.assertEqual(
+            registry.removed, ["update.wiser_controls_card"]
+        )
+        self.assertEqual(registry.updates, [])
+        self.assertEqual(replacement.unique_id, stable_unique_id)
+
+    def test_restores_converted_card_update_without_replacement(self) -> None:
+        stable_unique_id = "wiser_rooms_card_update"
+        historical = _entry(
+            "update.wiser_controls_card",
+            str(uuid5(NAMESPACE, stable_unique_id)),
+            domain="update",
+        )
+        registry = FakeRegistry([historical])
+        migration = _load_migration_module(registry)
+
+        self.assertEqual(
+            migration.repair_card_update_unique_ids(object()), 1
+        )
+        self.assertEqual(historical.unique_id, stable_unique_id)
+        self.assertEqual(registry.removed, [])
+        self.assertEqual(
+            registry.updates,
+            [("update.wiser_controls_card", stable_unique_id)],
+        )
 
     def test_invalid_unique_id_does_not_partially_migrate(self) -> None:
         valid_entry = _entry("sensor.temperature", "legacy-temperature")

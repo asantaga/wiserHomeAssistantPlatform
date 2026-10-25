@@ -70,6 +70,12 @@ def _load_switch_module() -> ModuleType:
 
     _module(
         "wiser.helpers",
+        active_wiser_rooms=lambda data: [
+            room
+            for room in data.wiserhub.rooms.all
+            if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
+            != "nothingassigned"
+        ],
         get_device_name=lambda _data, device_id, device_type="device": (
             "Hot Water" if device_type == "Hot Water" else "Wiser HeatHub"
         ),
