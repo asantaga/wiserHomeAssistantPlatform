@@ -103,7 +103,9 @@ def load_controller():
         "CLIMATE_DOMAIN": "climate",
         "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": "automations_external_room_control",
         "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": "external_room_control_assignments",
+        "CONTROL_STRATEGIES": ["modulating", "temperature_limiter"],
         "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
+        "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
         "DOMAIN": "wiser",
         "FROST_PROTECTION_TEMPERATURE": 5.0,
         "HomeAssistantError": Exception,
@@ -154,6 +156,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             schedule=None,
             set_passive_mode_lower_temp=AsyncMock(),
             set_passive_mode_upper_temp=AsyncMock(),
+            set_passive_mode=AsyncMock(),
             set_target_temperature=AsyncMock(),
             cancel_overrides=AsyncMock(),
         )
@@ -195,6 +198,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
                 "passive_upper_override": None,
                 "passive_lower_override": None,
                 "passive_override_schedule_transition": None,
+                "passive_schedule_original_enabled": None,
             }
         }
         self.controller._upper_schedules = {}
@@ -640,6 +644,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
                 "passive_upper_override": None,
                 "passive_lower_override": None,
                 "passive_override_schedule_transition": None,
+                "passive_schedule_original_enabled": None,
             },
         )
         self.assertEqual(
@@ -674,6 +679,232 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             data["ScheduleData"][0]["slots"][0]["UpperSetpoint"], 20.0
         )
+
+    def test_scheduled_passive_controls_are_exposed_and_evaluated(self):
+        schedule = SimpleNamespace(
+            id=7,
+            schedule_type="Heating",
+            assignment_ids=[1],
+            ws_schedule_data={
+                "ScheduleData": [
+                    {
+                        "day": "Monday",
+                        "slots": [
+                            {"Time": "06:00", "Setpoint": "20"},
+                            {"Time": "18:00", "Setpoint": "16"},
+                        ],
+                    }
+                ]
+            },
+        )
+        self.room.schedule = schedule
+        self.controller._passive_control_schedules = {
+            "7": {
+                "Monday": {
+                    "06:00": {
+                        "scheduled": True,
+                        "enabled": True,
+                        "strategy": "modulating",
+                        "lower": 15.0,
+                        "upper": 20.0,
+                    },
+                    "18:00": {
+                        "scheduled": True,
+                        "enabled": False,
+                        "strategy": "temperature_limiter",
+                        "lower": 16.0,
+                        "upper": 21.0,
+                    },
+                }
+            }
+        }
+
+        data = self.controller.schedule_data(schedule)
+
+        self.assertEqual(data["Capabilities"], {"PassiveControl": True})
+        self.assertEqual(
+            data["PassiveControlDefaults"],
+            {"Enabled": False, "Strategy": "modulating"},
+        )
+        self.assertTrue(data["PassiveControl"])
+        self.assertEqual(data["PassiveRangeType"], "scheduled")
+        self.assertEqual(
+            data["ScheduleData"][0]["slots"][0],
+            {
+                "Time": "06:00",
+                "Setpoint": 15.0,
+                "UpperSetpoint": 20.0,
+                "PassiveScheduled": True,
+                "PassiveMode": True,
+                "PassiveStrategy": "modulating",
+            },
+        )
+        self.assertEqual(
+            self.controller.scheduled_passive_control(
+                1, datetime(2026, 10, 19, 12, 0)
+            )["strategy"],
+            "modulating",
+        )
+        self.assertFalse(
+            self.controller.scheduled_passive_control(
+                1, datetime(2026, 10, 19, 20, 0)
+            )["enabled"]
+        )
+
+    def test_validated_passive_controls_select_the_hub_setpoint(self):
+        schedule = {
+            "PassiveControl": True,
+            "PassiveRange": True,
+            "PassiveRangeType": "native",
+            "PassiveControlDefaults": {
+                "Enabled": True,
+                "Strategy": "temperature_limiter",
+            },
+            "ScheduleData": [
+                {
+                    "day": "Monday",
+                    "slots": [
+                        {
+                            "Time": "06:00",
+                            "Setpoint": 15,
+                            "UpperSetpoint": 20,
+                            "PassiveScheduled": True,
+                            "PassiveMode": True,
+                            "PassiveStrategy": "modulating",
+                        },
+                        {
+                            "Time": "18:00",
+                            "Setpoint": 16,
+                            "UpperSetpoint": 21,
+                            "PassiveScheduled": True,
+                            "PassiveMode": True,
+                            "PassiveStrategy": "temperature_limiter",
+                        },
+                        {
+                            "Time": "22:00",
+                            "Setpoint": 14,
+                            "UpperSetpoint": 18,
+                            "PassiveScheduled": True,
+                            "PassiveMode": False,
+                            "PassiveStrategy": "temperature_limiter",
+                        },
+                        {
+                            "Time": "23:00",
+                            "Setpoint": 17,
+                            "UpperSetpoint": 22,
+                            "PassiveScheduled": False,
+                        },
+                    ],
+                }
+            ],
+        }
+
+        controls, native = self.controller.validated_passive_control_schedule(
+            schedule
+        )
+
+        self.assertEqual(controls["Monday"]["06:00"]["lower"], 15.0)
+        self.assertEqual(
+            [slot["Setpoint"] for slot in native["ScheduleData"][0]["slots"]],
+            [20.0, 16.0, 14.0, 22],
+        )
+        self.assertFalse(controls["Monday"]["23:00"]["scheduled"])
+        self.assertNotIn("PassiveControl", native)
+        self.assertNotIn("Capabilities", native)
+        self.assertNotIn("PassiveControlDefaults", native)
+        self.assertNotIn("UpperSetpoint", native["ScheduleData"][0]["slots"][0])
+
+    def test_schedule_uses_the_current_room_mode_as_period_defaults(self):
+        self.room.passive_mode_enabled = True
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        schedule = SimpleNamespace(
+            id=7,
+            schedule_type="Heating",
+            assignment_ids=[1],
+            ws_schedule_data={
+                "ScheduleData": [
+                    {
+                        "day": "Monday",
+                        "slots": [{"Time": "06:00", "Setpoint": "17"}],
+                    }
+                ]
+            },
+        )
+        self.room.schedule = schedule
+
+        data = self.controller.schedule_data(schedule)
+
+        self.assertEqual(
+            data["PassiveControlDefaults"],
+            {"Enabled": True, "Strategy": "temperature_limiter"},
+        )
+        self.assertEqual(data["ScheduleData"][0]["slots"][0]["Setpoint"], "17")
+        self.assertEqual(data["ScheduleData"][0]["slots"][0]["UpperSetpoint"], 20.0)
+
+    def test_only_heating_schedules_publish_passive_control_capability(self):
+        schedule = SimpleNamespace(
+            id=7,
+            schedule_type="OnOff",
+            assignment_ids=[],
+            ws_schedule_data={"ScheduleData": []},
+        )
+
+        self.assertNotIn("Capabilities", self.controller.schedule_data(schedule))
+
+    def test_unassigned_schedule_can_use_temperature_limiter(self):
+        schedule = SimpleNamespace(assignment_ids=[])
+
+        self.assertTrue(
+            self.controller.schedule_supports_temperature_limiter(schedule)
+        )
+
+    async def test_update_applies_scheduled_passive_mode(self):
+        self.room.schedule = SimpleNamespace(
+            id=7,
+            ws_schedule_data={
+                "ScheduleData": [
+                    {
+                        "day": "Monday",
+                        "slots": [{"Time": "00:00", "Setpoint": "20"}],
+                    }
+                ]
+            },
+        )
+        self.controller._passive_control_schedules = {
+            "7": {
+                "Monday": {
+                    "00:00": {
+                        "scheduled": True,
+                        "enabled": True,
+                        "strategy": "modulating",
+                        "lower": 15.0,
+                        "upper": 20.0,
+                    }
+                }
+            }
+        }
+
+        await self.controller.async_update()
+
+        self.room.set_passive_mode.assert_awaited_once_with(True)
+        self.room.cancel_overrides.assert_not_awaited()
+        self.assertFalse(
+            self.controller._rooms["1"]["passive_schedule_original_enabled"]
+        )
+
+        self.room.passive_mode_enabled = True
+        self.controller._passive_control_schedules["7"]["Monday"]["00:00"] = {
+            "scheduled": False
+        }
+        await self.controller.async_update()
+
+        self.assertEqual(
+            self.room.set_passive_mode.await_args_list[-1].args,
+            (False,),
+        )
+        self.room.cancel_overrides.assert_awaited_once()
 
     async def test_native_passive_lower_uses_local_schedule(self):
         self.controller.coordinator.passive_room_strategies = {}
@@ -790,7 +1021,8 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         data = self.controller.schedule_data(schedule)
 
         self.assertNotIn("PassiveRange", data)
-        self.assertEqual(data, schedule.ws_schedule_data)
+        self.assertEqual(data["ScheduleData"], schedule.ws_schedule_data["ScheduleData"])
+        self.assertEqual(data["Capabilities"], {"PassiveControl": True})
 
     async def test_failed_upper_schedule_save_restores_memory(self):
         self.controller._upper_schedules = {
@@ -806,6 +1038,35 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.controller._upper_schedules,
             {"7": {"Monday": {"06:00": 20.0}}},
+        )
+
+    async def test_copy_schedule_metadata_replaces_stale_target_values(self):
+        self.controller._upper_schedules = {
+            "8": {"Monday": {"06:00": 99.0}}
+        }
+        self.controller._lower_schedules = {
+            "8": {"Monday": {"06:00": 12.0}}
+        }
+        self.controller._passive_control_schedules = {
+            "7": {
+                "Monday": {
+                    "06:00": {
+                        "enabled": True,
+                        "strategy": "modulating",
+                        "lower": 15.0,
+                        "upper": 20.0,
+                    }
+                }
+            }
+        }
+
+        await self.controller.async_copy_schedule_metadata(7, 8)
+
+        self.assertNotIn("8", self.controller._upper_schedules)
+        self.assertNotIn("8", self.controller._lower_schedules)
+        self.assertEqual(
+            self.controller._passive_control_schedules["8"],
+            self.controller._passive_control_schedules["7"],
         )
 
     async def test_external_limiter_lower_uses_hub_schedule_target(self):

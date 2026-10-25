@@ -214,6 +214,9 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
 
     def passive_room_strategy(self, room_id) -> str:
         """Return the Passive Mode strategy for an externally controlled room."""
+        scheduled = self.external_room_control.scheduled_passive_control(room_id)
+        if scheduled is not None:
+            return scheduled["strategy"]
         return self.passive_room_strategies.get(
             str(room_id), DEFAULT_PASSIVE_CONTROL_STRATEGY
         )

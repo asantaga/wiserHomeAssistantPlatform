@@ -21,7 +21,9 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
     CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS,
+    CONTROL_STRATEGIES,
     CONTROL_STRATEGY_TEMPERATURE_LIMITER,
+    DEFAULT_PASSIVE_CONTROL_STRATEGY,
     DOMAIN,
 )
 
@@ -97,6 +99,7 @@ class ExternalRoomControlController:
         self._rooms: dict[str, dict] = {}
         self._upper_schedules: dict[str, dict] = {}
         self._lower_schedules: dict[str, dict] = {}
+        self._passive_control_schedules: dict[str, dict] = {}
         self._native_passive_migrated = False
         self._closed_limiter_rooms: set[str] = set()
 
@@ -112,6 +115,12 @@ class ExternalRoomControlController:
         lower_schedules = stored.get("lower_schedules", {})
         self._lower_schedules = (
             lower_schedules if isinstance(lower_schedules, dict) else {}
+        )
+        passive_control_schedules = stored.get("passive_control_schedules", {})
+        self._passive_control_schedules = (
+            passive_control_schedules
+            if isinstance(passive_control_schedules, dict)
+            else {}
         )
         self._native_passive_migrated = bool(
             stored.get("native_passive_migrated", False)
@@ -161,6 +170,7 @@ class ExternalRoomControlController:
                 "rooms": self._rooms,
                 "upper_schedules": self._upper_schedules,
                 "lower_schedules": self._lower_schedules,
+                "passive_control_schedules": self._passive_control_schedules,
                 "native_passive_migrated": self._native_passive_migrated,
             }
         )
@@ -234,6 +244,7 @@ class ExternalRoomControlController:
         settings.setdefault("passive_upper_override", None)
         settings.setdefault("passive_lower_override", None)
         settings.setdefault("passive_override_schedule_transition", None)
+        settings.setdefault("passive_schedule_original_enabled", None)
         for obsolete_key in (
             "external_passive_enabled",
             "enabled",
@@ -313,6 +324,9 @@ class ExternalRoomControlController:
         if settings.get("passive_upper_override") is not None:
             return float(settings["passive_upper_override"])
         room = self._room(room_id)
+        control = self.scheduled_passive_control(room_id)
+        if control is not None and control["enabled"]:
+            return float(control["upper"])
         scheduled = self._scheduled_temperature(room, self._upper_schedules)
         if scheduled is not None:
             return scheduled
@@ -325,6 +339,9 @@ class ExternalRoomControlController:
         override = self._settings(room.id).get("passive_upper_override")
         if override is not None:
             return float(override)
+        control = self.scheduled_passive_control(room.id)
+        if control is not None and control["enabled"]:
+            return float(control["upper"])
         scheduled = self._scheduled_temperature(room, self._upper_schedules)
         if scheduled is not None:
             return scheduled
@@ -346,14 +363,15 @@ class ExternalRoomControlController:
         assigned_ids = {
             str(room_id) for room_id in getattr(schedule, "assignment_ids", [])
         }
-        schedule_id = str(schedule.id)
+        schedule_id = getattr(schedule, "id", None)
         return {
             str(room.id)
             for room in self.coordinator.wiserhub.rooms.all
             if str(room.id) in assigned_ids
             or (
-                getattr(room, "schedule", None) is not None
-                and str(room.schedule.id) == schedule_id
+                schedule_id is not None
+                and getattr(room, "schedule", None) is not None
+                and str(room.schedule.id) == str(schedule_id)
             )
         }
 
@@ -389,6 +407,23 @@ class ExternalRoomControlController:
             )
         )
 
+    def schedule_supports_temperature_limiter(self, schedule) -> bool:
+        """Return whether every assigned room supports external limiting."""
+        room_ids = self._schedule_room_ids(schedule)
+        return all(self.is_enabled(room_id) for room_id in room_ids)
+
+    def passive_control_schedule_uses_temperature_limiter(self, schedule_id) -> bool:
+        """Return whether a stored control schedule selects the limiter."""
+        schedule = self._passive_control_schedules.get(str(schedule_id), {})
+        return any(
+            control.get("enabled")
+            and control.get("strategy") == CONTROL_STRATEGY_TEMPERATURE_LIMITER
+            for day in schedule.values()
+            if isinstance(day, dict)
+            for control in day.values()
+            if isinstance(control, dict)
+        )
+
     def schedule_uses_native_range(self, schedule) -> bool:
         """Return whether a schedule has native Passive Mode rooms."""
         return bool(
@@ -400,12 +435,59 @@ class ExternalRoomControlController:
     def schedule_data(self, schedule) -> dict:
         """Add locally stored Passive range values to a Wiser heating schedule."""
         data = deepcopy(schedule.ws_schedule_data)
+        if str(schedule.schedule_type).casefold() != "heating":
+            return data
+        data["Capabilities"] = {"PassiveControl": True}
+        room_ids = sorted(self._schedule_room_ids(schedule))
+        default_room = self._room(room_ids[0]) if room_ids else None
+        data["PassiveControlDefaults"] = {
+            "Enabled": bool(
+                default_room
+                and self.coordinator.passive_mode_enabled
+                and default_room.passive_mode_enabled
+            ),
+            "Strategy": (
+                self.coordinator.passive_room_strategies.get(
+                    str(default_room.id), DEFAULT_PASSIVE_CONTROL_STRATEGY
+                )
+                if default_room
+                else DEFAULT_PASSIVE_CONTROL_STRATEGY
+            ),
+        }
+        passive_controls = self._passive_control_schedules.get(str(schedule.id))
+
+        def with_passive_controls():
+            if not passive_controls:
+                return data
+            has_scheduled_period = False
+            for day in data.get("ScheduleData", []):
+                saved_day = passive_controls.get(day.get("day"), {})
+                for slot in day.get("slots") or []:
+                    control = saved_day.get(str(slot.get("Time", "")))
+                    if not isinstance(control, dict):
+                        continue
+                    scheduled = bool(control.get("scheduled", True))
+                    slot["PassiveScheduled"] = scheduled
+                    if not scheduled:
+                        continue
+                    has_scheduled_period = True
+                    slot["Setpoint"] = control["lower"]
+                    slot["UpperSetpoint"] = control["upper"]
+                    slot["PassiveMode"] = control["enabled"]
+                    slot["PassiveStrategy"] = control["strategy"]
+            if has_scheduled_period:
+                data["PassiveControl"] = True
+                data["PassiveRange"] = True
+                data.setdefault("PassiveRangeType", "scheduled")
+                data["MinUpperSetpoint"] = FROST_PROTECTION_TEMPERATURE
+                data["MaxUpperSetpoint"] = MAX_SCHEDULE_TEMPERATURE
+            return data
         uses_external_range = self.schedule_uses_external_range(schedule)
         uses_native_range = (
             not uses_external_range and self.schedule_uses_native_range(schedule)
         )
         if not uses_external_range and not uses_native_range:
-            return data
+            return with_passive_controls()
 
         if uses_native_range:
             room_ids = self._schedule_native_passive_room_ids(schedule)
@@ -429,7 +511,7 @@ class ExternalRoomControlController:
                     lower = float(saved_day.get(slot.get("Time"), default_lower))
                     slot["Setpoint"] = min(lower, upper)
                     slot["UpperSetpoint"] = upper
-            return data
+            return with_passive_controls()
 
         room_ids = self._schedule_passive_room_ids(schedule)
         default_upper = max(
@@ -451,7 +533,7 @@ class ExternalRoomControlController:
                     continue
                 upper = float(saved_day.get(slot.get("Time"), default_upper))
                 slot["UpperSetpoint"] = max(lower, upper)
-        return data
+        return with_passive_controls()
 
     def validated_lower_schedule(self, _schedule_id, schedule_data) -> dict:
         """Validate lower values paired with native Passive upper setpoints."""
@@ -563,6 +645,118 @@ class ExternalRoomControlController:
             raise ValueError("Passive schedule must contain a time slot")
         return normalized
 
+    def validated_passive_control_schedule(self, schedule_data) -> tuple[dict, dict]:
+        """Validate scheduled Passive controls and build the hub schedule."""
+        normalized = {}
+        native_schedule = deepcopy(schedule_data)
+        for key in (
+            "Capabilities",
+            "PassiveControlDefaults",
+            "PassiveControl",
+            "PassiveRange",
+            "PassiveRangeType",
+            "MinUpperSetpoint",
+            "MaxUpperSetpoint",
+        ):
+            native_schedule.pop(key, None)
+        native_days = {
+            day.get("day"): day for day in native_schedule.get("ScheduleData", [])
+        }
+        range_type = schedule_data.get("PassiveRangeType")
+        has_scheduled_period = False
+        for day in schedule_data.get("ScheduleData", []):
+            day_name = day.get("day")
+            if day_name not in WEEKDAYS or not isinstance(day.get("slots"), list):
+                raise ValueError("Passive control schedule contains an invalid day")
+            normalized_day = {}
+            native_slots = {
+                str(slot.get("Time", "")): slot
+                for slot in native_days.get(day_name, {}).get("slots", [])
+            }
+            for slot in day["slots"]:
+                time_value = str(slot.get("Time", ""))
+                scheduled = slot.get("PassiveScheduled")
+                if not isinstance(scheduled, bool):
+                    raise ValueError(
+                        "Each period must specify whether Passive mode is scheduled"
+                    )
+                native_slot = native_slots.get(time_value)
+                if native_slot is None:
+                    raise ValueError(
+                        f"Passive control period is missing at {day_name} {time_value}"
+                    )
+                if not scheduled:
+                    normalized_day[time_value] = {"scheduled": False}
+                    if range_type == "native" and slot.get("UpperSetpoint") is not None:
+                        native_slot["Setpoint"] = slot["UpperSetpoint"]
+                    for key in (
+                        "UpperSetpoint",
+                        "PassiveScheduled",
+                        "PassiveMode",
+                        "PassiveStrategy",
+                    ):
+                        native_slot.pop(key, None)
+                    continue
+                has_scheduled_period = True
+                enabled = slot.get("PassiveMode")
+                strategy = slot.get("PassiveStrategy")
+                if not isinstance(enabled, bool) or strategy not in CONTROL_STRATEGIES:
+                    raise ValueError(
+                        "Each Passive control period requires a mode and strategy"
+                    )
+                try:
+                    lower = float(slot.get("Setpoint"))
+                    upper = float(slot.get("UpperSetpoint"))
+                except (TypeError, ValueError) as err:
+                    raise ValueError(
+                        "Missing Passive Mode temperature range for "
+                        f"{day_name} {time_value}"
+                    ) from err
+                for label, temperature in (("Lower", lower), ("Upper", upper)):
+                    if temperature != OFF_TEMPERATURE and not (
+                        FROST_PROTECTION_TEMPERATURE
+                        <= temperature
+                        <= MAX_SCHEDULE_TEMPERATURE
+                    ):
+                        raise ValueError(
+                            f"{label} temperature must be Off or between "
+                            f"{FROST_PROTECTION_TEMPERATURE:g} and "
+                            f"{MAX_SCHEDULE_TEMPERATURE:g} °C"
+                        )
+                if upper == OFF_TEMPERATURE and lower != OFF_TEMPERATURE:
+                    raise ValueError(
+                        "An upper temperature of Off requires the lower temperature "
+                        f"to be Off at {day_name} {time_value}"
+                    )
+                if upper < lower:
+                    raise ValueError(
+                        "Upper temperature must not be below the lower temperature "
+                        f"at {day_name} {time_value}"
+                    )
+                normalized_day[time_value] = {
+                    "scheduled": True,
+                    "enabled": enabled,
+                    "strategy": strategy,
+                    "lower": lower,
+                    "upper": upper,
+                }
+                native_slot["Setpoint"] = (
+                    lower
+                    if strategy == CONTROL_STRATEGY_TEMPERATURE_LIMITER
+                    else upper
+                )
+                for key in (
+                    "UpperSetpoint",
+                    "PassiveScheduled",
+                    "PassiveMode",
+                    "PassiveStrategy",
+                ):
+                    native_slot.pop(key, None)
+            normalized[day_name] = normalized_day
+        if not has_scheduled_period:
+            raise ValueError("Passive control schedule must contain a time slot")
+        return normalized, native_schedule
+
     @staticmethod
     def _numeric_setpoint(value):
         """Return a numeric setpoint, treating the Wiser Off value as absent."""
@@ -600,30 +794,73 @@ class ExternalRoomControlController:
                 self._lower_schedules[schedule_id] = previous
             raise
 
-    async def async_copy_upper_schedule(self, schedule_id, to_schedule_id) -> None:
-        """Copy paired external cutoffs with a Wiser schedule copy."""
-        source = self._upper_schedules.get(str(schedule_id))
-        if source is None:
-            return
-        self._upper_schedules[str(to_schedule_id)] = deepcopy(source)
-        await self._async_save()
-
-    async def async_copy_lower_schedule(self, schedule_id, to_schedule_id) -> None:
-        """Copy paired native lower values with a Wiser schedule copy."""
-        source = self._lower_schedules.get(str(schedule_id))
-        if source is None:
-            return
-        self._lower_schedules[str(to_schedule_id)] = deepcopy(source)
-        await self._async_save()
-
-    async def async_delete_upper_schedule(self, schedule_id) -> None:
-        """Remove local external cutoffs after the hub schedule is deleted."""
-        if self._upper_schedules.pop(str(schedule_id), None) is not None:
+    async def async_save_passive_control_schedule(
+        self, schedule_id, control_schedule
+    ) -> None:
+        """Persist mode and strategy transitions paired with a heating schedule."""
+        schedule_id = str(schedule_id)
+        previous = deepcopy(self._passive_control_schedules.get(schedule_id))
+        self._passive_control_schedules[schedule_id] = control_schedule
+        try:
             await self._async_save()
+        except Exception:
+            if previous is None:
+                self._passive_control_schedules.pop(schedule_id, None)
+            else:
+                self._passive_control_schedules[schedule_id] = previous
+            raise
 
-    async def async_delete_lower_schedule(self, schedule_id) -> None:
-        """Remove local native lower values after the hub schedule is deleted."""
-        if self._lower_schedules.pop(str(schedule_id), None) is not None:
+    async def async_disable_passive_control_schedule(self, schedule_id) -> None:
+        """Stop applying scheduled Passive mode and strategy transitions."""
+        schedule_id = str(schedule_id)
+        previous = self._passive_control_schedules.pop(schedule_id, None)
+        if previous is None:
+            return
+        try:
+            await self._async_save()
+        except Exception:
+            self._passive_control_schedules[schedule_id] = previous
+            raise
+
+    async def async_copy_schedule_metadata(
+        self, schedule_id, to_schedule_id
+    ) -> None:
+        """Copy all locally stored schedule metadata without stale values."""
+        source_id = str(schedule_id)
+        target_id = str(to_schedule_id)
+        schedule_stores = (
+            self._upper_schedules,
+            self._lower_schedules,
+            self._passive_control_schedules,
+        )
+        previous = [deepcopy(schedules.get(target_id)) for schedules in schedule_stores]
+        for schedules in schedule_stores:
+            source = schedules.get(source_id)
+            if source is None:
+                schedules.pop(target_id, None)
+            else:
+                schedules[target_id] = deepcopy(source)
+        try:
+            await self._async_save()
+        except Exception:
+            for schedules, value in zip(schedule_stores, previous):
+                if value is None:
+                    schedules.pop(target_id, None)
+                else:
+                    schedules[target_id] = value
+            raise
+
+    async def async_delete_schedule_metadata(self, schedule_id) -> None:
+        """Remove all locally stored metadata after schedule deletion."""
+        schedule_id = str(schedule_id)
+        changed = False
+        for schedules in (
+            self._upper_schedules,
+            self._lower_schedules,
+            self._passive_control_schedules,
+        ):
+            changed = schedules.pop(schedule_id, None) is not None or changed
+        if changed:
             await self._async_save()
 
     def _special_time(self, day, value):
@@ -644,7 +881,7 @@ class ExternalRoomControlController:
             "00:00",
         )
 
-    def _scheduled_temperature(
+    def _scheduled_value(
         self,
         room,
         schedules,
@@ -686,9 +923,44 @@ class ExternalRoomControlController:
         current_minute = current.weekday() * 1440 + current.hour * 60 + current.minute
         if next_period:
             future = [item for item in transitions if item[0] > current_minute]
-            return float((future[0] if future else transitions[0])[1])
+            return deepcopy((future[0] if future else transitions[0])[1])
         previous = [item for item in transitions if item[0] <= current_minute]
-        return float((previous[-1] if previous else transitions[-1])[1])
+        return deepcopy((previous[-1] if previous else transitions[-1])[1])
+
+    def _scheduled_temperature(
+        self,
+        room,
+        schedules,
+        now: datetime | None = None,
+        *,
+        next_period: bool = False,
+    ):
+        """Evaluate a numeric local value paired with a hub schedule slot."""
+        value = self._scheduled_value(
+            room, schedules, now, next_period=next_period
+        )
+        return float(value) if value is not None else None
+
+    def scheduled_passive_control(
+        self, room_id, now: datetime | None = None, *, next_period: bool = False
+    ) -> dict | None:
+        """Return the scheduled Passive mode and strategy for a room."""
+        if not self.coordinator.passive_mode_enabled:
+            return None
+        room = self._room(room_id)
+        if room is None:
+            return None
+        value = self._scheduled_value(
+            room,
+            self._passive_control_schedules,
+            now,
+            next_period=next_period,
+        )
+        return (
+            value
+            if isinstance(value, dict) and value.get("scheduled", True)
+            else None
+        )
 
     def passive_lower_temperature(self, room, now: datetime | None = None):
         """Return the scheduled lower limit for either Passive range type."""
@@ -698,6 +970,9 @@ class ExternalRoomControlController:
         override = self._settings(room.id).get("passive_lower_override")
         if override is not None and room.is_override:
             return min(float(override), float(room.passive_mode_upper_temp))
+        control = self.scheduled_passive_control(room.id, now)
+        if control is not None:
+            return float(control["lower"]) if control["enabled"] else None
         if self.schedule_uses_external_range(schedule):
             try:
                 return float(schedule.current_setting)
@@ -819,6 +1094,34 @@ class ExternalRoomControlController:
         await self._async_remove_orphaned_schedules()
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
+            room_id = str(room.id)
+            control = self.scheduled_passive_control(room.id)
+            settings = self._rooms.get(room_id)
+            original = (
+                settings.get("passive_schedule_original_enabled")
+                if isinstance(settings, dict)
+                else None
+            )
+            if control is not None:
+                settings = self._settings(room_id)
+                if original is None:
+                    settings["passive_schedule_original_enabled"] = bool(
+                        room.passive_mode_enabled
+                    )
+                    storage_changed = True
+                enabled = bool(control["enabled"])
+                if bool(room.passive_mode_enabled) != enabled:
+                    await room.set_passive_mode(enabled)
+                    if not enabled:
+                        await room.cancel_overrides()
+            elif original is not None:
+                if bool(room.passive_mode_enabled) != bool(original):
+                    await room.set_passive_mode(bool(original))
+                    if not original:
+                        await room.cancel_overrides()
+                settings["passive_schedule_original_enabled"] = None
+                storage_changed = True
+        for room in self.coordinator.wiserhub.rooms.all:
             settings = self._rooms.get(str(room.id))
             if not isinstance(settings, dict):
                 continue
@@ -887,12 +1190,21 @@ class ExternalRoomControlController:
         valid_schedule_ids = {str(schedule.id) for schedule in heating_schedules}
         orphaned_upper_ids = set(self._upper_schedules) - valid_schedule_ids
         orphaned_lower_ids = set(self._lower_schedules) - valid_schedule_ids
-        if not orphaned_upper_ids and not orphaned_lower_ids:
+        orphaned_control_ids = (
+            set(self._passive_control_schedules) - valid_schedule_ids
+        )
+        if (
+            not orphaned_upper_ids
+            and not orphaned_lower_ids
+            and not orphaned_control_ids
+        ):
             return
         for schedule_id in orphaned_upper_ids:
             self._upper_schedules.pop(schedule_id, None)
         for schedule_id in orphaned_lower_ids:
             self._lower_schedules.pop(schedule_id, None)
+        for schedule_id in orphaned_control_ids:
+            self._passive_control_schedules.pop(schedule_id, None)
         await self._async_save()
 
     async def _async_set_external_climates(
