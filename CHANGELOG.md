@@ -16,6 +16,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed rooms without heating capability incorrectly creating climate entities - issue [#762](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/762).
 - Fixed the integration failing to load when Home Assistant temporarily has mixed `aiofiles` package files during dependency installation, and removed the schedule export service's reliance on the API importing `aiofiles.os` - issue [#763](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/763).
 - Fixed **Advance Schedule** failing when the next heating period is off - issue [#657](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/657).
 - Fixed 3.x upgrades hashing room entity unique IDs before they could be matched to their stable room IDs. Existing room temperature, target-temperature, heating-demand, window-detection, **Include in Summer Comfort** and passive-mode entities are now retained, and affected 4.0.x registries are repaired on setup. Inactive `NothingAssigned` rooms left behind by retired devices are now excluded consistently so they cannot recreate duplicate room entities after migration - issue [#759](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/759).
