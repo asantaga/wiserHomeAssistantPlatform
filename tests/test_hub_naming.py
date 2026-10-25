@@ -137,6 +137,35 @@ class HubNamingTest(unittest.TestCase):
 
         self.assertEqual(self.helpers.active_wiser_rooms(self.data), [active])
 
+    def test_room_with_heating_capability_has_climate(self) -> None:
+        room = SimpleNamespace(
+            devices=[object()],
+            capabilities=SimpleNamespace(heating_supported=True),
+        )
+
+        self.assertTrue(self.helpers.room_has_climate(room))
+
+    def test_room_without_heating_capability_has_no_climate(self) -> None:
+        room = SimpleNamespace(
+            devices=[object()],
+            capabilities=SimpleNamespace(heating_supported=False),
+        )
+
+        self.assertFalse(self.helpers.room_has_climate(room))
+
+    def test_legacy_room_without_capabilities_retains_climate(self) -> None:
+        room = SimpleNamespace(devices=[object()], capabilities=None)
+
+        self.assertTrue(self.helpers.room_has_climate(room))
+
+    def test_room_without_devices_has_no_climate(self) -> None:
+        room = SimpleNamespace(
+            devices=[],
+            capabilities=SimpleNamespace(heating_supported=True),
+        )
+
+        self.assertFalse(self.helpers.room_has_climate(room))
+
     def test_room_consumers_do_not_iterate_unfiltered_rooms(self) -> None:
         """Keep entity setup, options and frontend room lists in sync."""
         for filename in (
