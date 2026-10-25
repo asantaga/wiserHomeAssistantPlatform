@@ -214,6 +214,35 @@ def get_unique_id(wiser_id: str):
     return str(f"{DOMAIN}-{wiser_id}")
 
 
+def _configured_hub_name(hass: HomeAssistant, discovered_name: str) -> str:
+    """Return the configured hub name for a suffixed discovery instance."""
+    discovered_folded = discovered_name.casefold()
+    unique_id_prefix = f"{DOMAIN}-"
+
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        configured_names = {
+            entry.data.get(CONF_NAME),
+            entry.title,
+        }
+        if (
+            entry.unique_id
+            and entry.unique_id.startswith(unique_id_prefix)
+        ):
+            configured_names.add(entry.unique_id.removeprefix(unique_id_prefix))
+
+        for configured_name in filter(None, configured_names):
+            configured_name = str(configured_name)
+            configured_folded = configured_name.casefold()
+            if discovered_folded == configured_folded:
+                return configured_name
+            suffix_prefix = f"{configured_folded}-"
+            suffix = discovered_name[len(configured_name) + 1 :]
+            if discovered_folded.startswith(suffix_prefix) and suffix.isdigit():
+                return configured_name
+
+    return discovered_name
+
+
 @config_entries.HANDLERS.register(DOMAIN)
 class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """WiserFlowHandler configuration method.
@@ -286,7 +315,8 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         host = discovery_info.host
         port = discovery_info.port
         zctype = discovery_info.type
-        name = discovery_info.name.replace(f".{zctype}", "")
+        discovered_name = discovery_info.name.replace(f".{zctype}", "")
+        name = _configured_hub_name(self.hass, discovered_name)
 
         await self.async_set_unique_id(get_unique_id(name))
         self._abort_if_unique_id_configured()

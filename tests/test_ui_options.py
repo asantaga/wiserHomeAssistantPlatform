@@ -456,6 +456,64 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                     result = await getattr(functions, method)(flow, {"host": "test"})
                     self.assertEqual(result["options"], {"legacy_naming": expected})
 
+    async def test_discovery_suffix_uses_configured_hub(self):
+        self.namespace.update(
+            CONF_HOST="host",
+            CONF_PORT="port",
+            CONF_HOSTNAME="hostname",
+            ZeroconfServiceInfo=object,
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {"_configured_hub_name", "get_unique_id", "async_step_zeroconf"},
+            self.namespace,
+        )
+        entry = SimpleNamespace(
+            data={"name": "WiserHeat05E6A6"},
+            title="WiserHeat05E6A6",
+            unique_id="wiser-WiserHeat05E6A6",
+        )
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                config_entries=SimpleNamespace(
+                    async_entries=lambda _domain: [entry]
+                )
+            ),
+            discovery_info={},
+            context={},
+            async_set_unique_id=AsyncMock(),
+            _abort_if_unique_id_configured=Mock(),
+            async_step_zeroconf_confirm=AsyncMock(return_value={"type": "form"}),
+        )
+        discovery = SimpleNamespace(
+            name="WiserHeat05E6A6-4._http._tcp.local.",
+            type="_http._tcp.local.",
+            host="192.0.2.1",
+            port=80,
+            hostname="WiserHeat05E6A6-4.local.",
+        )
+
+        await functions.async_step_zeroconf(flow, discovery)
+
+        flow.async_set_unique_id.assert_awaited_once_with(
+            "wiser-WiserHeat05E6A6"
+        )
+        flow._abort_if_unique_id_configured.assert_called_once_with()
+        self.assertEqual(flow.discovery_info["name"], "WiserHeat05E6A6")
+
+    def test_discovery_suffix_is_preserved_for_unknown_hub(self):
+        functions = load_functions(
+            "config_flow.py", {"_configured_hub_name"}, self.namespace
+        )
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_entries=lambda _domain: [])
+        )
+
+        self.assertEqual(
+            functions._configured_hub_name(hass, "WiserHeat05E6A6-4"),
+            "WiserHeat05E6A6-4",
+        )
+
     async def test_migration_enables_legacy_and_preserves_other_options(self):
         functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
         for options, expected in (({"scan_interval": 30}, True),
