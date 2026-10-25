@@ -224,9 +224,12 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return current temp from data."""
         return self._actuator.floor_temperature_sensor.measured_temperature
+
+    if not hasattr(ClimateEntity, "native_current_temperature"):
+        current_temperature = native_current_temperature
 
     @property
     def device_info(self):
@@ -294,25 +297,34 @@ class WiserTempProbe(WiserEntityMixin, CoordinatorEntity, ClimateEntity):
         return 1
 
     @property
-    def target_temperature_high(self) -> float | None:
+    def native_target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach.
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._actuator.floor_temperature_sensor.maximum_temperature
 
+    if not hasattr(ClimateEntity, "native_target_temperature_high"):
+        target_temperature_high = native_target_temperature_high
+
     @property
-    def target_temperature_low(self) -> float | None:
+    def native_target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach.
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._actuator.floor_temperature_sensor.minimum_temperature
 
+    if not hasattr(ClimateEntity, "native_target_temperature_low"):
+        target_temperature_low = native_target_temperature_low
+
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return temp units."""
         return UnitOfTemperature.CELSIUS
+
+    if not hasattr(ClimateEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
 
     @property
     def unique_id(self):
@@ -376,9 +388,12 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return current temp from data."""
         return self._room.current_temperature
+
+    if not hasattr(ClimateEntity, "native_current_temperature"):
+        current_temperature = native_current_temperature
 
     @property
     def current_humidity(self):
@@ -628,7 +643,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         )
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return target temp."""
         return room_target_temperature(
             self._room,
@@ -640,26 +655,35 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             TEMP_OFF,
         )
 
+    if not hasattr(ClimateEntity, "native_target_temperature"):
+        target_temperature = native_target_temperature
+
     @property
     def target_temperature_step(self) -> float | None:
         """Return the supported step of target temperature."""
         return 0.5
 
     @property
-    def target_temperature_high(self) -> float | None:
+    def native_target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach.
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._room.passive_mode_upper_temp
 
+    if not hasattr(ClimateEntity, "native_target_temperature_high"):
+        target_temperature_high = native_target_temperature_high
+
     @property
-    def target_temperature_low(self) -> float | None:
+    def native_target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach.
 
         Requires ClimateEntityFeature.TARGET_TEMPERATURE_RANGE.
         """
         return self._room.passive_mode_lower_temp
+
+    if not hasattr(ClimateEntity, "native_target_temperature_low"):
+        target_temperature_low = native_target_temperature_low
 
     @hub_error_handler
     async def async_set_temperature(self, **kwargs):
@@ -699,9 +723,12 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         return True
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return temp units."""
         return UnitOfTemperature.CELSIUS
+
+    if not hasattr(ClimateEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
 
     @property
     def unique_id(self):
@@ -812,9 +839,13 @@ class WiserHotWater(
         _LOGGER.debug("%s updating", self.name)
 
         previous_hotwater_values = self._hotwater
-        previous_hotwater_values._current_temperature = self.current_temperature
+        previous_hotwater_values._current_temperature = (
+            self.native_current_temperature
+        )
         self._hotwater = self._data.wiserhub.hotwater
-        self._hotwater._current_temperature = self.current_temperature
+        self._hotwater._current_temperature = (
+            self.native_current_temperature
+        )
         self._schedule = self.hotwater.schedule
 
         if not self.hotwater.is_boosted:
@@ -867,9 +898,12 @@ class WiserHotWater(
         return HW_CLIMATE_MIN_TEMP
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return current temperature."""
         return self._current_temperature
+
+    if not hasattr(ClimateEntity, "native_current_temperature"):
+        current_temperature = native_current_temperature
 
     @property
     def target_temperature_step(self) -> float | None:
@@ -877,16 +911,22 @@ class WiserHotWater(
         return 0.5
 
     @property
-    def target_temperature_high(self):
+    def native_target_temperature_high(self):
         """Return target temp."""
 
         return self.hotwater.current_target_temperature_high
 
+    if not hasattr(ClimateEntity, "native_target_temperature_high"):
+        target_temperature_high = native_target_temperature_high
+
     @property
-    def target_temperature_low(self):
+    def native_target_temperature_low(self):
         """Return target temp."""
 
         return self.hotwater.current_target_temperature_low
+
+    if not hasattr(ClimateEntity, "native_target_temperature_low"):
+        target_temperature_low = native_target_temperature_low
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
@@ -894,8 +934,8 @@ class WiserHotWater(
             await self.hotwater.set_target_temperature_high(high_temp)
         if low_temp := kwargs.get("target_temp_low"):
             # Low must be a minimum of 1C below high to prevent oscillating on/off
-            if self.target_temperature_high - low_temp < 1:
-                low_temp = self.target_temperature_high - 1
+            if self.native_target_temperature_high - low_temp < 1:
+                low_temp = self.native_target_temperature_high - 1
             await self.hotwater.set_target_temperature_low(low_temp)
         _LOGGER.debug(
             "Setting temperature range for %s to between %s and %s",
@@ -973,7 +1013,8 @@ class WiserHotWater(
                     await self._hotwater.boost(
                         duration,
                         "On"
-                        if self.current_temperature < self.target_temperature_high
+                        if self.native_current_temperature
+                        < self.native_target_temperature_high
                         else "Off",
                     )
             else:
@@ -1070,16 +1111,21 @@ class WiserHotWater(
             # into manual mode.
             return False
 
-        if not self.current_temperature:
+        if not self.native_current_temperature:
             # No current temp sensor providing value yet
             # return
             _LOGGER.debug("No value from current temperature sensor")
             return False
 
         # Reasons it should heat
-        if self.current_temperature <= self.target_temperature_low or (
-            self.current_temperature <= self.target_temperature_high
-            and self.hotwater.is_heating
+        if (
+            self.native_current_temperature
+            <= self.native_target_temperature_low
+            or (
+                self.native_current_temperature
+                <= self.native_target_temperature_high
+                and self.hotwater.is_heating
+            )
         ):
             should_heat = True
 
@@ -1104,7 +1150,10 @@ class WiserHotWater(
             should_heat = False
 
         # High temp override - has reached target high temp
-        if self.current_temperature >= self.target_temperature_high:
+        if (
+            self.native_current_temperature
+            >= self.native_target_temperature_high
+        ):
             should_heat = False
 
         # If in away mode, should not heat
@@ -1116,9 +1165,9 @@ class WiserHotWater(
             self.hotwater.is_away_mode,
             self.hotwater.is_heating,
             self.hotwater.is_boosted,
-            self.target_temperature_high,
-            self.target_temperature_low,
-            self.current_temperature,
+            self.native_target_temperature_high,
+            self.native_target_temperature_low,
+            self.native_current_temperature,
             self.hotwater.schedule.current_setting,
             self.hotwater.manual_heat,
             self._keep_cycling,
@@ -1166,9 +1215,12 @@ class WiserHotWater(
         return updated
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return temp units."""
         return UnitOfTemperature.CELSIUS
+
+    if not hasattr(ClimateEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
 
     @property
     def unique_id(self):
