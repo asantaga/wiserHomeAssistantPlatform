@@ -264,6 +264,14 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn('id="export-config"', source)
         self.assertIn('id="import-config"', source)
         self.assertIn('id="import-dialog"', source)
+        self.assertIn(
+            'getElementById("panel-actions").hidden = !this._hass?.user?.is_admin',
+            source,
+        )
+        self.assertNotIn(
+            "this._hass?.user?.is_admin && this._config?.panels?.length",
+            source,
+        )
         self.assertIn('format: this._config.export_format', source)
         self.assertIn('type: "wiser/panel/import"', source)
         self.assertIn('src="/wiser/wiser-logo.png"', source)

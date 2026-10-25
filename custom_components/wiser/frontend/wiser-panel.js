@@ -211,9 +211,7 @@ class WiserPanel extends HTMLElement {
 
   _syncSettings() {
     const view = this._views.find((candidate) => !candidate.hidden);
-    this.shadowRoot.getElementById("panel-actions").hidden = !(
-      this._hass?.user?.is_admin && this._config?.panels?.length
-    );
+    this.shadowRoot.getElementById("panel-actions").hidden = !this._hass?.user?.is_admin;
     this.shadowRoot.getElementById("settings").hidden = !(
       this._hass?.user?.is_admin && typeof view?._openEditor === "function"
     );
