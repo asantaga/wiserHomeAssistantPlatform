@@ -1,6 +1,9 @@
 {
   "domain": "wiser",
   "name": "Drayton Wiser Integration for Home Assistant",
+  "after_dependencies": [
+    "history_stats"
+  ],
   "codeowners": [
     "@asantaga",
     "@msp1974",
@@ -8,9 +11,6 @@
     "@lgo44"
   ],
   "config_flow": true,
-  "after_dependencies": [
-    "history_stats"
-  ],
   "dependencies": [
     "http",
     "websocket_api",

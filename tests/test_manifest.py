@@ -11,6 +11,14 @@ MANIFEST = (
 
 
 class ManifestTest(unittest.TestCase):
+    def test_manifest_keys_follow_hassfest_order(self):
+        manifest = json.loads(MANIFEST.read_text())
+
+        self.assertEqual(
+            list(manifest),
+            ["domain", "name", *sorted(set(manifest) - {"domain", "name"})],
+        )
+
     def test_history_stats_is_declared_as_an_after_dependency(self):
         manifest = json.loads(MANIFEST.read_text())
 
