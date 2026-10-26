@@ -270,7 +270,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Chauffage"
+        "name": "Chauffage",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Avancer le programme",
+              "cancel_overrides": "Annuler les dérogations",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 h",
+              "boost_2h": "Boost 2 h",
+              "boost_3h": "Boost 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": { "name": "Température du sol" }
     },

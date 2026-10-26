@@ -6,12 +6,12 @@
                     "preset_mode": {
                         "default": "mdi:tune-variant",
                         "state": {
-                            "Advance Schedule": "mdi:calendar-arrow-right",
-                            "Cancel Overrides": "mdi:close-circle",
-                            "Boost 30m": "mdi:fraction-one-half",
-                            "Boost 1h": "mdi:numeric-1",
-                            "Boost 2h": "mdi:numeric-2",
-                            "Boost 3h": "mdi:numeric-3"
+                            "advance_schedule": "mdi:calendar-arrow-right",
+                            "cancel_overrides": "mdi:close-circle",
+                            "boost_30m": "mdi:fraction-one-half",
+                            "boost_1h": "mdi:numeric-1",
+                            "boost_2h": "mdi:numeric-2",
+                            "boost_3h": "mdi:numeric-3"
                         }
                     }
                 }

@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Verwarming"
+        "name": "Verwarming",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Schema vervroegen",
+              "cancel_overrides": "Overschrijvingen annuleren",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 uur",
+              "boost_2h": "Boost 2 uur",
+              "boost_3h": "Boost 3 uur"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Vloertemperatuur"

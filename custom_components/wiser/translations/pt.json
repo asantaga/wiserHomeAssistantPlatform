@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Aquecimento"
+        "name": "Aquecimento",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Avançar horário",
+              "cancel_overrides": "Cancelar substituições",
+              "boost_30m": "Reforço 30 min",
+              "boost_1h": "Reforço 1 h",
+              "boost_2h": "Reforço 2 h",
+              "boost_3h": "Reforço 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Temperatura do piso"

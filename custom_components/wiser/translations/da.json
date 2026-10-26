@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Opvarmning"
+        "name": "Opvarmning",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Fremryk tidsplan",
+              "cancel_overrides": "Annuller tilsidesættelser",
+              "boost_30m": "Boost 30 min.",
+              "boost_1h": "Boost 1 t.",
+              "boost_2h": "Boost 2 t.",
+              "boost_3h": "Boost 3 t."
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Gulvtemperatur"

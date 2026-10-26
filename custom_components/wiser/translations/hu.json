@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Fűtés"
+        "name": "Fűtés",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Ütemezés előreléptetése",
+              "cancel_overrides": "Felülbírálások törlése",
+              "boost_30m": "Felfűtés 30 perc",
+              "boost_1h": "Felfűtés 1 óra",
+              "boost_2h": "Felfűtés 2 óra",
+              "boost_3h": "Felfűtés 3 óra"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Padlóhőmérséklet"

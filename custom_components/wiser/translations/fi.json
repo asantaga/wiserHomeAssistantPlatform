@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Lämmitys"
+        "name": "Lämmitys",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Siirry seuraavaan ajastusjaksoon",
+              "cancel_overrides": "Peruuta ohitukset",
+              "boost_30m": "Tehostus 30 min",
+              "boost_1h": "Tehostus 1 h",
+              "boost_2h": "Tehostus 2 h",
+              "boost_3h": "Tehostus 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Lattialämpötila"

@@ -43,7 +43,6 @@ from .const import (
     HW_CLIMATE_MIN_TEMP,
     MANUFACTURER,
     ROOM,
-    WISER_BOOST_PRESETS,
     WISER_SERVICES,
     WISER_SETPOINT_MODES,
     HWCycleModes,
@@ -95,11 +94,17 @@ WISER_PRESET_TO_HASS = {
     "FromNoControl": STATUS_BLANK,
 }
 
-WISER_PRESETS = {
-    "Advance Schedule": 0,
-    "Cancel Overrides": 0,
+WISER_PRESET_TO_API = {
+    "advance_schedule": WiserPresetOptionsEnum.advance_schedule.value,
+    "cancel_overrides": WiserPresetOptionsEnum.cancel_overrides.value,
+    "boost_30m": WiserPresetOptionsEnum.boost30.value,
+    "boost_1h": WiserPresetOptionsEnum.boost60.value,
+    "boost_2h": WiserPresetOptionsEnum.boost120.value,
+    "boost_3h": WiserPresetOptionsEnum.boost180.value,
 }
-WISER_PRESETS.update(WISER_BOOST_PRESETS)
+WISER_PRESET_FROM_API = {
+    api_value: preset for preset, api_value in WISER_PRESET_TO_API.items()
+}
 
 HVAC_MODE_WISER_TO_HASS = {
     "Auto": HVACMode.AUTO,
@@ -479,14 +484,19 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def preset_modes(self):
         """Return the list of available preset modes."""
-        return self._room.available_presets
+        return [
+            WISER_PRESET_FROM_API.get(preset, preset)
+            for preset in self._room.available_presets
+        ]
 
     @hub_error_handler
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Async call to set preset mode ."""
         _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._room.name)
         try:
-            await self._room.set_preset(preset_mode)
+            await self._room.set_preset(
+                WISER_PRESET_TO_API.get(preset_mode, preset_mode)
+            )
         except ValueError as ex:
             _LOGGER.error(ex)
 
