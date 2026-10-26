@@ -79,7 +79,6 @@ from .helpers import (
     get_hub_device_name,
     get_hub_via_device_info,
     get_identifier,
-    get_instance_count,
     get_legacy_device_identifier,
     get_legacy_room_identifier,
     get_legacy_unique_id,
@@ -104,6 +103,33 @@ ROOM_NAMES_STORAGE_KEY = f"{DOMAIN}.{{}}.room_names"
 ROOM_NAMES_STORE = "room_names_store"
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _shared_service_owner(hass: HomeAssistant):
+    """Return a loaded coordinator suitable for shared service handlers."""
+    coordinators = [
+        entry_data[DATA]
+        for entry_data in hass.data.get(DOMAIN, {}).values()
+    ]
+    if not coordinators:
+        return None
+    return next(
+        (
+            coordinator
+            for coordinator in coordinators
+            if coordinator.wiserhub.hotwater
+        ),
+        coordinators[0],
+    )
+
+
+async def _async_refresh_shared_services(hass: HomeAssistant) -> None:
+    """Remove stale handlers and bind shared services to a loaded hub."""
+    for service in WISER_SERVICES.values():
+        hass.services.async_remove(DOMAIN, service)
+
+    if coordinator := _shared_service_owner(hass):
+        await async_setup_services(hass, coordinator)
 
 
 def _initial_room_names(stored_room_names, config_entry_room_names):
@@ -1131,21 +1157,6 @@ async def async_remove_config_entry_device(
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Unload a config entry."""
-    data = hass.data[DOMAIN][config_entry.entry_id][DATA]
-
-    if get_instance_count(hass) == 0:
-        # Unload lovelace module resource if only instance
-        _LOGGER.debug("Remove Wiser Lovelace cards")
-        module_register = JSModuleRegistration(hass)
-        await module_register.async_unregister()
-
-        # Deregister services if only instance
-        _LOGGER.debug("Unregister Wiser services")
-        for service in WISER_SERVICES.values():
-            if not data.wiserhub.hotwater and service == "boost_hotwater":
-                continue
-            hass.services.async_remove(DOMAIN, service)
-
     _LOGGER.debug("Unload Wiser integration platforms")
     # Unload a config entry
     unload_ok = all(
@@ -1164,6 +1175,11 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     if unload_ok:
         await async_unload_card_updates(hass, config_entry)
         hass.data[DOMAIN].pop(config_entry.entry_id)
+        await _async_refresh_shared_services(hass)
+        if not hass.data[DOMAIN]:
+            _LOGGER.debug("Remove Wiser Lovelace cards")
+            module_register = JSModuleRegistration(hass)
+            await module_register.async_unregister()
         await async_update_wiser_panel(hass)
         update_hub_device_names(hass)
 
