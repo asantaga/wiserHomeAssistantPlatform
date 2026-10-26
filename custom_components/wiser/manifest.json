@@ -8,6 +8,9 @@
     "@lgo44"
   ],
   "config_flow": true,
+  "after_dependencies": [
+    "history_stats"
+  ],
   "dependencies": [
     "http",
     "websocket_api",
