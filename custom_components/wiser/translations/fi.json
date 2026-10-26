@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Keskuslämmityksen aktiivinen ala-asetusarvo",
-        "chFlowActiveUpperSetpoint": "Keskuslämmityksen aktiivinen yläasetusarvo",
-        "dhwFlowSetpoint": "Keskittimen käyttöveden menoveden asetusarvo",
-        "dhwSetpoint": "Kattilan käyttöveden asetusarvo",
-        "maxChSetpoint": "Kattilan keskuslämmityksen enimmäisasetusarvo"
+        "ch_flow_active_lower_setpoint": "Keskuslämmityksen aktiivinen ala-asetusarvo",
+        "ch_flow_active_upper_setpoint": "Keskuslämmityksen aktiivinen yläasetusarvo",
+        "dhw_flow_setpoint": "Keskittimen käyttöveden menoveden asetusarvo",
+        "dhw_setpoint": "Kattilan käyttöveden asetusarvo",
+        "max_ch_setpoint": "Kattilan keskuslämmityksen enimmäisasetusarvo"
       }
     }
   },

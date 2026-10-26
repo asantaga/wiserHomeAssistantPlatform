@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Aktivt nedre centralvärmebörvärde",
-        "chFlowActiveUpperSetpoint": "Aktivt övre centralvärmebörvärde",
-        "dhwFlowSetpoint": "Hubbens börvärde för varmvattenframledning",
-        "dhwSetpoint": "Pannans varmvattenbörvärde",
-        "maxChSetpoint": "Pannans maximala centralvärmebörvärde"
+        "ch_flow_active_lower_setpoint": "Aktivt nedre centralvärmebörvärde",
+        "ch_flow_active_upper_setpoint": "Aktivt övre centralvärmebörvärde",
+        "dhw_flow_setpoint": "Hubbens börvärde för varmvattenframledning",
+        "dhw_setpoint": "Pannans varmvattenbörvärde",
+        "max_ch_setpoint": "Pannans maximala centralvärmebörvärde"
       }
     }
   },

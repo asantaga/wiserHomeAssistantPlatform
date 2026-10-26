@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Aktivt nedre sentralvarmesettpunkt",
-        "chFlowActiveUpperSetpoint": "Aktivt øvre sentralvarmesettpunkt",
-        "dhwFlowSetpoint": "Hubens settpunkt for varmtvannstur",
-        "dhwSetpoint": "Kjelens varmtvannssettpunkt",
-        "maxChSetpoint": "Kjelens maksimale sentralvarmesettpunkt"
+        "ch_flow_active_lower_setpoint": "Aktivt nedre sentralvarmesettpunkt",
+        "ch_flow_active_upper_setpoint": "Aktivt øvre sentralvarmesettpunkt",
+        "dhw_flow_setpoint": "Hubens settpunkt for varmtvannstur",
+        "dhw_setpoint": "Kjelens varmtvannssettpunkt",
+        "max_ch_setpoint": "Kjelens maksimale sentralvarmesettpunkt"
       }
     }
   },

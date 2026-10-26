@@ -33,6 +33,7 @@ from .coordinator import WiserHubRESTError
 from .helpers import get_config_entry_id_by_name, get_instance_count, is_wiser_config_id
 from .opentherm import (
     async_set_parameter,
+    opentherm_api_parameter,
     opentherm_parameter_feedback,
     opentherm_parameter_matches,
     parse_parameter_value,
@@ -387,7 +388,9 @@ async def async_setup_services(hass: HomeAssistant, data):
                 return fallback.format(**placeholders)
 
         endpoint = service_call.data[ATTR_OPENTHERM_ENDPOINT]
-        param = service_call.data[ATTR_OPENTHERM_PARAM]
+        param = opentherm_api_parameter(
+            service_call.data[ATTR_OPENTHERM_PARAM]
+        )
         if ATTR_OPENTHERM_TEMPERATURE in service_call.data:
             # The Wiser API represents temperatures in tenths of a degree.
             value = round(service_call.data[ATTR_OPENTHERM_TEMPERATURE] * 10)

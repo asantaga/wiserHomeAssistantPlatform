@@ -19,6 +19,21 @@ OPENTHERM_PARAMETER_ENDPOINTS = {
     "maxChSetpoint": "preDefinedRemoteBoilerParameters",
 }
 
+# Home Assistant selector translation keys must be snake_case. Keep accepting
+# the original API names so existing YAML service calls remain compatible.
+OPENTHERM_PARAMETER_ALIASES = {
+    "ch_flow_active_lower_setpoint": "chFlowActiveLowerSetpoint",
+    "ch_flow_active_upper_setpoint": "chFlowActiveUpperSetpoint",
+    "dhw_flow_setpoint": "dhwFlowSetpoint",
+    "dhw_setpoint": "dhwSetpoint",
+    "max_ch_setpoint": "maxChSetpoint",
+}
+
+
+def opentherm_api_parameter(parameter: str) -> str:
+    """Return the Wiser API name for a selector or legacy parameter value."""
+    return OPENTHERM_PARAMETER_ALIASES.get(parameter, parameter)
+
 # Feedback fields for the temperature parameters exposed by the action UI.
 # Values written by the API use tenths of a degree; these fields report °C.
 OPENTHERM_PARAMETER_FEEDBACK = {

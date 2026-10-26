@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Aktivt nedre centralvarmeindstillingspunkt",
-        "chFlowActiveUpperSetpoint": "Aktivt øvre centralvarmeindstillingspunkt",
-        "dhwFlowSetpoint": "Hubbens varmtvandsfremløbsindstillingspunkt",
-        "dhwSetpoint": "Kedlens varmtvandsindstillingspunkt",
-        "maxChSetpoint": "Kedlens maksimale centralvarmeindstillingspunkt"
+        "ch_flow_active_lower_setpoint": "Aktivt nedre centralvarmeindstillingspunkt",
+        "ch_flow_active_upper_setpoint": "Aktivt øvre centralvarmeindstillingspunkt",
+        "dhw_flow_setpoint": "Hubbens varmtvandsfremløbsindstillingspunkt",
+        "dhw_setpoint": "Kedlens varmtvandsindstillingspunkt",
+        "max_ch_setpoint": "Kedlens maksimale centralvarmeindstillingspunkt"
       }
     }
   },

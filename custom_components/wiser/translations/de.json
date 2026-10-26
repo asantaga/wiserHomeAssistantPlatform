@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Untere aktive Zentralheizungs-Solltemperatur",
-        "chFlowActiveUpperSetpoint": "Obere aktive Zentralheizungs-Solltemperatur",
-        "dhwFlowSetpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
-        "dhwSetpoint": "Warmwasser-Solltemperatur des Kessels",
-        "maxChSetpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
+        "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",
+        "ch_flow_active_upper_setpoint": "Obere aktive Zentralheizungs-Solltemperatur",
+        "dhw_flow_setpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
+        "dhw_setpoint": "Warmwasser-Solltemperatur des Kessels",
+        "max_ch_setpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
       }
     }
   },

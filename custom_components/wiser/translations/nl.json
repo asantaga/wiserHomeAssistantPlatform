@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Actieve CV-onderinstelling",
-        "chFlowActiveUpperSetpoint": "Actieve CV-boveninstelling",
-        "dhwFlowSetpoint": "Hub warmwateraanvoersetpoint",
-        "dhwSetpoint": "Ketel warmwatersetpoint",
-        "maxChSetpoint": "Ketel maximale CV-setpoint"
+        "ch_flow_active_lower_setpoint": "Actieve CV-onderinstelling",
+        "ch_flow_active_upper_setpoint": "Actieve CV-boveninstelling",
+        "dhw_flow_setpoint": "Hub warmwateraanvoersetpoint",
+        "dhw_setpoint": "Ketel warmwatersetpoint",
+        "max_ch_setpoint": "Ketel maximale CV-setpoint"
       }
     }
   },
