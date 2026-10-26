@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Untere aktive Zentralheizungs-Solltemperatur",
-        "chFlowActiveUpperSetpoint": "Obere aktive Zentralheizungs-Solltemperatur",
-        "dhwFlowSetpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
-        "dhwSetpoint": "Warmwasser-Solltemperatur des Kessels",
-        "maxChSetpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
+        "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",
+        "ch_flow_active_upper_setpoint": "Obere aktive Zentralheizungs-Solltemperatur",
+        "dhw_flow_setpoint": "Warmwasser-Vorlaufsolltemperatur des Hubs",
+        "dhw_setpoint": "Warmwasser-Solltemperatur des Kessels",
+        "max_ch_setpoint": "Maximale Zentralheizungs-Solltemperatur des Kessels"
       }
     }
   },
@@ -270,7 +270,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Heizung"
+        "name": "Heizung",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Zeitplan vorziehen",
+              "cancel_overrides": "Übersteuerungen aufheben",
+              "boost_30m": "Boost 30 Min.",
+              "boost_1h": "Boost 1 Std.",
+              "boost_2h": "Boost 2 Std.",
+              "boost_3h": "Boost 3 Std."
+            }
+          }
+        }
       },
       "floor_temperature": { "name": "Fußbodentemperatur" }
     },

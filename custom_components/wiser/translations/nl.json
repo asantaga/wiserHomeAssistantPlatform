@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Actieve CV-onderinstelling",
-        "chFlowActiveUpperSetpoint": "Actieve CV-boveninstelling",
-        "dhwFlowSetpoint": "Hub warmwateraanvoersetpoint",
-        "dhwSetpoint": "Ketel warmwatersetpoint",
-        "maxChSetpoint": "Ketel maximale CV-setpoint"
+        "ch_flow_active_lower_setpoint": "Actieve CV-onderinstelling",
+        "ch_flow_active_upper_setpoint": "Actieve CV-boveninstelling",
+        "dhw_flow_setpoint": "Hub warmwateraanvoersetpoint",
+        "dhw_setpoint": "Ketel warmwatersetpoint",
+        "max_ch_setpoint": "Ketel maximale CV-setpoint"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Verwarming"
+        "name": "Verwarming",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Schema vervroegen",
+              "cancel_overrides": "Overschrijvingen annuleren",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 uur",
+              "boost_2h": "Boost 2 uur",
+              "boost_3h": "Boost 3 uur"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Vloertemperatuur"

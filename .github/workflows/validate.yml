@@ -1,35 +1,44 @@
-name: "Validate"
+name: Validate
+
 on:
   pull_request:
-    branches:
-      - main
+    branches: [dev, master]
   push:
-    branches:
-      - main
+    branches: [dev, master]
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  ci:
-    runs-on: ubuntu-latest
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v2
-        name: Download repo
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v2
-        name: Setup Python
-        with:
-          python-version: '3.8.x'
-      - uses: actions/cache@v2
-        name: Cache
-        with:
-          path: |
-            ~/.cache/pip
-          key: custom-component-ci
-      - name: HACS Action
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - name: Install test dependencies
+        run: python -m pip install -r tests/requirements.txt
+      - name: Run complete test suite
+        run: python -m unittest discover -s tests
+
+  integration-validation:
+    name: HACS and hassfest
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: HACS validation
         uses: hacs/action@main
         with:
           CATEGORY: integration
-          #ignore: requirements
-      - name: hassfest
+      - name: hassfest validation
         uses: home-assistant/actions/hassfest@master

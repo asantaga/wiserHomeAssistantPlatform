@@ -240,11 +240,11 @@ set_opentherm_parameter:
           mode: dropdown
           translation_key: opentherm_parameter
           options:
-            - chFlowActiveLowerSetpoint
-            - chFlowActiveUpperSetpoint
-            - dhwFlowSetpoint
-            - dhwSetpoint
-            - maxChSetpoint
+            - ch_flow_active_lower_setpoint
+            - ch_flow_active_upper_setpoint
+            - dhw_flow_setpoint
+            - dhw_setpoint
+            - max_ch_setpoint
     temperature:
       name: Temperature
       description: Use a temperature within the limits reported by your boiler.

@@ -1,6 +1,9 @@
 {
   "domain": "wiser",
   "name": "Drayton Wiser Integration for Home Assistant",
+  "after_dependencies": [
+    "history_stats"
+  ],
   "codeowners": [
     "@asantaga",
     "@msp1974",

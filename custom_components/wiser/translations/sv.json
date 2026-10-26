@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Aktivt nedre centralvärmebörvärde",
-        "chFlowActiveUpperSetpoint": "Aktivt övre centralvärmebörvärde",
-        "dhwFlowSetpoint": "Hubbens börvärde för varmvattenframledning",
-        "dhwSetpoint": "Pannans varmvattenbörvärde",
-        "maxChSetpoint": "Pannans maximala centralvärmebörvärde"
+        "ch_flow_active_lower_setpoint": "Aktivt nedre centralvärmebörvärde",
+        "ch_flow_active_upper_setpoint": "Aktivt övre centralvärmebörvärde",
+        "dhw_flow_setpoint": "Hubbens börvärde för varmvattenframledning",
+        "dhw_setpoint": "Pannans varmvattenbörvärde",
+        "max_ch_setpoint": "Pannans maximala centralvärmebörvärde"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Uppvärmning"
+        "name": "Uppvärmning",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Flytta fram schema",
+              "cancel_overrides": "Avbryt åsidosättningar",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 tim",
+              "boost_2h": "Boost 2 tim",
+              "boost_3h": "Boost 3 tim"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Golvtemperatur"

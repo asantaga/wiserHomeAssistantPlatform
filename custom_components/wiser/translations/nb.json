@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Aktivt nedre sentralvarmesettpunkt",
-        "chFlowActiveUpperSetpoint": "Aktivt øvre sentralvarmesettpunkt",
-        "dhwFlowSetpoint": "Hubens settpunkt for varmtvannstur",
-        "dhwSetpoint": "Kjelens varmtvannssettpunkt",
-        "maxChSetpoint": "Kjelens maksimale sentralvarmesettpunkt"
+        "ch_flow_active_lower_setpoint": "Aktivt nedre sentralvarmesettpunkt",
+        "ch_flow_active_upper_setpoint": "Aktivt øvre sentralvarmesettpunkt",
+        "dhw_flow_setpoint": "Hubens settpunkt for varmtvannstur",
+        "dhw_setpoint": "Kjelens varmtvannssettpunkt",
+        "max_ch_setpoint": "Kjelens maksimale sentralvarmesettpunkt"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Oppvarming"
+        "name": "Oppvarming",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Fremrykk tidsplan",
+              "cancel_overrides": "Avbryt overstyringer",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 t",
+              "boost_2h": "Boost 2 t",
+              "boost_3h": "Boost 3 t"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Gulvtemperatur"

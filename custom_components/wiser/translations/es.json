@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Consigna inferior de calefacción central activa",
-        "chFlowActiveUpperSetpoint": "Consigna superior de calefacción central activa",
-        "dhwFlowSetpoint": "Consigna caudal de agua caliente del hub",
-        "dhwSetpoint": "Consigna de agua caliente de caldera",
-        "maxChSetpoint": "Consigna máxima de calefacción central de caldera"
+        "ch_flow_active_lower_setpoint": "Consigna inferior de calefacción central activa",
+        "ch_flow_active_upper_setpoint": "Consigna superior de calefacción central activa",
+        "dhw_flow_setpoint": "Consigna caudal de agua caliente del hub",
+        "dhw_setpoint": "Consigna de agua caliente de caldera",
+        "max_ch_setpoint": "Consigna máxima de calefacción central de caldera"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Calefacción"
+        "name": "Calefacción",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Adelantar horario",
+              "cancel_overrides": "Cancelar anulaciones",
+              "boost_30m": "Impulso 30 min",
+              "boost_1h": "Impulso 1 h",
+              "boost_2h": "Impulso 2 h",
+              "boost_3h": "Impulso 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Temperatura del suelo"

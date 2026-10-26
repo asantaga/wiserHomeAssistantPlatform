@@ -16,6 +16,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Fixed shared Wiser services and Lovelace resources remaining registered after the final hub was removed, and ensured multi-hub service handlers are rebound to a loaded hub after another hub unloads.
 - Removed use of the deprecated config-flow connection-class constant ahead of its removal in Home Assistant 2027.5; the integration's local-polling classification remains declared in its manifest - issue [#772](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/772).
 - Updated climate and water-heater temperature properties for Home Assistant 2026.11 while retaining compatibility with older supported Home Assistant releases - issue [#770](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/770).
 - Fixed preset-mode icons not appearing for Wiser room climate entities in Home Assistant thermostat cards - issue [#767](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/767).

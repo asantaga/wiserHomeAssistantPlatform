@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Ponto de ajuste inferior de aquecimento central ativo",
-        "chFlowActiveUpperSetpoint": "Ponto de ajuste superior de aquecimento central ativo",
-        "dhwFlowSetpoint": "Ponto de ajuste de fluxo de água quente do hub",
-        "dhwSetpoint": "Ponto de ajuste de água quente da caldeira",
-        "maxChSetpoint": "Ponto de ajuste máximo de aquecimento central da caldeira"
+        "ch_flow_active_lower_setpoint": "Ponto de ajuste inferior de aquecimento central ativo",
+        "ch_flow_active_upper_setpoint": "Ponto de ajuste superior de aquecimento central ativo",
+        "dhw_flow_setpoint": "Ponto de ajuste de fluxo de água quente do hub",
+        "dhw_setpoint": "Ponto de ajuste de água quente da caldeira",
+        "max_ch_setpoint": "Ponto de ajuste máximo de aquecimento central da caldeira"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Aquecimento"
+        "name": "Aquecimento",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Avançar horário",
+              "cancel_overrides": "Cancelar substituições",
+              "boost_30m": "Reforço 30 min",
+              "boost_1h": "Reforço 1 h",
+              "boost_2h": "Reforço 2 h",
+              "boost_3h": "Reforço 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Temperatura do piso"

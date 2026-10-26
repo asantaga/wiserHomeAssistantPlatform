@@ -62,6 +62,43 @@ def _system(generation=2, firmware="4.48.2", device_firmware="1.0.0"):
 
 
 class ParameterValueTest(unittest.TestCase):
+    def test_selector_parameter_names_map_to_wiser_api_names(self):
+        aliases = {
+            "ch_flow_active_lower_setpoint": "chFlowActiveLowerSetpoint",
+            "ch_flow_active_upper_setpoint": "chFlowActiveUpperSetpoint",
+            "dhw_flow_setpoint": "dhwFlowSetpoint",
+            "dhw_setpoint": "dhwSetpoint",
+            "max_ch_setpoint": "maxChSetpoint",
+        }
+
+        for selector_name, api_name in aliases.items():
+            with self.subTest(selector_name=selector_name):
+                self.assertEqual(
+                    HELPER.opentherm_api_parameter(selector_name), api_name
+                )
+                self.assertEqual(
+                    HELPER.opentherm_api_parameter(api_name), api_name
+                )
+
+    def test_selector_translation_keys_match_in_every_language(self):
+        strings = json.loads((COMPONENT / "strings.json").read_text())
+        expected = set(
+            strings["selector"]["opentherm_parameter"]["options"]
+        )
+        services = (COMPONENT / "services.yaml").read_text()
+
+        for key in expected:
+            self.assertIn(f"            - {key}\n", services)
+        for path in (COMPONENT / "translations").glob("*.json"):
+            with self.subTest(language=path.stem):
+                translations = json.loads(path.read_text())
+                actual = set(
+                    translations["selector"]["opentherm_parameter"][
+                        "options"
+                    ]
+                )
+                self.assertEqual(actual, expected)
+
     def test_ui_and_yaml_scalars_retain_the_correct_json_type(self):
         for raw, expected in (
             ("400", 400), (400, 400), (" 400 ", 400),
@@ -579,6 +616,7 @@ class OpenThermActionTest(unittest.IsolatedAsyncioTestCase):
             "is_wiser_config_id": lambda hass, hub: hub in hass.data["wiser"],
             "get_config_entry_id_by_name": lambda hass, hub: {"Other hub": "second"}.get(hub),
             "async_set_parameter": HELPER.async_set_parameter,
+            "opentherm_api_parameter": HELPER.opentherm_api_parameter,
             "opentherm_parameter_matches": HELPER.opentherm_parameter_matches,
             "opentherm_parameter_feedback": HELPER.opentherm_parameter_feedback,
             "parse_parameter_value": HELPER.parse_parameter_value,

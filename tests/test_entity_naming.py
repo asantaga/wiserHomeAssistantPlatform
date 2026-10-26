@@ -3,6 +3,7 @@
 import ast
 import json
 from pathlib import Path
+import re
 import unittest
 
 
@@ -257,13 +258,37 @@ class EntityNamingTest(unittest.TestCase):
         self.assertEqual(
             set(preset_icons["state"]),
             {
-                "Advance Schedule",
-                "Cancel Overrides",
-                "Boost 30m",
-                "Boost 1h",
-                "Boost 2h",
-                "Boost 3h",
+                "advance_schedule",
+                "cancel_overrides",
+                "boost_30m",
+                "boost_1h",
+                "boost_2h",
+                "boost_3h",
             },
+        )
+        strings = json.loads((COMPONENT_PATH / "strings.json").read_text())
+        labels = strings["entity"]["climate"]["heating"][
+            "state_attributes"
+        ]["preset_mode"]["state"]
+        self.assertEqual(set(labels), set(preset_icons["state"]))
+        self.assertTrue(
+            all(re.fullmatch(r"[a-z0-9]+(?:_[a-z0-9]+)*", key) for key in labels)
+        )
+        for path in sorted((COMPONENT_PATH / "translations").glob("*.json")):
+            translated = json.loads(path.read_text())
+            translated_labels = translated["entity"]["climate"]["heating"][
+                "state_attributes"
+            ]["preset_mode"]["state"]
+            self.assertEqual(set(translated_labels), set(labels), path.name)
+
+        climate_source = (COMPONENT_PATH / "climate.py").read_text()
+        self.assertIn(
+            "WISER_PRESET_FROM_API.get(preset, preset)",
+            climate_source,
+        )
+        self.assertIn(
+            "WISER_PRESET_TO_API.get(preset_mode, preset_mode)",
+            climate_source,
         )
 
     def test_smart_plug_control_is_presented_as_an_outlet(self) -> None:

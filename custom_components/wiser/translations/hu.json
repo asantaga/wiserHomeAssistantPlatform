@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Központi fűtés aktív alsó célhőmérséklete",
-        "chFlowActiveUpperSetpoint": "Központi fűtés aktív felső célhőmérséklete",
-        "dhwFlowSetpoint": "Központ melegvíz-előremenő célhőmérséklete",
-        "dhwSetpoint": "Kazán melegvíz-célhőmérséklete",
-        "maxChSetpoint": "Kazán központifűtés-maximális célhőmérséklete"
+        "ch_flow_active_lower_setpoint": "Központi fűtés aktív alsó célhőmérséklete",
+        "ch_flow_active_upper_setpoint": "Központi fűtés aktív felső célhőmérséklete",
+        "dhw_flow_setpoint": "Központ melegvíz-előremenő célhőmérséklete",
+        "dhw_setpoint": "Kazán melegvíz-célhőmérséklete",
+        "max_ch_setpoint": "Kazán központifűtés-maximális célhőmérséklete"
       }
     }
   },
@@ -290,7 +290,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Fűtés"
+        "name": "Fűtés",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Ütemezés előreléptetése",
+              "cancel_overrides": "Felülbírálások törlése",
+              "boost_30m": "Felfűtés 30 perc",
+              "boost_1h": "Felfűtés 1 óra",
+              "boost_2h": "Felfűtés 2 óra",
+              "boost_3h": "Felfűtés 3 óra"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Padlóhőmérséklet"

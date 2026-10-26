@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Active central-heating lower setpoint",
-        "chFlowActiveUpperSetpoint": "Active central-heating upper setpoint",
-        "dhwFlowSetpoint": "Hub hot-water flow setpoint",
-        "dhwSetpoint": "Boiler hot-water setpoint",
-        "maxChSetpoint": "Boiler maximum central-heating setpoint"
+        "ch_flow_active_lower_setpoint": "Active central-heating lower setpoint",
+        "ch_flow_active_upper_setpoint": "Active central-heating upper setpoint",
+        "dhw_flow_setpoint": "Hub hot-water flow setpoint",
+        "dhw_setpoint": "Boiler hot-water setpoint",
+        "max_ch_setpoint": "Boiler maximum central-heating setpoint"
       }
     }
   },
@@ -270,7 +270,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Heating"
+        "name": "Heating",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Advance Schedule",
+              "cancel_overrides": "Cancel Overrides",
+              "boost_30m": "Boost 30m",
+              "boost_1h": "Boost 1h",
+              "boost_2h": "Boost 2h",
+              "boost_3h": "Boost 3h"
+            }
+          }
+        }
       },
       "floor_temperature": {
         "name": "Floor temperature"

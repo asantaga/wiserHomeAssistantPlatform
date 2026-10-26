@@ -247,11 +247,11 @@
   "selector": {
     "opentherm_parameter": {
       "options": {
-        "chFlowActiveLowerSetpoint": "Consigne basse active du chauffage central",
-        "chFlowActiveUpperSetpoint": "Consigne haute active du chauffage central",
-        "dhwFlowSetpoint": "Consigne de départ d’eau chaude de la passerelle",
-        "dhwSetpoint": "Consigne d’eau chaude de la chaudière",
-        "maxChSetpoint": "Consigne maximale de chauffage central de la chaudière"
+        "ch_flow_active_lower_setpoint": "Consigne basse active du chauffage central",
+        "ch_flow_active_upper_setpoint": "Consigne haute active du chauffage central",
+        "dhw_flow_setpoint": "Consigne de départ d’eau chaude de la passerelle",
+        "dhw_setpoint": "Consigne d’eau chaude de la chaudière",
+        "max_ch_setpoint": "Consigne maximale de chauffage central de la chaudière"
       }
     }
   },
@@ -270,7 +270,19 @@
   "entity": {
     "climate": {
       "heating": {
-        "name": "Chauffage"
+        "name": "Chauffage",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "advance_schedule": "Avancer le programme",
+              "cancel_overrides": "Annuler les dérogations",
+              "boost_30m": "Boost 30 min",
+              "boost_1h": "Boost 1 h",
+              "boost_2h": "Boost 2 h",
+              "boost_3h": "Boost 3 h"
+            }
+          }
+        }
       },
       "floor_temperature": { "name": "Température du sol" }
     },
