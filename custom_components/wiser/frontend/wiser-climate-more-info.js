@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -36,7 +36,8 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const styleGenerations = new WeakMap();
-const boostCountdownGenerations = new WeakMap();
+const boostPresetGenerations = new WeakMap();
+const boostPresetValues = new WeakMap();
 
 const demandForState = (stateObj) => {
   const demand = Number(stateObj?.attributes?.percentage_demand);
@@ -681,45 +682,51 @@ const boostMinutesRemaining = (stateObj) => {
   return Number.isFinite(reported) ? Math.max(0, Math.ceil(reported)) : undefined;
 };
 
-const styleBoostCountdown = async (host, stateObj, feature) => {
-  const generation = (boostCountdownGenerations.get(host) || 0) + 1;
-  boostCountdownGenerations.set(host, generation);
-  if (feature?.type !== "climate-hvac-modes") return;
+const syncBoostPreset = async (host, stateObj, feature) => {
+  const generation = (boostPresetGenerations.get(host) || 0) + 1;
+  boostPresetGenerations.set(host, generation);
+  if (feature?.type !== "climate-preset-modes") return;
   await host.updateComplete;
   const featureHost = host.shadowRoot?.querySelector("hui-card-feature");
   await featureHost?.updateComplete;
   const climateFeature = featureHost?.shadowRoot?.querySelector(
-    "hui-climate-hvac-modes-card-feature"
+    "hui-climate-preset-modes-card-feature"
   );
   await climateFeature?.updateComplete;
-  const select = climateFeature?.shadowRoot?.querySelector("ha-control-select");
-  if (!select || generation !== boostCountdownGenerations.get(host)) return;
+  const select = climateFeature?.shadowRoot?.querySelector(
+    "ha-control-select-menu"
+  );
+  if (!select || generation !== boostPresetGenerations.get(host)) return;
+  const previousValue = boostPresetValues.get(select);
+  const baseOptions = Array.isArray(select.options)
+    ? select.options.filter((option) => option.value !== previousValue)
+    : [];
   const minutes = boostMinutesRemaining(stateObj);
   if (minutes === undefined) {
-    select.style.removeProperty("--wiser-boost-remaining");
+    if (previousValue !== undefined) {
+      select.options = baseOptions;
+      select.value = stateObj.attributes.preset_mode;
+      boostPresetValues.delete(select);
+    }
     return;
   }
-  select.style.setProperty(
-    "--wiser-boost-remaining",
-    `"${minutes > 0 ? `${minutes}m` : "<1m"}"`
-  );
-  await select.updateComplete;
-  if (!select.shadowRoot?.querySelector("style[data-wiser-boost-countdown]")) {
-    const style = document.createElement("style");
-    style.dataset.wiserBoostCountdown = "";
-    style.textContent = `
-      .option.selected .content::after {
-        content: var(--wiser-boost-remaining);
-        display: block;
-        margin-top: -1px;
-        font-size: 10px;
-        line-height: 10px;
-        font-weight: var(--ha-font-weight-medium);
-        white-space: nowrap;
-      }
-    `;
-    select.shadowRoot.append(style);
-  }
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  if (generation !== boostPresetGenerations.get(host)) return;
+  const remaining = minutes > 0 ? `${minutes}m` : "<1m";
+  const presetValue = String(stateObj.attributes.preset_mode || "Boost");
+  const presetName = presetValue.replace(/\s+<?\d+m$/i, "").trim() || "Boost";
+  const label =
+    host.clientWidth >= 180
+      ? `${presetName} · ${remaining}`
+      : host.clientWidth >= 105
+        ? remaining
+        : "";
+  select.options = [
+    ...baseOptions.filter((option) => option.value !== presetValue),
+    { value: presetValue, label },
+  ];
+  select.value = presetValue;
+  boostPresetValues.set(select, presetValue);
 };
 
 const applyThermostatInlineFeatures = (card) => {
@@ -793,7 +800,7 @@ const applyThermostatInlineFeatures = (card) => {
     } else {
       host.style.removeProperty("--feature-color");
     }
-    void styleBoostCountdown(host, stateObj, feature);
+    void syncBoostPreset(host, stateObj, feature);
   });
   hosts.slice(features.length).forEach((host) => host.remove());
   bottom.style.display = "none";
