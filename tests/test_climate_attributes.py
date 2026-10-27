@@ -141,12 +141,15 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn('"hui-thermostat-card"', self.source)
         self.assertIn("applyThermostatInlineFeatures", self.source)
         self.assertIn('config.features_position !== "inline"', self.source)
-        self.assertIn("thermostatFeatureWeight", self.source)
+        self.assertIn("thermostatFeatureLayout", self.source)
         self.assertIn('"climate-hvac-modes": "hvac_modes"', self.source)
-        self.assertIn('host.dataset.weight = String(weight)', self.source)
-        self.assertIn('flex: 3 1 150px', self.source)
-        self.assertIn('flex: 2 1 120px', self.source)
-        self.assertIn('flex: 1 1 60px', self.source)
+        self.assertIn('feature.style === "dropdown"', self.source)
+        self.assertIn("configuredModes.filter", self.source)
+        self.assertIn("minimum: Math.max(buttons * 50, 60)", self.source)
+        self.assertIn('host.dataset.units = String(layout.units)', self.source)
+        self.assertIn(
+            'host.style.flex = `${layout.units} 1 ${layout.minimum}px`', self.source
+        )
         self.assertIn('bottom.style.display = "none"', self.source)
         self.assertIn("new window.ResizeObserver", self.source)
 

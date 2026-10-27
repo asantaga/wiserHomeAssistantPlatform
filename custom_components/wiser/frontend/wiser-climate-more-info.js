@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.4.2 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -629,16 +629,21 @@ const THERMOSTAT_MODE_FEATURES = {
   "climate-swing-horizontal-modes": "swing_horizontal_modes",
 };
 
-const thermostatFeatureWeight = (feature, stateObj) => {
+const thermostatFeatureLayout = (feature, stateObj) => {
   const attribute = THERMOSTAT_MODE_FEATURES[feature?.type];
-  if (!attribute) return 1;
+  if (!attribute) return { units: 1, minimum: 60 };
+  if (feature.style === "dropdown") return { units: 2, minimum: 120 };
   const configuredModes = feature?.[attribute];
-  const availableModes = Array.isArray(configuredModes)
-    ? configuredModes
-    : stateObj?.attributes?.[attribute];
-  return Array.isArray(availableModes)
-    ? Math.min(Math.max(availableModes.length, 1), 3)
+  const entityModes = stateObj?.attributes?.[attribute];
+  const visibleModes = Array.isArray(configuredModes)
+    ? Array.isArray(entityModes)
+      ? configuredModes.filter((mode) => entityModes.includes(mode))
+      : configuredModes
+    : entityModes;
+  const buttons = Array.isArray(visibleModes)
+    ? Math.max(visibleModes.length, 1)
     : 1;
+  return { units: buttons, minimum: Math.max(buttons * 50, 60) };
 };
 
 const thermostatFeatureRows = (card, features, stateObj) => {
@@ -651,8 +656,7 @@ const thermostatFeatureRows = (card, features, stateObj) => {
   let rows = 1;
   let used = 0;
   for (const feature of features) {
-    const weight = thermostatFeatureWeight(feature, stateObj);
-    const minimum = weight === 3 ? 150 : weight === 2 ? 120 : 60;
+    const { minimum } = thermostatFeatureLayout(feature, stateObj);
     const required = used ? minimum + gap : minimum;
     if (used && used + required > availableWidth) {
       rows += 1;
@@ -701,15 +705,6 @@ const applyThermostatInlineFeatures = (card) => {
         min-width: 60px;
         padding: 0;
       }
-      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="1"] {
-        flex: 1 1 60px;
-      }
-      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="2"] {
-        flex: 2 1 120px;
-      }
-      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="3"] {
-        flex: 3 1 150px;
-      }
     `;
     root.append(style);
   }
@@ -725,8 +720,9 @@ const applyThermostatInlineFeatures = (card) => {
   features.forEach((feature, index) => {
     const host = hosts[index] || document.createElement("hui-card-features");
     if (!hosts[index]) row.append(host);
-    const weight = thermostatFeatureWeight(feature, stateObj);
-    host.dataset.weight = String(weight);
+    const layout = thermostatFeatureLayout(feature, stateObj);
+    host.dataset.units = String(layout.units);
+    host.style.flex = `${layout.units} 1 ${layout.minimum}px`;
     host.hass = card.hass;
     host.context = bottom.context || card._featureContext;
     host.color = bottom.color;

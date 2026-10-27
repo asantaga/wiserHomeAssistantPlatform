@@ -10,7 +10,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
 - Added optional native-based **Wiser climate controls** under **UI options**, applying the same room-demand, passive-mode colours and theme variables to both Thermostat cards and More Info while retaining Home Assistant's native card, dialog, temperature handling, history and settings.
-- Added **Bottom** and responsive **Inline** feature positioning to native Thermostat cards for Wiser rooms. Inline dynamically gives multi-button mode controls more room while compact controls share the remaining row and wrap only when needed; the matching choice is available in Home Assistant's visual card editor.
+- Added **Bottom** and responsive **Inline** feature positioning to native Thermostat cards for Wiser rooms. Inline calculates space from each feature's configured button count and control style, while compact controls share the remaining row and wrap only when needed; the matching choice is available in Home Assistant's visual card editor.
 
 ### Changed
 
