@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.2.2 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.2.3 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -38,32 +38,11 @@ const demandForState = (stateObj) => {
   return Number.isFinite(demand) ? demand : 0;
 };
 
-const formatLimiterTemperature = (stateObj, temperatureUnit) => {
-  const temperature = Number(stateObj?.attributes?.target_temp_high);
-  if (!Number.isFinite(temperature)) return undefined;
-  const step = Number(stateObj?.attributes?.target_temp_step);
-  const digits = Number.isFinite(step)
-    ? Number.isInteger(step)
-      ? 0
-      : 1
-    : temperatureUnit === "°F"
-      ? 0
-      : 1;
-  return `${temperature.toFixed(digits)}${temperatureUnit || "°C"}`;
-};
-
-const extraInfoForState = (stateObj, temperatureUnit) => {
+const extraInfoForState = (stateObj) => {
   const attributes = stateObj?.attributes;
   if (attributes?.is_passive) {
     const controlType = attributes.passive_control_type || "Modulation";
-    const limiterTemperature =
-      controlType === "Limiter"
-        ? formatLimiterTemperature(stateObj, temperatureUnit)
-        : undefined;
-    const mode = limiterTemperature
-      ? `${controlType} ${limiterTemperature}`
-      : controlType;
-    return `${mode} · ${demandForState(stateObj)}%`;
+    return `${controlType} · ${demandForState(stateObj)}%`;
   }
   if (attributes?.demand_type != null) {
     return `Demand · ${demandForState(stateObj)}%`;
@@ -130,10 +109,7 @@ const styleNativeControl = async (control, stateObj) => {
   control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
   control.style.setProperty("--wiser-label-color", labelColor);
   control.style.setProperty(`--state-climate-${state}-color`, modeColor);
-  const temperatureUnit =
-    control._config?.config?.unit_system?.temperature ||
-    stateObj.attributes.temperature_unit;
-  const extraInfo = extraInfoForState(stateObj, temperatureUnit);
+  const extraInfo = extraInfoForState(stateObj);
   control.style.setProperty(
     "--wiser-extra-info-text",
     extraInfo ? `"${cssString(extraInfo)}"` : "none"
@@ -155,6 +131,7 @@ const styleNativeControl = async (control, stateObj) => {
       content: var(--wiser-extra-info-text);
       font-weight: var(--ha-font-weight-medium, 500);
       line-height: var(--ha-line-height-normal, 1.5);
+      margin-top: var(--extra-info-margin-top, -6px);
       max-width: 90%;
       overflow: visible;
       text-align: center;
