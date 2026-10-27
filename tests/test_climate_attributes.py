@@ -158,6 +158,15 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("bottom.columns = 1", self.source)
         self.assertNotIn("thermostatFeatureObservers", self.source)
 
+    def test_active_hvac_button_shows_boost_time_remaining(self) -> None:
+        self.assertIn("boostMinutesRemaining", self.source)
+        self.assertIn("attributes.boost_end", self.source)
+        self.assertIn("attributes.boost_time_remaining", self.source)
+        self.assertIn('feature?.type !== "climate-hvac-modes"', self.source)
+        self.assertIn("--wiser-boost-remaining", self.source)
+        self.assertIn(".option.selected .content::after", self.source)
+        self.assertIn("void styleBoostCountdown(host, stateObj, feature)", self.source)
+
     def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
         self.assertIn('"hui-thermostat-card-editor"', self.source)
         self.assertIn("thermostatFeaturePositionSchema", self.source)

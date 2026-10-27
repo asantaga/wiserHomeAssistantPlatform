@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.3 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -36,6 +36,7 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const styleGenerations = new WeakMap();
+const boostCountdownGenerations = new WeakMap();
 
 const demandForState = (stateObj) => {
   const demand = Number(stateObj?.attributes?.percentage_demand);
@@ -670,6 +671,57 @@ const thermostatFeatureRows = (card, features, stateObj) => {
   return rows;
 };
 
+const boostMinutesRemaining = (stateObj) => {
+  if (!stateObj?.attributes?.is_boosted) return undefined;
+  const end = new Date(stateObj.attributes.boost_end).getTime();
+  if (Number.isFinite(end)) {
+    return Math.max(0, Math.ceil((end - Date.now()) / 60000));
+  }
+  const reported = Number(stateObj.attributes.boost_time_remaining);
+  return Number.isFinite(reported) ? Math.max(0, Math.ceil(reported)) : undefined;
+};
+
+const styleBoostCountdown = async (host, stateObj, feature) => {
+  const generation = (boostCountdownGenerations.get(host) || 0) + 1;
+  boostCountdownGenerations.set(host, generation);
+  if (feature?.type !== "climate-hvac-modes") return;
+  await host.updateComplete;
+  const featureHost = host.shadowRoot?.querySelector("hui-card-feature");
+  await featureHost?.updateComplete;
+  const climateFeature = featureHost?.shadowRoot?.querySelector(
+    "hui-climate-hvac-modes-card-feature"
+  );
+  await climateFeature?.updateComplete;
+  const select = climateFeature?.shadowRoot?.querySelector("ha-control-select");
+  if (!select || generation !== boostCountdownGenerations.get(host)) return;
+  const minutes = boostMinutesRemaining(stateObj);
+  if (minutes === undefined) {
+    select.style.removeProperty("--wiser-boost-remaining");
+    return;
+  }
+  select.style.setProperty(
+    "--wiser-boost-remaining",
+    `"${minutes > 0 ? `${minutes}m` : "<1m"}"`
+  );
+  await select.updateComplete;
+  if (!select.shadowRoot?.querySelector("style[data-wiser-boost-countdown]")) {
+    const style = document.createElement("style");
+    style.dataset.wiserBoostCountdown = "";
+    style.textContent = `
+      .option.selected .content::after {
+        content: var(--wiser-boost-remaining);
+        display: block;
+        margin-top: -1px;
+        font-size: 10px;
+        line-height: 10px;
+        font-weight: var(--ha-font-weight-medium);
+        white-space: nowrap;
+      }
+    `;
+    select.shadowRoot.append(style);
+  }
+};
+
 const applyThermostatInlineFeatures = (card) => {
   const config = card._config;
   const features = Array.isArray(config?.features) ? config.features : [];
@@ -741,6 +793,7 @@ const applyThermostatInlineFeatures = (card) => {
     } else {
       host.style.removeProperty("--feature-color");
     }
+    void styleBoostCountdown(host, stateObj, feature);
   });
   hosts.slice(features.length).forEach((host) => host.remove());
   bottom.style.display = "none";
