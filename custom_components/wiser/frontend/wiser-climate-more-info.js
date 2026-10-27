@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.3.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.3.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -13,7 +13,6 @@ const MORE_INFO_TYPE = "wiser-climate-more-info";
 const NATIVE_TEMPERATURE_CONTROL = "ha-state-control-climate-temperature";
 const NATIVE_THERMOSTAT_CARD = "hui-thermostat-card";
 const NATIVE_THERMOSTAT_EDITOR = "hui-thermostat-card-editor";
-const INLINE_FEATURE_ATTRIBUTE = "data-wiser-thermostat-inline";
 const TARGET_TEMPERATURE = 1;
 const TARGET_TEMPERATURE_RANGE = 2;
 const PRESET_MODE = 16;
@@ -35,6 +34,7 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const styleGenerations = new WeakMap();
+const thermostatFeatureObservers = new WeakMap();
 
 const demandForState = (stateObj) => {
   const demand = Number(stateObj?.attributes?.percentage_demand);
@@ -602,9 +602,10 @@ const thermostatState = (element) =>
 const clearThermostatInlineFeatures = (card) => {
   const root = card.shadowRoot;
   if (!root) return;
-  root.querySelector(`[${INLINE_FEATURE_ATTRIBUTE}]`)?.remove();
-  root.querySelector("style[data-wiser-thermostat-inline]")?.remove();
-  const bottom = root.querySelector(`hui-card-features:not([${INLINE_FEATURE_ATTRIBUTE}])`);
+  const observer = thermostatFeatureObservers.get(card);
+  observer?.disconnect();
+  thermostatFeatureObservers.delete(card);
+  const bottom = root.querySelector("hui-card-features");
   if (bottom) {
     bottom.style.removeProperty("display");
     bottom.columns = undefined;
@@ -612,14 +613,19 @@ const clearThermostatInlineFeatures = (card) => {
   }
 };
 
+const thermostatFeatureColumns = (card, featureCount) => {
+  const width =
+    card.shadowRoot?.querySelector("ha-card")?.clientWidth || card.clientWidth;
+  const availableColumns = width >= 600 ? 3 : width >= 400 ? 2 : 1;
+  return Math.min(featureCount, availableColumns);
+};
+
 const applyThermostatInlineFeatures = (card) => {
   const config = card._config;
   const features = Array.isArray(config?.features) ? config.features : [];
   const stateObj = thermostatState(card);
   const root = card.shadowRoot;
-  const bottom = root?.querySelector(
-    `hui-card-features:not([${INLINE_FEATURE_ATTRIBUTE}])`
-  );
+  const bottom = root?.querySelector("hui-card-features");
   if (
     !root ||
     !bottom ||
@@ -631,51 +637,26 @@ const applyThermostatInlineFeatures = (card) => {
     return;
   }
 
-  let style = root.querySelector("style[data-wiser-thermostat-inline]");
-  if (!style) {
-    style = document.createElement("style");
-    style.dataset.wiserThermostatInline = "";
-    root.append(style);
-  }
-  style.textContent = `
-    .title {
-      align-self: flex-start;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      min-height: 58px;
-      padding-inline: 30px 8px;
-      text-align: start;
-      width: 50%;
-    }
-    hui-card-features[${INLINE_FEATURE_ATTRIBUTE}] {
-      inset-inline-end: 48px;
-      inset-inline-start: 50%;
-      padding: 0;
-      position: absolute;
-      top: 8px;
-      width: auto;
-      z-index: 1;
-    }
-  `;
+  bottom.features = features;
+  bottom.columns = thermostatFeatureColumns(card, features.length);
+  bottom.style.removeProperty("display");
 
-  let inline = root.querySelector(`[${INLINE_FEATURE_ATTRIBUTE}]`);
-  if (!inline) {
-    inline = document.createElement("hui-card-features");
-    inline.setAttribute(INLINE_FEATURE_ATTRIBUTE, "");
-    root.querySelector("ha-card")?.append(inline);
+  if (!thermostatFeatureObservers.has(card) && window.ResizeObserver) {
+    const observer = new window.ResizeObserver(() => {
+      if (card._config?.features_position === "inline") {
+        const currentFeatures = card._config.features || [];
+        const currentBottom = card.shadowRoot?.querySelector("hui-card-features");
+        if (currentBottom) {
+          currentBottom.columns = thermostatFeatureColumns(
+            card,
+            currentFeatures.length
+          );
+        }
+      }
+    });
+    observer.observe(card);
+    thermostatFeatureObservers.set(card, observer);
   }
-  inline.hass = card.hass;
-  inline.context = card._featureContext || { entity_id: config.entity };
-  inline.columns = 1;
-  inline.features = features.slice(0, 1);
-  const featureColor = bottom.style.getPropertyValue("--feature-color");
-  if (featureColor) inline.style.setProperty("--feature-color", featureColor);
-
-  const remaining = features.slice(1);
-  bottom.features = remaining;
-  bottom.columns = Math.min(remaining.length, 2);
-  bottom.style.display = remaining.length ? "" : "none";
 };
 
 const patchNativeThermostatCard = async () => {
@@ -702,10 +683,10 @@ const patchNativeThermostatCard = async () => {
       features.length
     ) {
       const nativeRows = Math.ceil((features.length * 2) / 3);
-      const inlineRows = Math.ceil(Math.max(features.length - 1, 0) / 2);
+      const columns = thermostatFeatureColumns(this, features.length);
+      const inlineRows = Math.ceil(features.length / Math.max(columns, 1));
       options.rows += inlineRows - nativeRows;
       options.min_rows += inlineRows - nativeRows;
-      options.min_columns = 12;
     }
     return options;
   };
@@ -736,9 +717,12 @@ const thermostatFeaturePositionSchema = (hass) => ({
           hass.localize(
             `ui.panel.lovelace.editor.card.tile.features_position_options.${value}`
           ) || titleCase(value),
-        description: hass.localize(
-          `ui.panel.lovelace.editor.card.tile.features_position_options.${value}_description`
-        ),
+        description:
+          value === "inline"
+            ? "Displays features side by side in up to three columns"
+            : hass.localize(
+                `ui.panel.lovelace.editor.card.tile.features_position_options.${value}_description`
+              ),
         value,
         image: {
           src: `/static/images/form/tile_features_position_${value}.svg`,
