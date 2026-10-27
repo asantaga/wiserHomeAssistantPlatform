@@ -85,6 +85,8 @@ class ClimateMoreInfoFrontendTest(unittest.TestCase):
         self.assertIn('"ha-state-control-climate-temperature"', self.source)
         self.assertIn("this._temperatureControl.stateObj = stateObj", self.source)
         self.assertIn("preventInteractionOnScroll", self.source)
+        self.assertIn('stateObj.attributes.current_humidity', self.source)
+        self.assertIn('"current_humidity"', self.source)
 
     def test_applies_passive_and_demand_styling(self) -> None:
         for value in (

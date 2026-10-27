@@ -265,7 +265,13 @@ class WiserClimateMoreInfo extends HTMLElement {
     const currentValue = document.createElement("p");
     currentValue.className = "value";
     currentColumn.append(currentLabel, currentValue);
-    current.append(currentColumn);
+    const humidityColumn = document.createElement("div");
+    const humidityLabel = document.createElement("p");
+    humidityLabel.className = "label";
+    const humidityValue = document.createElement("p");
+    humidityValue.className = "value";
+    humidityColumn.append(humidityLabel, humidityValue);
+    current.append(currentColumn, humidityColumn);
 
     const controls = document.createElement("div");
     controls.className = "controls";
@@ -301,6 +307,9 @@ class WiserClimateMoreInfo extends HTMLElement {
     this._current = current;
     this._currentLabel = currentLabel;
     this._currentValue = currentValue;
+    this._humidityColumn = humidityColumn;
+    this._humidityLabel = humidityLabel;
+    this._humidityValue = humidityValue;
     this._temperatureControl = temperatureControl;
     this._modeSelect = modeSelect;
     this._modeIconElement = modeIcon;
@@ -317,6 +326,15 @@ class WiserClimateMoreInfo extends HTMLElement {
     );
     this._currentValue.textContent = this._formatAttribute(
       "current_temperature"
+    );
+    const currentHumidity = stateObj.attributes.current_humidity;
+    this._humidityColumn.hidden = currentHumidity == null;
+    this._humidityLabel.textContent = this._formatAttributeName(
+      "current_humidity",
+      "Current humidity"
+    );
+    this._humidityValue.textContent = this._formatAttribute(
+      "current_humidity"
     );
 
     this._temperatureControl.stateObj = stateObj;
