@@ -57,6 +57,24 @@ class RoomClimateAttributesTest(unittest.TestCase):
         self.assertIn("demand_type", attribute_assignments(guarded))
         self.assertNotIn("demand_type", attribute_assignments(unguarded))
 
+    def test_passive_control_type_reports_modulation_or_limiter(self) -> None:
+        assignment = next(
+            node
+            for node in ast.walk(self.method)
+            if isinstance(node, ast.Assign)
+            and "passive_control_type" in attribute_assignments([node])
+        )
+        parent_guard = next(
+            node
+            for node in self.method.body
+            if isinstance(node, ast.If) and assignment in set(ast.walk(node))
+        )
+        self.assertIn("is_passive_mode", ast.unparse(parent_guard.test))
+        values = ast.unparse(assignment.value)
+        self.assertIn("Limiter", values)
+        self.assertIn("Modulation", values)
+        self.assertIn("uses_temperature_limiter", values)
+
     def test_custom_more_info_is_guarded_by_ui_option(self) -> None:
         custom_assignment = next(
             node
@@ -111,6 +129,12 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn(".info::after", self.source)
         self.assertIn("max-width: 90%", self.source)
         self.assertNotIn(".info > p:last-of-type::after", self.source)
+
+    def test_extra_info_uses_passive_mode_or_opentherm_demand(self) -> None:
+        self.assertIn("attributes.passive_control_type", self.source)
+        self.assertIn('return `Demand · ${demandForState(stateObj)}%`', self.source)
+        self.assertIn("attributes?.demand_type != null", self.source)
+        self.assertIn('extraInfo ? `"${cssString(extraInfo)}"` : "none"', self.source)
 
     def test_preserves_native_climate_actions(self) -> None:
         self.assertIn('"set_hvac_mode"', self.source)

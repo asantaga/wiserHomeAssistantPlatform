@@ -13,6 +13,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Changed
 
+- Updated Wiser climate controls to label Passive demand as **Modulation** or **Limiter**, show a generic demand percentage for OpenTherm rooms, and leave other rooms on Home Assistant's standard display.
 - Updated the `aioWiserHeatAPI` dependency from v1.7.3 to v1.7.7, using its native room heat-demand and button-panel battery support. Dev builds prefer a published API prerelease and fall back to the released API pin; local builds can explicitly use a manually installed API, while final integration releases always use the released pin - PR [#754](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/754).
 
 ### Fixed

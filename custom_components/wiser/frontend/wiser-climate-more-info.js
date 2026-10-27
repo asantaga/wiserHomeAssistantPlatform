@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.1.1 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.2.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -39,13 +39,15 @@ const demandForState = (stateObj) => {
 };
 
 const extraInfoForState = (stateObj) => {
-  const state = stateObj?.state;
-  const mode = stateObj?.attributes?.is_passive
-    ? "Passive"
-    : state === "heat"
-      ? "Manual"
-      : titleCase(state);
-  return state === "off" ? mode : `${mode} · ${demandForState(stateObj)}%`;
+  const attributes = stateObj?.attributes;
+  if (attributes?.is_passive) {
+    const controlType = attributes.passive_control_type || "Modulation";
+    return `${controlType} · ${demandForState(stateObj)}%`;
+  }
+  if (attributes?.demand_type != null) {
+    return `Demand · ${demandForState(stateObj)}%`;
+  }
+  return undefined;
 };
 
 const wiserControlsEnabled = (stateObj) =>
@@ -107,9 +109,10 @@ const styleNativeControl = async (control, stateObj) => {
   control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
   control.style.setProperty("--wiser-label-color", labelColor);
   control.style.setProperty(`--state-climate-${state}-color`, modeColor);
+  const extraInfo = extraInfoForState(stateObj);
   control.style.setProperty(
     "--wiser-extra-info-text",
-    `"${cssString(extraInfoForState(stateObj))}"`
+    extraInfo ? `"${cssString(extraInfo)}"` : "none"
   );
 
   let style = control.shadowRoot.querySelector("style[data-wiser-theme]");
