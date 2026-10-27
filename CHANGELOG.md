@@ -9,6 +9,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Added
 
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
+- Added an optional native-based Wiser climate More Info control under **UI options**, with room demand, passive-mode colours and theme variables while retaining Home Assistant's dialog, temperature handling, history and settings.
 
 ### Changed
 

@@ -51,10 +51,12 @@
         "title": "Käyttöliittymän asetukset",
         "data": {
           "legacy_naming": "Vanha nimeämistapa",
-          "show_wiser_sidebar": "Näytä Wiser sivupalkissa"
+          "show_wiser_sidebar": "Näytä Wiser sivupalkissa",
+          "wiser_climate_more_info": "Use Wiser climate More Info"
         },
         "data_description": {
-          "legacy_naming": "Sisällytä huoneiden nimet Wiser-laitteiden nimiin. Jos tämä on käytössä, entiteettitunnusten luominen uudelleen Home Assistantin oletusmuodolla kohdassa Asetukset → Järjestelmä → Entiteettitunnuksen muoto (Home Assistant 2026.8 ja uudemmat) kahdentaa alueiden nimet, kun alueen ja Wiser-huoneen nimet ovat samat. Tämän asetuksen muuttaminen ei nimeä nykyisiä entiteettitunnuksia uudelleen."
+          "legacy_naming": "Sisällytä huoneiden nimet Wiser-laitteiden nimiin. Jos tämä on käytössä, entiteettitunnusten luominen uudelleen Home Assistantin oletusmuodolla kohdassa Asetukset → Järjestelmä → Entiteettitunnuksen muoto (Home Assistant 2026.8 ja uudemmat) kahdentaa alueiden nimet, kun alueen ja Wiser-huoneen nimet ovat samat. Tämän asetuksen muuttaminen ei nimeä nykyisiä entiteettitunnuksia uudelleen.",
+          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
         }
       },
       "main_params": {

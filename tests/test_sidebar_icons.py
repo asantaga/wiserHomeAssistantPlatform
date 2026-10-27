@@ -41,6 +41,7 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
             [
                 call(ROOT / "wiser-icons.js"),
                 call(ROOT / "wiser-hot-water-control.js"),
+                call(ROOT / "wiser-climate-more-info.js"),
             ],
         )
         self.assertEqual(
@@ -50,6 +51,10 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
                 call(
                     host.hass,
                     "/wiser/wiser-hot-water-control.js?v=sha256-icons",
+                ),
+                call(
+                    host.hass,
+                    "/wiser/wiser-climate-more-info.js?v=sha256-icons",
                 ),
             ],
         )

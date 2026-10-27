@@ -51,10 +51,12 @@
         "title": "Gränssnittsalternativ",
         "data": {
           "legacy_naming": "Äldre namngivning",
-          "show_wiser_sidebar": "Visa Wiser i sidopanelen"
+          "show_wiser_sidebar": "Visa Wiser i sidopanelen",
+          "wiser_climate_more_info": "Use Wiser climate More Info"
         },
         "data_description": {
-          "legacy_naming": "Inkludera rumsnamn i namn på Wiser-enheter. Om detta är aktiverat kommer återskapande av entitets-ID:n i Home Assistant med standardformatet under Inställningar → System → Format för entitets-ID (Home Assistant 2026.8 och senare) att duplicera områdesnamn när området och Wiser-rummet har samma namn. Ändring av detta alternativ byter inte namn på befintliga entitets-ID:n."
+          "legacy_naming": "Inkludera rumsnamn i namn på Wiser-enheter. Om detta är aktiverat kommer återskapande av entitets-ID:n i Home Assistant med standardformatet under Inställningar → System → Format för entitets-ID (Home Assistant 2026.8 och senare) att duplicera områdesnamn när området och Wiser-rummet har samma namn. Ändring av detta alternativ byter inte namn på befintliga entitets-ID:n.",
+          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
         }
       },
       "main_params": {

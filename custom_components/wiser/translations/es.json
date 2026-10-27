@@ -51,10 +51,12 @@
         "title": "Opciones de la interfaz de usuario",
         "data": {
           "legacy_naming": "Nomenclatura heredada",
-          "show_wiser_sidebar": "Mostrar Wiser en la barra lateral"
+          "show_wiser_sidebar": "Mostrar Wiser en la barra lateral",
+          "wiser_climate_more_info": "Use Wiser climate More Info"
         },
         "data_description": {
-          "legacy_naming": "Incluye los nombres de las habitaciones en los nombres de los dispositivos Wiser. Si se habilita, al usar Home Assistant para regenerar los ID de entidad con el formato predeterminado en Configuración → Sistema → Formato de ID de entidad (Home Assistant 2026.8 y posteriores), se duplicarán los nombres de área cuando coincidan con los nombres de las habitaciones Wiser. Cambiar esta opción no modifica los ID de entidad existentes."
+          "legacy_naming": "Incluye los nombres de las habitaciones en los nombres de los dispositivos Wiser. Si se habilita, al usar Home Assistant para regenerar los ID de entidad con el formato predeterminado en Configuración → Sistema → Formato de ID de entidad (Home Assistant 2026.8 y posteriores), se duplicarán los nombres de área cuando coincidan con los nombres de las habitaciones Wiser. Cambiar esta opción no modifica los ID de entidad existentes.",
+          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
         }
       },
       "main_params": {

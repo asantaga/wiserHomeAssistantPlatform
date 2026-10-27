@@ -535,6 +535,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
         attrs["percentage_demand"] = self._room.percentage_demand
+        if self._data.wiser_climate_more_info:
+            attrs["custom_ui_more_info"] = "wiser-climate-more-info"
 
         # OpenTherm
         opentherm = getattr(self._data.wiserhub.system, "opentherm", None)

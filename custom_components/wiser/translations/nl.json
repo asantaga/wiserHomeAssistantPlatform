@@ -51,10 +51,12 @@
         "title": "Opties voor de gebruikersinterface",
         "data": {
           "legacy_naming": "Oude naamgeving",
-          "show_wiser_sidebar": "Toon Wiser in zijbalk"
+          "show_wiser_sidebar": "Toon Wiser in zijbalk",
+          "wiser_climate_more_info": "Use Wiser climate More Info"
         },
         "data_description": {
-          "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd."
+          "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd.",
+          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
         }
       },
       "main_params": {
