@@ -107,6 +107,11 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("styleNativeControl(this, this.stateObj)", self.source)
         self.assertIn("clearNativeControlStyle(this)", self.source)
 
+    def test_extra_info_is_not_clipped_by_native_label_overflow(self) -> None:
+        self.assertIn(".info::after", self.source)
+        self.assertIn("max-width: 90%", self.source)
+        self.assertNotIn(".info > p:last-of-type::after", self.source)
+
     def test_preserves_native_climate_actions(self) -> None:
         self.assertIn('"set_hvac_mode"', self.source)
         self.assertIn('"set_preset_mode"', self.source)

@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.1.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.1.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -109,7 +109,7 @@ const styleNativeControl = async (control, stateObj) => {
   control.style.setProperty(`--state-climate-${state}-color`, modeColor);
   control.style.setProperty(
     "--wiser-extra-info-text",
-    `"\\A ${cssString(extraInfoForState(stateObj))}"`
+    `"${cssString(extraInfoForState(stateObj))}"`
   );
 
   let style = control.shadowRoot.querySelector("style[data-wiser-theme]");
@@ -123,11 +123,17 @@ const styleNativeControl = async (control, stateObj) => {
     .label, .info, .info > p {
       color: var(--thermostat-primary-text-color, var(--primary-text-color)) !important;
     }
-    .info > p:last-of-type::after {
+    .info::after {
       color: var(--extra-info-text-color, var(--action-color));
       content: var(--wiser-extra-info-text);
-      white-space: pre;
+      font-weight: var(--ha-font-weight-medium, 500);
+      line-height: var(--ha-line-height-normal, 1.5);
+      max-width: 90%;
+      overflow: visible;
+      text-align: center;
+      white-space: nowrap;
     }
+    .container.xs .info::after { display: none; }
     .container .label { color: var(--wiser-label-color) !important; }
     ${
       demand > 0
