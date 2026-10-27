@@ -235,10 +235,6 @@ class WiserClimateMoreInfo extends HTMLElement {
         justify-content: center;
         margin-bottom: var(--ha-space-6, 24px);
       }
-      ha-state-control-climate-temperature {
-        box-sizing: border-box;
-        width: min(100%, 450px);
-      }
       .selects {
         display: flex;
         flex-flow: row wrap;
@@ -256,7 +252,6 @@ class WiserClimateMoreInfo extends HTMLElement {
       .load-error { color: var(--error-color); text-align: center; }
     `;
 
-    const content = document.createElement("div");
     const current = document.createElement("div");
     current.className = "current";
     const currentColumn = document.createElement("div");
@@ -302,8 +297,7 @@ class WiserClimateMoreInfo extends HTMLElement {
     );
     selects.append(presetSelect);
 
-    content.append(current, controls, selects);
-    this.shadowRoot.replaceChildren(style, content);
+    this.shadowRoot.replaceChildren(style, current, controls, selects);
     this._current = current;
     this._currentLabel = currentLabel;
     this._currentValue = currentValue;
