@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.1 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.2 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -15,6 +15,7 @@ const NATIVE_THERMOSTAT_CARD = "hui-thermostat-card";
 const NATIVE_THERMOSTAT_EDITOR = "hui-thermostat-card-editor";
 const THERMOSTAT_FEATURE_ROW_ATTRIBUTE = "data-wiser-feature-row";
 const THERMOSTAT_FEATURE_STYLE_ATTRIBUTE = "data-wiser-feature-layout";
+const THERMOSTAT_FEATURE_SLOT_ATTRIBUTE = "data-wiser-feature-slot";
 const TARGET_TEMPERATURE = 1;
 const TARGET_TEMPERATURE_RANGE = 2;
 const PRESET_MODE = 16;
@@ -36,8 +37,6 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const styleGenerations = new WeakMap();
-const boostPresetGenerations = new WeakMap();
-const boostPresetValues = new WeakMap();
 
 const demandForState = (stateObj) => {
   const demand = Number(stateObj?.attributes?.percentage_demand);
@@ -682,51 +681,26 @@ const boostMinutesRemaining = (stateObj) => {
   return Number.isFinite(reported) ? Math.max(0, Math.ceil(reported)) : undefined;
 };
 
-const syncBoostPreset = async (host, stateObj, feature) => {
-  const generation = (boostPresetGenerations.get(host) || 0) + 1;
-  boostPresetGenerations.set(host, generation);
-  if (feature?.type !== "climate-preset-modes") return;
-  await host.updateComplete;
-  const featureHost = host.shadowRoot?.querySelector("hui-card-feature");
-  await featureHost?.updateComplete;
-  const climateFeature = featureHost?.shadowRoot?.querySelector(
-    "hui-climate-preset-modes-card-feature"
-  );
-  await climateFeature?.updateComplete;
-  const select = climateFeature?.shadowRoot?.querySelector(
-    "ha-control-select-menu"
-  );
-  if (!select || generation !== boostPresetGenerations.get(host)) return;
-  const previousValue = boostPresetValues.get(select);
-  const baseOptions = Array.isArray(select.options)
-    ? select.options.filter((option) => option.value !== previousValue)
-    : [];
+const syncBoostPreset = (slot, stateObj, feature) => {
+  let overlay = slot.querySelector("[data-wiser-boost-preset]");
   const minutes = boostMinutesRemaining(stateObj);
-  if (minutes === undefined) {
-    if (previousValue !== undefined) {
-      select.options = baseOptions;
-      select.value = stateObj.attributes.preset_mode;
-      boostPresetValues.delete(select);
-    }
+  if (feature?.type !== "climate-preset-modes" || minutes === undefined) {
+    overlay?.remove();
     return;
   }
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  if (generation !== boostPresetGenerations.get(host)) return;
   const remaining = minutes > 0 ? `${minutes}m` : "<1m";
   const presetValue = String(stateObj.attributes.preset_mode || "Boost");
   const presetName = presetValue.replace(/\s+<?\d+m$/i, "").trim() || "Boost";
-  const label =
-    host.clientWidth >= 180
-      ? `${presetName} · ${remaining}`
-      : host.clientWidth >= 105
-        ? remaining
-        : "";
-  select.options = [
-    ...baseOptions.filter((option) => option.value !== presetValue),
-    { value: presetValue, label },
-  ];
-  select.value = presetValue;
-  boostPresetValues.set(select, presetValue);
+  if (!overlay) {
+    overlay = document.createElement("span");
+    overlay.dataset.wiserBoostPreset = "";
+    overlay.innerHTML =
+      '<span data-wiser-boost-full></span><span data-wiser-boost-compact></span>';
+    slot.append(overlay);
+  }
+  overlay.querySelector("[data-wiser-boost-full]").textContent =
+    `${presetName} · ${remaining}`;
+  overlay.querySelector("[data-wiser-boost-compact]").textContent = remaining;
 };
 
 const applyThermostatInlineFeatures = (card) => {
@@ -765,10 +739,41 @@ const applyThermostatInlineFeatures = (card) => {
         max-width: 360px;
         margin-inline: auto;
       }
-      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features {
-        width: auto;
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > [${THERMOSTAT_FEATURE_SLOT_ATTRIBUTE}] {
+        position: relative;
+        container-type: inline-size;
         min-width: 60px;
+      }
+      [${THERMOSTAT_FEATURE_SLOT_ATTRIBUTE}] > hui-card-features {
+        width: 100%;
         padding: 0;
+      }
+      [data-wiser-boost-preset] {
+        position: absolute;
+        inset-block: 0;
+        inset-inline: 42px 38px;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--primary-text-color);
+        font-size: var(--ha-font-size-m, 14px);
+        line-height: 1;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        pointer-events: none;
+      }
+      [data-wiser-boost-compact] {
+        display: none;
+      }
+      @container (max-width: 179px) {
+        [data-wiser-boost-full] { display: none; }
+        [data-wiser-boost-compact] { display: inline; }
+      }
+      @container (max-width: 104px) {
+        [data-wiser-boost-preset] { display: none; }
       }
     `;
     root.append(style);
@@ -782,12 +787,20 @@ const applyThermostatInlineFeatures = (card) => {
   }
   row.toggleAttribute("data-editor-preview", isCardEditorPreview(card));
 
-  const hosts = [...row.querySelectorAll(":scope > hui-card-features")];
+  const slots = [
+    ...row.querySelectorAll(`:scope > [${THERMOSTAT_FEATURE_SLOT_ATTRIBUTE}]`),
+  ];
   features.forEach((feature, index) => {
-    const host = hosts[index] || document.createElement("hui-card-features");
-    if (!hosts[index]) row.append(host);
+    let slot = slots[index];
+    if (!slot) {
+      slot = document.createElement("div");
+      slot.setAttribute(THERMOSTAT_FEATURE_SLOT_ATTRIBUTE, "");
+      slot.append(document.createElement("hui-card-features"));
+      row.append(slot);
+    }
+    const host = slot.querySelector("hui-card-features");
     const layout = thermostatFeatureLayout(feature, stateObj);
-    host.style.flex = `${layout.units} 1 ${layout.minimum}px`;
+    slot.style.flex = `${layout.units} 1 ${layout.minimum}px`;
     host.hass = card.hass;
     host.context = bottom.context || card._featureContext;
     host.color = bottom.color;
@@ -800,9 +813,9 @@ const applyThermostatInlineFeatures = (card) => {
     } else {
       host.style.removeProperty("--feature-color");
     }
-    void syncBoostPreset(host, stateObj, feature);
+    syncBoostPreset(slot, stateObj, feature);
   });
-  hosts.slice(features.length).forEach((host) => host.remove());
+  slots.slice(features.length).forEach((slot) => slot.remove());
   bottom.style.display = "none";
 };
 

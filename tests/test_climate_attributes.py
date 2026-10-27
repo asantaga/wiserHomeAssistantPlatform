@@ -147,7 +147,7 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("configuredModes.filter", self.source)
         self.assertIn("minimum: Math.max(buttons * 50, 60)", self.source)
         self.assertIn(
-            'host.style.flex = `${layout.units} 1 ${layout.minimum}px`', self.source
+            'slot.style.flex = `${layout.units} 1 ${layout.minimum}px`', self.source
         )
         self.assertIn("isCardEditorPreview", self.source)
         self.assertIn("element?.preview === true", self.source)
@@ -163,12 +163,13 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("attributes.boost_end", self.source)
         self.assertIn("attributes.boost_time_remaining", self.source)
         self.assertIn('feature?.type !== "climate-preset-modes"', self.source)
-        self.assertIn('"hui-climate-preset-modes-card-feature"', self.source)
-        self.assertIn('"ha-control-select-menu"', self.source)
-        self.assertIn("host.clientWidth >= 180", self.source)
-        self.assertIn("host.clientWidth >= 105", self.source)
-        self.assertIn("{ value: presetValue, label }", self.source)
-        self.assertIn("void syncBoostPreset(host, stateObj, feature)", self.source)
+        self.assertIn("data-wiser-boost-preset", self.source)
+        self.assertIn("data-wiser-boost-full", self.source)
+        self.assertIn("data-wiser-boost-compact", self.source)
+        self.assertIn("@container (max-width: 179px)", self.source)
+        self.assertIn("@container (max-width: 104px)", self.source)
+        self.assertIn("syncBoostPreset(slot, stateObj, feature)", self.source)
+        self.assertNotIn("select.options =", self.source)
         self.assertNotIn("--wiser-boost-remaining", self.source)
 
     def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
