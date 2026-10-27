@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.2 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.3 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -36,7 +36,6 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const styleGenerations = new WeakMap();
-const thermostatFeatureObservers = new WeakMap();
 
 const demandForState = (stateObj) => {
   const demand = Number(stateObj?.attributes?.percentage_demand);
@@ -604,9 +603,6 @@ const thermostatState = (element) =>
 const clearThermostatInlineFeatures = (card) => {
   const root = card.shadowRoot;
   if (!root) return;
-  const observer = thermostatFeatureObservers.get(card);
-  observer?.disconnect();
-  thermostatFeatureObservers.delete(card);
   root
     .querySelector(`[${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}]`)
     ?.remove();
@@ -616,7 +612,7 @@ const clearThermostatInlineFeatures = (card) => {
   const bottom = root.querySelector("ha-card > hui-card-features");
   if (bottom) {
     bottom.style.removeProperty("display");
-    bottom.columns = undefined;
+    bottom.columns = 1;
     bottom.features = card._config?.features || [];
   }
 };
@@ -646,21 +642,8 @@ const thermostatFeatureLayout = (feature, stateObj) => {
   return { units: buttons, minimum: Math.max(buttons * 50, 60) };
 };
 
-const isCardEditorPreview = (element) => {
-  if (element?.preview === true || element?.editMode === true) return true;
-  let current = element;
-  while (current) {
-    if (
-      current.localName === "hui-card-preview" ||
-      (current.localName === "hui-card" && current.hasAttribute("preview"))
-    ) {
-      return true;
-    }
-    const root = current.getRootNode?.();
-    current = current.parentElement || root?.host;
-  }
-  return false;
-};
+const isCardEditorPreview = (element) =>
+  element?.preview === true || element?.editMode === true;
 
 const thermostatFeatureRows = (card, features, stateObj) => {
   const renderedWidth =
@@ -745,7 +728,6 @@ const applyThermostatInlineFeatures = (card) => {
     const host = hosts[index] || document.createElement("hui-card-features");
     if (!hosts[index]) row.append(host);
     const layout = thermostatFeatureLayout(feature, stateObj);
-    host.dataset.units = String(layout.units);
     host.style.flex = `${layout.units} 1 ${layout.minimum}px`;
     host.hass = card.hass;
     host.context = bottom.context || card._featureContext;
@@ -754,20 +736,14 @@ const applyThermostatInlineFeatures = (card) => {
     host.columns = 1;
     host.features = [feature];
     const featureColor = bottom.style.getPropertyValue("--feature-color");
-    if (featureColor) host.style.setProperty("--feature-color", featureColor);
+    if (featureColor) {
+      host.style.setProperty("--feature-color", featureColor);
+    } else {
+      host.style.removeProperty("--feature-color");
+    }
   });
   hosts.slice(features.length).forEach((host) => host.remove());
   bottom.style.display = "none";
-
-  if (!thermostatFeatureObservers.has(card) && window.ResizeObserver) {
-    const observer = new window.ResizeObserver(() => {
-      if (card._config?.features_position === "inline") {
-        applyThermostatInlineFeatures(card);
-      }
-    });
-    observer.observe(card);
-    thermostatFeatureObservers.set(card, observer);
-  }
 };
 
 const patchNativeThermostatCard = async () => {

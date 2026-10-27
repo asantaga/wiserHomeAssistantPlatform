@@ -146,18 +146,17 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn('feature.style === "dropdown"', self.source)
         self.assertIn("configuredModes.filter", self.source)
         self.assertIn("minimum: Math.max(buttons * 50, 60)", self.source)
-        self.assertIn('host.dataset.units = String(layout.units)', self.source)
         self.assertIn(
             'host.style.flex = `${layout.units} 1 ${layout.minimum}px`', self.source
         )
         self.assertIn("isCardEditorPreview", self.source)
         self.assertIn("element?.preview === true", self.source)
         self.assertIn("element?.editMode === true", self.source)
-        self.assertIn('current.localName === "hui-card-preview"', self.source)
         self.assertIn('max-width: 360px', self.source)
         self.assertIn('row.toggleAttribute("data-editor-preview"', self.source)
         self.assertIn('bottom.style.display = "none"', self.source)
-        self.assertIn("new window.ResizeObserver", self.source)
+        self.assertIn("bottom.columns = 1", self.source)
+        self.assertNotIn("thermostatFeatureObservers", self.source)
 
     def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
         self.assertIn('"hui-thermostat-card-editor"', self.source)
