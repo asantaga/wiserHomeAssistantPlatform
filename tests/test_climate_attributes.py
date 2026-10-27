@@ -169,8 +169,19 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("@container (max-width: 179px)", self.source)
         self.assertIn("@container (max-width: 104px)", self.source)
         self.assertIn("syncBoostPreset(slot, stateObj, feature)", self.source)
+        self.assertIn("scheduleBoostPresetRefresh(card, stateObj)", self.source)
+        self.assertIn("__wiserBoostRefreshTimer", self.source)
         self.assertNotIn("select.options =", self.source)
         self.assertNotIn("--wiser-boost-remaining", self.source)
+
+    def test_thermostat_patch_can_refresh_in_an_existing_browser_session(self) -> None:
+        self.assertIn("__wiserInlineFeaturesDynamicPatched", self.source)
+        self.assertIn("__wiserApplyInlineFeatures", self.source)
+        self.assertIn("this.__wiserApplyInlineFeatures?.()", self.source)
+        self.assertNotIn(
+            "if (!cardClass || cardClass.prototype.__wiserInlineFeaturesPatched) return;",
+            self.source,
+        )
 
     def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
         self.assertIn('"hui-thermostat-card-editor"', self.source)

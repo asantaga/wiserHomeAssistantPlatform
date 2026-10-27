@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.2 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.3 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -602,6 +602,10 @@ const thermostatState = (element) =>
     : undefined;
 
 const clearThermostatInlineFeatures = (card) => {
+  if (card.__wiserBoostRefreshTimer) {
+    clearTimeout(card.__wiserBoostRefreshTimer);
+    card.__wiserBoostRefreshTimer = undefined;
+  }
   const root = card.shadowRoot;
   if (!root) return;
   root
@@ -701,6 +705,23 @@ const syncBoostPreset = (slot, stateObj, feature) => {
   overlay.querySelector("[data-wiser-boost-full]").textContent =
     `${presetName} · ${remaining}`;
   overlay.querySelector("[data-wiser-boost-compact]").textContent = remaining;
+};
+
+const scheduleBoostPresetRefresh = (card, stateObj) => {
+  if (card.__wiserBoostRefreshTimer) {
+    clearTimeout(card.__wiserBoostRefreshTimer);
+    card.__wiserBoostRefreshTimer = undefined;
+  }
+  if (!stateObj?.attributes?.is_boosted) return;
+
+  const end = new Date(stateObj.attributes.boost_end).getTime();
+  const untilNextMinute = Number.isFinite(end)
+    ? ((end - Date.now()) % 60000 + 60000) % 60000
+    : 60000;
+  card.__wiserBoostRefreshTimer = setTimeout(() => {
+    card.__wiserBoostRefreshTimer = undefined;
+    if (card.isConnected) applyThermostatInlineFeatures(card);
+  }, Math.max(untilNextMinute + 50, 1000));
 };
 
 const applyThermostatInlineFeatures = (card) => {
@@ -817,43 +838,53 @@ const applyThermostatInlineFeatures = (card) => {
   });
   slots.slice(features.length).forEach((slot) => slot.remove());
   bottom.style.display = "none";
+  scheduleBoostPresetRefresh(card, stateObj);
 };
 
 const patchNativeThermostatCard = async () => {
   await customElements.whenDefined(NATIVE_THERMOSTAT_CARD);
   const cardClass = customElements.get(NATIVE_THERMOSTAT_CARD);
-  if (!cardClass || cardClass.prototype.__wiserInlineFeaturesPatched) return;
+  if (!cardClass) return;
 
-  const originalUpdated = cardClass.prototype.updated;
-  cardClass.prototype.updated = function (...args) {
-    const result = originalUpdated?.apply(this, args);
-    Promise.resolve(this.updateComplete).then(() =>
-      applyThermostatInlineFeatures(this)
-    );
-    return result;
-  };
-
-  const originalGridOptions = cardClass.prototype.getGridOptions;
-  cardClass.prototype.getGridOptions = function (...args) {
-    const options = originalGridOptions.apply(this, args);
-    const features = this._config?.features || [];
-    if (
-      wiserControlsEnabled(thermostatState(this)) &&
-      this._config?.features_position === "inline" &&
-      features.length
-    ) {
-      const nativeRows = Math.ceil((features.length * 2) / 3);
-      const inlineRows = thermostatFeatureRows(
-        this,
-        features,
-        thermostatState(this)
+  const prototype = cardClass.prototype;
+  if (!prototype.__wiserInlineFeaturesDynamicPatched) {
+    const previousUpdated = prototype.updated;
+    prototype.updated = function (...args) {
+      const result = previousUpdated?.apply(this, args);
+      Promise.resolve(this.updateComplete).then(() =>
+        this.__wiserApplyInlineFeatures?.()
       );
-      options.rows += inlineRows - nativeRows;
-      options.min_rows += inlineRows - nativeRows;
-    }
-    return options;
+      return result;
+    };
+    prototype.__wiserInlineFeaturesDynamicPatched = true;
+  }
+  prototype.__wiserApplyInlineFeatures = function () {
+    applyThermostatInlineFeatures(this);
   };
-  cardClass.prototype.__wiserInlineFeaturesPatched = true;
+
+  if (!prototype.__wiserInlineFeaturesPatched) {
+    const originalGridOptions = prototype.getGridOptions;
+    prototype.getGridOptions = function (...args) {
+      const options = originalGridOptions.apply(this, args);
+      const features = this._config?.features || [];
+      if (
+        wiserControlsEnabled(thermostatState(this)) &&
+        this._config?.features_position === "inline" &&
+        features.length
+      ) {
+        const nativeRows = Math.ceil((features.length * 2) / 3);
+        const inlineRows = thermostatFeatureRows(
+          this,
+          features,
+          thermostatState(this)
+        );
+        options.rows += inlineRows - nativeRows;
+        options.min_rows += inlineRows - nativeRows;
+      }
+      return options;
+    };
+    prototype.__wiserInlineFeaturesPatched = true;
+  }
 
   const visit = (root) => {
     for (const element of root.querySelectorAll?.("*") || []) {
