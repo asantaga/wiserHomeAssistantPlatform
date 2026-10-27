@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.0.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.1.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -6,8 +6,8 @@
 // https://github.com/home-assistant/frontend/blob/dev/src/state-control/climate/ha-state-control-climate-temperature.ts
 // Reviewed 2026-10-27. Home Assistant frontend is licensed under Apache-2.0.
 // We reuse HA's registered temperature control instead of replacing its
-// temperature/service behaviour; this element only supplies Wiser presentation
-// and the two controls supported by Wiser rooms.
+// temperature/service behaviour. The Wiser presentation is applied to that
+// same native control in both More Info and native Thermostat cards.
 
 const MORE_INFO_TYPE = "wiser-climate-more-info";
 const NATIVE_TEMPERATURE_CONTROL = "ha-state-control-climate-temperature";
@@ -31,11 +31,155 @@ const titleCase = (value) =>
 const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
+const styleGenerations = new WeakMap();
+
+const demandForState = (stateObj) => {
+  const demand = Number(stateObj?.attributes?.percentage_demand);
+  return Number.isFinite(demand) ? demand : 0;
+};
+
+const extraInfoForState = (stateObj) => {
+  const state = stateObj?.state;
+  const mode = stateObj?.attributes?.is_passive
+    ? "Passive"
+    : state === "heat"
+      ? "Manual"
+      : titleCase(state);
+  return state === "off" ? mode : `${mode} · ${demandForState(stateObj)}%`;
+};
+
+const wiserControlsEnabled = (stateObj) =>
+  stateObj?.attributes?.custom_ui_more_info === MORE_INFO_TYPE;
+
+const clearNativeControlStyle = (control) => {
+  styleGenerations.set(control, (styleGenerations.get(control) || 0) + 1);
+  for (const property of [
+    "--wiser-slider-color",
+    "--wiser-slider-opacity",
+    "--wiser-label-color",
+    "--wiser-extra-info-text",
+    "--state-climate-auto-color",
+    "--state-climate-heat-color",
+    "--state-climate-off-color",
+  ]) {
+    control.style.removeProperty(property);
+  }
+  control.shadowRoot?.querySelector("style[data-wiser-theme]")?.remove();
+  control.shadowRoot
+    ?.querySelector("ha-control-circular-slider")
+    ?.shadowRoot?.querySelector("style[data-wiser-theme]")
+    ?.remove();
+};
+
+const styleNativeControl = async (control, stateObj) => {
+  if (!control || !wiserControlsEnabled(stateObj)) {
+    if (control) clearNativeControlStyle(control);
+    return;
+  }
+
+  const generation = (styleGenerations.get(control) || 0) + 1;
+  styleGenerations.set(control, generation);
+  await control.updateComplete;
+  if (generation !== styleGenerations.get(control) || !control.shadowRoot) return;
+
+  const demand = demandForState(stateObj);
+  const passive = Boolean(stateObj.attributes.is_passive);
+  const state = stateObj.state;
+  const passiveMode = passive && (state === "auto" || state === "heat");
+  const sliderColor = passiveMode
+    ? state === "auto"
+      ? "var(--passive-auto-color, var(--light-green-color))"
+      : "var(--passive-heat-color, var(--amber-color))"
+    : "var(--slider-color, var(--disabled-color))";
+  const modeColor = passiveMode
+    ? sliderColor
+    : state === "auto"
+      ? "var(--climate-auto-color, var(--green-color))"
+      : "var(--climate-heat-color, var(--deep-orange-color))";
+  const sliderOpacity = passiveMode
+    ? "var(--slider-passive-range-opacity, 1)"
+    : "var(--slider-opacity, var(--slider-theme-opacity, .3))";
+  const labelColor = demand > 0
+    ? "var(--label-text-highlight-color, var(--deep-orange-color, inherit))"
+    : "var(--thermostat-primary-text-color, var(--primary-text-color))";
+
+  control.style.setProperty("--wiser-slider-color", sliderColor);
+  control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
+  control.style.setProperty("--wiser-label-color", labelColor);
+  control.style.setProperty(`--state-climate-${state}-color`, modeColor);
+  control.style.setProperty(
+    "--wiser-extra-info-text",
+    `"\\A ${cssString(extraInfoForState(stateObj))}"`
+  );
+
+  let style = control.shadowRoot.querySelector("style[data-wiser-theme]");
+  if (!style) {
+    style = document.createElement("style");
+    style.dataset.wiserTheme = "";
+    control.shadowRoot.append(style);
+  }
+  style.textContent = `
+    .buttons { visibility: var(--button-visibility, visible) !important; }
+    .label, .info, .info > p {
+      color: var(--thermostat-primary-text-color, var(--primary-text-color)) !important;
+    }
+    .info > p:last-of-type::after {
+      color: var(--extra-info-text-color, var(--action-color));
+      content: var(--wiser-extra-info-text);
+      white-space: pre;
+    }
+    .container .label { color: var(--wiser-label-color) !important; }
+    ${
+      demand > 0
+        ? ".container { --action-color: var(--radial-glow-color, var(--deep-orange-color)) !important; }"
+        : ""
+    }
+    ha-control-circular-slider {
+      --control-circular-slider-high-color: var(--custom-theme-control-circular-slider-high-color, var(--disabled-color)) !important;
+      --control-circular-slider-low-color: var(--wiser-slider-color) !important;
+      --control-circular-slider-background: var(--wiser-slider-color) !important;
+      --control-circular-slider-background-opacity: var(--wiser-slider-opacity) !important;
+    }
+  `;
+
+  const slider = control.shadowRoot.querySelector("ha-control-circular-slider");
+  if (!slider) return;
+  await slider.updateComplete;
+  if (generation !== styleGenerations.get(control) || !slider.shadowRoot) return;
+
+  let sliderStyle = slider.shadowRoot.querySelector("style[data-wiser-theme]");
+  if (!sliderStyle) {
+    sliderStyle = document.createElement("style");
+    sliderStyle.dataset.wiserTheme = "";
+    slider.shadowRoot.append(sliderStyle);
+  }
+  sliderStyle.textContent = `
+    .arc.arc-clear {
+      stroke-width: var(--custom-theme-slider-high-stroke-width, 25px);
+    }
+    path.arc.arc-colored.high {
+      opacity: var(--custom-theme-control-circular-slider-high-color-opacity, var(--slider-theme-opacity, .3)) !important;
+      stroke-width: 25px;
+    }
+    .current {
+      stroke: color-mix(in srgb, var(--wiser-slider-color), #000 50%) !important;
+    }
+    .arc-current {
+      opacity: .5 !important;
+      stroke: var(--primary-text-color) !important;
+    }
+    .arc.arc-active.high { opacity: 0 !important; }
+    .target-border.high, .target-border.low {
+      opacity: 1 !important;
+      stroke: var(--wiser-slider-color) !important;
+    }
+  `;
+};
+
 class WiserClimateMoreInfo extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._styleGeneration = 0;
   }
 
   set hass(hass) {
@@ -117,21 +261,6 @@ class WiserClimateMoreInfo extends HTMLElement {
       );
     }
     return titleCase(value);
-  }
-
-  _demand() {
-    const demand = Number(this._stateObj?.attributes?.percentage_demand);
-    return Number.isFinite(demand) ? demand : 0;
-  }
-
-  _extraInfo() {
-    const state = this._stateObj?.state;
-    const mode = this._stateObj?.attributes?.is_passive
-      ? "Passive"
-      : state === "heat"
-        ? "Manual"
-        : this._formatState(state);
-    return state === "off" ? mode : `${mode} · ${this._demand()}%`;
   }
 
   _createModeIcon(mode) {
@@ -377,110 +506,7 @@ class WiserClimateMoreInfo extends HTMLElement {
   }
 
   async _styleNativeControl() {
-    const generation = ++this._styleGeneration;
-    const control = this._temperatureControl;
-    await control.updateComplete;
-    if (generation !== this._styleGeneration || !control.shadowRoot) return;
-
-    const demand = this._demand();
-    const passive = Boolean(this._stateObj.attributes.is_passive);
-    const state = this._stateObj.state;
-    const passiveMode = passive && (state === "auto" || state === "heat");
-    const sliderColor = passiveMode
-      ? state === "auto"
-        ? "var(--passive-auto-color, var(--light-green-color))"
-        : "var(--passive-heat-color, var(--amber-color))"
-      : "var(--slider-color, var(--disabled-color))";
-    const modeColor = passiveMode
-      ? sliderColor
-      : state === "auto"
-        ? "var(--climate-auto-color, var(--green-color))"
-        : "var(--climate-heat-color, var(--deep-orange-color))";
-    const sliderOpacity = passiveMode
-      ? "var(--slider-passive-range-opacity, 1)"
-      : "var(--slider-opacity, var(--slider-theme-opacity, .3))";
-    const labelColor = demand > 0
-      ? "var(--label-text-highlight-color, var(--deep-orange-color, inherit))"
-      : "var(--thermostat-primary-text-color, var(--primary-text-color))";
-
-    control.style.setProperty("--wiser-slider-color", sliderColor);
-    control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
-    control.style.setProperty("--wiser-label-color", labelColor);
-    control.style.setProperty(
-      `--state-climate-${state}-color`,
-      modeColor
-    );
-    control.style.setProperty(
-      "--wiser-extra-info-text",
-      `"\\A ${cssString(this._extraInfo())}"`
-    );
-
-    let style = control.shadowRoot.querySelector("style[data-wiser-theme]");
-    if (!style) {
-      style = document.createElement("style");
-      style.dataset.wiserTheme = "";
-      control.shadowRoot.append(style);
-    }
-    style.textContent = `
-      .buttons { visibility: var(--button-visibility, visible) !important; }
-      .label, .info, .info > p {
-        color: var(--thermostat-primary-text-color, var(--primary-text-color)) !important;
-      }
-      .info > p:last-of-type::after {
-        color: var(--extra-info-text-color, var(--action-color));
-        content: var(--wiser-extra-info-text);
-        white-space: pre;
-      }
-      .container .label { color: var(--wiser-label-color) !important; }
-      ${
-        demand > 0
-          ? ".container { --action-color: var(--radial-glow-color, var(--deep-orange-color)) !important; }"
-          : ""
-      }
-      ha-control-circular-slider {
-        --control-circular-slider-high-color: var(--custom-theme-control-circular-slider-high-color, var(--disabled-color)) !important;
-        --control-circular-slider-low-color: var(--wiser-slider-color) !important;
-        --control-circular-slider-background: var(--wiser-slider-color) !important;
-        --control-circular-slider-background-opacity: var(--wiser-slider-opacity) !important;
-      }
-    `;
-
-    const slider = control.shadowRoot.querySelector(
-      "ha-control-circular-slider"
-    );
-    if (!slider) return;
-    await slider.updateComplete;
-    if (generation !== this._styleGeneration || !slider.shadowRoot) return;
-
-    let sliderStyle = slider.shadowRoot.querySelector(
-      "style[data-wiser-theme]"
-    );
-    if (!sliderStyle) {
-      sliderStyle = document.createElement("style");
-      sliderStyle.dataset.wiserTheme = "";
-      slider.shadowRoot.append(sliderStyle);
-    }
-    sliderStyle.textContent = `
-      .arc.arc-clear {
-        stroke-width: var(--custom-theme-slider-high-stroke-width, 25px);
-      }
-      path.arc.arc-colored.high {
-        opacity: var(--custom-theme-control-circular-slider-high-color-opacity, var(--slider-theme-opacity, .3)) !important;
-        stroke-width: 25px;
-      }
-      .current {
-        stroke: color-mix(in srgb, var(--wiser-slider-color), #000 50%) !important;
-      }
-      .arc-current {
-        opacity: .5 !important;
-        stroke: var(--primary-text-color) !important;
-      }
-      .arc.arc-active.high { opacity: 0 !important; }
-      .target-border.high, .target-border.low {
-        opacity: 1 !important;
-        stroke: var(--wiser-slider-color) !important;
-      }
-    `;
+    await styleNativeControl(this._temperatureControl, this._stateObj);
   }
 
   _render() {
@@ -522,3 +548,35 @@ class WiserClimateMoreInfo extends HTMLElement {
 if (!customElements.get(MORE_INFO_TYPE)) {
   customElements.define(MORE_INFO_TYPE, WiserClimateMoreInfo);
 }
+
+const patchNativeTemperatureControl = async () => {
+  await customElements.whenDefined(NATIVE_TEMPERATURE_CONTROL);
+  const controlClass = customElements.get(NATIVE_TEMPERATURE_CONTROL);
+  if (!controlClass || controlClass.prototype.__wiserControlsPatched) return;
+
+  const originalUpdated = controlClass.prototype.updated;
+  controlClass.prototype.updated = function (...args) {
+    const result = originalUpdated?.apply(this, args);
+    if (wiserControlsEnabled(this.stateObj)) {
+      void styleNativeControl(this, this.stateObj);
+    } else {
+      clearNativeControlStyle(this);
+    }
+    return result;
+  };
+  controlClass.prototype.__wiserControlsPatched = true;
+
+  const visit = (root) => {
+    for (const element of root.querySelectorAll?.("*") || []) {
+      if (element.localName === NATIVE_TEMPERATURE_CONTROL) {
+        if (wiserControlsEnabled(element.stateObj)) {
+          void styleNativeControl(element, element.stateObj);
+        }
+      }
+      if (element.shadowRoot) visit(element.shadowRoot);
+    }
+  };
+  visit(document);
+};
+
+void patchNativeTemperatureControl();

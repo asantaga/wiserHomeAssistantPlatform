@@ -52,11 +52,11 @@
         "data": {
           "legacy_naming": "Korábbi elnevezési mód",
           "show_wiser_sidebar": "Wiser megjelenítése az oldalsávon",
-          "wiser_climate_more_info": "Use Wiser climate More Info"
+          "wiser_climate_more_info": "Use Wiser climate controls"
         },
         "data_description": {
           "legacy_naming": "A helyiségek neveinek hozzáadása a Wiser-eszközök nevéhez. Ha engedélyezve van, az entitásazonosítók Home Assistant általi újragenerálása az alapértelmezett formátummal a Beállítások → Rendszer → Entitásazonosító-formátum menüben (Home Assistant 2026.8-tól) megkettőzi a területneveket, ha a terület és a Wiser-helyiség neve megegyezik. A beállítás módosítása nem nevezi át a meglévő entitásazonosítókat.",
-          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
+          "wiser_climate_more_info": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
         }
       },
       "main_params": {

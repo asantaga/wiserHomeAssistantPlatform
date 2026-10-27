@@ -73,8 +73,8 @@ class RoomClimateAttributesTest(unittest.TestCase):
         self.assertIn("wiser_climate_more_info", ast.unparse(parent_guard.test))
 
 
-class ClimateMoreInfoFrontendTest(unittest.TestCase):
-    """Keep the optional control tied to native HA behaviour and Wiser data."""
+class ClimateControlsFrontendTest(unittest.TestCase):
+    """Keep the optional controls tied to native HA behaviour and Wiser data."""
 
     def setUp(self) -> None:
         self.source = (
@@ -99,6 +99,13 @@ class ClimateMoreInfoFrontendTest(unittest.TestCase):
             "--wiser-extra-info-text",
         ):
             self.assertIn(value, self.source)
+
+    def test_applies_same_styling_to_native_thermostat_cards(self) -> None:
+        self.assertIn("patchNativeTemperatureControl", self.source)
+        self.assertIn("controlClass.prototype.updated", self.source)
+        self.assertIn("wiserControlsEnabled(this.stateObj)", self.source)
+        self.assertIn("styleNativeControl(this, this.stateObj)", self.source)
+        self.assertIn("clearNativeControlStyle(this)", self.source)
 
     def test_preserves_native_climate_actions(self) -> None:
         self.assertIn('"set_hvac_mode"', self.source)

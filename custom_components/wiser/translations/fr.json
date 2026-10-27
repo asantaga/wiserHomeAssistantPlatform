@@ -52,11 +52,11 @@
         "data": {
           "legacy_naming": "Nommage historique",
           "show_wiser_sidebar": "Afficher Wiser dans la barre latérale",
-          "wiser_climate_more_info": "Use Wiser climate More Info"
+          "wiser_climate_more_info": "Use Wiser climate controls"
         },
         "data_description": {
           "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants.",
-          "wiser_climate_more_info": "Replace the native climate control inside More Info for Wiser rooms with a native-based Wiser control that shows demand and passive-mode styling. The surrounding Home Assistant dialog, history and settings are unchanged."
+          "wiser_climate_more_info": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
         }
       },
       "main_params": {
