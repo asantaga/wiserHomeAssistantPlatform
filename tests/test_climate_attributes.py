@@ -151,6 +151,8 @@ class ClimateControlsFrontendTest(unittest.TestCase):
             'host.style.flex = `${layout.units} 1 ${layout.minimum}px`', self.source
         )
         self.assertIn("isCardEditorPreview", self.source)
+        self.assertIn("element?.preview === true", self.source)
+        self.assertIn("element?.editMode === true", self.source)
         self.assertIn('current.localName === "hui-card-preview"', self.source)
         self.assertIn('max-width: 360px', self.source)
         self.assertIn('row.toggleAttribute("data-editor-preview"', self.source)

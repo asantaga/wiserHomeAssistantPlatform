@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.1 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.2 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -647,6 +647,7 @@ const thermostatFeatureLayout = (feature, stateObj) => {
 };
 
 const isCardEditorPreview = (element) => {
+  if (element?.preview === true || element?.editMode === true) return true;
   let current = element;
   while (current) {
     if (
