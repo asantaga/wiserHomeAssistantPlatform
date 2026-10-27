@@ -137,6 +137,21 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("attributes?.demand_type != null", self.source)
         self.assertIn('extraInfo ? `"${cssString(extraInfo)}"` : "none"', self.source)
 
+    def test_thermostat_card_supports_tile_style_inline_features(self) -> None:
+        self.assertIn('"hui-thermostat-card"', self.source)
+        self.assertIn("applyThermostatInlineFeatures", self.source)
+        self.assertIn('config.features_position !== "inline"', self.source)
+        self.assertIn("features.slice(0, 1)", self.source)
+        self.assertIn("features.slice(1)", self.source)
+        self.assertIn("Math.min(remaining.length, 2)", self.source)
+
+    def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
+        self.assertIn('"hui-thermostat-card-editor"', self.source)
+        self.assertIn("thermostatFeaturePositionSchema", self.source)
+        self.assertIn('options: ["bottom", "inline"]', self.source)
+        self.assertIn("tile_features_position_${value}.svg", self.source)
+        self.assertIn("injectThermostatFeaturePositionEditor", self.source)
+
     def test_preserves_native_climate_actions(self) -> None:
         self.assertIn('"set_hvac_mode"', self.source)
         self.assertIn('"set_preset_mode"', self.source)

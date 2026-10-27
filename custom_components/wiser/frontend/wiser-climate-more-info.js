@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.2.3 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.3.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -11,6 +11,9 @@
 
 const MORE_INFO_TYPE = "wiser-climate-more-info";
 const NATIVE_TEMPERATURE_CONTROL = "ha-state-control-climate-temperature";
+const NATIVE_THERMOSTAT_CARD = "hui-thermostat-card";
+const NATIVE_THERMOSTAT_EDITOR = "hui-thermostat-card-editor";
+const INLINE_FEATURE_ATTRIBUTE = "data-wiser-thermostat-inline";
 const TARGET_TEMPERATURE = 1;
 const TARGET_TEMPERATURE_RANGE = 2;
 const PRESET_MODE = 16;
@@ -590,3 +593,265 @@ const patchNativeTemperatureControl = async () => {
 };
 
 void patchNativeTemperatureControl();
+
+const thermostatState = (element) =>
+  element?._config?.entity
+    ? element.hass?.states?.[element._config.entity]
+    : undefined;
+
+const clearThermostatInlineFeatures = (card) => {
+  const root = card.shadowRoot;
+  if (!root) return;
+  root.querySelector(`[${INLINE_FEATURE_ATTRIBUTE}]`)?.remove();
+  root.querySelector("style[data-wiser-thermostat-inline]")?.remove();
+  const bottom = root.querySelector(`hui-card-features:not([${INLINE_FEATURE_ATTRIBUTE}])`);
+  if (bottom) {
+    bottom.style.removeProperty("display");
+    bottom.columns = undefined;
+    bottom.features = card._config?.features || [];
+  }
+};
+
+const applyThermostatInlineFeatures = (card) => {
+  const config = card._config;
+  const features = Array.isArray(config?.features) ? config.features : [];
+  const stateObj = thermostatState(card);
+  const root = card.shadowRoot;
+  const bottom = root?.querySelector(
+    `hui-card-features:not([${INLINE_FEATURE_ATTRIBUTE}])`
+  );
+  if (
+    !root ||
+    !bottom ||
+    !wiserControlsEnabled(stateObj) ||
+    config.features_position !== "inline" ||
+    features.length === 0
+  ) {
+    clearThermostatInlineFeatures(card);
+    return;
+  }
+
+  let style = root.querySelector("style[data-wiser-thermostat-inline]");
+  if (!style) {
+    style = document.createElement("style");
+    style.dataset.wiserThermostatInline = "";
+    root.append(style);
+  }
+  style.textContent = `
+    .title {
+      align-self: flex-start;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      min-height: 58px;
+      padding-inline: 30px 8px;
+      text-align: start;
+      width: 50%;
+    }
+    hui-card-features[${INLINE_FEATURE_ATTRIBUTE}] {
+      inset-inline-end: 48px;
+      inset-inline-start: 50%;
+      padding: 0;
+      position: absolute;
+      top: 8px;
+      width: auto;
+      z-index: 1;
+    }
+  `;
+
+  let inline = root.querySelector(`[${INLINE_FEATURE_ATTRIBUTE}]`);
+  if (!inline) {
+    inline = document.createElement("hui-card-features");
+    inline.setAttribute(INLINE_FEATURE_ATTRIBUTE, "");
+    root.querySelector("ha-card")?.append(inline);
+  }
+  inline.hass = card.hass;
+  inline.context = card._featureContext || { entity_id: config.entity };
+  inline.columns = 1;
+  inline.features = features.slice(0, 1);
+  const featureColor = bottom.style.getPropertyValue("--feature-color");
+  if (featureColor) inline.style.setProperty("--feature-color", featureColor);
+
+  const remaining = features.slice(1);
+  bottom.features = remaining;
+  bottom.columns = Math.min(remaining.length, 2);
+  bottom.style.display = remaining.length ? "" : "none";
+};
+
+const patchNativeThermostatCard = async () => {
+  await customElements.whenDefined(NATIVE_THERMOSTAT_CARD);
+  const cardClass = customElements.get(NATIVE_THERMOSTAT_CARD);
+  if (!cardClass || cardClass.prototype.__wiserInlineFeaturesPatched) return;
+
+  const originalUpdated = cardClass.prototype.updated;
+  cardClass.prototype.updated = function (...args) {
+    const result = originalUpdated?.apply(this, args);
+    Promise.resolve(this.updateComplete).then(() =>
+      applyThermostatInlineFeatures(this)
+    );
+    return result;
+  };
+
+  const originalGridOptions = cardClass.prototype.getGridOptions;
+  cardClass.prototype.getGridOptions = function (...args) {
+    const options = originalGridOptions.apply(this, args);
+    const features = this._config?.features || [];
+    if (
+      wiserControlsEnabled(thermostatState(this)) &&
+      this._config?.features_position === "inline" &&
+      features.length
+    ) {
+      const nativeRows = Math.ceil((features.length * 2) / 3);
+      const inlineRows = Math.ceil(Math.max(features.length - 1, 0) / 2);
+      options.rows += inlineRows - nativeRows;
+      options.min_rows += inlineRows - nativeRows;
+      options.min_columns = 12;
+    }
+    return options;
+  };
+  cardClass.prototype.__wiserInlineFeaturesPatched = true;
+
+  const visit = (root) => {
+    for (const element of root.querySelectorAll?.("*") || []) {
+      if (element.localName === NATIVE_THERMOSTAT_CARD) {
+        applyThermostatInlineFeatures(element);
+      }
+      if (element.shadowRoot) visit(element.shadowRoot);
+    }
+  };
+  visit(document);
+};
+
+const thermostatFeaturePositionSchema = (hass) => ({
+  name: "features_position",
+  required: true,
+  label:
+    hass.localize("ui.panel.lovelace.editor.card.tile.features_position") ||
+    "Features position",
+  selector: {
+    select: {
+      mode: "box",
+      options: ["bottom", "inline"].map((value) => ({
+        label:
+          hass.localize(
+            `ui.panel.lovelace.editor.card.tile.features_position_options.${value}`
+          ) || titleCase(value),
+        description: hass.localize(
+          `ui.panel.lovelace.editor.card.tile.features_position_options.${value}_description`
+        ),
+        value,
+        image: {
+          src: `/static/images/form/tile_features_position_${value}.svg`,
+          src_dark: `/static/images/form/tile_features_position_${value}_dark.svg`,
+          flip_rtl: true,
+        },
+      })),
+    },
+  },
+});
+
+const injectThermostatFeaturePositionEditor = (editor) => {
+  const root = editor.shadowRoot;
+  const content = root?.querySelector("ha-expansion-panel .content");
+  const stateObj = thermostatState(editor);
+  const hasFeatures = Boolean(editor._config?.features?.length);
+  let form = root?.querySelector("ha-form[data-wiser-features-position]");
+  if (!content || !hasFeatures || !wiserControlsEnabled(stateObj)) {
+    form?.remove();
+    return;
+  }
+
+  if (!form) {
+    form = document.createElement("ha-form");
+    form.dataset.wiserFeaturesPosition = "";
+    form.computeLabel = (schema) => schema.label;
+    form.addEventListener("value-changed", (event) => {
+      event.stopPropagation();
+      const featuresPosition = event.detail.value.features_position || "bottom";
+      const config = {
+        ...editor._config,
+        features_position: featuresPosition,
+      };
+      editor._config = config;
+      editor.dispatchEvent(
+        new CustomEvent("config-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { config },
+        })
+      );
+    });
+    content.append(form);
+
+    let style = root.querySelector("style[data-wiser-features-position]");
+    if (!style) {
+      style = document.createElement("style");
+      style.dataset.wiserFeaturesPosition = "";
+      style.textContent = `
+        ha-form[data-wiser-features-position] {
+          display: block;
+          margin-top: var(--ha-space-6, 24px);
+        }
+      `;
+      root.append(style);
+    }
+  }
+  form.hass = editor.hass;
+  form.data = {
+    features_position: editor._config.features_position || "bottom",
+  };
+  form.schema = [thermostatFeaturePositionSchema(editor.hass)];
+};
+
+const patchNativeThermostatEditor = async () => {
+  await customElements.whenDefined(NATIVE_THERMOSTAT_EDITOR);
+  const editorClass = customElements.get(NATIVE_THERMOSTAT_EDITOR);
+  if (!editorClass || editorClass.prototype.__wiserInlineFeaturesPatched) return;
+
+  const originalSetConfig = editorClass.prototype.setConfig;
+  editorClass.prototype.setConfig = function (config) {
+    const featuresPosition = config.features_position;
+    const nativeConfig = { ...config };
+    delete nativeConfig.features_position;
+    const result = originalSetConfig.call(this, nativeConfig);
+    this._config = {
+      ...this._config,
+      ...(featuresPosition ? { features_position: featuresPosition } : {}),
+    };
+    return result;
+  };
+
+  const originalValueChanged = editorClass.prototype._valueChanged;
+  editorClass.prototype._valueChanged = function (event) {
+    if (this._config?.features_position && event.detail?.value) {
+      event.detail.value = {
+        ...event.detail.value,
+        features_position: this._config.features_position,
+      };
+    }
+    return originalValueChanged.call(this, event);
+  };
+
+  const originalUpdated = editorClass.prototype.updated;
+  editorClass.prototype.updated = function (...args) {
+    const result = originalUpdated?.apply(this, args);
+    Promise.resolve(this.updateComplete).then(() =>
+      injectThermostatFeaturePositionEditor(this)
+    );
+    return result;
+  };
+  editorClass.prototype.__wiserInlineFeaturesPatched = true;
+
+  const visit = (root) => {
+    for (const element of root.querySelectorAll?.("*") || []) {
+      if (element.localName === NATIVE_THERMOSTAT_EDITOR) {
+        injectThermostatFeaturePositionEditor(element);
+      }
+      if (element.shadowRoot) visit(element.shadowRoot);
+    }
+  };
+  visit(document);
+};
+
+void patchNativeThermostatCard();
+void patchNativeThermostatEditor();
