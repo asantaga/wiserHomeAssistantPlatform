@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.3 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.6.4 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -13,6 +13,7 @@ const MORE_INFO_TYPE = "wiser-climate-more-info";
 const NATIVE_TEMPERATURE_CONTROL = "ha-state-control-climate-temperature";
 const NATIVE_THERMOSTAT_CARD = "hui-thermostat-card";
 const NATIVE_THERMOSTAT_EDITOR = "hui-thermostat-card-editor";
+const NATIVE_PRESET_FEATURE = "hui-climate-preset-modes-card-feature";
 const THERMOSTAT_FEATURE_ROW_ATTRIBUTE = "data-wiser-feature-row";
 const THERMOSTAT_FEATURE_STYLE_ATTRIBUTE = "data-wiser-feature-layout";
 const THERMOSTAT_FEATURE_SLOT_ATTRIBUTE = "data-wiser-feature-slot";
@@ -602,10 +603,6 @@ const thermostatState = (element) =>
     : undefined;
 
 const clearThermostatInlineFeatures = (card) => {
-  if (card.__wiserBoostRefreshTimer) {
-    clearTimeout(card.__wiserBoostRefreshTimer);
-    card.__wiserBoostRefreshTimer = undefined;
-  }
   const root = card.shadowRoot;
   if (!root) return;
   root
@@ -685,45 +682,6 @@ const boostMinutesRemaining = (stateObj) => {
   return Number.isFinite(reported) ? Math.max(0, Math.ceil(reported)) : undefined;
 };
 
-const syncBoostPreset = (slot, stateObj, feature) => {
-  let overlay = slot.querySelector("[data-wiser-boost-preset]");
-  const minutes = boostMinutesRemaining(stateObj);
-  if (feature?.type !== "climate-preset-modes" || minutes === undefined) {
-    overlay?.remove();
-    return;
-  }
-  const remaining = minutes > 0 ? `${minutes}m` : "<1m";
-  const presetValue = String(stateObj.attributes.preset_mode || "Boost");
-  const presetName = presetValue.replace(/\s+<?\d+m$/i, "").trim() || "Boost";
-  if (!overlay) {
-    overlay = document.createElement("span");
-    overlay.dataset.wiserBoostPreset = "";
-    overlay.innerHTML =
-      '<span data-wiser-boost-full></span><span data-wiser-boost-compact></span>';
-    slot.append(overlay);
-  }
-  overlay.querySelector("[data-wiser-boost-full]").textContent =
-    `${presetName} · ${remaining}`;
-  overlay.querySelector("[data-wiser-boost-compact]").textContent = remaining;
-};
-
-const scheduleBoostPresetRefresh = (card, stateObj) => {
-  if (card.__wiserBoostRefreshTimer) {
-    clearTimeout(card.__wiserBoostRefreshTimer);
-    card.__wiserBoostRefreshTimer = undefined;
-  }
-  if (!stateObj?.attributes?.is_boosted) return;
-
-  const end = new Date(stateObj.attributes.boost_end).getTime();
-  const untilNextMinute = Number.isFinite(end)
-    ? ((end - Date.now()) % 60000 + 60000) % 60000
-    : 60000;
-  card.__wiserBoostRefreshTimer = setTimeout(() => {
-    card.__wiserBoostRefreshTimer = undefined;
-    if (card.isConnected) applyThermostatInlineFeatures(card);
-  }, Math.max(untilNextMinute + 50, 1000));
-};
-
 const applyThermostatInlineFeatures = (card) => {
   const config = card._config;
   const features = Array.isArray(config?.features) ? config.features : [];
@@ -762,39 +720,11 @@ const applyThermostatInlineFeatures = (card) => {
       }
       [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > [${THERMOSTAT_FEATURE_SLOT_ATTRIBUTE}] {
         position: relative;
-        container-type: inline-size;
         min-width: 60px;
       }
       [${THERMOSTAT_FEATURE_SLOT_ATTRIBUTE}] > hui-card-features {
         width: 100%;
         padding: 0;
-      }
-      [data-wiser-boost-preset] {
-        position: absolute;
-        inset-block: 0;
-        inset-inline: 42px 38px;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        min-width: 0;
-        overflow: hidden;
-        color: var(--primary-text-color);
-        font-size: var(--ha-font-size-m, 14px);
-        line-height: 1;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        pointer-events: none;
-      }
-      [data-wiser-boost-compact] {
-        display: none;
-      }
-      @container (max-width: 179px) {
-        [data-wiser-boost-full] { display: none; }
-        [data-wiser-boost-compact] { display: inline; }
-      }
-      @container (max-width: 104px) {
-        [data-wiser-boost-preset] { display: none; }
       }
     `;
     root.append(style);
@@ -834,11 +764,123 @@ const applyThermostatInlineFeatures = (card) => {
     } else {
       host.style.removeProperty("--feature-color");
     }
-    syncBoostPreset(slot, stateObj, feature);
   });
   slots.slice(features.length).forEach((slot) => slot.remove());
   bottom.style.display = "none";
-  scheduleBoostPresetRefresh(card, stateObj);
+};
+
+const boostPresetFeatureState = (feature) =>
+  feature?._stateObj || feature?.stateObj;
+
+const boostPresetWidthMode = (width) =>
+  width >= 180 ? "full" : width >= 105 ? "compact" : "icon";
+
+const augmentBoostPresetOptions = (feature, options) => {
+  const stateObj = boostPresetFeatureState(feature);
+  const minutes = boostMinutesRemaining(stateObj);
+  const width = feature.__wiserBoostPresetWidth || feature.clientWidth || 0;
+  if (
+    !wiserControlsEnabled(stateObj) ||
+    minutes === undefined ||
+    boostPresetWidthMode(width) === "icon"
+  ) {
+    return options;
+  }
+
+  const remaining = minutes > 0 ? `${minutes}m` : "<1m";
+  const presetValue = String(stateObj.attributes.preset_mode || "Boost");
+  const presetName = presetValue.replace(/\s+<?\d+m$/i, "").trim() || "Boost";
+  const label =
+    boostPresetWidthMode(width) === "full"
+      ? `${presetName} · ${remaining}`
+      : remaining;
+  return [
+    { value: presetValue, label },
+    ...options.filter((option) => option.value !== presetValue),
+  ];
+};
+
+const syncBoostPresetFeature = (feature) => {
+  const width = feature.getBoundingClientRect().width;
+  const previousMode = boostPresetWidthMode(
+    feature.__wiserBoostPresetWidth || 0
+  );
+  feature.__wiserBoostPresetWidth = width;
+  if (boostPresetWidthMode(width) !== previousMode) feature.requestUpdate();
+
+  if (!feature.__wiserBoostPresetResizeObserver) {
+    feature.__wiserBoostPresetResizeObserver = new ResizeObserver((entries) => {
+      const nextWidth = entries[0]?.contentRect?.width || feature.clientWidth;
+      const oldMode = boostPresetWidthMode(
+        feature.__wiserBoostPresetWidth || 0
+      );
+      feature.__wiserBoostPresetWidth = nextWidth;
+      if (boostPresetWidthMode(nextWidth) !== oldMode) feature.requestUpdate();
+    });
+    feature.__wiserBoostPresetResizeObserver.observe(feature);
+  }
+
+  clearTimeout(feature.__wiserBoostPresetTimer);
+  const stateObj = boostPresetFeatureState(feature);
+  if (!wiserControlsEnabled(stateObj) || !stateObj?.attributes?.is_boosted) {
+    feature.__wiserBoostPresetTimer = undefined;
+    return;
+  }
+  const end = new Date(stateObj.attributes.boost_end).getTime();
+  const untilNextMinute = Number.isFinite(end)
+    ? ((end - Date.now()) % 60000 + 60000) % 60000
+    : 60000;
+  feature.__wiserBoostPresetTimer = setTimeout(() => {
+    feature.__wiserBoostPresetTimer = undefined;
+    if (feature.isConnected) feature.requestUpdate();
+  }, Math.max(untilNextMinute + 50, 1000));
+};
+
+const patchNativePresetFeature = async () => {
+  await customElements.whenDefined(NATIVE_PRESET_FEATURE);
+  const featureClass = customElements.get(NATIVE_PRESET_FEATURE);
+  if (!featureClass) return;
+
+  const prototype = featureClass.prototype;
+  if (!prototype.__wiserBoostPresetPatched) {
+    const originalGetOptions = prototype._getOptions;
+    prototype._getOptions = function (...args) {
+      const options = originalGetOptions.apply(this, args);
+      return this.__wiserAugmentBoostPresetOptions?.(options) || options;
+    };
+
+    const originalUpdated = prototype.updated;
+    prototype.updated = function (...args) {
+      const result = originalUpdated?.apply(this, args);
+      this.__wiserSyncBoostPresetFeature?.();
+      return result;
+    };
+
+    const originalDisconnected = prototype.disconnectedCallback;
+    prototype.disconnectedCallback = function (...args) {
+      clearTimeout(this.__wiserBoostPresetTimer);
+      this.__wiserBoostPresetResizeObserver?.disconnect();
+      this.__wiserBoostPresetResizeObserver = undefined;
+      return originalDisconnected?.apply(this, args);
+    };
+    prototype.__wiserBoostPresetPatched = true;
+  }
+  prototype.__wiserAugmentBoostPresetOptions = function (options) {
+    return augmentBoostPresetOptions(this, options);
+  };
+  prototype.__wiserSyncBoostPresetFeature = function () {
+    syncBoostPresetFeature(this);
+  };
+
+  const visit = (root) => {
+    for (const element of root.querySelectorAll?.("*") || []) {
+      if (element.localName === NATIVE_PRESET_FEATURE) {
+        element.requestUpdate();
+      }
+      if (element.shadowRoot) visit(element.shadowRoot);
+    }
+  };
+  visit(document);
 };
 
 const patchNativeThermostatCard = async () => {
@@ -1033,3 +1075,4 @@ const patchNativeThermostatEditor = async () => {
 
 void patchNativeThermostatCard();
 void patchNativeThermostatEditor();
+void patchNativePresetFeature();
