@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.3.1 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.4.0 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -13,6 +13,8 @@ const MORE_INFO_TYPE = "wiser-climate-more-info";
 const NATIVE_TEMPERATURE_CONTROL = "ha-state-control-climate-temperature";
 const NATIVE_THERMOSTAT_CARD = "hui-thermostat-card";
 const NATIVE_THERMOSTAT_EDITOR = "hui-thermostat-card-editor";
+const THERMOSTAT_FEATURE_ROW_ATTRIBUTE = "data-wiser-feature-row";
+const THERMOSTAT_FEATURE_STYLE_ATTRIBUTE = "data-wiser-feature-layout";
 const TARGET_TEMPERATURE = 1;
 const TARGET_TEMPERATURE_RANGE = 2;
 const PRESET_MODE = 16;
@@ -605,7 +607,13 @@ const clearThermostatInlineFeatures = (card) => {
   const observer = thermostatFeatureObservers.get(card);
   observer?.disconnect();
   thermostatFeatureObservers.delete(card);
-  const bottom = root.querySelector("hui-card-features");
+  root
+    .querySelector(`[${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}]`)
+    ?.remove();
+  root
+    .querySelector(`style[${THERMOSTAT_FEATURE_STYLE_ATTRIBUTE}]`)
+    ?.remove();
+  const bottom = root.querySelector("ha-card > hui-card-features");
   if (bottom) {
     bottom.style.removeProperty("display");
     bottom.columns = undefined;
@@ -613,11 +621,44 @@ const clearThermostatInlineFeatures = (card) => {
   }
 };
 
-const thermostatFeatureColumns = (card, featureCount) => {
+const THERMOSTAT_MODE_FEATURES = {
+  "climate-hvac-modes": "hvac_modes",
+  "climate-preset-modes": "preset_modes",
+  "climate-fan-modes": "fan_modes",
+  "climate-swing-modes": "swing_modes",
+  "climate-swing-horizontal-modes": "swing_horizontal_modes",
+};
+
+const thermostatFeatureWeight = (feature, stateObj) => {
+  const attribute = THERMOSTAT_MODE_FEATURES[feature?.type];
+  if (!attribute) return 1;
+  const configuredModes = feature?.[attribute];
+  const availableModes = Array.isArray(configuredModes)
+    ? configuredModes
+    : stateObj?.attributes?.[attribute];
+  return Array.isArray(availableModes) && availableModes.length > 1 ? 2 : 1;
+};
+
+const thermostatFeatureRows = (card, features, stateObj) => {
   const width =
-    card.shadowRoot?.querySelector("ha-card")?.clientWidth || card.clientWidth;
-  const availableColumns = width >= 600 ? 3 : width >= 400 ? 2 : 1;
-  return Math.min(featureCount, availableColumns);
+    card.shadowRoot?.querySelector("ha-card")?.clientWidth ||
+    card.clientWidth ||
+    600;
+  const availableWidth = Math.max(width - 24, 1);
+  const gap = 12;
+  let rows = 1;
+  let used = 0;
+  for (const feature of features) {
+    const minimum = thermostatFeatureWeight(feature, stateObj) === 2 ? 220 : 110;
+    const required = used ? minimum + gap : minimum;
+    if (used && used + required > availableWidth) {
+      rows += 1;
+      used = minimum;
+    } else {
+      used += required;
+    }
+  }
+  return rows;
 };
 
 const applyThermostatInlineFeatures = (card) => {
@@ -625,7 +666,7 @@ const applyThermostatInlineFeatures = (card) => {
   const features = Array.isArray(config?.features) ? config.features : [];
   const stateObj = thermostatState(card);
   const root = card.shadowRoot;
-  const bottom = root?.querySelector("hui-card-features");
+  const bottom = root?.querySelector("ha-card > hui-card-features");
   if (
     !root ||
     !bottom ||
@@ -637,21 +678,65 @@ const applyThermostatInlineFeatures = (card) => {
     return;
   }
 
-  bottom.features = features;
-  bottom.columns = thermostatFeatureColumns(card, features.length);
-  bottom.style.removeProperty("display");
+  let style = root.querySelector(
+    `style[${THERMOSTAT_FEATURE_STYLE_ATTRIBUTE}]`
+  );
+  if (!style) {
+    style = document.createElement("style");
+    style.setAttribute(THERMOSTAT_FEATURE_STYLE_ATTRIBUTE, "");
+    style.textContent = `
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--ha-card-feature-gap, 12px);
+        width: 100%;
+        padding: 0 12px 12px;
+        box-sizing: border-box;
+      }
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features {
+        width: auto;
+        min-width: min(100%, 110px);
+        padding: 0;
+      }
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="1"] {
+        flex: 1 1 110px;
+      }
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="2"] {
+        flex: 2 1 220px;
+      }
+    `;
+    root.append(style);
+  }
+
+  let row = root.querySelector(`[${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}]`);
+  if (!row) {
+    row = document.createElement("div");
+    row.setAttribute(THERMOSTAT_FEATURE_ROW_ATTRIBUTE, "");
+    bottom.after(row);
+  }
+
+  const hosts = [...row.querySelectorAll(":scope > hui-card-features")];
+  features.forEach((feature, index) => {
+    const host = hosts[index] || document.createElement("hui-card-features");
+    if (!hosts[index]) row.append(host);
+    const weight = thermostatFeatureWeight(feature, stateObj);
+    host.dataset.weight = String(weight);
+    host.hass = card.hass;
+    host.context = bottom.context || card._featureContext;
+    host.color = bottom.color;
+    host.position = bottom.position;
+    host.columns = 1;
+    host.features = [feature];
+    const featureColor = bottom.style.getPropertyValue("--feature-color");
+    if (featureColor) host.style.setProperty("--feature-color", featureColor);
+  });
+  hosts.slice(features.length).forEach((host) => host.remove());
+  bottom.style.display = "none";
 
   if (!thermostatFeatureObservers.has(card) && window.ResizeObserver) {
     const observer = new window.ResizeObserver(() => {
       if (card._config?.features_position === "inline") {
-        const currentFeatures = card._config.features || [];
-        const currentBottom = card.shadowRoot?.querySelector("hui-card-features");
-        if (currentBottom) {
-          currentBottom.columns = thermostatFeatureColumns(
-            card,
-            currentFeatures.length
-          );
-        }
+        applyThermostatInlineFeatures(card);
       }
     });
     observer.observe(card);
@@ -683,8 +768,11 @@ const patchNativeThermostatCard = async () => {
       features.length
     ) {
       const nativeRows = Math.ceil((features.length * 2) / 3);
-      const columns = thermostatFeatureColumns(this, features.length);
-      const inlineRows = Math.ceil(features.length / Math.max(columns, 1));
+      const inlineRows = thermostatFeatureRows(
+        this,
+        features,
+        thermostatState(this)
+      );
       options.rows += inlineRows - nativeRows;
       options.min_rows += inlineRows - nativeRows;
     }
@@ -719,7 +807,7 @@ const thermostatFeaturePositionSchema = (hass) => ({
           ) || titleCase(value),
         description:
           value === "inline"
-            ? "Displays features side by side in up to three columns"
+            ? "Uses available width dynamically and wraps when needed"
             : hass.localize(
                 `ui.panel.lovelace.editor.card.tile.features_position_options.${value}_description`
               ),

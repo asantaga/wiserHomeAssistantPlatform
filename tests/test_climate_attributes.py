@@ -141,9 +141,12 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn('"hui-thermostat-card"', self.source)
         self.assertIn("applyThermostatInlineFeatures", self.source)
         self.assertIn('config.features_position !== "inline"', self.source)
-        self.assertIn("thermostatFeatureColumns", self.source)
-        self.assertIn("width >= 600 ? 3 : width >= 400 ? 2 : 1", self.source)
-        self.assertIn("bottom.features = features", self.source)
+        self.assertIn("thermostatFeatureWeight", self.source)
+        self.assertIn('"climate-hvac-modes": "hvac_modes"', self.source)
+        self.assertIn('host.dataset.weight = String(weight)', self.source)
+        self.assertIn('flex: 2 1 220px', self.source)
+        self.assertIn('flex: 1 1 110px', self.source)
+        self.assertIn('bottom.style.display = "none"', self.source)
         self.assertIn("new window.ResizeObserver", self.source)
 
     def test_thermostat_editor_exposes_native_feature_position_form(self) -> None:
@@ -151,7 +154,9 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("thermostatFeaturePositionSchema", self.source)
         self.assertIn('options: ["bottom", "inline"]', self.source)
         self.assertIn("tile_features_position_${value}.svg", self.source)
-        self.assertIn("side by side in up to three columns", self.source)
+        self.assertIn(
+            "Uses available width dynamically and wraps when needed", self.source
+        )
         self.assertIn("injectThermostatFeaturePositionEditor", self.source)
 
     def test_preserves_native_climate_actions(self) -> None:
