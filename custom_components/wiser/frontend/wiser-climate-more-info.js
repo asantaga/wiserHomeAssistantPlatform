@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.4.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.4.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -649,7 +649,7 @@ const thermostatFeatureRows = (card, features, stateObj) => {
   let rows = 1;
   let used = 0;
   for (const feature of features) {
-    const minimum = thermostatFeatureWeight(feature, stateObj) === 2 ? 220 : 110;
+    const minimum = thermostatFeatureWeight(feature, stateObj) === 2 ? 180 : 90;
     const required = used ? minimum + gap : minimum;
     if (used && used + required > availableWidth) {
       rows += 1;
@@ -695,14 +695,14 @@ const applyThermostatInlineFeatures = (card) => {
       }
       [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features {
         width: auto;
-        min-width: min(100%, 110px);
+        min-width: 90px;
         padding: 0;
       }
       [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="1"] {
-        flex: 1 1 110px;
+        flex: 1 1 90px;
       }
       [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features[data-weight="2"] {
-        flex: 2 1 220px;
+        flex: 2 1 180px;
       }
     `;
     root.append(style);

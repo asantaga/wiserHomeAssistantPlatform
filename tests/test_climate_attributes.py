@@ -144,8 +144,8 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("thermostatFeatureWeight", self.source)
         self.assertIn('"climate-hvac-modes": "hvac_modes"', self.source)
         self.assertIn('host.dataset.weight = String(weight)', self.source)
-        self.assertIn('flex: 2 1 220px', self.source)
-        self.assertIn('flex: 1 1 110px', self.source)
+        self.assertIn('flex: 2 1 180px', self.source)
+        self.assertIn('flex: 1 1 90px', self.source)
         self.assertIn('bottom.style.display = "none"', self.source)
         self.assertIn("new window.ResizeObserver", self.source)
 
