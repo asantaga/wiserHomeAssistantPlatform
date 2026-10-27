@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.0 */
+/*! WISER-CARD-VERSION wiser-climate-more-info 1.5.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -646,11 +646,29 @@ const thermostatFeatureLayout = (feature, stateObj) => {
   return { units: buttons, minimum: Math.max(buttons * 50, 60) };
 };
 
+const isCardEditorPreview = (element) => {
+  let current = element;
+  while (current) {
+    if (
+      current.localName === "hui-card-preview" ||
+      (current.localName === "hui-card" && current.hasAttribute("preview"))
+    ) {
+      return true;
+    }
+    const root = current.getRootNode?.();
+    current = current.parentElement || root?.host;
+  }
+  return false;
+};
+
 const thermostatFeatureRows = (card, features, stateObj) => {
-  const width =
+  const renderedWidth =
     card.shadowRoot?.querySelector("ha-card")?.clientWidth ||
     card.clientWidth ||
     600;
+  const width = isCardEditorPreview(card)
+    ? Math.min(renderedWidth, 360)
+    : renderedWidth;
   const availableWidth = Math.max(width - 24, 1);
   const gap = 12;
   let rows = 1;
@@ -700,6 +718,10 @@ const applyThermostatInlineFeatures = (card) => {
         padding: 0 12px 12px;
         box-sizing: border-box;
       }
+      [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}][data-editor-preview] {
+        max-width: 360px;
+        margin-inline: auto;
+      }
       [${THERMOSTAT_FEATURE_ROW_ATTRIBUTE}] > hui-card-features {
         width: auto;
         min-width: 60px;
@@ -715,6 +737,7 @@ const applyThermostatInlineFeatures = (card) => {
     row.setAttribute(THERMOSTAT_FEATURE_ROW_ATTRIBUTE, "");
     bottom.after(row);
   }
+  row.toggleAttribute("data-editor-preview", isCardEditorPreview(card));
 
   const hosts = [...row.querySelectorAll(":scope > hui-card-features")];
   features.forEach((feature, index) => {
