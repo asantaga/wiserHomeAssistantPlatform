@@ -3,28 +3,48 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
+import math
 
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
+    ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    UnitOfTemperature,
 )
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
     CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
     CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS,
+    CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+    CONF_EXTERNAL_TEMPERATURE_BOOST_MODE,
+    CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+    CONF_EXTERNAL_TEMPERATURE_MAX_BOOST,
+    CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+    CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS,
+    CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+    CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
     CONTROL_STRATEGIES,
     CONTROL_STRATEGY_TEMPERATURE_LIMITER,
     DEFAULT_PASSIVE_CONTROL_STRATEGY,
+    DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+    DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+    DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST,
+    DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+    DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+    DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE,
     DOMAIN,
+    EXTERNAL_TEMPERATURE_BOOST_FIXED,
+    EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,6 +106,73 @@ class ExternalRoomControlController:
                 "Ignoring external climate entities assigned to multiple Wiser rooms: %s",
                 ", ".join(sorted(duplicate_entities)),
             )
+        configured_sensors = {
+            str(room_id): str(entity_id)
+            for room_id, entity_id in options.get(
+                CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS, {}
+            ).items()
+            if entity_id
+        }
+        duplicate_sensors = {
+            entity_id
+            for entity_id in configured_sensors.values()
+            if list(configured_sensors.values()).count(entity_id) > 1
+        }
+        self.temperature_sensors = {
+            room_id: entity_id
+            for room_id, entity_id in configured_sensors.items()
+            if entity_id not in duplicate_sensors
+            and not self.assignments.get(room_id)
+        }
+        if duplicate_sensors:
+            _LOGGER.error(
+                "Ignoring external temperature sensors assigned to multiple "
+                "Wiser rooms: %s",
+                ", ".join(sorted(duplicate_sensors)),
+            )
+        self.temperature_tolerance = float(
+            options.get(
+                CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
+                DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE,
+            )
+        )
+        self.temperature_boost_duration = int(
+            options.get(
+                CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+                DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+            )
+        )
+        self.temperature_boost_mode = options.get(
+            CONF_EXTERNAL_TEMPERATURE_BOOST_MODE,
+            EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
+        )
+        self.temperature_fixed_boost = float(
+            options.get(
+                CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+                DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+            )
+        )
+        self.temperature_proportional_multiplier = float(
+            options.get(
+                CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+                DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+            )
+        )
+        self.temperature_max_boost = min(
+            5.0,
+            float(
+                options.get(
+                    CONF_EXTERNAL_TEMPERATURE_MAX_BOOST,
+                    DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST,
+                )
+            ),
+        )
+        self.temperature_stale_minutes = int(
+            options.get(
+                CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+                DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+            )
+        )
         self._store = Store(
             hass,
             STORAGE_VERSION,
@@ -102,6 +189,7 @@ class ExternalRoomControlController:
         self._passive_control_schedules: dict[str, dict] = {}
         self._native_passive_migrated = False
         self._closed_limiter_rooms: set[str] = set()
+        self._sensor_boosts: dict[str, dict] = {}
 
     async def async_load(self) -> None:
         """Load Passive Mode lower schedules and migrate experimental data."""
@@ -124,6 +212,10 @@ class ExternalRoomControlController:
         )
         self._native_passive_migrated = bool(
             stored.get("native_passive_migrated", False)
+        )
+        sensor_boosts = stored.get("sensor_boosts", {})
+        self._sensor_boosts = (
+            sensor_boosts if isinstance(sensor_boosts, dict) else {}
         )
         storage_changed = await self._async_migrate_native_passive_data()
         for room_id in list(self._rooms):
@@ -172,6 +264,7 @@ class ExternalRoomControlController:
                 "lower_schedules": self._lower_schedules,
                 "passive_control_schedules": self._passive_control_schedules,
                 "native_passive_migrated": self._native_passive_migrated,
+                "sensor_boosts": self._sensor_boosts,
             }
         )
 
@@ -291,6 +384,19 @@ class ExternalRoomControlController:
     def has_assignment(self, room_id) -> bool:
         """Return whether a room has at least one external climate entity."""
         return bool(self.assigned_entity_ids(room_id))
+
+    def temperature_sensor_entity_id(self, room_id) -> str | None:
+        """Return the external temperature sensor assigned to a Wiser room."""
+        return self.temperature_sensors.get(str(room_id))
+
+    def has_temperature_sensor(self, room_id) -> bool:
+        """Return whether a room uses external temperature feedback."""
+        room = self._room(room_id)
+        return bool(
+            self.temperature_sensor_entity_id(room_id)
+            and room is not None
+            and not getattr(room, "roomstat_id", None)
+        )
 
     def has_passive_override(self, room_id) -> bool:
         """Return whether a locally stored Passive range override is active."""
@@ -1090,7 +1196,7 @@ class ExternalRoomControlController:
         await self._async_save()
 
     async def async_update(self) -> None:
-        """Mirror each Wiser room target to its assigned external climates."""
+        """Update external climate mirroring and temperature feedback."""
         await self._async_remove_orphaned_schedules()
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
@@ -1144,10 +1250,25 @@ class ExternalRoomControlController:
                 storage_changed = True
         if storage_changed:
             await self._async_save()
+        for room in self.coordinator.wiserhub.rooms.all:
+            room_id = str(room.id)
+            if room_id not in self._sensor_boosts:
+                continue
+            if self.available and self.has_temperature_sensor(room.id):
+                continue
+            if self._sensor_boost_is_owned(room):
+                await self._async_clear_sensor_boost(room)
+            else:
+                self._sensor_boosts.pop(room_id, None)
+                await self._async_save()
         if not self.available:
             return
 
         for room in self.coordinator.wiserhub.rooms.all:
+            if self.has_temperature_sensor(room.id):
+                self._closed_limiter_rooms.discard(str(room.id))
+                await self._async_update_temperature_sensor(room)
+                continue
             if not self.is_enabled(room.id):
                 self._closed_limiter_rooms.discard(str(room.id))
                 continue
@@ -1180,6 +1301,134 @@ class ExternalRoomControlController:
             if target_temperature is None:
                 continue
             await self._async_set_external_climates(room.id, target_temperature)
+
+    def _external_temperature(self, room_id) -> float | None:
+        """Return a fresh assigned sensor temperature converted to Celsius."""
+        entity_id = self.temperature_sensor_entity_id(room_id)
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        last_updated = getattr(state, "last_updated", None)
+        if last_updated is not None:
+            try:
+                age = dt_util.utcnow() - dt_util.as_utc(last_updated)
+            except (TypeError, ValueError):
+                return None
+            if age > timedelta(minutes=self.temperature_stale_minutes):
+                return None
+        try:
+            temperature = float(state.state)
+            unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+            if unit and unit != UnitOfTemperature.CELSIUS:
+                temperature = TemperatureConverter.convert(
+                    temperature, unit, UnitOfTemperature.CELSIUS
+                )
+        except (TypeError, ValueError):
+            return None
+        return temperature if math.isfinite(temperature) else None
+
+    def _temperature_boost_delta(self, shortfall: float) -> float:
+        """Return a valid Wiser boost increment for the measured shortfall."""
+        if self.temperature_boost_mode == EXTERNAL_TEMPERATURE_BOOST_FIXED:
+            boost = self.temperature_fixed_boost
+        else:
+            boost = shortfall * self.temperature_proportional_multiplier
+        boost = min(max(0.5, boost), self.temperature_max_boost, 5.0)
+        return math.ceil(boost * 2) / 2
+
+    def _sensor_boost_is_owned(self, room) -> bool:
+        """Return whether the active boost still matches one created here."""
+        room_id = str(room.id)
+        marker = self._sensor_boosts.get(room_id)
+        if not isinstance(marker, dict):
+            return False
+        expected_end = marker.get("expected_end")
+        if not room.is_boosted:
+            try:
+                expected = dt_util.parse_datetime(expected_end)
+                return bool(
+                    expected is not None
+                    and dt_util.as_utc(expected) > dt_util.utcnow()
+                )
+            except (TypeError, ValueError):
+                return False
+        actual_end = getattr(room, "boost_end_time", None)
+        if expected_end and actual_end is not None:
+            try:
+                expected = dt_util.parse_datetime(expected_end)
+                actual = (
+                    actual_end
+                    if isinstance(actual_end, datetime)
+                    else dt_util.parse_datetime(str(actual_end))
+                )
+                if expected is None or actual is None:
+                    return False
+                difference = dt_util.as_utc(actual) - dt_util.as_utc(expected)
+                if abs(difference.total_seconds()) > 120:
+                    return False
+            except (TypeError, ValueError):
+                return False
+        return True
+
+    async def _async_clear_sensor_boost(self, room) -> None:
+        """Cancel a boost only when it is still owned by sensor feedback."""
+        room_id = str(room.id)
+        if not room.is_boosted:
+            return
+        if self._sensor_boost_is_owned(room) and not await room.cancel_boost():
+            return
+        if room_id in self._sensor_boosts:
+            self._sensor_boosts.pop(room_id, None)
+            await self._async_save()
+
+    async def _async_update_temperature_sensor(self, room) -> None:
+        """Apply external temperature feedback through owned Wiser boosts."""
+        room_id = str(room.id)
+        owned = self._sensor_boost_is_owned(room)
+        if room_id in self._sensor_boosts and not owned:
+            self._sensor_boosts.pop(room_id, None)
+            await self._async_save()
+
+        normal_auto = bool(
+            room.mode == "Auto"
+            and not room.is_away_mode
+            and not room.is_passive_mode
+            and (not room.is_override or owned)
+        )
+        temperature = self._external_temperature(room.id)
+        target = getattr(room, "scheduled_target_temperature", None)
+        try:
+            target = float(target)
+        except (TypeError, ValueError):
+            target = None
+
+        if not normal_auto or temperature is None or target is None:
+            if owned:
+                await self._async_clear_sensor_boost(room)
+            return
+
+        shortfall = target - temperature
+        if shortfall <= self.temperature_tolerance:
+            if owned:
+                await self._async_clear_sensor_boost(room)
+            return
+        if room.is_boosted or room.is_override:
+            return
+        if owned:
+            return
+
+        delta = self._temperature_boost_delta(shortfall)
+        if not await room.boost(delta, self.temperature_boost_duration):
+            return
+        expected_end = dt_util.utcnow() + timedelta(
+            minutes=self.temperature_boost_duration
+        )
+        self._sensor_boosts[room_id] = {
+            "expected_end": expected_end.isoformat(),
+            "duration": self.temperature_boost_duration,
+            "delta": delta,
+        }
+        await self._async_save()
 
     async def _async_remove_orphaned_schedules(self) -> None:
         """Remove paired values whose native Wiser schedule no longer exists."""

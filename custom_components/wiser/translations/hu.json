@@ -87,7 +87,14 @@
             "name": "Külső helyiségvezérlés",
             "description": "Rendelje hozzá a külső klímaeszközöket a Wiser-helyiségükhöz, hogy kövessék a helyiség aktuális célhőmérsékletét passzív móddal vagy anélkül.",
             "data": {
-              "automations_external_room_control": "Külső helyiségvezérlés"
+              "automations_external_room_control": "Külső helyiségvezérlés",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -232,7 +239,10 @@
     },
     "error": {
       "external_climate_must_not_be_wiser": "Válasszon külső klímaentitást. A Wiser klímaentitás nem vezérelhető külső eszközként.",
-      "external_climate_duplicate_assignment": "Egy külső klímaentitás csak egy Wiser-helyiséghez rendelhető."
+      "external_climate_duplicate_assignment": "Egy külső klímaentitás csak egy Wiser-helyiséghez rendelhető.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
     }
   },
   "services": {
@@ -256,6 +266,7 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Központi fűtés aktív alsó célhőmérséklete",

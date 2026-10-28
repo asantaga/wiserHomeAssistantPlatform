@@ -85,9 +85,16 @@
           },
           "automations_external_room_control": {
             "name": "External Room Control",
-            "description": "Assign external climate devices to their Wiser room so they follow the room's current target, with or without Passive Mode.",
+            "description": "Assign external climate devices to follow a Wiser room target, or use an external temperature sensor in a room without a Wiser Room Thermostat to control it through integration-owned boosts.",
             "data": {
-              "automations_external_room_control": "External Room Control"
+              "automations_external_room_control": "External Room Control",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -228,7 +235,10 @@
     },
     "error": {
       "external_climate_must_not_be_wiser": "Select an external climate entity. A Wiser climate entity cannot be controlled as an external device.",
-      "external_climate_duplicate_assignment": "An external climate entity can only be assigned to one Wiser room."
+      "external_climate_duplicate_assignment": "An external climate entity can only be assigned to one Wiser room.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
     },
     "abort": {
       "opentherm_not_available": "OpenTherm data is not available for this Wiser hub.",
@@ -256,6 +266,12 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "Proportional to temperature shortfall",
+        "fixed": "Fixed amount"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Active central-heating lower setpoint",

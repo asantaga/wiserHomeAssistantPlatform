@@ -87,7 +87,14 @@
             "name": "Externe kamerregeling",
             "description": "Wijs externe klimaatapparaten toe aan hun Wiser-kamer, zodat ze de huidige doeltemperatuur van de kamer volgen, met of zonder passieve modus.",
             "data": {
-              "automations_external_room_control": "Externe kamerregeling"
+              "automations_external_room_control": "Externe kamerregeling",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -232,7 +239,10 @@
     },
     "error": {
       "external_climate_must_not_be_wiser": "Selecteer een externe klimaatentiteit. Een Wiser-klimaatentiteit kan niet als extern apparaat worden aangestuurd.",
-      "external_climate_duplicate_assignment": "Een externe klimaatentiteit kan slechts aan één Wiser-kamer worden toegewezen."
+      "external_climate_duplicate_assignment": "Een externe klimaatentiteit kan slechts aan één Wiser-kamer worden toegewezen.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
     }
   },
   "services": {
@@ -256,6 +266,7 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Actieve CV-onderinstelling",

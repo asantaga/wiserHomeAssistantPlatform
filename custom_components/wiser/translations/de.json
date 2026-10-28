@@ -87,7 +87,14 @@
             "name": "Externe Raumregelung",
             "description": "Weisen Sie externe Klima-Geräte ihrem Wiser-Raum zu, damit sie dem aktuellen Raum-Sollwert mit oder ohne Passivmodus folgen.",
             "data": {
-              "automations_external_room_control": "Externe Raumregelung"
+              "automations_external_room_control": "Externe Raumregelung",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -228,7 +235,10 @@
     },
     "error": {
       "external_climate_must_not_be_wiser": "Wählen Sie eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes Gerät gesteuert werden.",
-      "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden."
+      "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
     },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
@@ -256,6 +266,7 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",

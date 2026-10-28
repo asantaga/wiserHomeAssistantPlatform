@@ -82,6 +82,22 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": (
                 "external_room_control_assignments"
             ),
+            "CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS": "external_temperature_sensor_assignments",
+            "CONF_EXTERNAL_TEMPERATURE_TOLERANCE": "external_temperature_tolerance",
+            "CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION": "external_temperature_boost_duration",
+            "CONF_EXTERNAL_TEMPERATURE_BOOST_MODE": "external_temperature_boost_mode",
+            "CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST": "external_temperature_fixed_boost",
+            "CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER": "external_temperature_proportional_multiplier",
+            "CONF_EXTERNAL_TEMPERATURE_MAX_BOOST": "external_temperature_max_boost",
+            "CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES": "external_temperature_stale_minutes",
+            "DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE": 0.5,
+            "DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION": 60,
+            "DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST": 1.0,
+            "DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER": 1.5,
+            "DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST": 5.0,
+            "DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES": 30,
+            "EXTERNAL_TEMPERATURE_BOOST_FIXED": "fixed",
+            "EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL": "proportional",
             "CONF_LEGACY_PASSIVE_TEMP_INCREMENT": (
                 "passive_mode_temperature_increments"
             ),
@@ -1018,6 +1034,24 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    def test_external_temperature_sensor_rooms_exclude_wiser_thermostats(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_external_temperature_sensor_room_ids"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _wiser_rooms=lambda: [
+                SimpleNamespace(id=1, temperature_control=True, roomstat_id=None),
+                SimpleNamespace(id=2, temperature_control=True, roomstat_id=22),
+                SimpleNamespace(id=3, temperature_control=False, roomstat_id=None),
+            ]
+        )
+
+        self.assertEqual(
+            functions._external_temperature_sensor_room_ids(flow), {"1"}
+        )
+
     def test_room_supports_temperature_control_uses_capability_and_fallbacks(self):
         functions = load_functions(
             "helpers.py", {"room_supports_temperature_control"}, {}
@@ -1237,10 +1271,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "Office": "1",
                     "Bedroom": "2",
+                    "Nursery": "3",
                 },
                 {
                     "1": ["climate.office"],
                     "2": ["climate.bedroom"],
+                    "3": [],
                 },
             ),
             config_entry=SimpleNamespace(
@@ -1263,6 +1299,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                     "external": True,
                     "Office": ["climate.office"],
                     "Bedroom": ["climate.bedroom"],
+                    "Nursery": [],
+                    "Nursery temperature sensor": "sensor.nursery_temperature",
                 }
             },
         )
@@ -1276,6 +1314,13 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotIn("Office", result["data"]["external"])
         self.assertNotIn("Bedroom", result["data"]["external"])
+        self.assertEqual(
+            result["data"]["external"][
+                "external_temperature_sensor_assignments"
+            ],
+            {"3": "sensor.nursery_temperature"},
+        )
+        self.assertNotIn("Nursery temperature sensor", result["data"]["external"])
 
         removed = await functions.async_step_automation_params(
             flow,

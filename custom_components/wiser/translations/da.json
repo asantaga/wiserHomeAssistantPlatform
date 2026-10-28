@@ -87,7 +87,14 @@
             "name": "Ekstern rumstyring",
             "description": "Tildel eksterne klimaenheder til deres Wiser-rum, så de følger rummets aktuelle måltemperatur, med eller uden passiv tilstand.",
             "data": {
-              "automations_external_room_control": "Ekstern rumstyring"
+              "automations_external_room_control": "Ekstern rumstyring",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -232,7 +239,10 @@
     },
     "error": {
       "external_climate_must_not_be_wiser": "Vælg en ekstern klimaenhed. En Wiser-klimaenhed kan ikke styres som en ekstern enhed.",
-      "external_climate_duplicate_assignment": "En ekstern klimaenhed kan kun tildeles ét Wiser-rum."
+      "external_climate_duplicate_assignment": "En ekstern klimaenhed kan kun tildeles ét Wiser-rum.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
     }
   },
   "services": {
@@ -256,6 +266,7 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Aktivt nedre centralvarmeindstillingspunkt",

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import logging
+import math
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -83,6 +84,26 @@ class FakeRegistry:
         return self.entries.get(entity_id)
 
 
+class FakeDateTimeUtil:
+    """Small subset of Home Assistant datetime helpers used by the controller."""
+
+    @staticmethod
+    def now():
+        return datetime.now()
+
+    @staticmethod
+    def utcnow():
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    def as_utc(value):
+        return value.astimezone(timezone.utc)
+
+    @staticmethod
+    def parse_datetime(value):
+        return datetime.fromisoformat(value) if value else None
+
+
 def load_controller():
     """Load the real controller class with lightweight dependencies."""
     tree = ast.parse((COMPONENT / "external_room_control.py").read_text())
@@ -103,6 +124,22 @@ def load_controller():
         "CLIMATE_DOMAIN": "climate",
         "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": "automations_external_room_control",
         "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": "external_room_control_assignments",
+        "CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS": "external_temperature_sensor_assignments",
+        "CONF_EXTERNAL_TEMPERATURE_TOLERANCE": "external_temperature_tolerance",
+        "CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION": "external_temperature_boost_duration",
+        "CONF_EXTERNAL_TEMPERATURE_BOOST_MODE": "external_temperature_boost_mode",
+        "CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST": "external_temperature_fixed_boost",
+        "CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER": "external_temperature_proportional_multiplier",
+        "CONF_EXTERNAL_TEMPERATURE_MAX_BOOST": "external_temperature_max_boost",
+        "CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES": "external_temperature_stale_minutes",
+        "DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE": 0.5,
+        "DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION": 60,
+        "DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST": 1.0,
+        "DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER": 1.5,
+        "DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST": 5.0,
+        "DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES": 30,
+        "EXTERNAL_TEMPERATURE_BOOST_FIXED": "fixed",
+        "EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL": "proportional",
         "CONTROL_STRATEGIES": ["modulating", "temperature_limiter"],
         "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
         "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
@@ -114,6 +151,11 @@ def load_controller():
         "SERVICE_SET_TEMPERATURE": "set_temperature",
         "STATE_UNAVAILABLE": "unavailable",
         "STATE_UNKNOWN": "unknown",
+        "ATTR_UNIT_OF_MEASUREMENT": "unit_of_measurement",
+        "UnitOfTemperature": SimpleNamespace(CELSIUS="°C"),
+        "TemperatureConverter": SimpleNamespace(
+            convert=lambda value, _from_unit, _to_unit: value
+        ),
         "STORAGE_VERSION": 1,
         "Store": FakeStore,
         "WEEKDAYS": (
@@ -127,8 +169,10 @@ def load_controller():
         ),
         "_LOGGER": logging.getLogger(__name__),
         "datetime": datetime,
+        "timedelta": timedelta,
+        "math": math,
         "deepcopy": deepcopy,
-        "dt_util": SimpleNamespace(now=datetime.now),
+        "dt_util": FakeDateTimeUtil,
         "er": SimpleNamespace(async_get=lambda _hass: registry),
     }
     exec(compile(module, "external_room_control.py", "exec"), namespace)
@@ -142,6 +186,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         controller_class, self.registry = load_controller()
         self.room = SimpleNamespace(
             id=1,
+            roomstat_id=None,
             mode="Auto",
             is_boosted=False,
             is_away_mode=False,
@@ -152,13 +197,17 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             configured_passive_mode_upper_temp=20.0,
             current_temperature=17.0,
             current_target_temperature=19.0,
+            scheduled_target_temperature=19.0,
             is_override=False,
+            boost_end_time=None,
             schedule=None,
             set_passive_mode_lower_temp=AsyncMock(),
             set_passive_mode_upper_temp=AsyncMock(),
             set_passive_mode=AsyncMock(),
             set_target_temperature=AsyncMock(),
             cancel_overrides=AsyncMock(),
+            boost=AsyncMock(return_value=True),
+            cancel_boost=AsyncMock(return_value=True),
         )
         wiserhub = SimpleNamespace(
             rooms=SimpleNamespace(all=[self.room]),
@@ -213,6 +262,94 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             {"entity_id": "climate.external_trv", "temperature": 19.0},
             blocking=True,
         )
+
+    def _use_external_temperature_sensor(self, temperature=17.0):
+        self.controller.assignments = {}
+        self.controller.temperature_sensors = {"1": "sensor.office_temperature"}
+        self.state.state = str(temperature)
+        self.state.attributes = {"unit_of_measurement": "°C"}
+
+    async def test_external_sensor_starts_proportional_owned_boost(self):
+        self._use_external_temperature_sensor(17.0)
+
+        await self.controller.async_update()
+
+        self.room.boost.assert_awaited_once_with(3.0, 60)
+        self.assertEqual(self.controller._sensor_boosts["1"]["delta"], 3.0)
+        saved = self.controller._store.async_save.await_args.args[0]
+        self.assertIn("1", saved["sensor_boosts"])
+
+    async def test_external_sensor_supports_a_fixed_boost(self):
+        self._use_external_temperature_sensor(17.0)
+        self.controller.temperature_boost_mode = "fixed"
+        self.controller.temperature_fixed_boost = 1.5
+
+        await self.controller.async_update()
+
+        self.room.boost.assert_awaited_once_with(1.5, 60)
+
+    async def test_external_sensor_is_ignored_when_room_has_wiser_thermostat(self):
+        self._use_external_temperature_sensor(17.0)
+        self.room.roomstat_id = 42
+
+        await self.controller.async_update()
+
+        self.room.boost.assert_not_awaited()
+        self.assertFalse(self.controller.has_temperature_sensor(self.room.id))
+
+    async def test_external_sensor_never_cancels_a_manual_boost(self):
+        self._use_external_temperature_sensor(20.0)
+        self.room.is_boosted = True
+        self.room.is_override = True
+
+        await self.controller.async_update()
+
+        self.room.cancel_boost.assert_not_awaited()
+        self.room.boost.assert_not_awaited()
+
+    async def test_external_sensor_cancels_owned_boost_within_tolerance(self):
+        self._use_external_temperature_sensor(17.0)
+        await self.controller.async_update()
+        expected_end = self.controller._sensor_boosts["1"]["expected_end"]
+        self.room.is_boosted = True
+        self.room.is_override = True
+        self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.state.state = "18.6"
+
+        await self.controller.async_update()
+
+        self.room.cancel_boost.assert_awaited_once_with()
+        self.assertNotIn("1", self.controller._sensor_boosts)
+
+    async def test_external_sensor_preserves_a_user_modified_boost(self):
+        self._use_external_temperature_sensor(17.0)
+        await self.controller.async_update()
+        expected_end = datetime.fromisoformat(
+            self.controller._sensor_boosts["1"]["expected_end"]
+        )
+        self.room.is_boosted = True
+        self.room.is_override = True
+        self.room.boost_end_time = expected_end + timedelta(minutes=10)
+        self.state.state = "20"
+
+        await self.controller.async_update()
+
+        self.room.cancel_boost.assert_not_awaited()
+        self.assertNotIn("1", self.controller._sensor_boosts)
+
+    async def test_external_sensor_unavailable_cancels_owned_boost(self):
+        self._use_external_temperature_sensor(17.0)
+        await self.controller.async_update()
+        expected_end = self.controller._sensor_boosts["1"]["expected_end"]
+        self.room.is_boosted = True
+        self.room.is_override = True
+        self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.state.state = "unavailable"
+
+        await self.controller.async_update()
+
+        self.room.cancel_boost.assert_awaited_once_with()
+        self.assertNotIn("1", self.controller._sensor_boosts)
 
     async def test_modulating_passive_mode_mirrors_room_target(self):
         self.room.is_passive_mode = True

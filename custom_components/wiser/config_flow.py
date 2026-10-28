@@ -36,6 +36,7 @@ from homeassistant.helpers.selector import (
     EntitySelectorConfig,
     SELECTORS,
     SelectSelector,
+    SelectSelectorConfig,
     SelectSelectorMode,
     Selector,
     make_selector_config_schema,
@@ -59,6 +60,14 @@ from .const import (
     CONF_CONTROL_STRATEGY,
     CONF_EQUIPMENT_SENSORS,
     CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS,
+    CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+    CONF_EXTERNAL_TEMPERATURE_BOOST_MODE,
+    CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+    CONF_EXTERNAL_TEMPERATURE_MAX_BOOST,
+    CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+    CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS,
+    CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+    CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
     CONF_HOSTNAME,
@@ -77,12 +86,20 @@ from .const import (
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
+    DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+    DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+    DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST,
+    DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+    DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+    DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE,
     CONTROL_STRATEGIES,
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP,
     DEFAULT_SCAN_INTERVAL,
     DATA,
     DOMAIN,
+    EXTERNAL_TEMPERATURE_BOOST_FIXED,
+    EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
     HWCycleModes,
@@ -585,6 +602,15 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         }
         return room_fields, entities_by_room
 
+    def _external_temperature_sensor_room_ids(self):
+        """Return rooms that do not already have a Wiser Room Thermostat."""
+        return {
+            str(room.id)
+            for room in self._wiser_rooms()
+            if room_supports_temperature_control(room)
+            and not getattr(room, "roomstat_id", None)
+        }
+
     async def async_step_opentherm(self, user_input=None):
         """Choose an OpenTherm feature to configure."""
         if self._opentherm() is None:
@@ -921,6 +947,23 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS, {}
             ).items()
         }
+        saved_sensor_assignments = {
+            str(room_id): str(entity_id)
+            for room_id, entity_id in saved_external_options.get(
+                CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS, {}
+            ).items()
+            if entity_id
+        }
+        sensor_room_ids = (
+            self._external_temperature_sensor_room_ids()
+            if hasattr(self, "_external_temperature_sensor_room_ids")
+            else set(room_fields.values())
+        )
+        sensor_fields = {
+            f"{field_name} temperature sensor": room_id
+            for field_name, room_id in room_fields.items()
+            if room_id in sensor_room_ids
+        }
         saved_passive_options = self.config_entry.options.get(
             CONF_AUTOMATIONS_PASSIVE, {}
         )
@@ -965,6 +1008,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             )
             external_options = dict(display_external_options)
             assignments = {}
+            sensor_assignments = {}
             registry = er.async_get(self.hass)
             for field_name, room_id in room_fields.items():
                 entity_ids = list(external_options.pop(field_name, []))
@@ -976,11 +1020,25 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     errors["base"] = "external_climate_must_not_be_wiser"
                 if entity_ids:
                     assignments[room_id] = entity_ids
+            for field_name, room_id in sensor_fields.items():
+                entity_id = external_options.pop(field_name, None)
+                if entity_id:
+                    entry = registry.async_get(entity_id)
+                    if entry is not None and entry.platform == DOMAIN:
+                        errors["base"] = "external_sensor_must_not_be_wiser"
+                    sensor_assignments[room_id] = entity_id
             if _external_room_control_duplicate_entities(assignments):
                 errors["base"] = "external_climate_duplicate_assignment"
+            if len(set(sensor_assignments.values())) != len(sensor_assignments):
+                errors["base"] = "external_sensor_duplicate_assignment"
+            if set(assignments) & set(sensor_assignments):
+                errors["base"] = "external_room_control_conflicting_assignment"
 
             if not errors:
                 external_options[CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS] = assignments
+                external_options[CONF_EXTERNAL_TEMPERATURE_SENSOR_ASSIGNMENTS] = (
+                    sensor_assignments
+                )
                 user_input = dict(user_input)
                 user_input[CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL] = external_options
                 submitted_passive = dict(
@@ -1032,6 +1090,139 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     include_entities=external_entities_by_room.get(room_id, []),
                 )
             )
+            sensor_field_name = f"{field_name} temperature sensor"
+            if sensor_field_name not in sensor_fields:
+                continue
+            external_section_schema[
+                vol.Optional(
+                    sensor_field_name,
+                    default=display_external_options.get(
+                        sensor_field_name,
+                        saved_sensor_assignments.get(room_id),
+                    ),
+                )
+            ] = EntitySelector(
+                EntitySelectorConfig(
+                    domain=["sensor", "number", "input_number"],
+                    device_class="temperature",
+                    multiple=False,
+                )
+            )
+
+        external_section_schema.update(
+            {
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
+                        DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE,
+                    ),
+                ): selector(
+                    {
+                        "number": {
+                            "min": 0,
+                            "max": 5,
+                            "step": 0.1,
+                            "unit_of_measurement": UnitOfTemperature.CELSIUS,
+                            "mode": "box",
+                        }
+                    }
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+                        DEFAULT_EXTERNAL_TEMPERATURE_BOOST_DURATION,
+                    ),
+                ): selector(
+                    {
+                        "number": {
+                            "min": 10,
+                            "max": 180,
+                            "step": 5,
+                            "unit_of_measurement": "min",
+                            "mode": "box",
+                        }
+                    }
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_BOOST_MODE,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_BOOST_MODE,
+                        EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
+                    ),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
+                            EXTERNAL_TEMPERATURE_BOOST_FIXED,
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key="external_temperature_boost_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+                        DEFAULT_EXTERNAL_TEMPERATURE_FIXED_BOOST,
+                    ),
+                ): selector(
+                    {
+                        "number": {
+                            "min": 0.5,
+                            "max": 5,
+                            "step": 0.5,
+                            "unit_of_measurement": UnitOfTemperature.CELSIUS,
+                            "mode": "box",
+                        }
+                    }
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+                        DEFAULT_EXTERNAL_TEMPERATURE_PROPORTIONAL_MULTIPLIER,
+                    ),
+                ): selector(
+                    {"number": {"min": 0.5, "max": 5, "step": 0.1, "mode": "box"}}
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_MAX_BOOST,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_MAX_BOOST,
+                        DEFAULT_EXTERNAL_TEMPERATURE_MAX_BOOST,
+                    ),
+                ): selector(
+                    {
+                        "number": {
+                            "min": 0.5,
+                            "max": 5,
+                            "step": 0.5,
+                            "unit_of_measurement": UnitOfTemperature.CELSIUS,
+                            "mode": "box",
+                        }
+                    }
+                ),
+                vol.Optional(
+                    CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+                    default=display_external_options.get(
+                        CONF_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+                        DEFAULT_EXTERNAL_TEMPERATURE_STALE_MINUTES,
+                    ),
+                ): selector(
+                    {
+                        "number": {
+                            "min": 5,
+                            "max": 180,
+                            "step": 5,
+                            "unit_of_measurement": "min",
+                            "mode": "box",
+                        }
+                    }
+                ),
+            }
+        )
 
         passive_options = dict(saved_passive_options)
         if user_input is not None:
