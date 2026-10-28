@@ -136,6 +136,21 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "room_supports_temperature_control": lambda room: bool(
                 room.temperature_control
             ),
+            "room_has_wiser_temperature_sensor": lambda room: bool(
+                getattr(room, "roomstat_id", None)
+                or any(
+                    getattr(device, "product_type", None)
+                    in {"RoomStat", "TemperatureHumiditySensor"}
+                    for device in (getattr(room, "devices", None) or [])
+                )
+            ),
+            "room_has_wiser_smartvalve": lambda room: bool(
+                getattr(room, "number_of_smartvalves", 0)
+                or any(
+                    getattr(device, "product_type", None) == "iTRV"
+                    for device in (getattr(room, "devices", None) or [])
+                )
+            ),
             "_passive_room_strategies": lambda strategies, assignments, enabled: {
                 str(room_id): strategy
                 for room_id, strategy in strategies.items()
@@ -1079,7 +1094,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-    def test_external_temperature_sensor_rooms_exclude_wiser_thermostats(self):
+    def test_external_temperature_sensor_rooms_exclude_wiser_sensors(self):
         functions = load_functions(
             "config_flow.py",
             {"_external_temperature_sensor_room_ids"},
@@ -1087,14 +1102,117 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         flow = SimpleNamespace(
             _wiser_rooms=lambda: [
-                SimpleNamespace(id=1, temperature_control=True, roomstat_id=None),
-                SimpleNamespace(id=2, temperature_control=True, roomstat_id=22),
-                SimpleNamespace(id=3, temperature_control=False, roomstat_id=None),
+                SimpleNamespace(
+                    id=1,
+                    temperature_control=True,
+                    number_of_smartvalves=1,
+                    roomstat_id=None,
+                    devices=[],
+                ),
+                SimpleNamespace(
+                    id=2,
+                    temperature_control=True,
+                    number_of_smartvalves=1,
+                    roomstat_id=22,
+                    devices=[],
+                ),
+                SimpleNamespace(
+                    id=3,
+                    temperature_control=False,
+                    number_of_smartvalves=1,
+                    roomstat_id=None,
+                    devices=[],
+                ),
+                SimpleNamespace(
+                    id=4,
+                    temperature_control=True,
+                    number_of_smartvalves=1,
+                    roomstat_id=None,
+                    devices=[
+                        SimpleNamespace(product_type="TemperatureHumiditySensor")
+                    ],
+                ),
+                SimpleNamespace(
+                    id=5,
+                    temperature_control=True,
+                    number_of_smartvalves=0,
+                    roomstat_id=None,
+                    devices=[],
+                ),
             ]
         )
 
         self.assertEqual(
             functions._external_temperature_sensor_room_ids(flow), {"1"}
+        )
+
+    async def test_external_temperature_sensor_step_aborts_without_rooms(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"async_step_external_temperature_sensors"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_room_control_form_rooms=lambda: ({}, {}),
+            _external_temperature_sensor_room_ids=lambda: set(),
+            async_abort=lambda **kwargs: kwargs,
+        )
+
+        result = await functions.async_step_external_temperature_sensors(flow)
+
+        self.assertEqual(result, {"reason": "no_external_temperature_rooms"})
+
+    def test_room_has_wiser_temperature_sensor_supports_both_sensor_types(self):
+        functions = load_functions(
+            "helpers.py", {"room_has_wiser_temperature_sensor"}, {}
+        )
+
+        self.assertTrue(
+            functions.room_has_wiser_temperature_sensor(
+                SimpleNamespace(roomstat_id=22, devices=[])
+            )
+        )
+        self.assertTrue(
+            functions.room_has_wiser_temperature_sensor(
+                SimpleNamespace(
+                    roomstat_id=None,
+                    devices=[
+                        SimpleNamespace(product_type="TemperatureHumiditySensor")
+                    ],
+                )
+            )
+        )
+        self.assertFalse(
+            functions.room_has_wiser_temperature_sensor(
+                SimpleNamespace(
+                    roomstat_id=None,
+                    devices=[SimpleNamespace(product_type="iTRV")],
+                )
+            )
+        )
+
+    def test_room_has_wiser_smartvalve_supports_count_and_devices(self):
+        functions = load_functions(
+            "helpers.py", {"room_has_wiser_smartvalve"}, {}
+        )
+
+        self.assertTrue(
+            functions.room_has_wiser_smartvalve(
+                SimpleNamespace(number_of_smartvalves=1, devices=[])
+            )
+        )
+        self.assertTrue(
+            functions.room_has_wiser_smartvalve(
+                SimpleNamespace(
+                    number_of_smartvalves=0,
+                    devices=[SimpleNamespace(product_type="iTRV")],
+                )
+            )
+        )
+        self.assertFalse(
+            functions.room_has_wiser_smartvalve(
+                SimpleNamespace(number_of_smartvalves=0, devices=[])
+            )
         )
 
     def test_room_supports_temperature_control_uses_capability_and_fallbacks(self):

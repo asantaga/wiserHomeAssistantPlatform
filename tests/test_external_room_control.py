@@ -156,6 +156,21 @@ def load_controller():
         "TemperatureConverter": SimpleNamespace(
             convert=lambda value, _from_unit, _to_unit: value
         ),
+        "room_has_wiser_temperature_sensor": lambda room: bool(
+            getattr(room, "roomstat_id", None)
+            or any(
+                getattr(device, "product_type", None)
+                in {"RoomStat", "TemperatureHumiditySensor"}
+                for device in (getattr(room, "devices", None) or [])
+            )
+        ),
+        "room_has_wiser_smartvalve": lambda room: bool(
+            getattr(room, "number_of_smartvalves", 0)
+            or any(
+                getattr(device, "product_type", None) == "iTRV"
+                for device in (getattr(room, "devices", None) or [])
+            )
+        ),
         "STORAGE_VERSION": 1,
         "Store": FakeStore,
         "WEEKDAYS": (
@@ -186,6 +201,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         controller_class, self.registry = load_controller()
         self.room = SimpleNamespace(
             id=1,
+            number_of_smartvalves=1,
             roomstat_id=None,
             mode="Auto",
             is_boosted=False,
@@ -292,6 +308,26 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
     async def test_external_sensor_is_ignored_when_room_has_wiser_thermostat(self):
         self._use_external_temperature_sensor(17.0)
         self.room.roomstat_id = 42
+
+        await self.controller.async_update()
+
+        self.room.boost.assert_not_awaited()
+        self.assertFalse(self.controller.has_temperature_sensor(self.room.id))
+
+    async def test_external_sensor_is_ignored_when_room_has_wiser_sensor(self):
+        self._use_external_temperature_sensor(17.0)
+        self.room.devices = [
+            SimpleNamespace(product_type="TemperatureHumiditySensor")
+        ]
+
+        await self.controller.async_update()
+
+        self.room.boost.assert_not_awaited()
+        self.assertFalse(self.controller.has_temperature_sensor(self.room.id))
+
+    async def test_external_sensor_is_ignored_when_room_has_no_wiser_trv(self):
+        self._use_external_temperature_sensor(17.0)
+        self.room.number_of_smartvalves = 0
 
         await self.controller.async_update()
 

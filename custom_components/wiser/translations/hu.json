@@ -239,7 +239,8 @@
     },
     "abort": {
       "opentherm_not_available": "Ehhez a Wiser központhoz nem érhetők el OpenTherm-adatok.",
-      "equipment_not_available": "Ehhez a Wiser központhoz nem érhetők el berendezésadatok."
+      "equipment_not_available": "Ehhez a Wiser központhoz nem érhetők el berendezésadatok.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     },
     "error": {
       "external_climate_must_not_be_wiser": "Válasszon külső klímaentitást. A Wiser klímaentitás nem vezérelhető külső eszközként.",

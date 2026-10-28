@@ -121,6 +121,8 @@ from .opentherm_detection import (
 from .helpers import (
     active_wiser_rooms,
     room_has_climate,
+    room_has_wiser_smartvalve,
+    room_has_wiser_temperature_sensor,
     room_supports_temperature_control,
 )
 
@@ -665,12 +667,13 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         return room_fields, entities_by_room
 
     def _external_temperature_sensor_room_ids(self):
-        """Return rooms that do not already have a Wiser Room Thermostat."""
+        """Return TRV rooms without a native Wiser temperature sensor."""
         return {
             str(room.id)
             for room in self._wiser_rooms()
             if room_supports_temperature_control(room)
-            and not getattr(room, "roomstat_id", None)
+            and room_has_wiser_smartvalve(room)
+            and not room_has_wiser_temperature_sensor(room)
         }
 
     def _save_external_room_control_options(self, external_options):
@@ -793,6 +796,8 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             for field_name, room_id in room_fields.items()
             if room_id in eligible_room_ids
         }
+        if not room_fields:
+            return self.async_abort(reason="no_external_temperature_rooms")
         external_options = dict(
             self.config_entry.options.get(
                 CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {}

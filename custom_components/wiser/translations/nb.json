@@ -239,7 +239,8 @@
     },
     "abort": {
       "opentherm_not_available": "OpenTherm-data er ikke tilgjengelige for denne Wiser-huben.",
-      "equipment_not_available": "Utstyrsdata er ikke tilgjengelige for denne Wiser-huben."
+      "equipment_not_available": "Utstyrsdata er ikke tilgjengelige for denne Wiser-huben.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     },
     "error": {
       "external_climate_must_not_be_wiser": "Velg en ekstern klimaenhet. En Wiser-klimaenhet kan ikke styres som en ekstern enhet.",

@@ -247,7 +247,8 @@
     },
     "abort": {
       "opentherm_not_available": "Les données OpenTherm ne sont pas disponibles pour cette passerelle Wiser.",
-      "equipment_not_available": "Les données des équipements ne sont pas disponibles pour cette passerelle Wiser."
+      "equipment_not_available": "Les données des équipements ne sont pas disponibles pour cette passerelle Wiser.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     }
   },
   "services": {

@@ -239,7 +239,8 @@
     },
     "abort": {
       "opentherm_not_available": "Los datos de OpenTherm no están disponibles para este concentrador Wiser.",
-      "equipment_not_available": "Los datos del equipo no están disponibles para este concentrador Wiser."
+      "equipment_not_available": "Los datos del equipo no están disponibles para este concentrador Wiser.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     },
     "error": {
       "external_climate_must_not_be_wiser": "Seleccione una entidad climática externa. Una entidad climática Wiser no se puede controlar como dispositivo externo.",

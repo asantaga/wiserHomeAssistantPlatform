@@ -247,7 +247,8 @@
     },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
-      "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar."
+      "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     }
   },
   "services": {

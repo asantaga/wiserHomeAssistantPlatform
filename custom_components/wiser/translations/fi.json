@@ -239,7 +239,8 @@
     },
     "abort": {
       "opentherm_not_available": "OpenTherm-tietoja ei ole saatavilla tälle Wiser-keskittimelle.",
-      "equipment_not_available": "Laitetietoja ei ole saatavilla tälle Wiser-keskittimelle."
+      "equipment_not_available": "Laitetietoja ei ole saatavilla tälle Wiser-keskittimelle.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     },
     "error": {
       "external_climate_must_not_be_wiser": "Valitse ulkoinen ilmastointientiteetti. Wiser-ilmastointientiteettiä ei voi ohjata ulkoisena laitteena.",

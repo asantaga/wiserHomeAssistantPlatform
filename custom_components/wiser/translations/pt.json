@@ -239,7 +239,8 @@
     },
     "abort": {
       "opentherm_not_available": "Os dados OpenTherm não estão disponíveis para este hub Wiser.",
-      "equipment_not_available": "Os dados do equipamento não estão disponíveis para este hub Wiser."
+      "equipment_not_available": "Os dados do equipamento não estão disponíveis para este hub Wiser.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     },
     "error": {
       "external_climate_must_not_be_wiser": "Selecione uma entidade de climatização externa. Uma entidade de climatização Wiser não pode ser controlada como dispositivo externo.",

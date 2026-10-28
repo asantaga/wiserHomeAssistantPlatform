@@ -69,6 +69,29 @@ def room_supports_temperature_control(room):
     )
 
 
+def room_has_wiser_temperature_sensor(room):
+    """Return whether a room already has a native Wiser temperature sensor."""
+    if getattr(room, "roomstat_id", None):
+        return True
+
+    return any(
+        getattr(device, "product_type", None)
+        in {"RoomStat", "TemperatureHumiditySensor"}
+        for device in (getattr(room, "devices", None) or [])
+    )
+
+
+def room_has_wiser_smartvalve(room):
+    """Return whether a room contains a Wiser smart valve to control."""
+    if getattr(room, "number_of_smartvalves", 0):
+        return True
+
+    return any(
+        getattr(device, "product_type", None) == "iTRV"
+        for device in (getattr(room, "devices", None) or [])
+    )
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address
