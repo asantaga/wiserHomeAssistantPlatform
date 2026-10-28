@@ -214,12 +214,33 @@ def get_unique_id(wiser_id: str):
     return str(f"{DOMAIN}-{wiser_id}")
 
 
-def _configured_hub_name(hass: HomeAssistant, discovered_name: str) -> str:
-    """Return the configured hub name for a suffixed discovery instance."""
+def _configured_hub_entry(
+    hass: HomeAssistant,
+    discovered_name: str,
+    host: str | None = None,
+    hostname: str | None = None,
+):
+    """Return an existing entry matching a discovered Wiser hub."""
     discovered_folded = discovered_name.casefold()
     unique_id_prefix = f"{DOMAIN}-"
+    discovered_addresses = {
+        str(value).casefold().rstrip(".")
+        for value in (host, hostname)
+        if value
+    }
 
     for entry in hass.config_entries.async_entries(DOMAIN):
+        configured_addresses = {
+            str(value).casefold().rstrip(".")
+            for value in (
+                entry.data.get(CONF_HOST),
+                entry.data.get(CONF_HOSTNAME),
+            )
+            if value
+        }
+        if discovered_addresses & configured_addresses:
+            return entry
+
         configured_names = {
             entry.data.get(CONF_NAME),
             entry.title,
@@ -234,13 +255,13 @@ def _configured_hub_name(hass: HomeAssistant, discovered_name: str) -> str:
             configured_name = str(configured_name)
             configured_folded = configured_name.casefold()
             if discovered_folded == configured_folded:
-                return configured_name
+                return entry
             suffix_prefix = f"{configured_folded}-"
             suffix = discovered_name[len(configured_name) + 1 :]
             if discovered_folded.startswith(suffix_prefix) and suffix.isdigit():
-                return configured_name
+                return entry
 
-    return discovered_name
+    return None
 
 
 @config_entries.HANDLERS.register(DOMAIN)
@@ -316,7 +337,20 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         port = discovery_info.port
         zctype = discovery_info.type
         discovered_name = discovery_info.name.replace(f".{zctype}", "")
-        name = _configured_hub_name(self.hass, discovered_name)
+        discovered_hostname = discovery_info.hostname.replace(".local.", ".local")
+        configured_entry = _configured_hub_entry(
+            self.hass,
+            discovered_name,
+            host,
+            discovered_hostname,
+        )
+        if configured_entry is not None:
+            await self.async_set_unique_id(
+                configured_entry.unique_id or get_unique_id(discovered_name)
+            )
+            return self.async_abort(reason="already_configured")
+
+        name = discovered_name
 
         await self.async_set_unique_id(get_unique_id(name))
         self._abort_if_unique_id_configured()
@@ -327,7 +361,7 @@ class WiserFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 CONF_HOST: host,
                 CONF_PORT: port,
-                CONF_HOSTNAME: discovery_info.hostname.replace(".local.", ".local"),
+                CONF_HOSTNAME: discovered_hostname,
                 CONF_NAME: name,
             }
         )
