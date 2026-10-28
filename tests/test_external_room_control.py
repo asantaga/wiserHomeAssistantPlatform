@@ -283,6 +283,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self._use_external_temperature_sensor(17.0)
         self.controller.temperature_boost_mode = "fixed"
         self.controller.temperature_fixed_boost = 1.5
+        self.controller.temperature_max_boost = 0.5
 
         await self.controller.async_update()
 

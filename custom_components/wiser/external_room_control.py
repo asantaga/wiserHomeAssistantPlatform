@@ -76,7 +76,6 @@ class ExternalRoomControlController:
         self.hass = hass
         self.coordinator = coordinator
         options = config_entry.options.get(CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {})
-        self.available = options.get(CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, False)
         configured_assignments = {
             str(room_id): list(entity_ids)
             for room_id, entity_ids in options.get(
@@ -130,6 +129,7 @@ class ExternalRoomControlController:
                 "Wiser rooms: %s",
                 ", ".join(sorted(duplicate_sensors)),
             )
+        self.available = bool(self.assignments or self.temperature_sensors)
         self.temperature_tolerance = float(
             options.get(
                 CONF_EXTERNAL_TEMPERATURE_TOLERANCE,
@@ -1330,9 +1330,9 @@ class ExternalRoomControlController:
     def _temperature_boost_delta(self, shortfall: float) -> float:
         """Return a valid Wiser boost increment for the measured shortfall."""
         if self.temperature_boost_mode == EXTERNAL_TEMPERATURE_BOOST_FIXED:
-            boost = self.temperature_fixed_boost
-        else:
-            boost = shortfall * self.temperature_proportional_multiplier
+            boost = min(max(0.5, self.temperature_fixed_boost), 5.0)
+            return math.ceil(boost * 2) / 2
+        boost = shortfall * self.temperature_proportional_multiplier
         boost = min(max(0.5, boost), self.temperature_max_boost, 5.0)
         return math.ceil(boost * 2) / 2
 
