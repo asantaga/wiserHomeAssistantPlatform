@@ -92,6 +92,15 @@ def room_has_wiser_smartvalve(room):
     )
 
 
+def room_supports_external_temperature_feedback(room):
+    """Return whether a room can use external temperature feedback."""
+    return (
+        room_supports_temperature_control(room)
+        and room_has_wiser_smartvalve(room)
+        and not room_has_wiser_temperature_sensor(room)
+    )
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address

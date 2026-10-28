@@ -46,7 +46,7 @@ from .const import (
     EXTERNAL_TEMPERATURE_BOOST_FIXED,
     EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
 )
-from .helpers import room_has_wiser_smartvalve, room_has_wiser_temperature_sensor
+from .helpers import room_supports_external_temperature_feedback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -396,8 +396,7 @@ class ExternalRoomControlController:
         return bool(
             self.temperature_sensor_entity_id(room_id)
             and room is not None
-            and room_has_wiser_smartvalve(room)
-            and not room_has_wiser_temperature_sensor(room)
+            and room_supports_external_temperature_feedback(room)
         )
 
     def has_passive_override(self, room_id) -> bool:

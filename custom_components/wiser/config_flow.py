@@ -121,8 +121,7 @@ from .opentherm_detection import (
 from .helpers import (
     active_wiser_rooms,
     room_has_climate,
-    room_has_wiser_smartvalve,
-    room_has_wiser_temperature_sensor,
+    room_supports_external_temperature_feedback,
     room_supports_temperature_control,
 )
 
@@ -671,9 +670,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         return {
             str(room.id)
             for room in self._wiser_rooms()
-            if room_supports_temperature_control(room)
-            and room_has_wiser_smartvalve(room)
-            and not room_has_wiser_temperature_sensor(room)
+            if room_supports_external_temperature_feedback(room)
         }
 
     def _save_external_room_control_options(self, external_options):

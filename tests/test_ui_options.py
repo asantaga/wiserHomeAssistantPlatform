@@ -136,19 +136,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "room_supports_temperature_control": lambda room: bool(
                 room.temperature_control
             ),
-            "room_has_wiser_temperature_sensor": lambda room: bool(
-                getattr(room, "roomstat_id", None)
-                or any(
+            "room_supports_external_temperature_feedback": lambda room: bool(
+                room.temperature_control
+                and room.number_of_smartvalves
+                and not room.roomstat_id
+                and not any(
                     getattr(device, "product_type", None)
                     in {"RoomStat", "TemperatureHumiditySensor"}
-                    for device in (getattr(room, "devices", None) or [])
-                )
-            ),
-            "room_has_wiser_smartvalve": lambda room: bool(
-                getattr(room, "number_of_smartvalves", 0)
-                or any(
-                    getattr(device, "product_type", None) == "iTRV"
-                    for device in (getattr(room, "devices", None) or [])
+                    for device in room.devices
                 )
             ),
             "_passive_room_strategies": lambda strategies, assignments, enabled: {
@@ -1212,6 +1207,43 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(
             functions.room_has_wiser_smartvalve(
                 SimpleNamespace(number_of_smartvalves=0, devices=[])
+            )
+        )
+
+    def test_external_temperature_feedback_uses_shared_eligibility(self):
+        functions = load_functions(
+            "helpers.py",
+            {
+                "room_has_wiser_smartvalve",
+                "room_has_wiser_temperature_sensor",
+                "room_supports_external_temperature_feedback",
+                "room_supports_temperature_control",
+            },
+            {},
+        )
+
+        self.assertTrue(
+            functions.room_supports_external_temperature_feedback(
+                SimpleNamespace(
+                    capabilities=None,
+                    number_of_smartvalves=1,
+                    number_of_heating_actuators=0,
+                    roomstat_id=None,
+                    devices=[],
+                )
+            )
+        )
+        self.assertFalse(
+            functions.room_supports_external_temperature_feedback(
+                SimpleNamespace(
+                    capabilities=None,
+                    number_of_smartvalves=1,
+                    number_of_heating_actuators=0,
+                    roomstat_id=None,
+                    devices=[
+                        SimpleNamespace(product_type="TemperatureHumiditySensor")
+                    ],
+                )
             )
         )
 

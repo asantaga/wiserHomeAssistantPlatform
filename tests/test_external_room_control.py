@@ -156,18 +156,12 @@ def load_controller():
         "TemperatureConverter": SimpleNamespace(
             convert=lambda value, _from_unit, _to_unit: value
         ),
-        "room_has_wiser_temperature_sensor": lambda room: bool(
-            getattr(room, "roomstat_id", None)
-            or any(
+        "room_supports_external_temperature_feedback": lambda room: bool(
+            getattr(room, "number_of_smartvalves", 0)
+            and not getattr(room, "roomstat_id", None)
+            and not any(
                 getattr(device, "product_type", None)
                 in {"RoomStat", "TemperatureHumiditySensor"}
-                for device in (getattr(room, "devices", None) or [])
-            )
-        ),
-        "room_has_wiser_smartvalve": lambda room: bool(
-            getattr(room, "number_of_smartvalves", 0)
-            or any(
-                getattr(device, "product_type", None) == "iTRV"
                 for device in (getattr(room, "devices", None) or [])
             )
         ),
