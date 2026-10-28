@@ -465,7 +465,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         functions = load_functions(
             "config_flow.py",
-            {"_configured_hub_name", "get_unique_id", "async_step_zeroconf"},
+            {"_configured_hub_entry", "get_unique_id", "async_step_zeroconf"},
             self.namespace,
         )
         entry = SimpleNamespace(
@@ -482,6 +482,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             discovery_info={},
             context={},
             async_set_unique_id=AsyncMock(),
+            async_abort=Mock(return_value={"type": "abort"}),
             _abort_if_unique_id_configured=Mock(),
             async_step_zeroconf_confirm=AsyncMock(return_value={"type": "form"}),
         )
@@ -493,25 +494,73 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             hostname="WiserHeat05E6A6-4.local.",
         )
 
-        await functions.async_step_zeroconf(flow, discovery)
+        result = await functions.async_step_zeroconf(flow, discovery)
 
         flow.async_set_unique_id.assert_awaited_once_with(
             "wiser-WiserHeat05E6A6"
         )
-        flow._abort_if_unique_id_configured.assert_called_once_with()
-        self.assertEqual(flow.discovery_info["name"], "WiserHeat05E6A6")
+        flow.async_abort.assert_called_once_with(reason="already_configured")
+        flow._abort_if_unique_id_configured.assert_not_called()
+        flow.async_step_zeroconf_confirm.assert_not_awaited()
+        self.assertEqual(result, {"type": "abort"})
 
-    def test_discovery_suffix_is_preserved_for_unknown_hub(self):
+    async def test_discovery_host_matches_legacy_configured_entry(self):
+        self.namespace.update(
+            CONF_HOST="host",
+            CONF_PORT="port",
+            CONF_HOSTNAME="hostname",
+            ZeroconfServiceInfo=object,
+        )
         functions = load_functions(
-            "config_flow.py", {"_configured_hub_name"}, self.namespace
+            "config_flow.py",
+            {"_configured_hub_entry", "get_unique_id", "async_step_zeroconf"},
+            self.namespace,
+        )
+        entry = SimpleNamespace(
+            data={"host": "192.168.0.17"},
+            title="Drayton Wiser Integration for Home Assistant",
+            unique_id="legacy-hub-id",
+        )
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                config_entries=SimpleNamespace(
+                    async_entries=lambda _domain: [entry]
+                )
+            ),
+            discovery_info={},
+            context={},
+            async_set_unique_id=AsyncMock(),
+            async_abort=Mock(return_value={"type": "abort"}),
+            _abort_if_unique_id_configured=Mock(),
+            async_step_zeroconf_confirm=AsyncMock(return_value={"type": "form"}),
+        )
+        discovery = SimpleNamespace(
+            name="WiserHeat05C3CC._http._tcp.local.",
+            type="_http._tcp.local.",
+            host="192.168.0.17",
+            port=80,
+            hostname="WiserHeat05C3CC.local.",
+        )
+
+        result = await functions.async_step_zeroconf(flow, discovery)
+
+        flow.async_set_unique_id.assert_awaited_once_with("legacy-hub-id")
+        flow.async_abort.assert_called_once_with(reason="already_configured")
+        flow.async_step_zeroconf_confirm.assert_not_awaited()
+        self.assertEqual(result, {"type": "abort"})
+
+    def test_unknown_discovery_does_not_match_configured_hub(self):
+        functions = load_functions(
+            "config_flow.py",
+            {"_configured_hub_entry"},
+            self.namespace,
         )
         hass = SimpleNamespace(
             config_entries=SimpleNamespace(async_entries=lambda _domain: [])
         )
 
-        self.assertEqual(
-            functions._configured_hub_name(hass, "WiserHeat05E6A6-4"),
-            "WiserHeat05E6A6-4",
+        self.assertIsNone(
+            functions._configured_hub_entry(hass, "WiserHeat05E6A6-4")
         )
 
     async def test_migration_enables_legacy_and_preserves_other_options(self):
