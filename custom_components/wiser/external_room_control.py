@@ -544,7 +544,11 @@ class ExternalRoomControlController:
         data = deepcopy(schedule.ws_schedule_data)
         if str(schedule.schedule_type).casefold() != "heating":
             return data
-        data["Capabilities"] = {"PassiveControl": True}
+        data["Capabilities"] = {
+            "PassiveControl": bool(self.coordinator.passive_mode_enabled)
+        }
+        if not self.coordinator.passive_mode_enabled:
+            return data
         room_ids = sorted(self._schedule_room_ids(schedule))
         default_room = self._room(room_ids[0]) if room_ids else None
         data["PassiveControlDefaults"] = {

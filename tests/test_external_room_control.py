@@ -1021,6 +1021,44 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("Capabilities", self.controller.schedule_data(schedule))
 
+    def test_disabled_hub_passive_mode_hides_schedule_controls(self):
+        self.controller.coordinator.passive_mode_enabled = False
+        self.room.passive_mode_enabled = True
+        schedule = SimpleNamespace(
+            id=7,
+            schedule_type="Heating",
+            assignment_ids=[1],
+            ws_schedule_data={
+                "ScheduleData": [
+                    {
+                        "day": "Monday",
+                        "slots": [{"Time": "06:00", "Setpoint": "17"}],
+                    }
+                ]
+            },
+        )
+        self.controller._passive_control_schedules = {
+            "7": {
+                "Monday": {
+                    "06:00": {
+                        "scheduled": True,
+                        "enabled": True,
+                        "strategy": "temperature_limiter",
+                        "lower": 17.0,
+                        "upper": 22.0,
+                    }
+                }
+            }
+        }
+
+        data = self.controller.schedule_data(schedule)
+
+        self.assertEqual(data["Capabilities"], {"PassiveControl": False})
+        self.assertNotIn("PassiveControlDefaults", data)
+        self.assertNotIn("PassiveControl", data)
+        self.assertNotIn("PassiveRange", data)
+        self.assertEqual(data["ScheduleData"], schedule.ws_schedule_data["ScheduleData"])
+
     def test_unassigned_schedule_can_use_temperature_limiter(self):
         schedule = SimpleNamespace(assignment_ids=[])
 
