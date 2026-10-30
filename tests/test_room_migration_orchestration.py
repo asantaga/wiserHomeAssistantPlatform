@@ -75,6 +75,7 @@ def _load_wiser_init() -> ModuleType:
         DOMAIN="wiser",
         ENTITY_PREFIX="Wiser",
         MANUFACTURER="Drayton Wiser",
+        ROOM="Room",
         DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP=45.0,
         WISER_PLATFORMS=[],
         WISER_SERVICES={},

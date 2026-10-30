@@ -75,6 +75,17 @@ class EntityNamingTest(unittest.TestCase):
                 self.assertIsInstance(value, ast.Constant, class_name)
                 self.assertTrue(value.value, class_name)
 
+    def test_room_binary_sensor_uses_logical_room_metadata(self) -> None:
+        """The window sensor must not label a room as the hub Controller."""
+        source = (COMPONENT_PATH / "binary_sensor.py").read_text()
+        room_source = source[
+            source.index("class RoomBinarySensor"):
+            source.index("class WiserSmokeAlarm")
+        ]
+
+        self.assertIn('"model": ROOM', room_source)
+        self.assertNotIn('"sw_version"', room_source)
+
     def test_flow_translation_catalogues_have_matching_keys(self) -> None:
         """Every language must describe the live config and options flows."""
 
