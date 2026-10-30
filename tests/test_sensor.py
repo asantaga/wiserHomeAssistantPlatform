@@ -278,8 +278,8 @@ def _load_sensor_module() -> ModuleType:
     )
     _module(
         "wiser.temperature",
-        room_target_temperature=lambda room, frost_temp, off_temp: (
-            frost_temp
+        room_target_temperature=lambda room, frost_temp, off_temp, min_temp: (
+            (min_temp if frost_temp in (None, off_temp) else frost_temp)
             if room.mode == "Off" or room.current_target_temperature == off_temp
             else room.current_target_temperature
         ),
