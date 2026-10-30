@@ -22,19 +22,27 @@ class RoomTargetTemperatureTest(unittest.TestCase):
         room = SimpleNamespace(mode="Auto", current_target_temperature=20.5)
 
         self.assertEqual(
-            TEMPERATURE.room_target_temperature(room, 5.0, -20), 20.5
+            TEMPERATURE.room_target_temperature(room, 5.0, -20, 5.0), 20.5
         )
 
     def test_returns_frost_temperature_when_room_mode_is_off(self) -> None:
         room = SimpleNamespace(mode="Off", current_target_temperature=18.0)
 
         self.assertEqual(
-            TEMPERATURE.room_target_temperature(room, 5.0, -20), 5.0
+            TEMPERATURE.room_target_temperature(room, 5.0, -20, 5.0), 5.0
         )
 
     def test_returns_frost_temperature_for_off_sentinel(self) -> None:
         room = SimpleNamespace(mode="Manual", current_target_temperature=-20)
 
         self.assertEqual(
-            TEMPERATURE.room_target_temperature(room, 5.0, -20), 5.0
+            TEMPERATURE.room_target_temperature(room, 5.0, -20, 5.0), 5.0
+        )
+
+    def test_away_mode_off_sentinel_uses_supported_minimum(self) -> None:
+        """Do not expose Wiser's -20C off sentinel as a climate target."""
+        room = SimpleNamespace(mode="Auto", current_target_temperature=-20)
+
+        self.assertEqual(
+            TEMPERATURE.room_target_temperature(room, -20, -20, 5.0), 5.0
         )

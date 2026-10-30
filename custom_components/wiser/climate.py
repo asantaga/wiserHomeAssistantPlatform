@@ -663,6 +663,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
                 else TEMP_MINIMUM
             ),
             TEMP_OFF,
+            TEMP_MINIMUM,
         )
 
     if not hasattr(ClimateEntity, "native_target_temperature"):

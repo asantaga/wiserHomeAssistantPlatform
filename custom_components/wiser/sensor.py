@@ -1550,6 +1550,7 @@ class WiserLTSTempSensor(WiserSensor):
                     else TEMP_MINIMUM
                 ),
                 TEMP_OFF,
+                TEMP_MINIMUM,
             )
         self.async_write_ha_state()
 
