@@ -13,7 +13,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_OPENTHERM_SENSORS, DATA, DOMAIN, MANUFACTURER
+from .const import (
+    CONF_OPENTHERM_SENSORS,
+    DATA,
+    DOMAIN,
+    MANUFACTURER,
+    ROOM,
+)
 from .entity import WiserEntityMixin
 from .helpers import (
     active_wiser_rooms,
@@ -486,9 +492,8 @@ class RoomBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity):
             "name": get_device_name(self._data, self._room_id, "room"),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._room_id, "room"))},
             "manufacturer": MANUFACTURER,
-            "model": self._data.wiserhub.system.product_type,
+            "model": ROOM,
             "suggested_area": self._room.name,
-            "sw_version": self._data.wiserhub.system.firmware_version,
             **get_hub_via_device_info(self._data),
         }
 

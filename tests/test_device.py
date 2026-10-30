@@ -507,6 +507,9 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.legacy_identifier,
             "Wiser Room",
             creation_parent_info={"via_device_id": "physical-hub-id"},
+            manufacturer="Drayton Wiser",
+            model="Room",
+            sw_version=None,
         )
         result = DEVICE.assign_device_area_if_unset(
             device_registry, area_registry, result, "Test"
@@ -521,6 +524,9 @@ class MigrateRoomDeviceTest(unittest.TestCase):
                     "identifiers": {self.identifier},
                     "name": "Wiser Room",
                     "via_device_id": "physical-hub-id",
+                    "manufacturer": "Drayton Wiser",
+                    "model": "Room",
+                    "sw_version": None,
                 }
             ],
         )
@@ -546,6 +552,9 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             self.identifier,
             self.legacy_identifier,
             "Wiser Room",
+            manufacturer="Drayton Wiser",
+            model="Room",
+            sw_version=None,
         )
 
         self.assertEqual(result.id, "room-device")
@@ -554,8 +563,36 @@ class MigrateRoomDeviceTest(unittest.TestCase):
             registry.updated[0][1]["new_identifiers"], {self.identifier}
         )
         self.assertEqual(registry.updated[0][1]["name"], "Wiser Room")
+        self.assertEqual(registry.updated[0][1]["manufacturer"], "Drayton Wiser")
+        self.assertEqual(registry.updated[0][1]["model"], "Room")
+        self.assertIsNone(registry.updated[0][1]["sw_version"])
         self.assertNotIn("area_id", registry.updated[0][1])
         self.assertEqual(registry.removed, [])
+
+    def test_repairs_stale_controller_metadata_on_stable_room(self) -> None:
+        registry = DeviceRegistry(
+            {
+                (self.identifier, self.config_entry_id): DeviceEntry(
+                    "room-device"
+                )
+            }
+        )
+
+        DEVICE.migrate_room_device(
+            registry,
+            EntityRegistry(),
+            self.config_entry_id,
+            self.identifier,
+            self.legacy_identifier,
+            "Wiser Room",
+            manufacturer="Drayton Wiser",
+            model="Room",
+            sw_version=None,
+        )
+
+        self.assertEqual(registry.updated[0][0], "room-device")
+        self.assertEqual(registry.updated[0][1]["model"], "Room")
+        self.assertIsNone(registry.updated[0][1]["sw_version"])
 
     def test_merges_duplicate_legacy_room_into_stable_room(self) -> None:
         registry = DeviceRegistry(

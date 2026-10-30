@@ -496,6 +496,7 @@ def migrate_room_device(
     legacy_identifier,
     name,
     creation_parent_info=None,
+    **device_info,
 ):
     """Migrate or create a Wiser room device with its stable identifier."""
     get_by_identifier = getattr(
@@ -511,7 +512,11 @@ def migrate_room_device(
         )
 
     if room_device is not None:
-        updates = {"new_identifiers": {identifier}, "name": name}
+        updates = {
+            "new_identifiers": {identifier},
+            "name": name,
+            **device_info,
+        }
         if (
             room_device.area_id is None
             and legacy_device is not None
@@ -533,6 +538,7 @@ def migrate_room_device(
             legacy_device.id,
             new_identifiers={identifier},
             name=name,
+            **device_info,
         )
 
     return device_registry.async_get_or_create(
@@ -540,6 +546,7 @@ def migrate_room_device(
         identifiers={identifier},
         name=name,
         **(creation_parent_info or {}),
+        **device_info,
     )
 
 

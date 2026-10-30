@@ -42,6 +42,7 @@ from .const import (
     ENTITY_PREFIX,
     MANUFACTURER,
     OPENTHERM_HOT_WATER_SCHEDULE,
+    ROOM,
     UPDATE_LISTENER,
     WISER_PLATFORMS,
     WISER_SERVICES,
@@ -935,6 +936,9 @@ def migrate_room_device_registry(
             (DOMAIN, get_legacy_room_identifier(data, room.id)),
             get_device_name(data, room.id, "room"),
             creation_parent_info=get_hub_via_device_info(data),
+            manufacturer=MANUFACTURER,
+            model=ROOM,
+            sw_version=None,
         )
         assign_device_area_if_unset(
             device_registry, area_registry, device_entry, room.name
