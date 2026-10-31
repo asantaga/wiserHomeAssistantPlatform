@@ -442,6 +442,25 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     WiserEquipmentSensor(data, power_tag_control.id)
                 )
 
+    # Add equipment records which are not represented by a supported device
+    # collection. Linked records already received a sensor above.
+    if equipment_sensors_enabled:
+        equipment_collection = getattr(data.wiserhub.devices, "equipments", None)
+        linked_equipment_ids = {
+            getattr(equipment, "id", None)
+            for device in data.wiserhub.devices.all
+            if (equipment := getattr(device, "equipment", None)) is not None
+        }
+        for equipment in getattr(equipment_collection, "all", ()):
+            if equipment.id not in linked_equipment_ids:
+                wiser_sensors.append(
+                    WiserEquipmentSensor(
+                        data,
+                        equipment.device_id,
+                        equipment_id=equipment.id,
+                    )
+                )
+
     # Add LTS sensors - for room temp and target temp
     _LOGGER.debug("Setting up LTS sensors")
     for room in active_wiser_rooms(data):
@@ -2405,16 +2424,28 @@ class WiserEquipmentSensor(WiserSensor):
         }
     )
 
-    def __init__(self, data, device_id=0, sensor_type="") -> None:
+    def __init__(
+        self, data, device_id=0, sensor_type="", equipment_id=None
+    ) -> None:
         """Initialise the device sensor."""
         super().__init__(
             data, device_id, sensor_type, translation_key="equipment_power"
         )
+        self._equipment_id = equipment_id
         if self._device_id == 0:
             self._device = self._data.wiserhub.system
         else:
             self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
         self._state = self.native_value
+
+    def _get_equipment(self):
+        """Return linked or standalone equipment data."""
+        if getattr(self, "_equipment_id", None) is not None:
+            collection = getattr(self._data.wiserhub.devices, "equipments", None)
+            if collection is None:
+                return None
+            return collection.get_by_id(self._equipment_id)
+        return getattr(self._device, "equipment", None)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -2441,14 +2472,13 @@ class WiserEquipmentSensor(WiserSensor):
         """Return whether equipment data is currently available."""
         return (
             super().available
-            and self._device is not None
-            and getattr(self._device, "equipment", None) is not None
+            and self._get_equipment() is not None
         )
 
     @property
     def native_value(self) -> float | None:
         """Return the native power value."""
-        equipment = getattr(self._device, "equipment", None)
+        equipment = self._get_equipment()
         if equipment is None:
             return None
 
@@ -2467,10 +2497,34 @@ class WiserEquipmentSensor(WiserSensor):
     def native_unit_of_measurement(self) -> str:
         """Return the unit this state is expressed in."""
         return UnitOfPower.WATT
+
+    @property
+    def unique_id(self):
+        """Return a stable ID for linked and standalone equipment."""
+        if self._equipment_id is not None:
+            return get_unique_id(
+                self._data, "sensor", "Equipment", self._equipment_id
+            )
+        return super().unique_id
         
     @property
     def device_info(self):
         """Return device specific attributes."""
+        equipment = self._get_equipment()
+        if self._device is None:
+            return {
+                "name": getattr(equipment, "equipment_name", "Equipment"),
+                "identifiers": {
+                    (
+                        DOMAIN,
+                        f"{self._data.wiserhub.system.name} equipment "
+                        f"{self._equipment_id}",
+                    )
+                },
+                "manufacturer": MANUFACTURER,
+                "model": getattr(equipment, "product_type", None),
+                **get_hub_via_device_info(self._data),
+            }
         return {
             "name": get_device_name(self._data, self._device_id),
             "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
@@ -2482,13 +2536,15 @@ class WiserEquipmentSensor(WiserSensor):
     @property
     def extra_state_attributes(self):
         """Return device state attributes."""
-        equipment = getattr(self._device, "equipment", None)
+        equipment = self._get_equipment()
         if equipment is None:
             return {}
 
         power = equipment.power
         attrs = {
-            "product_identifier": self._device.product_identifier,
+            "product_identifier": getattr(
+                self._device, "product_identifier", None
+            ),
             "equipment_name": equipment.equipment_name,
             "device_type": equipment.device_type,
             "family": equipment.equipment_family,
