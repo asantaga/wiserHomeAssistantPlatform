@@ -2509,6 +2509,12 @@ class WiserEquipmentSensor(WiserSensor):
             "onoff_cost_schedule_supported": equipment.onoff_cost_schedule_supported,
             "functional_control_mode": equipment.functional_control_mode,
             "current_control_mode": equipment.current_control_mode,
+            "available_control_states": getattr(
+                equipment, "available_control_states", []
+            ),
+            "overview_schedule_id": getattr(
+                equipment, "overview_schedule_id", None
+            ),
             "pcm_mode": equipment.pcm_mode,
             "pcm_supported": equipment.pcm_supported,
             "pcm_priority": equipment.pcm_priority,
@@ -2544,5 +2550,13 @@ class WiserEquipmentSensor(WiserSensor):
         # PowerTagE and SmartPlug attributes
         if equipment.device_type in ("PTE", "PowerTagE", "SmartPlug"):
             attrs["energy_delivered"] = power.current_summation_delivered
+
+        if equipment.device_type == "SmartPlug":
+            attrs["stated_power"] = getattr(equipment, "stated_power", None)
+
+        if equipment.device_type == "EVSE":
+            attrs["cable_stated_power"] = getattr(
+                equipment, "cable_stated_power", None
+            )
 
         return attrs

@@ -910,6 +910,37 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         power.current_summation_delivered = 0
         self.assertEqual(sensor.extra_state_attributes["energy"], 0)
 
+    def test_new_equipment_attributes_are_exposed(self) -> None:
+        class OptionalAttributes(SimpleNamespace):
+            def __getattr__(self, _name):
+                return None
+
+        power = OptionalAttributes(current_summation_delivered=None)
+        equipment = OptionalAttributes(
+            available_control_states=["selfManagement", "consumptionForceOff"],
+            overview_schedule_id=12,
+            stated_power=3600,
+            cable_stated_power=7400,
+            device_type="SmartPlug",
+            power=power,
+        )
+        sensor = object.__new__(self.sensor_module.WiserEquipmentSensor)
+        sensor._device = OptionalAttributes(equipment=equipment)
+
+        attributes = sensor.extra_state_attributes
+        self.assertEqual(
+            attributes["available_control_states"],
+            ["selfManagement", "consumptionForceOff"],
+        )
+        self.assertEqual(attributes["overview_schedule_id"], 12)
+        self.assertEqual(attributes["stated_power"], 3600)
+        self.assertNotIn("cable_stated_power", attributes)
+
+        equipment.device_type = "EVSE"
+        attributes = sensor.extra_state_attributes
+        self.assertEqual(attributes["cable_stated_power"], 7400)
+        self.assertNotIn("stated_power", attributes)
+
     def test_equipment_name_uses_translation_without_changing_unique_id(self) -> None:
         device = SimpleNamespace(id=9)
         data = SimpleNamespace(
