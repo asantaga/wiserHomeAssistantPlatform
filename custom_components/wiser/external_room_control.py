@@ -1499,13 +1499,28 @@ class ExternalRoomControlController:
                 )
             except (TypeError, ValueError):
                 maximum_target = None
-            target = float(
-                target_temperature
-                if target_temperature is not None
-                else maximum_target or DEFAULT_OPEN_TEMPERATURE
+            display_temperature_unit = self.hass.config.units.temperature_unit
+            default_minimum = TemperatureConverter.convert(
+                FROST_PROTECTION_TEMPERATURE,
+                UnitOfTemperature.CELSIUS,
+                display_temperature_unit,
             )
+            if target_temperature is not None:
+                target = TemperatureConverter.convert(
+                    float(target_temperature),
+                    UnitOfTemperature.CELSIUS,
+                    display_temperature_unit,
+                )
+            elif maximum_target is not None:
+                target = maximum_target
+            else:
+                target = TemperatureConverter.convert(
+                    DEFAULT_OPEN_TEMPERATURE,
+                    UnitOfTemperature.CELSIUS,
+                    display_temperature_unit,
+                )
             target = max(
-                minimum_target or FROST_PROTECTION_TEMPERATURE,
+                minimum_target if minimum_target is not None else default_minimum,
                 target,
             )
             if maximum_target is not None:

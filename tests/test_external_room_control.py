@@ -104,6 +104,20 @@ class FakeDateTimeUtil:
         return datetime.fromisoformat(value) if value else None
 
 
+class FakeTemperatureConverter:
+    """Convert the temperature units exercised by the controller tests."""
+
+    @staticmethod
+    def convert(value, from_unit, to_unit):
+        if from_unit == to_unit:
+            return value
+        if from_unit == "°C" and to_unit == "°F":
+            return value * 9 / 5 + 32
+        if from_unit == "°F" and to_unit == "°C":
+            return (value - 32) * 5 / 9
+        raise ValueError(f"Unsupported conversion: {from_unit} to {to_unit}")
+
+
 def load_controller():
     """Load the real controller class with lightweight dependencies."""
     tree = ast.parse((COMPONENT / "external_room_control.py").read_text())
@@ -152,10 +166,8 @@ def load_controller():
         "STATE_UNAVAILABLE": "unavailable",
         "STATE_UNKNOWN": "unknown",
         "ATTR_UNIT_OF_MEASUREMENT": "unit_of_measurement",
-        "UnitOfTemperature": SimpleNamespace(CELSIUS="°C"),
-        "TemperatureConverter": SimpleNamespace(
-            convert=lambda value, _from_unit, _to_unit: value
-        ),
+        "UnitOfTemperature": SimpleNamespace(CELSIUS="°C", FAHRENHEIT="°F"),
+        "TemperatureConverter": FakeTemperatureConverter,
         "room_supports_external_temperature_feedback": lambda room: bool(
             getattr(room, "number_of_smartvalves", 0)
             and not getattr(room, "roomstat_id", None)
@@ -230,6 +242,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.hass = SimpleNamespace(
             states=SimpleNamespace(get=lambda _entity_id: self.state),
             services=SimpleNamespace(async_call=AsyncMock()),
+            config=SimpleNamespace(
+                units=SimpleNamespace(temperature_unit="°C")
+            ),
         )
         config_entry = SimpleNamespace(
             entry_id="entry",
@@ -270,6 +285,23 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate",
             "set_temperature",
             {"entity_id": "climate.external_trv", "temperature": 19.0},
+            blocking=True,
+        )
+
+    async def test_mirrors_wiser_target_in_fahrenheit_installation(self):
+        self.hass.config.units.temperature_unit = "°F"
+        self.state.attributes = {
+            "temperature": 70.0,
+            "min_temp": 41.0,
+            "max_temp": 86.0,
+        }
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 66.2},
             blocking=True,
         )
 
