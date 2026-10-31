@@ -741,7 +741,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             target_temp_low = kwargs.get("target_temp_low")
             if (
                 target_temp_low is not None
-                and float(target_temp_low) != float(self.target_temperature_low)
+                and float(target_temp_low)
+                != float(self.native_target_temperature_low)
             ):
                 await self._data.external_room_control.async_set_passive_lower_temperature(
                     self._room_id, target_temp_low
@@ -749,7 +750,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             target_temp_high = kwargs.get("target_temp_high")
             if (
                 target_temp_high is not None
-                and float(target_temp_high) != float(self.target_temperature_high)
+                and float(target_temp_high)
+                != float(self.native_target_temperature_high)
             ):
                 await self._data.external_room_control.async_set_upper_temperature(
                     self._room_id, target_temp_high
