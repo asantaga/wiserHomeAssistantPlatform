@@ -682,6 +682,38 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(saved["minor_version"], 9)
 
+    async def test_migration_preserves_version_six_passive_increment(self):
+        functions = load_functions(
+            "__init__.py", {"async_migrate_entry"}, self.namespace
+        )
+        entry = SimpleNamespace(
+            version=1,
+            minor_version=6,
+            options={
+                "automations_passive_mode": {
+                    "automations_passive_mode": True,
+                    "passive_mode_temperature_increments": 1.5,
+                }
+            },
+        )
+        update = Mock()
+        hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=update)
+        )
+
+        self.assertTrue(await functions.async_migrate_entry(hass, entry))
+
+        saved = update.call_args.kwargs
+        self.assertEqual(
+            saved["options"]["automations_passive_mode"],
+            {
+                "automations_passive_mode": True,
+                "temperature_increment": 1.5,
+                "room_strategies": {},
+            },
+        )
+        self.assertEqual(saved["minor_version"], 9)
+
     async def test_migration_keeps_original_passive_internal(self):
         functions = load_functions("__init__.py", {"async_migrate_entry"}, self.namespace)
         entry = SimpleNamespace(

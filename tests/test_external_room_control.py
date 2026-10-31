@@ -104,6 +104,20 @@ class FakeDateTimeUtil:
         return datetime.fromisoformat(value) if value else None
 
 
+class FakeTemperatureConverter:
+    """Convert the temperature units exercised by the controller tests."""
+
+    @staticmethod
+    def convert(value, from_unit, to_unit):
+        if from_unit == to_unit:
+            return value
+        if from_unit == "°C" and to_unit == "°F":
+            return value * 9 / 5 + 32
+        if from_unit == "°F" and to_unit == "°C":
+            return (value - 32) * 5 / 9
+        raise ValueError(f"Unsupported conversion: {from_unit} to {to_unit}")
+
+
 def load_controller():
     """Load the real controller class with lightweight dependencies."""
     tree = ast.parse((COMPONENT / "external_room_control.py").read_text())
@@ -152,10 +166,8 @@ def load_controller():
         "STATE_UNAVAILABLE": "unavailable",
         "STATE_UNKNOWN": "unknown",
         "ATTR_UNIT_OF_MEASUREMENT": "unit_of_measurement",
-        "UnitOfTemperature": SimpleNamespace(CELSIUS="°C"),
-        "TemperatureConverter": SimpleNamespace(
-            convert=lambda value, _from_unit, _to_unit: value
-        ),
+        "UnitOfTemperature": SimpleNamespace(CELSIUS="°C", FAHRENHEIT="°F"),
+        "TemperatureConverter": FakeTemperatureConverter,
         "room_supports_external_temperature_feedback": lambda room: bool(
             getattr(room, "number_of_smartvalves", 0)
             and not getattr(room, "roomstat_id", None)
@@ -230,6 +242,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.hass = SimpleNamespace(
             states=SimpleNamespace(get=lambda _entity_id: self.state),
             services=SimpleNamespace(async_call=AsyncMock()),
+            config=SimpleNamespace(
+                units=SimpleNamespace(temperature_unit="°C")
+            ),
         )
         config_entry = SimpleNamespace(
             entry_id="entry",
@@ -270,6 +285,23 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate",
             "set_temperature",
             {"entity_id": "climate.external_trv", "temperature": 19.0},
+            blocking=True,
+        )
+
+    async def test_mirrors_wiser_target_in_fahrenheit_installation(self):
+        self.hass.config.units.temperature_unit = "°F"
+        self.state.attributes = {
+            "temperature": 70.0,
+            "min_temp": 41.0,
+            "max_temp": 86.0,
+        }
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 66.2},
             blocking=True,
         )
 
@@ -345,6 +377,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.room.is_boosted = True
         self.room.is_override = True
         self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.room.current_target_temperature = 22.0
         self.state.state = "18.6"
 
         await self.controller.async_update()
@@ -360,7 +393,8 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.room.is_boosted = True
         self.room.is_override = True
-        self.room.boost_end_time = expected_end + timedelta(minutes=10)
+        self.room.boost_end_time = expected_end + timedelta(minutes=1)
+        self.room.current_target_temperature = 25.0
         self.state.state = "20"
 
         await self.controller.async_update()
@@ -375,6 +409,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.room.is_boosted = True
         self.room.is_override = True
         self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.room.current_target_temperature = 22.0
         self.state.state = "unavailable"
 
         await self.controller.async_update()
@@ -1244,6 +1279,50 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.controller._upper_schedules,
             {"7": {"Monday": {"06:00": 20.0}}},
+        )
+
+    async def test_failed_combined_schedule_save_restores_all_metadata(self):
+        original_upper = {"Monday": {"06:00": 20.0}}
+        original_lower = {"Monday": {"06:00": 15.0}}
+        original_control = {
+            "Monday": {"06:00": {"scheduled": False}}
+        }
+        self.controller._upper_schedules = {"7": deepcopy(original_upper)}
+        self.controller._lower_schedules = {"7": deepcopy(original_lower)}
+        self.controller._passive_control_schedules = {
+            "7": deepcopy(original_control)
+        }
+        self.controller._store.async_save.side_effect = RuntimeError("save failed")
+
+        with self.assertRaisesRegex(RuntimeError, "save failed"):
+            await self.controller.async_save_schedule_metadata(
+                7,
+                upper_schedule={"Monday": {"06:00": 22.0}},
+                passive_control_schedule={
+                    "Monday": {
+                        "06:00": {
+                            "scheduled": True,
+                            "enabled": True,
+                            "strategy": "temperature_limiter",
+                            "lower": 17.0,
+                            "upper": 22.0,
+                        }
+                    }
+                },
+            )
+
+        self.assertEqual(self.controller._upper_schedules["7"], original_upper)
+        self.assertEqual(self.controller._lower_schedules["7"], original_lower)
+        self.assertEqual(
+            self.controller._passive_control_schedules["7"], original_control
+        )
+
+    def test_websocket_saves_schedule_metadata_in_one_operation(self):
+        source = (COMPONENT / "websockets.py").read_text()
+
+        self.assertIn("async_save_schedule_metadata", source)
+        self.assertNotIn(
+            "await d.external_room_control.async_save_upper_schedule", source
         )
 
     async def test_copy_schedule_metadata_replaces_stale_target_values(self):

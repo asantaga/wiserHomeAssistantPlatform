@@ -933,6 +933,42 @@ class ExternalRoomControlController:
             self._passive_control_schedules[schedule_id] = previous
             raise
 
+    async def async_save_schedule_metadata(
+        self,
+        schedule_id,
+        *,
+        upper_schedule=None,
+        lower_schedule=None,
+        passive_control_schedule=None,
+    ) -> None:
+        """Persist all metadata associated with one schedule atomically."""
+        schedule_id = str(schedule_id)
+        schedule_stores = (
+            self._upper_schedules,
+            self._lower_schedules,
+            self._passive_control_schedules,
+        )
+        previous = [
+            deepcopy(schedules.get(schedule_id)) for schedules in schedule_stores
+        ]
+        if upper_schedule is not None:
+            self._upper_schedules[schedule_id] = upper_schedule
+        if lower_schedule is not None:
+            self._lower_schedules[schedule_id] = lower_schedule
+        if passive_control_schedule is None:
+            self._passive_control_schedules.pop(schedule_id, None)
+        else:
+            self._passive_control_schedules[schedule_id] = passive_control_schedule
+        try:
+            await self._async_save()
+        except Exception:
+            for schedules, value in zip(schedule_stores, previous):
+                if value is None:
+                    schedules.pop(schedule_id, None)
+                else:
+                    schedules[schedule_id] = value
+            raise
+
     async def async_copy_schedule_metadata(
         self, schedule_id, to_schedule_id
     ) -> None:
@@ -1357,6 +1393,18 @@ class ExternalRoomControlController:
                 )
             except (TypeError, ValueError):
                 return False
+        expected_target = marker.get("expected_target")
+        actual_target = getattr(room, "current_target_temperature", None)
+        if expected_target is not None and actual_target is not None:
+            try:
+                if not math.isclose(
+                    float(actual_target),
+                    float(expected_target),
+                    abs_tol=0.25,
+                ):
+                    return False
+            except (TypeError, ValueError):
+                return False
         actual_end = getattr(room, "boost_end_time", None)
         if expected_end and actual_end is not None:
             try:
@@ -1430,6 +1478,7 @@ class ExternalRoomControlController:
         )
         self._sensor_boosts[room_id] = {
             "expected_end": expected_end.isoformat(),
+            "expected_target": min(MAX_SCHEDULE_TEMPERATURE, target + delta),
             "duration": self.temperature_boost_duration,
             "delta": delta,
         }
@@ -1499,13 +1548,28 @@ class ExternalRoomControlController:
                 )
             except (TypeError, ValueError):
                 maximum_target = None
-            target = float(
-                target_temperature
-                if target_temperature is not None
-                else maximum_target or DEFAULT_OPEN_TEMPERATURE
+            display_temperature_unit = self.hass.config.units.temperature_unit
+            default_minimum = TemperatureConverter.convert(
+                FROST_PROTECTION_TEMPERATURE,
+                UnitOfTemperature.CELSIUS,
+                display_temperature_unit,
             )
+            if target_temperature is not None:
+                target = TemperatureConverter.convert(
+                    float(target_temperature),
+                    UnitOfTemperature.CELSIUS,
+                    display_temperature_unit,
+                )
+            elif maximum_target is not None:
+                target = maximum_target
+            else:
+                target = TemperatureConverter.convert(
+                    DEFAULT_OPEN_TEMPERATURE,
+                    UnitOfTemperature.CELSIUS,
+                    display_temperature_unit,
+                )
             target = max(
-                minimum_target or FROST_PROTECTION_TEMPERATURE,
+                minimum_target if minimum_target is not None else default_minimum,
                 target,
             )
             if maximum_target is not None:
