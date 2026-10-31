@@ -152,6 +152,117 @@ if (!customElements.get("ha-selector-opentherm_temperature_source")) {
   customElements.define("ha-selector-opentherm_temperature_source", OpenThermTemperatureSourceSelector);
 }
 
+class ExternalTemperatureCalculationSelector extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._value = {
+      mode: "proportional",
+      fixed_boost: 1,
+      proportional_multiplier: 1.5,
+      maximum_boost: 5,
+    };
+  }
+
+  set hass(value) { this._hass = value; this._update(); }
+  set selector(value) {
+    this._selector = value?.external_temperature_calculation_v1 || {};
+    this._update();
+  }
+  set value(value) {
+    this._value = { ...this._value, ...(value || {}) };
+    this._update();
+  }
+  get value() { return this._value; }
+  set label(value) { this._label = value; this._update(); }
+  set disabled(value) { this._disabled = value; this._update(); }
+  set required(value) { this._required = value; }
+
+  connectedCallback() {
+    if (this._form) return;
+    this._form = document.createElement("ha-form");
+    this._form.addEventListener("value-changed", (event) => {
+      event.stopPropagation();
+      if (this._disabled) return;
+      this._value = { ...this._value, ...event.detail.value };
+      this._update();
+      this.dispatchEvent(new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: { ...this._value } },
+      }));
+    });
+    this.shadowRoot.append(this._form);
+    this._update();
+  }
+
+  reportValidity() {
+    return !this._form?.reportValidity || this._form.reportValidity();
+  }
+
+  _update() {
+    if (!this._form) return;
+    const labels = {
+      mode: this._label || "Boost calculation",
+      fixed_boost: "Fixed boost amount",
+      proportional_multiplier: "Proportional multiplier",
+      maximum_boost: "Maximum boost amount",
+    };
+    const helpers = {
+      mode: "Choose a fixed target increase or calculate it from the measured temperature shortfall.",
+      fixed_boost: "Raises the Wiser target by this amount whenever feedback calls for heat.",
+      proportional_multiplier: "Multiplies the difference between the scheduled target and measured temperature.",
+      maximum_boost: "Caps the target increase calculated by proportional control.",
+    };
+    const fixed = this._value.mode === "fixed";
+    this._form.hass = this._hass;
+    this._form.data = { ...this._value };
+    this._form.schema = [
+      {
+        name: "mode",
+        required: Boolean(this._required),
+        selector: {
+          select: {
+            options: [
+              { value: "proportional", label: "Proportional to temperature shortfall" },
+              { value: "fixed", label: "Fixed amount" },
+            ],
+            mode: "dropdown",
+          },
+        },
+      },
+      fixed
+        ? {
+            name: "fixed_boost",
+            required: Boolean(this._required),
+            selector: { number: { min: 0.5, max: 5, step: 0.5, mode: "box", unit_of_measurement: "°C" } },
+          }
+        : {
+            name: "proportional_multiplier",
+            required: Boolean(this._required),
+            selector: { number: { min: 0.5, max: 5, step: 0.1, mode: "box" } },
+          },
+      ...(!fixed
+        ? [{
+            name: "maximum_boost",
+            required: Boolean(this._required),
+            selector: { number: { min: 0.5, max: 5, step: 0.5, mode: "box", unit_of_measurement: "°C" } },
+          }]
+        : []),
+    ];
+    this._form.computeLabel = (schema) => labels[schema.name] || schema.name;
+    this._form.computeHelper = (schema) => helpers[schema.name];
+    this._form.disabled = Boolean(this._disabled);
+  }
+}
+
+if (!customElements.get("ha-selector-external_temperature_calculation_v1")) {
+  customElements.define(
+    "ha-selector-external_temperature_calculation_v1",
+    ExternalTemperatureCalculationSelector
+  );
+}
+
 class OpenThermFailureNotificationsSelector extends HTMLElement {
   constructor() {
     super();

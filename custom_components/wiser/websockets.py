@@ -1,4 +1,6 @@
+from copy import deepcopy
 import logging
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
@@ -276,7 +278,7 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                schedule = schedule.ws_schedule_data
+                schedule = d.external_room_control.schedule_data(schedule)
                 connection.send_result(msg["id"], schedule)
             else:
                 connection.send_error(
@@ -381,6 +383,19 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
+                if (
+                    not remove
+                    and d.external_room_control.passive_control_schedule_uses_temperature_limiter(
+                        schedule_id
+                    )
+                    and not d.external_room_control.is_enabled(msg["entity_id"])
+                ):
+                    connection.send_error(
+                        msg["id"],
+                        "invalid_schedule",
+                        "Temperature limiter periods require External Room Control for every assigned room",
+                    )
+                    return
                 if not remove:
                     await schedule.assign_schedule(int(msg["entity_id"]))
                 else:
@@ -501,6 +516,9 @@ async def async_register_websockets(hass, data):
                     )
                 else:
                     await d.async_refresh()
+                await d.external_room_control.async_delete_schedule_metadata(
+                    schedule_id
+                )
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(
@@ -545,7 +563,128 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                await schedule.set_schedule_from_ws_data(new_schedule)
+                previous_native_schedule = deepcopy(schedule.ws_schedule_data)
+                upper_schedule = None
+                lower_schedule = None
+                passive_control_schedule = None
+                native_schedule = None
+                passive_range_type = new_schedule.get("PassiveRangeType")
+                if new_schedule.get("PassiveRange") and passive_range_type == "external":
+                    if not d.external_room_control.schedule_uses_external_range(schedule):
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Passive Mode assignments changed; reload the schedule",
+                        )
+                        return
+                    try:
+                        upper_schedule = d.external_room_control.validated_upper_schedule(
+                            schedule_id, new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                elif new_schedule.get("PassiveRange") and passive_range_type == "native":
+                    if not d.external_room_control.schedule_uses_native_range(schedule):
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Passive Mode assignments changed; reload the schedule",
+                        )
+                        return
+                    try:
+                        lower_schedule = d.external_room_control.validated_lower_schedule(
+                            schedule_id, new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                if new_schedule.get("PassiveControl"):
+                    if not d.passive_mode_enabled:
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Enable Passive Mode in the Wiser integration before scheduling it",
+                        )
+                        return
+                    try:
+                        (
+                            passive_control_schedule,
+                            native_schedule,
+                        ) = d.external_room_control.validated_passive_control_schedule(
+                            new_schedule
+                        )
+                    except (TypeError, ValueError) as err:
+                        connection.send_error(
+                            msg["id"], "invalid_schedule", str(err)
+                        )
+                        return
+                    uses_limiter = any(
+                        control.get("enabled")
+                        and control.get("strategy") == "temperature_limiter"
+                        for day in passive_control_schedule.values()
+                        for control in day.values()
+                    )
+                    if (
+                        uses_limiter
+                        and not d.external_room_control.schedule_supports_temperature_limiter(
+                            schedule
+                        )
+                    ):
+                        connection.send_error(
+                            msg["id"],
+                            "invalid_schedule",
+                            "Temperature limiter periods require External Room Control for every assigned room",
+                        )
+                        return
+                if native_schedule is None:
+                    native_schedule = deepcopy(new_schedule)
+                    native_schedule.pop("Capabilities", None)
+                    native_schedule.pop("PassiveControlDefaults", None)
+                    native_schedule.pop("PassiveRange", None)
+                    native_schedule.pop("PassiveRangeType", None)
+                    native_schedule.pop("PassiveControl", None)
+                    native_schedule.pop("MinUpperSetpoint", None)
+                    native_schedule.pop("MaxUpperSetpoint", None)
+                    for day in native_schedule.get("ScheduleData", []):
+                        for slot in day.get("slots") or []:
+                            if lower_schedule is not None:
+                                slot["Setpoint"] = slot.get("UpperSetpoint")
+                            for key in (
+                                "UpperSetpoint",
+                                "PassiveScheduled",
+                                "PassiveMode",
+                                "PassiveStrategy",
+                            ):
+                                slot.pop(key, None)
+                await schedule.set_schedule_from_ws_data(native_schedule)
+                try:
+                    await d.external_room_control.async_save_schedule_metadata(
+                        schedule_id,
+                        upper_schedule=upper_schedule,
+                        lower_schedule=lower_schedule,
+                        passive_control_schedule=passive_control_schedule,
+                    )
+                except Exception as err:
+                    try:
+                        await schedule.set_schedule_from_ws_data(
+                            previous_native_schedule
+                        )
+                    except Exception as rollback_err:
+                        _LOGGER.error(
+                            "Unable to restore Wiser schedule %s after saving "
+                            "its Passive Mode range failed: %s",
+                            schedule_id,
+                            rollback_err,
+                        )
+                    connection.send_error(
+                        msg["id"], "wiser error", str(err)
+                    )
+                    return
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:
@@ -587,6 +726,9 @@ async def async_register_websockets(hass, data):
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
                 await schedule.copy_schedule(to_schedule_id)
+                await d.external_room_control.async_copy_schedule_metadata(
+                    schedule_id, to_schedule_id
+                )
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:

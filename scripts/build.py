@@ -103,7 +103,7 @@ def build(
     without_frontend=False,
     use_installed_api=False,
 ):
-    """Stage a fresh integration and replace the ZIP only after a successful build."""
+    """Stage a fresh integration and replace both outputs after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
     if release or channel == "stable":
         local_root = None
@@ -142,11 +142,29 @@ def build(
         with ZipFile(archive_path) as archive:
             if archive.testzip() is not None:
                 raise ValueError("Package integrity check failed")
-        archive_path.replace(output)
+        report_path = Path(temporary) / "card-releases.json"
         shutil.copyfile(
             staging / "frontend/card-releases.json",
-            output.parent / "card-releases.json",
+            report_path,
         )
+
+        directory_output = output.with_suffix("")
+        previous_directory = Path(temporary) / "previous-wiser"
+        if directory_output.exists() or directory_output.is_symlink():
+            directory_output.replace(previous_directory)
+        try:
+            staging.replace(directory_output)
+            archive_path.replace(output)
+        except Exception:
+            if directory_output.is_dir() and not directory_output.is_symlink():
+                shutil.rmtree(directory_output)
+            else:
+                directory_output.unlink(missing_ok=True)
+            if previous_directory.exists() or previous_directory.is_symlink():
+                previous_directory.replace(directory_output)
+            raise
+
+        report_path.replace(output.parent / "card-releases.json")
         (output.parent / "panel-config-release.json").unlink(missing_ok=True)
     return report
 
@@ -193,6 +211,7 @@ def main():
         parser.exit(1, f"Build failed: {error}\n")
     print(json.dumps(report, indent=2))
     print(f"Built {args.output.resolve()}")
+    print(f"Built {args.output.with_suffix('').resolve()}")
 
 
 if __name__ == "__main__":

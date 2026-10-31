@@ -40,6 +40,7 @@ def _load_switch_module() -> ModuleType:
     _module("homeassistant.const", ATTR_ENTITY_ID="entity_id")
     _module("homeassistant.helpers")
     _module("homeassistant.helpers.config_validation", entity_id=lambda x: x)
+    _module("homeassistant.helpers.entity_registry", async_get=lambda _hass: None)
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
 
     class CoordinatorEntity:
@@ -206,6 +207,59 @@ class WiserPassiveModeRoomSupportTest(unittest.TestCase):
         )
 
         self.assertFalse(self.switch_module._room_supports_passive_mode(room))
+
+    def test_removes_room_entities_when_global_passive_mode_is_disabled(
+        self,
+    ) -> None:
+        class EntityRegistry:
+            def __init__(self) -> None:
+                self.lookups = []
+                self.removed = []
+
+            def async_get_entity_id(self, domain, platform, unique_id):
+                self.lookups.append((domain, platform, unique_id))
+                return f"switch.{unique_id}"
+
+            def async_remove(self, entity_id) -> None:
+                self.removed.append(entity_id)
+
+        registry = EntityRegistry()
+        self.switch_module.er.async_get = lambda _hass: registry
+        data = SimpleNamespace(
+            passive_mode_enabled=False,
+            wiserhub=SimpleNamespace(
+                rooms=SimpleNamespace(
+                    all=[SimpleNamespace(id=1), SimpleNamespace(id=2)]
+                )
+            ),
+        )
+
+        self.switch_module._remove_disabled_passive_mode_entities(object(), data)
+
+        self.assertEqual(
+            registry.lookups,
+            [
+                ("switch", "wiser", "room-entity-id"),
+                ("switch", "wiser", "room-entity-id"),
+            ],
+        )
+        self.assertEqual(
+            registry.removed,
+            ["switch.room-entity-id", "switch.room-entity-id"],
+        )
+
+    def test_keeps_room_entities_while_global_passive_mode_is_enabled(
+        self,
+    ) -> None:
+        def fail_if_registry_is_requested(_hass):
+            self.fail("entity registry should not be accessed while enabled")
+
+        self.switch_module.er.async_get = fail_if_registry_is_requested
+        data = SimpleNamespace(
+            passive_mode_enabled=True,
+        )
+
+        self.switch_module._remove_disabled_passive_mode_entities(object(), data)
 
 
 class WiserDeviceSwitchRefreshTest(unittest.TestCase):

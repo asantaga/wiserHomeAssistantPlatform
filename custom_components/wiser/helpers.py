@@ -49,6 +49,58 @@ def room_has_climate(room):
     )
 
 
+def room_supports_temperature_control(room):
+    """Return whether a Wiser room can participate in temperature control."""
+    capabilities = getattr(room, "capabilities", None)
+    if capabilities is not None:
+        temperature_control = getattr(capabilities, "temperature_control", None)
+        if temperature_control is not None:
+            return bool(temperature_control)
+
+        if getattr(capabilities, "heating_supported", False) or getattr(
+            capabilities, "cooling_supported", False
+        ):
+            return True
+
+    return bool(
+        getattr(room, "number_of_smartvalves", 0)
+        or getattr(room, "number_of_heating_actuators", 0)
+        or getattr(room, "roomstat_id", None)
+    )
+
+
+def room_has_wiser_temperature_sensor(room):
+    """Return whether a room already has a native Wiser temperature sensor."""
+    if getattr(room, "roomstat_id", None):
+        return True
+
+    return any(
+        getattr(device, "product_type", None)
+        in {"RoomStat", "TemperatureHumiditySensor"}
+        for device in (getattr(room, "devices", None) or [])
+    )
+
+
+def room_has_wiser_smartvalve(room):
+    """Return whether a room contains a Wiser smart valve to control."""
+    if getattr(room, "number_of_smartvalves", 0):
+        return True
+
+    return any(
+        getattr(device, "product_type", None) == "iTRV"
+        for device in (getattr(room, "devices", None) or [])
+    )
+
+
+def room_supports_external_temperature_feedback(room):
+    """Return whether a room can use external temperature feedback."""
+    return (
+        room_supports_temperature_control(room)
+        and room_has_wiser_smartvalve(room)
+        and not room_has_wiser_temperature_sensor(room)
+    )
+
+
 def get_hub_mac_suffix(data):
     """Return the last three octets of the physical hub MAC address."""
     mac_address = data.wiserhub.system.network.mac_address
