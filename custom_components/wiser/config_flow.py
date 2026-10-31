@@ -554,7 +554,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             collection = getattr(devices, collection_name, None)
             return getattr(collection, "all", ())
 
-        return any(
+        device_equipment_available = any(
             getattr(device, "equipment", None) is not None
             for collection_name in (
                 "smartplugs",
@@ -564,6 +564,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 "evse",
             )
             for device in all_devices(collection_name)
+        )
+        standalone_equipments = getattr(devices, "equipments", None)
+        return device_equipment_available or bool(
+            getattr(standalone_equipments, "all", ())
         )
 
     def _rooms_without_climate(self):
