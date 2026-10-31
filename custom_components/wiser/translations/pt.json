@@ -114,7 +114,7 @@
           "equipment_sensors": "Habilitar sensores de dados do equipamento"
         },
         "data_description": {
-          "equipment_sensors": "Disponibiliza um sensor adicional com atributos detalhados do equipamento para cada tomada inteligente, PowerTag e atuador de aquecimento compatível."
+          "equipment_sensors": "Disponibiliza um sensor adicional com atributos detalhados do equipamento para tomadas inteligentes, PowerTags, atuadores de aquecimento, carregadores de veículos elétricos e outros equipamentos compatíveis comunicados pelo hub."
         }
       },
       "opentherm": {
