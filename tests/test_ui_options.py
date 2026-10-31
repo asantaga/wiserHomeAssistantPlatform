@@ -110,6 +110,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_OPENTHERM_HOT_WATER_CONTROL": "opentherm_hot_water_control",
             "CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID": "opentherm_hot_water_sensor_entity_id",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
+            "CONF_WISER_CLIMATE_MORE_INFO": "wiser_climate_more_info",
             "CONF_NAME": "name",
             "DATA": "data",
             "DOMAIN": "wiser",
@@ -1762,6 +1763,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             preferences = {
                 "legacy_naming": enabled,
                 "show_wiser_sidebar": enabled,
+                "wiser_climate_more_info": enabled,
             }
             result = await functions.async_step_ui_options(flow, preferences)
             self.assertEqual(result["data"], {"scan_interval": 30} | preferences)
@@ -1776,10 +1778,14 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             flow = SimpleNamespace(
                 config_entry=SimpleNamespace(options={
                     "legacy_naming": enabled,
-                    **({} if enabled else {"show_wiser_sidebar": False}),
+                    "show_wiser_sidebar": enabled,
+                    "wiser_climate_more_info": enabled,
                 }),
                 async_show_form=lambda **kwargs: kwargs,
             )
             result = await functions.async_step_ui_options(flow)
             self.assertIn(("legacy_naming", enabled), result["data_schema"])
             self.assertIn(("show_wiser_sidebar", enabled), result["data_schema"])
+            self.assertIn(
+                ("wiser_climate_more_info", enabled), result["data_schema"]
+            )

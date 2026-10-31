@@ -82,6 +82,13 @@ class JSModuleRegistration:
             self.hass,
             f"{URL_BASE}/wiser-hot-water-control.js?v={hot_water_version}",
         )
+        climate_more_info_version = await self.hass.async_add_executor_job(
+            card_version, Path(__file__).parent / "wiser-climate-more-info.js"
+        )
+        add_extra_js_url(
+            self.hass,
+            f"{URL_BASE}/wiser-climate-more-info.js?v={climate_more_info_version}",
+        )
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()

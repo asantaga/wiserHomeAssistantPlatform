@@ -11,9 +11,14 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Added a registry-driven Wiser panel configuration export/import workflow. Administrators can save every panel to one JSON file and selectively restore individual panels or the shared tab order and titles; future registry panels are included automatically.
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
 - Added external temperature sensor feedback to External Room Control for rooms without a Wiser Room Thermostat. A selected sensor can control the room against its scheduled target using fixed or proportional integration-owned boosts, with configurable tolerance, duration, maximum boost and stale-sensor timeout. Existing or user-modified boosts are left untouched - issue [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619).
+- Added optional native-based **Wiser climate controls** under **UI options**, applying the same room-demand, passive-mode colours and theme variables to both Thermostat cards and More Info while retaining Home Assistant's native card, dialog, temperature handling, history and settings.
+- Added **Bottom** and responsive **Inline** feature positioning to native Thermostat cards for Wiser rooms. Inline calculates space from each feature's configured button count and control style, while compact controls share the remaining row and wrap only when needed; the matching choice is available in Home Assistant's visual card editor.
+- Added the active Wiser boost and its remaining time to the native Preset selector, progressively reducing to the remaining time and then the standard preset icon as available space narrows.
 
 ### Changed
 
+- Updated Wiser climate controls to label Passive demand as **Modulation** or **Limiter**, with tighter status-line spacing, while retaining a generic demand percentage for OpenTherm and relay-controlled rooms.
+- Updated the Thermostat card editor preview to use a normal dashboard-card width for responsive feature packing, so its control rows match the saved card more closely.
 - Updated the `aioWiserHeatAPI` dependency from v1.7.3 to v1.7.7, using its native room heat-demand and button-panel battery support. Dev builds prefer a published API prerelease and fall back to the released API pin; local builds can explicitly use a manually installed API, while final integration releases always use the released pin - PR [#754](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/754).
 
 ### Fixed

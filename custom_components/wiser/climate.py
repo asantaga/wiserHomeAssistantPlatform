@@ -554,6 +554,14 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         )
         attrs["is_heating"] = self._room.is_heating
         attrs["is_passive"] = self._room.is_passive_mode
+        if self._room.is_passive_mode:
+            attrs["passive_control_type"] = (
+                "Limiter"
+                if self._data.external_room_control.uses_temperature_limiter(
+                    self._room_id
+                )
+                else "Modulation"
+            )
         attrs["is_external_room_control"] = self._data.external_room_control.is_active(
             self._room
         )
@@ -564,6 +572,8 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
         attrs["heating_rate"] = self._room.heating_rate
         attrs["percentage_demand"] = self._room.percentage_demand
+        if self._data.wiser_climate_more_info:
+            attrs["custom_ui_more_info"] = "wiser-climate-more-info"
 
         # OpenTherm
         opentherm = getattr(self._data.wiserhub.system, "opentherm", None)

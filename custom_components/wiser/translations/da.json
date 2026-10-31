@@ -55,10 +55,12 @@
         "title": "Brugerfladeindstillinger",
         "data": {
           "legacy_naming": "Ældre navngivning",
-          "show_wiser_sidebar": "Vis Wiser i sidepanelet"
+          "show_wiser_sidebar": "Vis Wiser i sidepanelet",
+          "wiser_climate_more_info": "Use Wiser climate controls"
         },
         "data_description": {
-          "legacy_naming": "Medtag rumnavne i Wiser-enhedsnavne. Hvis dette er aktiveret, vil regenerering af entitets-id'er i Home Assistant med standardformatet under Indstillinger → System → Entitets-id-format (Home Assistant 2026.8 og nyere) duplikere områdenavne, når området og Wiser-rummet har samme navn. Ændring af denne indstilling omdøber ikke eksisterende entitets-id'er."
+          "legacy_naming": "Medtag rumnavne i Wiser-enhedsnavne. Hvis dette er aktiveret, vil regenerering af entitets-id'er i Home Assistant med standardformatet under Indstillinger → System → Entitets-id-format (Home Assistant 2026.8 og nyere) duplikere områdenavne, når området og Wiser-rummet har samme navn. Ændring af denne indstilling omdøber ikke eksisterende entitets-id'er.",
+          "wiser_climate_more_info": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
         }
       },
       "main_params": {
