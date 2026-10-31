@@ -50,10 +50,7 @@ const extraInfoForState = (stateObj) => {
     const controlType = attributes.passive_control_type || "Modulation";
     return `${controlType} · ${demandForState(stateObj)}%`;
   }
-  if (attributes?.demand_type != null) {
-    return `Demand · ${demandForState(stateObj)}%`;
-  }
-  return undefined;
+  return `Demand · ${demandForState(stateObj)}%`;
 };
 
 const wiserControlsEnabled = (stateObj) =>
@@ -115,10 +112,9 @@ const styleNativeControl = async (control, stateObj) => {
   control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
   control.style.setProperty("--wiser-label-color", labelColor);
   control.style.setProperty(`--state-climate-${state}-color`, modeColor);
-  const extraInfo = extraInfoForState(stateObj);
   control.style.setProperty(
     "--wiser-extra-info-text",
-    extraInfo ? `"${cssString(extraInfo)}"` : "none"
+    `"${cssString(extraInfoForState(stateObj))}"`
   );
 
   let style = control.shadowRoot.querySelector("style[data-wiser-theme]");

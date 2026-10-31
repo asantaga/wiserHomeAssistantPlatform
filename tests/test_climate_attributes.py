@@ -131,11 +131,10 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("max-width: 90%", self.source)
         self.assertNotIn(".info > p:last-of-type::after", self.source)
 
-    def test_extra_info_uses_passive_mode_or_opentherm_demand(self) -> None:
+    def test_extra_info_uses_passive_mode_or_generic_demand(self) -> None:
         self.assertIn("attributes.passive_control_type", self.source)
         self.assertIn('return `Demand · ${demandForState(stateObj)}%`', self.source)
-        self.assertIn("attributes?.demand_type != null", self.source)
-        self.assertIn('extraInfo ? `"${cssString(extraInfo)}"` : "none"', self.source)
+        self.assertNotIn("attributes?.demand_type", self.source)
 
     def test_thermostat_card_supports_tile_style_inline_features(self) -> None:
         self.assertIn('"hui-thermostat-card"', self.source)
