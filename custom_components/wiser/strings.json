@@ -160,7 +160,7 @@
           "equipment_sensors": "Enable equipment data sensors"
         },
         "data_description": {
-          "equipment_sensors": "Expose an additional sensor containing detailed equipment attributes for each compatible smart plug, PowerTag, and heating actuator."
+          "equipment_sensors": "Expose an additional sensor containing detailed equipment attributes for supported smart plugs, PowerTags, heating actuators, EV chargers, and other equipment reported by the hub."
         }
       },
       "opentherm": {

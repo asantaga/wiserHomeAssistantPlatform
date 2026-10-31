@@ -134,7 +134,7 @@
           "equipment_sensors": "Schakel apparatuurgegevenssensoren in"
         },
         "data_description": {
-          "equipment_sensors": "Maakt een extra sensor beschikbaar met gedetailleerde apparatuurkenmerken voor elke compatibele slimme stekker, PowerTag en verwarmingsactuator."
+          "equipment_sensors": "Maakt een extra sensor beschikbaar met gedetailleerde apparatuurkenmerken voor ondersteunde slimme stekkers, PowerTags, verwarmingsactuatoren, EV-laders en andere door de hub gemelde apparatuur."
         }
       },
       "opentherm": {

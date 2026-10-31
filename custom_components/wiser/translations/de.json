@@ -134,7 +134,7 @@
           "equipment_sensors": "Gerätedatensensoren aktivieren"
         },
         "data_description": {
-          "equipment_sensors": "Stellt für jede kompatible intelligente Steckdose, jedes PowerTag und jeden Heizungsaktor einen zusätzlichen Sensor mit detaillierten Geräteattributen bereit."
+          "equipment_sensors": "Stellt einen zusätzlichen Sensor mit detaillierten Geräteattributen für unterstützte intelligente Steckdosen, PowerTags, Heizungsaktoren, EV-Ladegeräte und andere vom Hub gemeldete Geräte bereit."
         }
       },
       "opentherm": {
