@@ -211,7 +211,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             # Keep room context visible for installations upgrading to UI options.
             new_options.setdefault(CONF_LEGACY_NAMING, True)
 
-        if config_entry.minor_version < 6:
+        if config_entry.minor_version < 7:
             passive_options = new_options.get(CONF_AUTOMATIONS_PASSIVE)
             if isinstance(passive_options, dict):
                 passive_options = dict(passive_options)
