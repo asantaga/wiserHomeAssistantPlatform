@@ -261,6 +261,19 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn('sessionStorage.getItem(WISER_ACTIVE_PANEL_KEY)', source)
         self.assertIn('sessionStorage.setItem(WISER_ACTIVE_PANEL_KEY, id)', source)
         self.assertIn('id="settings"', source)
+        self.assertIn('id="export-config"', source)
+        self.assertIn('id="import-config"', source)
+        self.assertIn('id="import-dialog"', source)
+        self.assertIn(
+            'getElementById("panel-actions").hidden = !this._hass?.user?.is_admin',
+            source,
+        )
+        self.assertNotIn(
+            "this._hass?.user?.is_admin && this._config?.panels?.length",
+            source,
+        )
+        self.assertIn('format: this._config.export_format', source)
+        self.assertIn('type: "wiser/panel/import"', source)
         self.assertIn('src="/wiser/wiser-logo.png"', source)
         self.assertIn('alt="Wiser"', source)
         self.assertNotIn("<h1>Wiser</h1>", source)
@@ -284,6 +297,10 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("websocket_configure_rooms_panel", source)
         self.assertIn(
             "async_register_command(hass, websocket_configure_wiser_panel_tabs)",
+            source,
+        )
+        self.assertIn(
+            "async_register_command(hass, websocket_import_wiser_panel_config)",
             source,
         )
 
@@ -448,6 +465,87 @@ class WiserSidebarTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             self.sidebar.save_wiser_panel_tabs(self.hass, invalid_tabs)
         self.hass.config_entries.async_update_entry.assert_not_called()
+
+    def test_bulk_panel_import_updates_selected_panels_and_layout_once_per_hub(self):
+        first = self.add_hub(
+            "first",
+            {
+                "wiser_panel_config": {
+                    "zigbee": {"orientation": "table"},
+                    "rooms": {"room_columns": 2},
+                }
+            },
+        )
+        second = self.add_hub("second", {})
+        self.hass.config_entries.async_update_entry = Mock()
+
+        result = self.sidebar.import_panel_config_bundle(
+            self.hass,
+            {
+                "schedule": {
+                    "first": {"home_screen": "overview"},
+                    "second": {"home_screen": "timeline"},
+                },
+                "rooms": {"first": {"room_columns": 4}},
+            },
+            [
+                {"id": "rooms", "title": "Heating"},
+                {"id": "schedule", "title": "Schedules"},
+            ],
+        )
+
+        self.assertEqual(result, {"panels": 2, "hubs": 2, "tabs": True})
+        calls = self.hass.config_entries.async_update_entry.call_args_list
+        self.assertEqual([call.args[0] for call in calls], [first, second])
+        first_config = calls[0].kwargs["options"]["wiser_panel_config"]
+        self.assertEqual(first_config["zigbee"], {"orientation": "table"})
+        self.assertEqual(first_config["rooms"], {"room_columns": 4})
+        self.assertEqual(first_config["schedule"], {"home_screen": "overview"})
+        self.assertEqual(first_config["_panel_tabs"][0]["id"], "rooms")
+        second_config = calls[1].kwargs["options"]["wiser_panel_config"]
+        self.assertEqual(second_config["schedule"], {"home_screen": "timeline"})
+
+    def test_bulk_panel_import_validates_every_value_before_writing(self):
+        self.add_hub("first", {})
+        self.add_hub("second", {})
+        self.hass.config_entries.async_update_entry = Mock()
+
+        with self.assertRaises(ValueError):
+            self.sidebar.import_panel_config_bundle(
+                self.hass,
+                {
+                    "schedule": {
+                        "first": {"home_screen": "overview"},
+                        "second": {"bad": float("nan")},
+                    }
+                },
+            )
+
+        self.hass.config_entries.async_update_entry.assert_not_called()
+
+    def test_bulk_panel_import_automatically_accepts_new_registry_panels(self):
+        entry = self.add_hub("hub", {})
+        self.manifest.append(
+            {
+                "id": "future-panel",
+                "filename": "future.js",
+                "name": "Future panel",
+                "panel": "future-panel",
+            }
+        )
+        self.hass.config_entries.async_update_entry = Mock()
+
+        self.sidebar.import_panel_config_bundle(
+            self.hass,
+            {"future-panel": {"hub": {"columns": 5}}},
+        )
+
+        self.hass.config_entries.async_update_entry.assert_called_once_with(
+            entry,
+            options={
+                "wiser_panel_config": {"future-panel": {"columns": 5}}
+            },
+        )
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ from .local_schedule import (
     LOCAL_HOT_WATER_SCHEDULE_TYPE,
 )
 from .frontend.wiser_sidebar import (
+    import_panel_config_bundle,
     save_panel_config,
     save_wiser_panel_tabs,
 )
@@ -129,6 +130,31 @@ async def async_register_websockets(hass, data):
             connection.send_error(msg["id"], "invalid_config", str(err))
             return
         connection.send_result(msg["id"])
+
+    @callback
+    @websocket_api.websocket_command({
+        vol.Required("type"): "wiser/panel/import",
+        vol.Required("panels"): {str: {str: dict}},
+        vol.Optional("tabs"): [
+            {
+                vol.Required("id"): str,
+                vol.Required("title"): str,
+            }
+        ],
+    })
+    @websocket_api.require_admin
+    def websocket_import_wiser_panel_config(hass, connection, msg):
+        """Import selected panel settings after validating the complete bundle."""
+        try:
+            result = import_panel_config_bundle(
+                hass,
+                msg["panels"],
+                msg.get("tabs"),
+            )
+        except ValueError as err:
+            connection.send_error(msg["id"], "invalid_config", str(err))
+            return
+        connection.send_result(msg["id"], result)
 
     # Get Hubs
     @websocket_api.websocket_command(
@@ -772,6 +798,7 @@ async def async_register_websockets(hass, data):
 
     async_register_command(hass, websocket_configure_panel)
     async_register_command(hass, websocket_configure_wiser_panel_tabs)
+    async_register_command(hass, websocket_import_wiser_panel_config)
     async_register_command(hass, websocket_get_hubs)
     async_register_command(hass, websocket_get_suntimes)
     async_register_command(hass, websocket_get_schedules)
