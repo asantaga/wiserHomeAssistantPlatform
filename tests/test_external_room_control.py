@@ -1281,6 +1281,50 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             {"7": {"Monday": {"06:00": 20.0}}},
         )
 
+    async def test_failed_combined_schedule_save_restores_all_metadata(self):
+        original_upper = {"Monday": {"06:00": 20.0}}
+        original_lower = {"Monday": {"06:00": 15.0}}
+        original_control = {
+            "Monday": {"06:00": {"scheduled": False}}
+        }
+        self.controller._upper_schedules = {"7": deepcopy(original_upper)}
+        self.controller._lower_schedules = {"7": deepcopy(original_lower)}
+        self.controller._passive_control_schedules = {
+            "7": deepcopy(original_control)
+        }
+        self.controller._store.async_save.side_effect = RuntimeError("save failed")
+
+        with self.assertRaisesRegex(RuntimeError, "save failed"):
+            await self.controller.async_save_schedule_metadata(
+                7,
+                upper_schedule={"Monday": {"06:00": 22.0}},
+                passive_control_schedule={
+                    "Monday": {
+                        "06:00": {
+                            "scheduled": True,
+                            "enabled": True,
+                            "strategy": "temperature_limiter",
+                            "lower": 17.0,
+                            "upper": 22.0,
+                        }
+                    }
+                },
+            )
+
+        self.assertEqual(self.controller._upper_schedules["7"], original_upper)
+        self.assertEqual(self.controller._lower_schedules["7"], original_lower)
+        self.assertEqual(
+            self.controller._passive_control_schedules["7"], original_control
+        )
+
+    def test_websocket_saves_schedule_metadata_in_one_operation(self):
+        source = (COMPONENT / "websockets.py").read_text()
+
+        self.assertIn("async_save_schedule_metadata", source)
+        self.assertNotIn(
+            "await d.external_room_control.async_save_upper_schedule", source
+        )
+
     async def test_copy_schedule_metadata_replaces_stale_target_values(self):
         self.controller._upper_schedules = {
             "8": {"Monday": {"06:00": 99.0}}

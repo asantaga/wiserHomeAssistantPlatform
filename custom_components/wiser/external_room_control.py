@@ -933,6 +933,42 @@ class ExternalRoomControlController:
             self._passive_control_schedules[schedule_id] = previous
             raise
 
+    async def async_save_schedule_metadata(
+        self,
+        schedule_id,
+        *,
+        upper_schedule=None,
+        lower_schedule=None,
+        passive_control_schedule=None,
+    ) -> None:
+        """Persist all metadata associated with one schedule atomically."""
+        schedule_id = str(schedule_id)
+        schedule_stores = (
+            self._upper_schedules,
+            self._lower_schedules,
+            self._passive_control_schedules,
+        )
+        previous = [
+            deepcopy(schedules.get(schedule_id)) for schedules in schedule_stores
+        ]
+        if upper_schedule is not None:
+            self._upper_schedules[schedule_id] = upper_schedule
+        if lower_schedule is not None:
+            self._lower_schedules[schedule_id] = lower_schedule
+        if passive_control_schedule is None:
+            self._passive_control_schedules.pop(schedule_id, None)
+        else:
+            self._passive_control_schedules[schedule_id] = passive_control_schedule
+        try:
+            await self._async_save()
+        except Exception:
+            for schedules, value in zip(schedule_stores, previous):
+                if value is None:
+                    schedules.pop(schedule_id, None)
+                else:
+                    schedules[schedule_id] = value
+            raise
+
     async def async_copy_schedule_metadata(
         self, schedule_id, to_schedule_id
     ) -> None:

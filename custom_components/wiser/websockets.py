@@ -663,22 +663,12 @@ async def async_register_websockets(hass, data):
                                 slot.pop(key, None)
                 await schedule.set_schedule_from_ws_data(native_schedule)
                 try:
-                    if upper_schedule is not None:
-                        await d.external_room_control.async_save_upper_schedule(
-                            schedule_id, upper_schedule
-                        )
-                    if lower_schedule is not None:
-                        await d.external_room_control.async_save_lower_schedule(
-                            schedule_id, lower_schedule
-                        )
-                    if passive_control_schedule is not None:
-                        await d.external_room_control.async_save_passive_control_schedule(
-                            schedule_id, passive_control_schedule
-                        )
-                    else:
-                        await d.external_room_control.async_disable_passive_control_schedule(
-                            schedule_id
-                        )
+                    await d.external_room_control.async_save_schedule_metadata(
+                        schedule_id,
+                        upper_schedule=upper_schedule,
+                        lower_schedule=lower_schedule,
+                        passive_control_schedule=passive_control_schedule,
+                    )
                 except Exception as err:
                     try:
                         await schedule.set_schedule_from_ws_data(
