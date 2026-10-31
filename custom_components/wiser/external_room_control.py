@@ -1357,6 +1357,18 @@ class ExternalRoomControlController:
                 )
             except (TypeError, ValueError):
                 return False
+        expected_target = marker.get("expected_target")
+        actual_target = getattr(room, "current_target_temperature", None)
+        if expected_target is not None and actual_target is not None:
+            try:
+                if not math.isclose(
+                    float(actual_target),
+                    float(expected_target),
+                    abs_tol=0.25,
+                ):
+                    return False
+            except (TypeError, ValueError):
+                return False
         actual_end = getattr(room, "boost_end_time", None)
         if expected_end and actual_end is not None:
             try:
@@ -1430,6 +1442,7 @@ class ExternalRoomControlController:
         )
         self._sensor_boosts[room_id] = {
             "expected_end": expected_end.isoformat(),
+            "expected_target": min(MAX_SCHEDULE_TEMPERATURE, target + delta),
             "duration": self.temperature_boost_duration,
             "delta": delta,
         }

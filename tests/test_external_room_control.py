@@ -377,6 +377,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.room.is_boosted = True
         self.room.is_override = True
         self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.room.current_target_temperature = 22.0
         self.state.state = "18.6"
 
         await self.controller.async_update()
@@ -392,7 +393,8 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.room.is_boosted = True
         self.room.is_override = True
-        self.room.boost_end_time = expected_end + timedelta(minutes=10)
+        self.room.boost_end_time = expected_end + timedelta(minutes=1)
+        self.room.current_target_temperature = 25.0
         self.state.state = "20"
 
         await self.controller.async_update()
@@ -407,6 +409,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.room.is_boosted = True
         self.room.is_override = True
         self.room.boost_end_time = datetime.fromisoformat(expected_end)
+        self.room.current_target_temperature = 22.0
         self.state.state = "unavailable"
 
         await self.controller.async_update()
