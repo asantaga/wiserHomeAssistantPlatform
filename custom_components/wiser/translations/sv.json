@@ -114,7 +114,7 @@
           "equipment_sensors": "Aktivera sensorer för utrustningsdata"
         },
         "data_description": {
-          "equipment_sensors": "Visa en extra sensor med detaljerade utrustningsattribut för varje kompatibelt smartuttag, PowerTag och värmeställdon."
+          "equipment_sensors": "Visa en extra sensor med detaljerade utrustningsattribut för smartuttag, PowerTags, värmeställdon, elbilsladdare och annan utrustning som stöds och rapporteras av hubben."
         }
       },
       "opentherm": {

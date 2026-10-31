@@ -114,7 +114,7 @@
           "equipment_sensors": "Activer les capteurs de données des équipements"
         },
         "data_description": {
-          "equipment_sensors": "Expose un capteur supplémentaire contenant les attributs détaillés de l’équipement pour chaque prise intelligente, PowerTag et actionneur de chauffage compatible."
+          "equipment_sensors": "Expose un capteur supplémentaire contenant les attributs détaillés de l’équipement pour les prises intelligentes, PowerTags, actionneurs de chauffage et chargeurs de véhicules électriques pris en charge, ainsi que pour les autres équipements signalés par le hub."
         }
       },
       "opentherm": {

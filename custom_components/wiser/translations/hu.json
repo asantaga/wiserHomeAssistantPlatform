@@ -114,7 +114,7 @@
           "equipment_sensors": "Berendezésadat-érzékelők engedélyezése"
         },
         "data_description": {
-          "equipment_sensors": "További érzékelő megjelenítése részletes berendezésjellemzőkkel minden kompatibilis okoskonnektorhoz, PowerTag eszközhöz és fűtési szelepmozgatóhoz."
+          "equipment_sensors": "További érzékelő megjelenítése részletes berendezésjellemzőkkel a támogatott okoskonnektorokhoz, PowerTag eszközökhöz, fűtési szelepmozgatókhoz, elektromosautó-töltőkhöz és a központ által jelentett egyéb berendezésekhez."
         }
       },
       "opentherm": {

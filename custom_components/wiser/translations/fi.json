@@ -114,7 +114,7 @@
           "equipment_sensors": "Ota laitetietoanturit käyttöön"
         },
         "data_description": {
-          "equipment_sensors": "Näytä lisäanturi, joka sisältää yksityiskohtaiset laiteominaisuudet jokaiselle yhteensopivalle älypistorasialle, PowerTagille ja lämmitystoimilaitteelle."
+          "equipment_sensors": "Näytä lisäanturi, joka sisältää yksityiskohtaiset laiteominaisuudet tuetuille älypistorasioille, PowerTageille, lämmitystoimilaitteille, sähköauton latureille ja muille keskittimen ilmoittamille laitteille."
         }
       },
       "opentherm": {

@@ -114,7 +114,7 @@
           "equipment_sensors": "Habilitar sensores de datos del equipo"
         },
         "data_description": {
-          "equipment_sensors": "Expone un sensor adicional con atributos detallados del equipo para cada enchufe inteligente, PowerTag y actuador de calefacción compatible."
+          "equipment_sensors": "Expone un sensor adicional con atributos detallados del equipo para enchufes inteligentes, PowerTags, actuadores de calefacción, cargadores de vehículos eléctricos y otros equipos compatibles detectados por el concentrador."
         }
       },
       "opentherm": {
