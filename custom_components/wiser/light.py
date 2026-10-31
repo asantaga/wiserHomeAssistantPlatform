@@ -245,6 +245,11 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
         if self._device.is_output_mode_supported:
             attrs["is_output_mode_supported"] = self._device.is_output_mode_supported
             attrs["output_mode"] = self._device.output_mode
+
+        attrs["target_percentage"] = self._device.target_percentage
+        attrs["manual_level"] = self._device.manual_level
+        attrs["scheduled_percentage"] = self._device.scheduled_percentage
+
         # end added by LGO
 
         # Schedule
@@ -255,7 +260,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             attrs["next_schedule_change"] = str(self._device.schedule.next.time)
             attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
             attrs["next_schedule_state"] = self._device.schedule.next.setting
-
+    
         return attrs
 
     @hub_error_handler

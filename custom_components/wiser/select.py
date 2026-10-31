@@ -60,6 +60,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.light_id)]
                     )
+                # Add output_mode for dimmable lights
+                if light.is_output_mode_supported:
+                    wiser_selects.extend(
+                        [WiserLightOutputModeSelect(data, light.light_id)]
+                    )
 
     if data.wiserhub.devices.shutters.count > 0:
         _LOGGER.debug("Setting up Shutter mode select")
@@ -387,6 +392,56 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
         _LOGGER.debug(f"Setting {self.name} to {option}")
         if option in self._options:
             await self._device.set_led_indicator(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+
+class WiserLightOutputModeSelect(WiserSelectEntity):
+    def __init__(self, data, light_id) -> None:
+        """Initialize the sensor."""
+        self._light_id = light_id
+        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._device.id
+        super().__init__(data)
+        self._options = self._device.available_output_mode
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
+        self._options = self._device.available_output_mode
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device."""
+        return get_unique_id(
+            self._data,
+            self._device.product_type,
+            "ouput_mode",
+            self._light_id,
+        )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return get_light_entity_name(self._data, self._device, "Output Mode")
+
+    @property
+    def current_option(self) -> str:
+        return self._device.output_mode
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self._device.set_output_mode(option)
             await self.async_force_update()
         else:
             _LOGGER.error(

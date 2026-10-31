@@ -255,6 +255,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ]
                 )
 
+    # Add power notification switches for equipment that supports them.
+    equipment_collection = getattr(data.wiserhub.devices, "equipments", None)
+    if equipment_collection is not None:
+        for equipment in equipment_collection.all:
+            for notification_type in (
+                "over_power_notification",
+                "under_power_notification",
+            ):
+                if getattr(equipment, notification_type) is not None:
+                    wiser_switches.append(
+                        WiserEquipmentPowerNotificationSwitch(
+                            data, equipment.id, notification_type
+                        )
+                    )
+
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
         for room in active_wiser_rooms(data):
@@ -1297,3 +1312,96 @@ class WiserHotWaterSwitch(WiserSwitch):
         """Turn hot water off."""
         await self._data.wiserhub.hotwater.override_state("Off")
         await self.async_force_update()
+
+
+class WiserEquipmentPowerNotificationSwitch(WiserSwitch):
+    """Switch to enable or disable an equipment power notification."""
+
+    def __init__(self, data, equipment_id, notification_type) -> None:
+        """Initialize the switch."""
+        self._equipment_id = equipment_id
+        self._notification_type = notification_type
+        name = notification_type.replace("_", " ").title()
+        super().__init__(
+            data, name, notification_type, "equip-switch", "mdi:check-circle"
+        )
+        self._equipment = self._get_equipment()
+        self._is_on = self._notification.enabled
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Update the switch from the latest equipment data."""
+        super()._handle_coordinator_update()
+        self._equipment = self._get_equipment()
+        self._is_on = self._notification.enabled
+        self.async_write_ha_state()
+
+    def _get_equipment(self):
+        """Return the equipment represented by this switch."""
+        return self._data.wiserhub.devices.equipments.get_by_id(self._equipment_id)
+
+    @property
+    def _notification(self):
+        """Return this equipment's configured power notification."""
+        return getattr(self._equipment, self._notification_type)
+
+    @property
+    def name(self):
+        """Return the name of the equipment notification switch."""
+        return (
+            f"{get_device_name(self._data, self._equipment.device_id)} "
+            f"{self._name}"
+        )
+
+    @property
+    def unique_id(self):
+        """Return a stable unique ID."""
+        return get_unique_id(
+            self._data, self._type, self._key, self._equipment_id
+        )
+
+    @property
+    def icon(self):
+        """Return the switch icon."""
+        return self._icon
+
+    @property
+    def device_info(self):
+        """Return device registry information."""
+        device_id = self._equipment.device_id
+        return {
+            "name": get_device_name(self._data, device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, device_id))},
+            "manufacturer": MANUFACTURER_SCHNEIDER,
+            **get_hub_via_device_info(self._data),
+        }
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Enable the notification."""
+        setter = getattr(
+            self._equipment, f"set_{self._notification_type}_enabled"
+        )
+        await setter(True)
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Disable the notification."""
+        setter = getattr(
+            self._equipment, f"set_{self._notification_type}_enabled"
+        )
+        await setter(False)
+        await self.async_force_update()
+        return True
+
+    @property
+    def extra_state_attributes(self):
+        """Return the notification settings."""
+        notification = self._notification
+        return {
+            f"{self._notification_type}_period_mins": notification.period_mins,
+            f"{self._notification_type}_limit": notification.limit,
+            f"{self._notification_type}_enabled": notification.enabled,
+        }
