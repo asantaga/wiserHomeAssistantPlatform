@@ -23,6 +23,43 @@ from .zigbee import build_zigbee_network_data
 
 _LOGGER = logging.getLogger(__name__)
 
+POWER_NOTIFICATION_TYPES = {
+    "under": "under_power_notification",
+    "over": "over_power_notification",
+}
+
+
+def build_power_notification_data(wiserhub):
+    """Return equipment power notifications in a frontend-friendly format."""
+    output = []
+    equipment_collection = getattr(wiserhub.devices, "equipments", None)
+    for equipment in getattr(equipment_collection, "all", []):
+        notifications = {}
+        for notification_type, attribute in POWER_NOTIFICATION_TYPES.items():
+            notification = getattr(equipment, attribute, None)
+            notifications[notification_type] = (
+                {
+                    "period_mins": notification.period_mins,
+                    "limit": notification.limit,
+                    "enabled": notification.enabled,
+                }
+                if notification is not None
+                else None
+            )
+        output.append(
+            {
+                "equipment_id": equipment.id,
+                "device_id": equipment.device_id,
+                "device_type": equipment.device_type,
+                "name": equipment.equipment_name,
+                "family": equipment.equipment_family,
+                "monitored": equipment.monitored,
+                "smart_supported": equipment.smart_supported,
+                "notifications": notifications,
+            }
+        )
+    return output
+
 
 @callback
 @websocket_api.websocket_command(
@@ -618,6 +655,100 @@ async def async_register_websockets(hass, data):
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notifications".format(DOMAIN),
+            vol.Optional("hub"): str,
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_get_power_notifications(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Publish native equipment power notification data."""
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            connection.send_result(
+                msg["id"], build_power_notification_data(d.wiserhub)
+            )
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notification/set".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("equipment_id"): int,
+            vol.Required("notification_type"): vol.In(
+                list(POWER_NOTIFICATION_TYPES)
+            ),
+            vol.Required("period_mins"): vol.All(int, vol.Range(min=0)),
+            vol.Required("limit"): vol.All(int, vol.Range(min=0)),
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_power_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Create or update a native equipment power notification."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        equipment = d.wiserhub.devices.equipments.get_by_id(msg["equipment_id"])
+        if equipment is None:
+            connection.send_error(
+                msg["id"], "not_found", "equipment not recognised"
+            )
+            return
+        setter = getattr(
+            equipment,
+            f"set_{msg['notification_type']}_power_notification",
+        )
+        await setter(msg["period_mins"], msg["limit"], msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_power_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notification/delete".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("equipment_id"): int,
+            vol.Required("notification_type"): vol.In(
+                list(POWER_NOTIFICATION_TYPES)
+            ),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_delete_power_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Delete a native equipment power notification."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        equipment = d.wiserhub.devices.equipments.get_by_id(msg["equipment_id"])
+        if equipment is None:
+            connection.send_error(
+                msg["id"], "not_found", "equipment not recognised"
+            )
+            return
+        deleter = getattr(
+            equipment,
+            f"delete_{msg['notification_type']}_power_notification",
+        )
+        await deleter()
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_power_notification_data(d.wiserhub)
+        )
+
     async_register_command(hass, websocket_configure_panel)
     async_register_command(hass, websocket_configure_wiser_panel_tabs)
     async_register_command(hass, websocket_get_hubs)
@@ -634,5 +765,8 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_save_schedule)
     async_register_command(hass, websocket_copy_schedule)
     async_register_command(hass, websocket_get_zigbee_data)
+    async_register_command(hass, websocket_get_power_notifications)
+    async_register_command(hass, websocket_set_power_notification)
+    async_register_command(hass, websocket_delete_power_notification)
 
     async_register_command(hass, handle_subscribe_updates)
