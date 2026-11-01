@@ -36,15 +36,6 @@
       "component": "wiser-hub-panel",
       "panel": "wiser-hub-panel",
       "card": false
-    },
-    {
-      "id": "notifications",
-      "name": "Wiser Notifications Panel",
-      "filename": "wiser-notifications-panel.js",
-      "repository": "andyblac/wiser-notifications-panel",
-      "component": "wiser-notifications-panel",
-      "panel": "wiser-notifications-panel",
-      "card": false
     }
   ]
 }

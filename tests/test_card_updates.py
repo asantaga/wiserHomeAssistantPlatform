@@ -298,7 +298,6 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             self.response(json_data=self.metadata()),
             self.response(json_data=self.metadata("rooms")),
             self.response(json_data=self.metadata("hub")),
-            self.response(json_data=self.metadata("notifications")),
         ]
         with self.assertLogs("card_update_test.update", level="WARNING"):
             await self.coordinator.async_refresh()
@@ -306,10 +305,6 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.coordinator.data["zigbee"]["release"]["version"], "2.0.0")
         self.assertEqual(self.coordinator.data["rooms"]["release"]["version"], "2.0.0")
         self.assertEqual(self.coordinator.data["hub"]["release"]["version"], "2.0.0")
-        self.assertEqual(
-            self.coordinator.data["notifications"]["release"]["version"],
-            "2.0.0",
-        )
         self.assertEqual(self.coordinator.options["update_interval"], timedelta(hours=24))
 
     async def test_check_does_not_install_until_user_requests_it(self):
@@ -412,12 +407,12 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
         await self.updates.async_setup_entry(self.hass, SimpleNamespace(entry_id="first"), first)
         await self.updates.async_setup_entry(self.hass, SimpleNamespace(entry_id="second"), second)
         self.coordinator.async_refresh.assert_awaited_once()
-        self.assertEqual(len(first.call_args.args[0]), len(self.coordinator.cards))
+        self.assertEqual(len(first.call_args.args[0]), 4)
         second.assert_not_called()
         self.registry.async_get_entity_id.side_effect = lambda domain, platform, unique_id: f"update.{unique_id}"
         await self.updates.async_unload_card_updates(self.hass, SimpleNamespace(entry_id="first"))
         self.assertEqual(self.coordinator.owner, "second")
-        self.assertEqual(len(second.call_args.args[0]), len(self.coordinator.cards))
+        self.assertEqual(len(second.call_args.args[0]), 4)
         self.registry.async_remove.assert_called_with(
             "update.wiser_frontend_registry_update"
         )
