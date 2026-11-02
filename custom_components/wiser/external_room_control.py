@@ -191,6 +191,7 @@ class ExternalRoomControlController:
         self._native_passive_migrated = False
         self._closed_limiter_rooms: set[str] = set()
         self._sensor_boosts: dict[str, dict] = {}
+        self._controlled_climates: dict[str, dict] = {}
 
     async def async_load(self) -> None:
         """Load Passive Mode lower schedules and migrate experimental data."""
@@ -217,6 +218,10 @@ class ExternalRoomControlController:
         sensor_boosts = stored.get("sensor_boosts", {})
         self._sensor_boosts = (
             sensor_boosts if isinstance(sensor_boosts, dict) else {}
+        )
+        controlled_climates = stored.get("controlled_climates", {})
+        self._controlled_climates = (
+            controlled_climates if isinstance(controlled_climates, dict) else {}
         )
         storage_changed = await self._async_migrate_native_passive_data()
         for room_id in list(self._rooms):
@@ -266,6 +271,7 @@ class ExternalRoomControlController:
                 "passive_control_schedules": self._passive_control_schedules,
                 "native_passive_migrated": self._native_passive_migrated,
                 "sensor_boosts": self._sensor_boosts,
+                "controlled_climates": self._controlled_climates,
             }
         )
 
@@ -1259,6 +1265,7 @@ class ExternalRoomControlController:
     async def async_update(self) -> None:
         """Update external climate mirroring and temperature feedback."""
         await self._async_remove_orphaned_schedules()
+        await self._async_release_unassigned_climates()
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
             room_id = str(room.id)
@@ -1504,6 +1511,64 @@ class ExternalRoomControlController:
         }
         await self._async_save()
 
+    def _assigned_climate_entity_ids(self) -> set[str]:
+        """Return every climate entity assigned to this controller."""
+        return {
+            entity_id
+            for entity_ids in self.assignments.values()
+            for entity_id in entity_ids
+        }
+
+    async def _async_release_unassigned_climates(self) -> None:
+        """Restore climates that this controller no longer owns."""
+        assigned = self._assigned_climate_entity_ids()
+        changed = False
+        for entity_id, marker in list(self._controlled_climates.items()):
+            if entity_id in assigned:
+                continue
+            if not isinstance(marker, dict):
+                self._controlled_climates.pop(entity_id, None)
+                changed = True
+                continue
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                continue
+            try:
+                current_target = float(state.attributes.get(ATTR_TEMPERATURE))
+                expected_target = float(marker["expected_target"])
+            except (KeyError, TypeError, ValueError):
+                self._controlled_climates.pop(entity_id, None)
+                changed = True
+                continue
+            original_target = marker.get("original_target")
+            if math.isclose(current_target, expected_target, abs_tol=0.01):
+                try:
+                    original_target = float(original_target)
+                except (TypeError, ValueError):
+                    original_target = None
+                if original_target is not None:
+                    try:
+                        await self.hass.services.async_call(
+                            CLIMATE_DOMAIN,
+                            SERVICE_SET_TEMPERATURE,
+                            {
+                                ATTR_ENTITY_ID: entity_id,
+                                ATTR_TEMPERATURE: original_target,
+                            },
+                            blocking=True,
+                        )
+                    except HomeAssistantError as ex:
+                        _LOGGER.warning(
+                            "Unable to release External Room Control for %s: %s",
+                            entity_id,
+                            ex,
+                        )
+                        continue
+            self._controlled_climates.pop(entity_id, None)
+            changed = True
+        if changed:
+            await self._async_save()
+
     async def _async_remove_orphaned_schedules(self) -> None:
         """Remove paired values whose native Wiser schedule no longer exists."""
         schedules = getattr(self.coordinator.wiserhub, "schedules", None)
@@ -1596,6 +1661,17 @@ class ExternalRoomControlController:
                 target = min(maximum_target, target)
             if current_target == target:
                 continue
+            marker = self._controlled_climates.get(entity_id)
+            original_target = (
+                marker.get("original_target")
+                if isinstance(marker, dict)
+                else current_target
+            )
+            self._controlled_climates[entity_id] = {
+                "original_target": original_target,
+                "expected_target": target,
+            }
+            await self._async_save()
             try:
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN,

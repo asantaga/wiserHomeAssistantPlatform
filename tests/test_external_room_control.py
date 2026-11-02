@@ -299,6 +299,43 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             {"entity_id": "climate.external_trv", "temperature": 19.0},
             blocking=True,
         )
+        self.assertEqual(
+            self.controller._controlled_climates["climate.external_trv"],
+            {"original_target": 25.0, "expected_target": 19.0},
+        )
+
+    async def test_removing_assignment_restores_owned_external_target(self):
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 19.0
+        self.hass.services.async_call.reset_mock()
+        self.controller.assignments = {}
+        self.controller.available = False
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 25.0},
+            blocking=True,
+        )
+        self.assertNotIn(
+            "climate.external_trv", self.controller._controlled_climates
+        )
+
+    async def test_removing_assignment_preserves_user_modified_target(self):
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 21.0
+        self.hass.services.async_call.reset_mock()
+        self.controller.assignments = {}
+        self.controller.available = False
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_not_awaited()
+        self.assertNotIn(
+            "climate.external_trv", self.controller._controlled_climates
+        )
 
     async def test_mirrors_wiser_target_in_fahrenheit_installation(self):
         self.hass.config.units.temperature_unit = "°F"
