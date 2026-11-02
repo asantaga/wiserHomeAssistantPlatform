@@ -40,6 +40,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         for plug in data.wiserhub.devices.smartplugs.all:
             wiser_selects.extend([WiserSmartPlugModeSelect(data, plug.id)])
 
+ 
+            #Added LED indicator select if supported
+            if plug.is_led_indicator_supported:           
+                wiser_selects.extend(
+                    [WiserSmartplugLedIndicatorSelect(data, plug.id)]
+                    )
+            #End Added LED indicator select if supported
+
     if data.wiserhub.devices.lights.count > 0:
         _LOGGER.debug("Setting up Light mode select")
         for light in data.wiserhub.devices.lights.all:
@@ -377,6 +385,52 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
     def name(self):
         """Return Name of device."""
         return get_light_entity_name(self._data, self._device, "LED Indicator")
+
+    @property
+    def current_option(self) -> str:
+        return self._device.led_indicator
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self._device.set_led_indicator(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+class WiserSmartplugLedIndicatorSelect(WiserSelectEntity):
+    def __init__(self, data, smartplug_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = smartplug_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
+        self._options = self._device.available_led_indicator
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
+        self._options = self._device.available_led_indicator
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device."""
+        return get_unique_id(
+            self._data,
+            self._device.product_type,
+            "led-indicator",
+            self._device_id,
+        )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+        return "LED indicator"
 
     @property
     def current_option(self) -> str:
