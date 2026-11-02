@@ -1735,6 +1735,13 @@ class ExternalRoomControlController:
             if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 _LOGGER.debug("External climate entity %s is unavailable", entity_id)
                 continue
+            if ATTR_TEMPERATURE not in state.attributes:
+                _LOGGER.warning(
+                    "Ignoring external climate entity %s because it does not "
+                    "support a single target temperature",
+                    entity_id,
+                )
+                continue
             current_target = state.attributes.get(ATTR_TEMPERATURE)
             try:
                 current_target = (

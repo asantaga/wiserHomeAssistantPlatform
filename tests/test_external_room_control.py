@@ -455,6 +455,21 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate.external_trv", self.controller._controlled_climates
         )
 
+    async def test_ignores_range_based_external_climate(self):
+        self.state.attributes = {
+            "target_temp_low": 18.0,
+            "target_temp_high": 24.0,
+            "min_temp": 5.0,
+            "max_temp": 30.0,
+        }
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_not_awaited()
+        self.assertNotIn(
+            "climate.external_trv", self.controller._controlled_climates
+        )
+
     def _use_external_temperature_sensor(self, temperature=17.0):
         self.controller.assignments = {}
         self.controller.temperature_sensors = {"1": "sensor.office_temperature"}

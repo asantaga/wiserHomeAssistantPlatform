@@ -18,6 +18,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries, exceptions
 from homeassistant.const import (
+    ATTR_TEMPERATURE,
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -627,6 +628,24 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         area_registry = ar.async_get(self.hass)
         entries = list(entity_registry.entities.values())
         entities_by_room = {}
+
+        def supported_external_entity(entry):
+            if entry.entity_id.startswith("climate."):
+                state = self.hass.states.get(entry.entity_id)
+                return bool(
+                    state is not None
+                    and ATTR_TEMPERATURE in state.attributes
+                )
+            return bool(
+                entry.entity_id.startswith("sensor.")
+                and getattr(
+                    entry,
+                    "original_device_class",
+                    getattr(entry, "device_class", None),
+                )
+                == "temperature"
+            )
+
         for room in self._wiser_rooms():
             area = area_registry.async_get_area_by_name(room.name)
             entities_by_room[str(room.id)] = sorted(
@@ -635,18 +654,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 if area is not None
                 and entry.platform != DOMAIN
                 and er.async_get_effective_area_id(self.hass, entry) == area.id
-                and (
-                    entry.entity_id.startswith("climate.")
-                    or (
-                        entry.entity_id.startswith("sensor.")
-                        and getattr(
-                            entry,
-                            "original_device_class",
-                            getattr(entry, "device_class", None),
-                        )
-                        == "temperature"
-                    )
-                )
+                and supported_external_entity(entry)
             )
         return entities_by_room
 

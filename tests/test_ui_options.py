@@ -69,6 +69,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.namespace = {
             "CONF_ADDITIONAL_SENSORS": "additional_sensors",
+            "ATTR_TEMPERATURE": "temperature",
             "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": (
                 "automations_external_room_control"
             ),
@@ -994,6 +995,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 original_device_class=None,
             ),
             SimpleNamespace(
+                entity_id="climate.office_range",
+                platform="mqtt",
+                area_id="office",
+                original_device_class=None,
+            ),
+            SimpleNamespace(
                 entity_id="switch.office",
                 platform="mqtt",
                 area_id="office",
@@ -1058,7 +1065,23 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             {"_external_room_control_entities_by_room"},
             self.namespace,
         )
-        flow = SimpleNamespace(hass=object(), _wiser_rooms=lambda: rooms)
+        states = {
+            "climate.office_trv": SimpleNamespace(
+                attributes={"temperature": 20.0}
+            ),
+            "climate.office_range": SimpleNamespace(
+                attributes={"target_temp_low": 18.0, "target_temp_high": 24.0}
+            ),
+            "climate.bedroom_trv": SimpleNamespace(
+                attributes={"temperature": 19.0}
+            ),
+        }
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+            ),
+            _wiser_rooms=lambda: rooms,
+        )
 
         self.assertEqual(
             functions._external_room_control_entities_by_room(flow),
