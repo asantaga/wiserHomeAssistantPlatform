@@ -15,6 +15,7 @@ from .helpers import (
     get_unique_id,
     get_identifier,
     hub_error_handler,
+
 )
 from .schedules import WiserScheduleEntity
 
@@ -65,6 +66,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Shutter mode select")
         for shutter in data.wiserhub.devices.shutters.all:
             wiser_selects.extend([WiserShutterModeSelect(data, shutter.id)])
+
+    if data.wiserhub.devices.heating_actuators.count > 0:
+        _LOGGER.debug("Setting up Heating Actuator output mode select")
+        for actuator in data.wiserhub.devices.heating_actuators.all:
+            wiser_selects.extend([WiserHeatingActuatorOutputModeSelect(data, actuator.id)])
+
 
     # Add PTCs
     if data.wiserhub.devices.power_tags_c.count > 0:
@@ -387,6 +394,58 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
         _LOGGER.debug(f"Setting {self.name} to {option}")
         if option in self._options:
             await self._device.set_led_indicator(option)
+            await self.async_force_update()
+        else:
+            _LOGGER.error(
+                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
+            )
+
+class WiserHeatingActuatorOutputModeSelect(WiserSelectEntity):
+    _attr_translation_key = "Output Type"
+    def __init__(self, data, heating_actuator_id) -> None:
+        """Initialize the sensor."""
+        
+        self._heating_actuator_id = heating_actuator_id
+        self._device = data.wiserhub.devices.heating_actuators.get_by_id(heating_actuator_id)
+        self._device_id = self._device.id
+        super().__init__(data)
+        self._options = self._device.available_output_type
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.heating_actuators.get_by_id(
+            self._heating_actuator_id
+        )
+        self._options = self._device.available_output_type
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device."""
+        return get_unique_id(
+            self._data,
+            self._device.product_type,
+            "output-type",
+            self._heating_actuator_id,
+        )
+
+    @property
+    def name(self):
+        """Return Name of device."""
+    #    return get_device_name(self._data, self._device, "Output Type")
+        return  "Output Type"
+
+    @property
+    def current_option(self) -> str:
+        return self._device.output_type
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        _LOGGER.debug(f"Setting {self.name} to {option}")
+        if option in self._options:
+            await self._device.set_output_type(option)
             await self.async_force_update()
         else:
             _LOGGER.error(
