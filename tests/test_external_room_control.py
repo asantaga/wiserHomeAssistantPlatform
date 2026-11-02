@@ -1488,6 +1488,14 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "await d.external_room_control.async_save_upper_schedule", source
         )
 
+    def test_websocket_rolls_back_failed_schedule_metadata_copy(self):
+        source = (COMPONENT / "websockets.py").read_text()
+
+        self.assertIn("previous_target_schedule = deepcopy", source)
+        self.assertIn(
+            "await target_schedule.set_schedule_from_ws_data", source
+        )
+
     async def test_copy_schedule_metadata_replaces_stale_target_values(self):
         self.controller._upper_schedules = {
             "8": {"Monday": {"06:00": 99.0}}

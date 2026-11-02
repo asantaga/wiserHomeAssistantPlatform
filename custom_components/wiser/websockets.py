@@ -724,18 +724,42 @@ async def async_register_websockets(hass, data):
                 return
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
-            if schedule:
-                await schedule.copy_schedule(to_schedule_id)
-                await d.external_room_control.async_copy_schedule_metadata(
-                    schedule_id, to_schedule_id
+            target_schedule = d.wiserhub.schedules.get_by_id(
+                schedule_type_enum, to_schedule_id
+            )
+            if schedule and target_schedule:
+                previous_target_schedule = deepcopy(
+                    target_schedule.ws_schedule_data
                 )
+                await schedule.copy_schedule(to_schedule_id)
+                try:
+                    await d.external_room_control.async_copy_schedule_metadata(
+                        schedule_id, to_schedule_id
+                    )
+                except Exception as err:
+                    try:
+                        await target_schedule.set_schedule_from_ws_data(
+                            previous_target_schedule
+                        )
+                    except Exception as rollback_err:
+                        _LOGGER.error(
+                            "Unable to restore destination schedule %s after "
+                            "copying its Passive Mode metadata failed: %s",
+                            to_schedule_id,
+                            rollback_err,
+                        )
+                    connection.send_error(
+                        msg["id"], "wiser error", str(err)
+                    )
+                    return
                 await d.async_refresh()
                 connection.send_result(msg["id"], "success")
             else:
                 connection.send_error(
                     msg["id"],
                     "wiser error",
-                    f"Unable to copy schedule.  Schedule with id {schedule_id} of type {schedule_type} not found",
+                    "Unable to copy schedule. Source or destination schedule "
+                    f"of type {schedule_type} was not found",
                 )
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
