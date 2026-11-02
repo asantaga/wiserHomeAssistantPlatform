@@ -302,7 +302,11 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             self.controller._controlled_climates["climate.external_trv"],
-            {"original_target": 25.0, "expected_target": 19.0},
+            {
+                "original_target": 25.0,
+                "expected_target": 19.0,
+                "unit": "°C",
+            },
         )
 
     async def test_removing_assignment_restores_owned_external_target(self):
@@ -337,6 +341,39 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(
             "climate.external_trv", self.controller._controlled_climates
         )
+
+    async def test_removing_assignment_converts_stored_target_unit(self):
+        self.hass.config.units.temperature_unit = "°F"
+        self.state.attributes = {
+            "temperature": 75.0,
+            "min_temp": 41.0,
+            "max_temp": 86.0,
+        }
+        await self.controller.async_update()
+        self.assertEqual(
+            self.controller._controlled_climates["climate.external_trv"][
+                "unit"
+            ],
+            "°F",
+        )
+
+        self.hass.config.units.temperature_unit = "°C"
+        self.state.attributes = {
+            "temperature": 19.0,
+            "min_temp": 5.0,
+            "max_temp": 30.0,
+        }
+        self.hass.services.async_call.reset_mock()
+        self.controller.assignments = {}
+        self.controller.available = False
+
+        await self.controller.async_update()
+
+        call = self.hass.services.async_call.await_args
+        self.assertEqual(call.args[:2], ("climate", "set_temperature"))
+        self.assertEqual(call.args[2]["entity_id"], "climate.external_trv")
+        self.assertAlmostEqual(call.args[2]["temperature"], 23.8888889)
+        self.assertTrue(call.kwargs["blocking"])
 
     async def test_shutdown_releases_all_owned_state(self):
         await self.controller.async_update()

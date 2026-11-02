@@ -1554,6 +1554,17 @@ class ExternalRoomControlController:
             abs_tol=0.01,
         )
 
+    @staticmethod
+    def _marker_temperature(marker, key: str, current_unit: str) -> float:
+        """Return a stored ownership target in the current display unit."""
+        temperature = float(marker[key])
+        stored_unit = marker.get("unit") or current_unit
+        if stored_unit != current_unit:
+            temperature = TemperatureConverter.convert(
+                temperature, stored_unit, current_unit
+            )
+        return temperature
+
     async def _async_release_unassigned_climates(
         self, *, release_all: bool = False
     ) -> None:
@@ -1572,20 +1583,45 @@ class ExternalRoomControlController:
             state = self.hass.states.get(entity_id)
             if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
+            current_unit = self.hass.config.units.temperature_unit
             try:
                 current_target = float(state.attributes.get(ATTR_TEMPERATURE))
-                expected_target = float(marker["expected_target"])
+                expected_target = self._marker_temperature(
+                    marker, "expected_target", current_unit
+                )
             except (KeyError, TypeError, ValueError):
                 self._controlled_climates.pop(entity_id, None)
                 changed = True
                 continue
-            original_target = marker.get("original_target")
             if self._targets_match(state, current_target, expected_target):
                 try:
-                    original_target = float(original_target)
-                except (TypeError, ValueError):
+                    original_target = self._marker_temperature(
+                        marker, "original_target", current_unit
+                    )
+                except (KeyError, TypeError, ValueError):
                     original_target = None
                 if original_target is not None:
+                    try:
+                        minimum_target = float(
+                            state.attributes.get(ATTR_MIN_TEMP)
+                        )
+                    except (TypeError, ValueError):
+                        minimum_target = None
+                    try:
+                        maximum_target = float(
+                            state.attributes.get(ATTR_MAX_TEMP)
+                        )
+                    except (TypeError, ValueError):
+                        maximum_target = None
+                    if minimum_target is not None:
+                        original_target = max(minimum_target, original_target)
+                    if maximum_target is not None:
+                        original_target = min(maximum_target, original_target)
+                    original_target = self._snap_target_temperature(
+                        original_target,
+                        self._target_temperature_step(state),
+                        minimum_target,
+                    )
                     try:
                         await self.hass.services.async_call(
                             CLIMATE_DOMAIN,
@@ -1758,14 +1794,19 @@ class ExternalRoomControlController:
             ):
                 continue
             marker = self._controlled_climates.get(entity_id)
-            original_target = (
-                marker.get("original_target")
-                if isinstance(marker, dict)
-                else current_target
-            )
+            if isinstance(marker, dict):
+                try:
+                    original_target = self._marker_temperature(
+                        marker, "original_target", display_temperature_unit
+                    )
+                except (KeyError, TypeError, ValueError):
+                    original_target = current_target
+            else:
+                original_target = current_target
             self._controlled_climates[entity_id] = {
                 "original_target": original_target,
                 "expected_target": target,
+                "unit": display_temperature_unit,
             }
             await self._async_save()
             try:
