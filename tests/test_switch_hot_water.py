@@ -339,6 +339,8 @@ class _FakeSmartPlug:
         self.away_mode_action = "Off"
         self.scheduled_state = "Off"
         self.schedule_id = 0
+        self.next_scheduled_date = None
+        self.next_scheduled_end_date = None
         self.commands = []
 
     async def turn_on(self) -> None:
