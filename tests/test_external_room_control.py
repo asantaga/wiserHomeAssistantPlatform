@@ -1113,6 +1113,33 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             self.controller.schedule_supports_temperature_limiter(schedule)
         )
 
+    def test_mixed_strategy_schedule_uses_hub_target_as_limiter_cutoff(self):
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        self.room.passive_mode_enabled = True
+        native_room = SimpleNamespace(
+            id=2,
+            passive_mode_enabled=True,
+            schedule=None,
+        )
+        schedule = SimpleNamespace(
+            id=7,
+            schedule_type="Heating",
+            assignment_ids=[1, 2],
+            current_setting=22.0,
+        )
+        self.room.schedule = schedule
+        native_room.schedule = schedule
+        self.controller.coordinator.wiserhub.rooms.all.append(native_room)
+
+        self.assertFalse(self.controller.schedule_uses_external_range(schedule))
+        self.assertTrue(self.controller.schedule_uses_native_range(schedule))
+        self.assertEqual(self.controller.upper_temperature(self.room.id), 22.0)
+        self.assertEqual(
+            self.controller.passive_upper_temperature(self.room), 22.0
+        )
+
     async def test_update_applies_scheduled_passive_mode(self):
         self.room.schedule = SimpleNamespace(
             id=7,

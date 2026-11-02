@@ -437,6 +437,16 @@ class ExternalRoomControlController:
         scheduled = self._scheduled_temperature(room, self._upper_schedules)
         if scheduled is not None:
             return scheduled
+        schedule = getattr(room, "schedule", None)
+        if (
+            schedule is not None
+            and str(getattr(schedule, "schedule_type", "")).casefold() == "heating"
+            and self.schedule_uses_native_range(schedule)
+        ):
+            try:
+                return float(schedule.current_setting)
+            except (TypeError, ValueError):
+                pass
         return float(room.configured_passive_mode_upper_temp)
 
     def passive_upper_temperature(self, room):
@@ -452,6 +462,16 @@ class ExternalRoomControlController:
         scheduled = self._scheduled_temperature(room, self._upper_schedules)
         if scheduled is not None:
             return scheduled
+        schedule = getattr(room, "schedule", None)
+        if (
+            schedule is not None
+            and str(getattr(schedule, "schedule_type", "")).casefold() == "heating"
+            and self.schedule_uses_native_range(schedule)
+        ):
+            try:
+                return float(schedule.current_setting)
+            except (TypeError, ValueError):
+                pass
         return float(room.configured_passive_mode_upper_temp)
 
     def _room(self, room_id):
