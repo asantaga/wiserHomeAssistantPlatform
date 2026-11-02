@@ -12,8 +12,9 @@ import voluptuous as vol
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -131,9 +132,31 @@ def _room_supports_passive_mode(room) -> bool:
     )
 
 
+def _remove_disabled_passive_mode_entities(hass: HomeAssistant, data) -> None:
+    """Remove room Passive Mode entities when the automation is disabled."""
+    if data.passive_mode_enabled:
+        return
+
+    entity_registry = er.async_get(hass)
+    for room in active_wiser_rooms(data):
+        entity_id = entity_registry.async_get_entity_id(
+            "switch",
+            DOMAIN,
+            get_room_entity_unique_id(
+                data,
+                room.id,
+                "switch_passive_mode",
+            ),
+        )
+        if entity_id is not None:
+            entity_registry.async_remove(entity_id)
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Add the Wiser System Switch entities."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]  # Get Handler
+
+    _remove_disabled_passive_mode_entities(hass, data)
 
     # Add Defined Switches
     wiser_switches = []
@@ -255,10 +278,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ]
                 )
 
-    # Add Room passive mode switches
-    if data.enable_automations_passive_mode:
+    # Both control types use Wiser's native per-room Passive Mode. External
+    # control changes only how assigned climate devices follow that room.
+    if data.passive_mode_enabled:
         for room in active_wiser_rooms(data):
-            if _room_supports_passive_mode(room):
+            if _room_supports_passive_mode(room) or (
+                data.external_room_control.is_enabled(room.id)
+            ):
                 wiser_switches.append(
                     WiserPassiveModeSwitch(
                         hass, data, room.id, f"Wiser Passive Mode {room.name}"
