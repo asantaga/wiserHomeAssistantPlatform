@@ -338,6 +338,51 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate.external_trv", self.controller._controlled_climates
         )
 
+    async def test_shutdown_releases_all_owned_state(self):
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 19.0
+        self.hass.services.async_call.reset_mock()
+        self.room.name = "Office"
+        self.room.passive_mode_enabled = True
+        self.controller._rooms["1"][
+            "passive_schedule_original_enabled"
+        ] = False
+        self.room.is_boosted = True
+        self.room.is_override = True
+        expected_end = FakeDateTimeUtil.utcnow() + timedelta(minutes=30)
+        self.room.boost_end_time = expected_end
+        self.room.current_target_temperature = 22.0
+        self.controller._sensor_boosts["1"] = {
+            "expected_end": expected_end.isoformat(),
+            "expected_target": 22.0,
+        }
+
+        await self.controller.async_shutdown()
+
+        self.room.set_passive_mode.assert_awaited_once_with(False)
+        self.room.cancel_overrides.assert_awaited_once_with()
+        self.room.cancel_boost.assert_awaited_once_with()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 25.0},
+            blocking=True,
+        )
+        self.assertIsNone(
+            self.controller._rooms["1"][
+                "passive_schedule_original_enabled"
+            ]
+        )
+        self.assertNotIn("1", self.controller._sensor_boosts)
+        self.assertFalse(self.controller._controlled_climates)
+
+    def test_unload_releases_external_room_control(self):
+        source = (COMPONENT / "__init__.py").read_text()
+
+        self.assertIn(
+            "await coordinator.external_room_control.async_shutdown()", source
+        )
+
     async def test_mirrors_wiser_target_in_fahrenheit_installation(self):
         self.hass.config.units.temperature_unit = "°F"
         self.state.attributes = {

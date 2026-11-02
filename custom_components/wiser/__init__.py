@@ -1309,6 +1309,16 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
     _LOGGER.debug("Unload integration")
     if unload_ok:
+        coordinator = hass.data[DOMAIN][config_entry.entry_id][DATA]
+        try:
+            await coordinator.external_room_control.async_shutdown()
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # pylint: disable=broad-except  # noqa: BLE001
+            _LOGGER.warning(
+                "Unable to release External Room Control during unload",
+                exc_info=True,
+            )
         await async_unload_card_updates(hass, config_entry)
         hass.data[DOMAIN].pop(config_entry.entry_id)
         await _async_refresh_shared_services(hass)

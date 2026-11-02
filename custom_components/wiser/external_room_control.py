@@ -1552,9 +1552,13 @@ class ExternalRoomControlController:
             abs_tol=0.01,
         )
 
-    async def _async_release_unassigned_climates(self) -> None:
+    async def _async_release_unassigned_climates(
+        self, *, release_all: bool = False
+    ) -> None:
         """Restore climates that this controller no longer owns."""
-        assigned = self._assigned_climate_entity_ids()
+        assigned = (
+            set() if release_all else self._assigned_climate_entity_ids()
+        )
         changed = False
         for entity_id, marker in list(self._controlled_climates.items()):
             if entity_id in assigned:
@@ -1601,6 +1605,55 @@ class ExternalRoomControlController:
             changed = True
         if changed:
             await self._async_save()
+
+    async def async_shutdown(self) -> None:
+        """Release integration-owned state before the config entry unloads."""
+        storage_changed = False
+        for room in self.coordinator.wiserhub.rooms.all:
+            settings = self._rooms.get(str(room.id))
+            if not isinstance(settings, dict):
+                continue
+            original = settings.get("passive_schedule_original_enabled")
+            if original is None:
+                continue
+            if bool(room.passive_mode_enabled) != bool(original):
+                try:
+                    restored = await room.set_passive_mode(bool(original))
+                    if restored is False:
+                        continue
+                    if not original:
+                        await room.cancel_overrides()
+                except Exception:  # pylint: disable=broad-except  # noqa: BLE001
+                    _LOGGER.warning(
+                        "Unable to restore scheduled Passive Mode for %s",
+                        room.name,
+                        exc_info=True,
+                    )
+                    continue
+            settings["passive_schedule_original_enabled"] = None
+            storage_changed = True
+
+        for room in self.coordinator.wiserhub.rooms.all:
+            room_id = str(room.id)
+            if room_id not in self._sensor_boosts:
+                continue
+            if self._sensor_boost_is_owned(room) and room.is_boosted:
+                try:
+                    if not await room.cancel_boost():
+                        continue
+                except Exception:  # pylint: disable=broad-except  # noqa: BLE001
+                    _LOGGER.warning(
+                        "Unable to cancel external-temperature boost for %s",
+                        room.name,
+                        exc_info=True,
+                    )
+                    continue
+            self._sensor_boosts.pop(room_id, None)
+            storage_changed = True
+
+        if storage_changed:
+            await self._async_save()
+        await self._async_release_unassigned_climates(release_all=True)
 
     async def _async_remove_orphaned_schedules(self) -> None:
         """Remove paired values whose native Wiser schedule no longer exists."""
