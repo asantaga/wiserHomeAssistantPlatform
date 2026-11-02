@@ -9,6 +9,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Added
 
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
+- Added external temperature sensor feedback to External Room Control for rooms without a Wiser Room Thermostat. A selected sensor can control the room against its scheduled target using fixed or proportional integration-owned boosts, with configurable tolerance, duration, maximum boost and stale-sensor timeout. Existing or user-modified boosts are left untouched - issue [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619).
 
 ### Changed
 
@@ -26,7 +27,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Fixed rooms without heating capability incorrectly creating climate entities - issue [#762](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/762).
 - Fixed the integration failing to load when Home Assistant temporarily has mixed `aiofiles` package files during dependency installation, and removed the schedule export service's reliance on the API importing `aiofiles.os` - issue [#763](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/763).
 - Fixed **Advance Schedule** failing when the next heating period is off - issue [#657](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/657).
-- Fixed 3.x upgrades hashing room entity unique IDs before they could be matched to their stable room IDs. Existing room temperature, target-temperature, heating-demand, window-detection, **Include in Summer Comfort** and passive-mode entities are now retained, and affected 4.0.x registries are repaired on setup. Inactive `NothingAssigned` rooms left behind by retired devices are now excluded consistently so they cannot recreate duplicate room entities after migration - issue [#759](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/759).
+- Fixed 3.x upgrades hashing room entity unique IDs before they could be matched to their stable room IDs. Existing room temperature, target-temperature, heating-demand, window-detection, **Include in Summer Comfort** and passive-mode entities are now retained, and affected 4.0.x registries are repaired on setup. Legacy room devices missed by config-entry-scoped lookup after Home Assistant 2026.8's device split are recovered when their hub-scoped identifier is unambiguous, while inactive `NothingAssigned` rooms left behind by retired devices are excluded consistently so they cannot recreate duplicate room entities after migration - issue [#759](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/759).
 - Fixed battery sensors raising an error during hub refresh when a battery-powered device temporarily disappears.
 - Fixed the Zigbee network failing to load when multi-function or multi-gang devices expose several logical endpoints with the same physical Zigbee node ID - PR [#750](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/750).
 
@@ -49,6 +50,9 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added External Room Control, allowing external Home Assistant climate devices to follow their Wiser room normally and use its Passive Mode strategy when enabled.
+- Added selectable modulating and temperature-limiter strategies to native Passive Mode.
+- Migrated existing native Passive Mode enablement, temperature increments, lower schedules, and active lower overrides to the new configuration; experimental external-control settings are intentionally not migrated.
 - Added Schneider Mureva EV Link charger entities - issue [#689](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/689), PR [#749](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/749).
 - Added smoke alarm operating states and a report count sensor - PR [#744](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/744).
 - Added scheduled setpoint sensors, showing the current schedule temperature for Wiser rooms without climate control. Rooms are chosen under **Additional sensors** in the automation options - issue [#738](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/738), PR [#746](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/746).

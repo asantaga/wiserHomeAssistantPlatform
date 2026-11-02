@@ -33,7 +33,8 @@ from .const import (
     CONF_AUTOMATIONS_HW_HEAT_MODE,
     CONF_AUTOMATIONS_HW_SENSOR_ENTITY_ID,
     CONF_AUTOMATIONS_PASSIVE,
-    CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT,
+    CONF_PASSIVE_ROOM_STRATEGIES,
+    CONF_TEMPERATURE_INCREMENT,
     CONF_AUTOMATIONS_HW_CLIMATE_EXPERIMENTAL,
     CONF_HEATING_BOOST_TEMP,
     CONF_HEATING_BOOST_TIME,
@@ -48,11 +49,14 @@ from .const import (
     DEFAULT_HW_BOOST_MODE,
     DEFAULT_HW_HEAT_MODE,
     DEFAULT_PASSIVE_TEMP_INCREMENT,
+    CONTROL_STRATEGIES,
+    DEFAULT_PASSIVE_CONTROL_STRATEGY,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETPOINT_MODE,
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
+from .external_room_control import ExternalRoomControlController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,13 +137,30 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
         # Passive Mode Automation option params
-        self.enable_automations_passive_mode = config_entry.options.get(
-            CONF_AUTOMATIONS_PASSIVE, {}
-        ).get(CONF_AUTOMATIONS_PASSIVE, False)
+        passive_options = config_entry.options.get(CONF_AUTOMATIONS_PASSIVE, {})
+        self.passive_mode_enabled = bool(
+            passive_options.get(CONF_AUTOMATIONS_PASSIVE, False)
+        )
+        configured_room_strategies = passive_options.get(
+            CONF_PASSIVE_ROOM_STRATEGIES, {}
+        )
+        self.passive_room_strategies = (
+            {
+                str(room_id): strategy
+                for room_id, strategy in configured_room_strategies.items()
+                if strategy in CONTROL_STRATEGIES
+            }
+            if isinstance(configured_room_strategies, dict)
+            else {}
+        )
+        self.passive_temperature_increment = passive_options.get(
+            CONF_TEMPERATURE_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT
+        )
 
-        self.passive_temperature_increment = config_entry.options.get(
-            CONF_AUTOMATIONS_PASSIVE, {}
-        ).get(CONF_AUTOMATIONS_PASSIVE_TEMP_INCREMENT, DEFAULT_PASSIVE_TEMP_INCREMENT)
+        # External Room Control and Passive schedule runtime controller
+        self.external_room_control = ExternalRoomControlController(
+            hass, config_entry, self
+        )
 
         # HW Climate Automation
         self.hw_sensor_entity_id = config_entry.options.get(
@@ -166,7 +187,7 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             port=config_entry.data.get(CONF_PORT, 80),
             secret=str(config_entry.data[CONF_PASSWORD]).strip(),
             extra_config_file=hass.config.config_dir + CUSTOM_DATA_STORE,
-            enable_automations=self.enable_automations_passive_mode,
+            enable_automations=self.passive_mode_enabled,
         )
 
         # Initialise api parameters
@@ -176,11 +197,29 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.wiserhub.api_parameters.passive_mode_increment = (
             self.passive_temperature_increment
         )
+        self.wiserhub.api_parameters.passive_mode_temperature_limiter_provider = (
+            self.external_room_control.uses_temperature_limiter
+        )
+        self.wiserhub.api_parameters.passive_mode_lower_temp_provider = (
+            self.external_room_control.passive_lower_temperature
+        )
+        self.wiserhub.api_parameters.passive_mode_upper_temp_provider = (
+            self.external_room_control.passive_upper_temperature
+        )
 
         self.wiserhub.api_parameters.boost_temp_delta = self.boost_temp
 
         # HW climate mode
         self.wiserhub.api_parameters.hw_climate_mode = self.enable_hw_climate
+
+    def passive_room_strategy(self, room_id) -> str:
+        """Return the Passive Mode strategy for an externally controlled room."""
+        scheduled = self.external_room_control.scheduled_passive_control(room_id)
+        if scheduled is not None:
+            return scheduled["strategy"]
+        return self.passive_room_strategies.get(
+            str(room_id), DEFAULT_PASSIVE_CONTROL_STRATEGY
+        )
 
     async def async_update_data(self) -> WiserData:
         """Update data from hub."""
@@ -192,6 +231,13 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
             self.last_update_status = "Success"
 
             _LOGGER.info("Hub update completed for %s", self.wiserhub.system.name)
+
+            try:
+                await self.external_room_control.async_update()
+            except asyncio.CancelledError:
+                raise
+            except Exception as ex:  # pylint: disable=broad-except  # noqa: BLE001
+                _LOGGER.error("External Room Control update failed: %s", ex)
 
             # Send event to websockets to notify hub update
             async_dispatcher_send(
