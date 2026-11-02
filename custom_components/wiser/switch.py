@@ -1348,10 +1348,7 @@ class WiserEquipmentPowerNotificationSwitch(WiserSwitch):
     @property
     def name(self):
         """Return the name of the equipment notification switch."""
-        return (
-            f"{get_device_name(self._data, self._equipment.device_id)} "
-            f"{self._name}"
-        )
+        return self._name
 
     @property
     def unique_id(self):
