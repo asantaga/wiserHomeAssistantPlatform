@@ -8,6 +8,7 @@ import logging
 import math
 
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate.const import ATTR_TARGET_TEMP_STEP
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
@@ -1519,6 +1520,38 @@ class ExternalRoomControlController:
             for entity_id in entity_ids
         }
 
+    @staticmethod
+    def _target_temperature_step(state) -> float | None:
+        """Return a climate entity's usable target-temperature step."""
+        try:
+            step = float(state.attributes.get(ATTR_TARGET_TEMP_STEP))
+        except (TypeError, ValueError):
+            return None
+        return step if math.isfinite(step) and step > 0 else None
+
+    @staticmethod
+    def _snap_target_temperature(
+        temperature: float, step: float | None, minimum: float | None
+    ) -> float:
+        """Round a target to a climate entity's supported temperature grid."""
+        if step is None:
+            return temperature
+        base = minimum if minimum is not None else 0.0
+        return round(base + round((temperature - base) / step) * step, 6)
+
+    def _targets_match(self, state, current: float, expected: float) -> bool:
+        """Return whether two targets resolve to the same supported value."""
+        step = self._target_temperature_step(state)
+        try:
+            minimum = float(state.attributes.get(ATTR_MIN_TEMP))
+        except (TypeError, ValueError):
+            minimum = None
+        return math.isclose(
+            self._snap_target_temperature(current, step, minimum),
+            self._snap_target_temperature(expected, step, minimum),
+            abs_tol=0.01,
+        )
+
     async def _async_release_unassigned_climates(self) -> None:
         """Restore climates that this controller no longer owns."""
         assigned = self._assigned_climate_entity_ids()
@@ -1541,7 +1574,7 @@ class ExternalRoomControlController:
                 changed = True
                 continue
             original_target = marker.get("original_target")
-            if math.isclose(current_target, expected_target, abs_tol=0.01):
+            if self._targets_match(state, current_target, expected_target):
                 try:
                     original_target = float(original_target)
                 except (TypeError, ValueError):
@@ -1659,7 +1692,15 @@ class ExternalRoomControlController:
             )
             if maximum_target is not None:
                 target = min(maximum_target, target)
-            if current_target == target:
+            target = self._snap_target_temperature(
+                target,
+                self._target_temperature_step(state),
+                minimum_target,
+            )
+            if (
+                current_target is not None
+                and self._targets_match(state, current_target, target)
+            ):
                 continue
             marker = self._controlled_climates.get(entity_id)
             original_target = (

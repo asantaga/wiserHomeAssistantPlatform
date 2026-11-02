@@ -146,6 +146,7 @@ def load_controller():
         "ATTR_ENTITY_ID": "entity_id",
         "ATTR_MAX_TEMP": "max_temp",
         "ATTR_MIN_TEMP": "min_temp",
+        "ATTR_TARGET_TEMP_STEP": "target_temp_step",
         "ATTR_TEMPERATURE": "temperature",
         "CLIMATE_DOMAIN": "climate",
         "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": "automations_external_room_control",
@@ -343,6 +344,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "temperature": 70.0,
             "min_temp": 41.0,
             "max_temp": 86.0,
+            "target_temp_step": 1.0,
         }
 
         await self.controller.async_update()
@@ -350,8 +352,25 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.hass.services.async_call.assert_awaited_once_with(
             "climate",
             "set_temperature",
-            {"entity_id": "climate.external_trv", "temperature": 66.2},
+            {"entity_id": "climate.external_trv", "temperature": 66.0},
             blocking=True,
+        )
+
+    async def test_does_not_repeat_rounded_fahrenheit_target(self):
+        self.hass.config.units.temperature_unit = "°F"
+        self.room.current_target_temperature = 21.0
+        self.state.attributes = {
+            "temperature": 70.0,
+            "min_temp": 41.0,
+            "max_temp": 86.0,
+            "target_temp_step": 1.0,
+        }
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_not_awaited()
+        self.assertNotIn(
+            "climate.external_trv", self.controller._controlled_climates
         )
 
     def _use_external_temperature_sensor(self, temperature=17.0):
