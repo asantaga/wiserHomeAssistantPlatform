@@ -1457,6 +1457,29 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             self.controller._passive_control_schedules["7"], original_control
         )
 
+    async def test_combined_schedule_save_removes_obsolete_metadata(self):
+        self.controller._upper_schedules = {
+            "7": {"Monday": {"06:00": 22.0}}
+        }
+        self.controller._lower_schedules = {
+            "7": {"Monday": {"06:00": 15.0}}
+        }
+        self.controller._passive_control_schedules = {
+            "7": {"Monday": {"06:00": {"scheduled": False}}}
+        }
+        replacement_lower = {"Monday": {"06:00": 16.0}}
+
+        await self.controller.async_save_schedule_metadata(
+            7,
+            lower_schedule=replacement_lower,
+        )
+
+        self.assertNotIn("7", self.controller._upper_schedules)
+        self.assertEqual(
+            self.controller._lower_schedules["7"], replacement_lower
+        )
+        self.assertNotIn("7", self.controller._passive_control_schedules)
+
     def test_websocket_saves_schedule_metadata_in_one_operation(self):
         source = (COMPONENT / "websockets.py").read_text()
 

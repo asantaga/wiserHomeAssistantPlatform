@@ -978,14 +978,16 @@ class ExternalRoomControlController:
         previous = [
             deepcopy(schedules.get(schedule_id)) for schedules in schedule_stores
         ]
-        if upper_schedule is not None:
-            self._upper_schedules[schedule_id] = upper_schedule
-        if lower_schedule is not None:
-            self._lower_schedules[schedule_id] = lower_schedule
-        if passive_control_schedule is None:
-            self._passive_control_schedules.pop(schedule_id, None)
-        else:
-            self._passive_control_schedules[schedule_id] = passive_control_schedule
+        replacements = (
+            upper_schedule,
+            lower_schedule,
+            passive_control_schedule,
+        )
+        for schedules, replacement in zip(schedule_stores, replacements):
+            if replacement is None:
+                schedules.pop(schedule_id, None)
+            else:
+                schedules[schedule_id] = replacement
         try:
             await self._async_save()
         except Exception:
