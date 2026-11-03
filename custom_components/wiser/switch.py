@@ -255,21 +255,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     ]
                 )
 
-    # Add power notification switches for equipment that supports them.
-    equipment_collection = getattr(data.wiserhub.devices, "equipments", None)
-    if equipment_collection is not None:
-        for equipment in equipment_collection.all:
-            for notification_type in (
-                "over_power_notification",
-                "under_power_notification",
-            ):
-                if getattr(equipment, notification_type) is not None:
-                    wiser_switches.append(
-                        WiserEquipmentPowerNotificationSwitch(
-                            data, equipment.id, notification_type
-                        )
-                    )
-
     # Add Room passive mode switches
     if data.enable_automations_passive_mode:
         for room in active_wiser_rooms(data):
