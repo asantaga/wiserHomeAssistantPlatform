@@ -293,7 +293,8 @@
       "away_mode_target_temperature": { "name": "Away mode target temperature" },
       "floor_temperature_offset": { "name": "Floor temperature offset" },
       "indoor_discomfort_temperature": { "name": "Indoor discomfort temperature" },
-      "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" }
+      "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" },
+      "power_on_level": { "name": "Power-on level" }
     },
     "select": {
       "mode": { "name": "Mode" },

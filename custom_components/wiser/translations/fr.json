@@ -293,7 +293,8 @@
       "away_mode_target_temperature": { "name": "Température cible du mode absence" },
       "floor_temperature_offset": { "name": "Décalage de température du sol" },
       "indoor_discomfort_temperature": { "name": "Température d’inconfort intérieure" },
-      "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" }
+      "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" },
+      "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
       "mode": { "name": "Mode" },

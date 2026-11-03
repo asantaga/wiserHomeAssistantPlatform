@@ -320,6 +320,9 @@
       },
       "outdoor_discomfort_temperature": {
         "name": "Ongemakstemperatuur buiten"
+      },
+      "power_on_level": {
+        "name": "Inschakelniveau"
       }
     },
     "select": {
