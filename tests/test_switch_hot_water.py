@@ -176,6 +176,85 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
         self.assertEqual(self._override_calls, ["Off"])
 
 
+class WiserAutomationSwitchTest(unittest.TestCase):
+    """Tests automation switch identity and notification controls."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.switch_module = _load_switch_module()
+
+    def _switches(self):
+        class Automation:
+            id = "automation-1"
+            name = "Smoke Alarm"
+            enabled = True
+            notification_enabled = False
+
+            def __init__(self):
+                self.notification_calls = []
+
+            async def set_enabled(self, enabled):
+                self.enabled = enabled
+
+            async def set_enable_notification(self, enabled):
+                self.notification_calls.append(enabled)
+
+        automation = Automation()
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat045XXX"),
+                automations=SimpleNamespace(
+                    get_by_automation_id=lambda _automation_id: automation
+                ),
+            )
+        )
+        enabled = self.switch_module.WiserAutomationSwitch(
+            data, automation.name, "enabled", "mdi:check-circle", automation.id
+        )
+        notifications = self.switch_module.WiserAutomationSwitch(
+            data,
+            automation.name,
+            "notification_enabled",
+            "mdi:notification-clear-all",
+            automation.id,
+        )
+        enabled.async_force_update = self._noop_async
+        notifications.async_force_update = self._noop_async
+        return automation, enabled, notifications
+
+    async def _noop_async(self, *_args, **_kwargs) -> None:
+        return None
+
+    def test_controls_for_same_automation_have_distinct_stable_ids(self) -> None:
+        _automation, enabled, notifications = self._switches()
+        get_unique_id = self.switch_module.get_unique_id
+        self.switch_module.get_unique_id = (
+            lambda _data, device_type, entity_type, device_id: (
+                f"{device_type}-{entity_type}-{device_id}"
+            )
+        )
+        try:
+            enabled_id = enabled.unique_id
+            notifications_id = notifications.unique_id
+        finally:
+            self.switch_module.get_unique_id = get_unique_id
+
+        self.assertNotEqual(enabled_id, notifications_id)
+        self.assertEqual(enabled_id, "automation-switch_enabled-automation-1")
+        self.assertEqual(
+            notifications_id,
+            "automation-switch_notification_enabled-automation-1",
+        )
+
+    def test_notification_switch_uses_notification_setter(self) -> None:
+        automation, _enabled, notifications = self._switches()
+
+        asyncio.run(notifications.async_turn_on())
+        asyncio.run(notifications.async_turn_off())
+
+        self.assertEqual(automation.notification_calls, [True, False])
+
+
 class WiserPassiveModeRoomSupportTest(unittest.TestCase):
     """Tests for deciding which rooms receive a passive-mode switch."""
 
