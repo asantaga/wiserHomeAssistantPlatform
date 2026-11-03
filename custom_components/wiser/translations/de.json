@@ -293,7 +293,8 @@
       "away_mode_target_temperature": { "name": "Zieltemperatur im Abwesenheitsmodus" },
       "floor_temperature_offset": { "name": "Korrektur der Fußbodentemperatur" },
       "indoor_discomfort_temperature": { "name": "Unbehaglichkeitstemperatur innen" },
-      "outdoor_discomfort_temperature": { "name": "Unbehaglichkeitstemperatur außen" }
+      "outdoor_discomfort_temperature": { "name": "Unbehaglichkeitstemperatur außen" },
+      "power_on_level": { "name": "Einschaltniveau" }
     },
     "select": {
       "mode": { "name": "Modus" },
