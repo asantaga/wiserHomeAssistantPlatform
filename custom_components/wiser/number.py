@@ -19,6 +19,7 @@ from awesomeversion import AwesomeVersion
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.const import __version__ as HA_VERSION
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 HA_VERSION_OBJ = AwesomeVersion(HA_VERSION)
@@ -61,6 +62,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 ),
             ],
         )
+
+    # Add power on level for v2 hub
+    if data.wiserhub.devices.lights.count > 0:
+        for light in data.wiserhub.devices.lights.all:
+            if (
+                light.is_dimmable
+                and light.is_power_on_behaviour_supported
+            ):
+                wiser_numbers.extend(
+                    [WiserPowerOnLevelNumber(data, light.light_id)]
+                )
+
     async_add_entities(wiser_numbers)
 
 
@@ -408,4 +421,113 @@ class WiserDiscomfortOutdoorTempNumber(
         """Set new value."""
         _LOGGER.debug(f"Setting {self._name} to {value}C")
         await self._data.wiserhub.system.set_outdoor_discomfort_temperature(value)
+        await self.async_force_update()
+
+class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    _attr_has_entity_name = True
+    _attr_translation_key = "power_on_level"
+
+    def __init__(self, coordinator, light_id) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._light_id = light_id
+        self._name = light_id
+        self._light = self._data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._light.id
+        self._value = self._light.power_on_level
+
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if HA_VERSION_OBJ < "2022.7.0":
+            self._attr_min_value = self.native_min_value
+            self._attr_max_value = self.native_max_value
+            self._attr_value = self._light.power_on_level
+            self.set_value = self.set_native_value
+
+        _LOGGER.debug(f"{self._light.name} {self._name} initialise")
+
+    async def async_force_update(self, delay: int = 0):
+        _LOGGER.debug(f"Hub update initiated by {self._name}")
+        if delay:
+            await asyncio.sleep(delay)
+        await self._data.async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(f"{self._name} updating")
+        self._light = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
+        self._value = self._light.power_on_level
+        # Support prior to 2022.7.0 Versions without deprecation warning
+        if hasattr(self, "_attr_value"):
+            self._attr_value = self._light.power_on_level
+        self.async_write_ha_state()
+
+    @property
+    def native_min_value(self) -> int:
+        """Return the minimum value."""
+        return 0
+
+    @property
+    def native_max_value(self) -> int:
+        """Return the maximum value."""
+        return 100
+
+    @property
+    def native_step(self) -> float:
+        return 1
+
+    @property
+    def mode(self) -> NumberMode:
+        """Return the mode of the entity."""
+        return NumberMode.AUTO
+
+    @property
+    def icon(self):
+        """Icon for device"""
+        return "mdi:lightbulb-on"
+
+    @property
+    def unique_id(self):
+        return get_physical_entity_unique_id(
+            self._data,
+            "number",
+            self._light_id,
+            "power_on_level",
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            **get_hub_via_device_info(self._data),
+        }
+
+    @property
+    def native_value(self):
+        """Return device value"""
+        return self._value
+
+    async def async_set_native_value(self, value: int) -> None:
+        """Set new value."""
+        level = int(value)
+        if level != value:
+            raise HomeAssistantError("Power-on level must be a whole number.")
+
+        _LOGGER.debug(f"Setting {self._name} to {level}%")
+        set_power_on_level = getattr(self._light, "set_power_on_level", None)
+        if set_power_on_level is not None:
+            result = await set_power_on_level(level)
+        else:
+            result = await self._light._send_command({"PowerOnLevel": level})
+
+        if result is False:
+            raise HomeAssistantError(
+                f"The Wiser API did not confirm the power-on level update for "
+                f"light {self._light_id}."
+            )
         await self.async_force_update()

@@ -353,6 +353,9 @@
       },
       "outdoor_discomfort_temperature": {
         "name": "Udendørs ubehagstemperatur"
+      },
+      "power_on_level": {
+        "name": "Tændingsniveau"
       }
     },
     "select": {

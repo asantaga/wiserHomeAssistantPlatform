@@ -353,6 +353,9 @@
       },
       "outdoor_discomfort_temperature": {
         "name": "Temperatura de desconforto externo"
+      },
+      "power_on_level": {
+        "name": "Nível de ativação"
       }
     },
     "select": {
