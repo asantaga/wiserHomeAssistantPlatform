@@ -168,11 +168,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             {"Time": "06:00", "Setpoint": "50"},
             {"Time": "08:00", "Setpoint": "35"},
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 7, 0)
         )
         self.assertEqual(value, 50)
         self.assertEqual(next_event, datetime(2026, 10, 5, 8, 0))
+        self.assertEqual(next_temperature, 35)
 
     def test_schedule_wraps_to_the_previous_and_next_week(self):
         schedule = default_schedule(35)
@@ -181,11 +182,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         schedule["ScheduleData"][6]["slots"] = [
             {"Time": "22:00", "Setpoint": "48"}
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 5, 0)
         )
         self.assertEqual(value, 48)
         self.assertEqual(next_event, datetime(2026, 10, 11, 22, 0))
+        self.assertEqual(next_temperature, 48)
 
     def test_single_slot_at_current_time_advances_one_week(self):
         schedule = default_schedule(35)
@@ -194,11 +196,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         schedule["ScheduleData"][0]["slots"] = [
             {"Time": "06:00", "Setpoint": "50"}
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 6, 0)
         )
         self.assertEqual(value, 50)
         self.assertEqual(next_event, datetime(2026, 10, 12, 6, 0))
+        self.assertEqual(next_temperature, 50)
 
     def test_schedule_changes_at_exact_sunday_minute(self):
         schedule = default_schedule(35)
@@ -208,12 +211,13 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             {"Time": "19:15", "Setpoint": "45"},
         ]
 
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 11, 19, 15, 32)
         )
 
         self.assertEqual(value, 45)
         self.assertEqual(next_event, datetime(2026, 10, 12, 0, 0))
+        self.assertEqual(next_temperature, 35)
 
     def test_schedule_has_timer_and_coordinator_recovery_paths(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
@@ -296,7 +300,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             normalized["ScheduleData"][0]["slots"][0]["Setpoint"],
             "Hand wash",
         )
-        value, _ = schedule_position(
+        value, _, _ = schedule_position(
             normalized, datetime(2026, 10, 5, 7, 0)
         )
         self.assertEqual(value, 42)

@@ -219,7 +219,7 @@ def _validated_schedule(
 
 
 def _schedule_position(schedule, now):
-    """Return current setpoint and next transition for a local datetime."""
+    """Return current setpoint plus the next transition and its setpoint."""
     preset_temperatures = {
         option["name"].casefold(): float(option["temperature"])
         for option in schedule.get("PresetOptions", [])
@@ -238,7 +238,7 @@ def _schedule_position(schedule, now):
             )
     transitions.sort()
     if not transitions:
-        return None, None
+        return None, None, None
 
     current_minute = now.weekday() * 1440 + now.hour * 60 + now.minute
     previous = [
@@ -257,7 +257,7 @@ def _schedule_position(schedule, now):
     next_datetime = (now + timedelta(minutes=days_ahead)).replace(
         second=0, microsecond=0
     )
-    return current[1], next_datetime
+    return current[1], next_datetime, next_transition[1]
 
 
 class OpenThermHotWaterSchedule:
@@ -316,7 +316,7 @@ class OpenThermHotWaterSchedule:
         return self._schedule["Name"]
 
     def current(self, now=None):
-        """Return current setpoint and next transition."""
+        """Return current setpoint plus the next transition and its setpoint."""
         return _schedule_position(self._schedule, now or dt_util.now())
 
     def async_add_listener(self, listener):

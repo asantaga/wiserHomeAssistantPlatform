@@ -308,7 +308,7 @@ class WiserOpenThermHotWater(
     @property
     def extra_state_attributes(self):
         """Expose the selected schedule and its next transition."""
-        _, next_event = self._schedule.current()
+        _, next_event, next_temperature = self._schedule.current()
         return {
             # Used by Wiser's card feature to scope its icon mode control to
             # this water heater rather than every water_heater entity in HA.
@@ -318,6 +318,7 @@ class WiserOpenThermHotWater(
             "schedule_id": LOCAL_HOT_WATER_SCHEDULE_ID,
             "schedule_name": self._schedule.name,
             "next_schedule_event": next_event,
+            "next_schedule_temp": next_temperature,
         }
 
     async def async_added_to_hass(self):
@@ -494,7 +495,7 @@ class WiserOpenThermHotWater(
         if self._cancel_schedule_timer is not None:
             self._cancel_schedule_timer()
             self._cancel_schedule_timer = None
-        _, next_event = self._schedule.current()
+        _, next_event, _ = self._schedule.current()
         if next_event is None:
             return
         # Run just beyond the minute boundary so schedule evaluation cannot
@@ -519,7 +520,7 @@ class WiserOpenThermHotWater(
 
     def _scheduled_temperature(self):
         """Resolve the current integration-owned schedule setpoint."""
-        temperature, _ = self._schedule.current()
+        temperature, _, _ = self._schedule.current()
         return temperature
 
     async def _async_apply_schedule_safely(self):
