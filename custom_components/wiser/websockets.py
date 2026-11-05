@@ -139,6 +139,7 @@ async def async_build_native_notification_data(wiserhub):
     """Return native notifications enriched with Wiser automation details."""
     data = build_native_notification_data(wiserhub)
     automation_collection = getattr(wiserhub, "automations", None)
+    devices = getattr(wiserhub, "devices", None)
     raw_data = getattr(wiserhub, "raw_hub_data", {}) or {}
     domain_data = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
 
@@ -157,6 +158,15 @@ async def async_build_native_notification_data(wiserhub):
         )
         if target:
             name = target.get("Name") or target.get("EquipmentName")
+            get_device = getattr(devices, "get_by_id", None)
+            linked_device_id = target.get("DeviceId")
+            if (
+                not name
+                and callable(get_device)
+                and linked_device_id is not None
+            ):
+                linked_device = get_device(linked_device_id)
+                name = getattr(linked_device, "name", None)
             if name:
                 enriched["TargetName"] = name
         return enriched

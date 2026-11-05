@@ -239,7 +239,10 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
         async def get_details():
             return {
                 "TriggerMode": "All",
-                "Triggers": [{"Domain": "SmartPlug", "Id": 1}],
+                "Triggers": [
+                    {"Domain": "SmartPlug", "Id": 1},
+                    {"Domain": "BinarySensor", "Id": 2},
+                ],
                 "Actions": [{"Wait": 1}],
                 "TimeConstraints": [],
             }
@@ -255,6 +258,9 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
                 equipments=SimpleNamespace(all=[]),
                 smokealarms=SimpleNamespace(all=[]),
                 binary_sensor=SimpleNamespace(all=[]),
+                get_by_id=lambda device_id: SimpleNamespace(name="Front door")
+                if device_id == 24
+                else None,
             ),
             automations=SimpleNamespace(
                 get_by_id=lambda automation_id: api_automation
@@ -265,6 +271,7 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
                         {"id": 3, "Name": "Test", "Enabled": True}
                     ],
                     "SmartPlug": [{"id": 1, "Name": "Kitchen plug"}],
+                    "BinarySensor": [{"id": 2, "DeviceId": 24}],
                 }
             },
         )
@@ -282,7 +289,12 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
                         "Domain": "SmartPlug",
                         "Id": 1,
                         "TargetName": "Kitchen plug",
-                    }
+                    },
+                    {
+                        "Domain": "BinarySensor",
+                        "Id": 2,
+                        "TargetName": "Front door",
+                    },
                 ],
                 "actions": [{"Wait": 1}],
                 "time_constraints": [],
