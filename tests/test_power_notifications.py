@@ -118,6 +118,13 @@ class PowerNotificationDataTest(unittest.TestCase):
                 smokealarms=SimpleNamespace(all=[smoke_alarm]),
                 binary_sensor=SimpleNamespace(all=[sensor]),
             ),
+            automations=SimpleNamespace(
+                get_by_id=lambda automation_id: SimpleNamespace(
+                    set_notification_enabled=lambda enabled: None
+                )
+                if automation_id == 3
+                else None
+            ),
             raw_hub_data={
                 "Domain": {
                     "Automation": [
@@ -161,7 +168,7 @@ class PowerNotificationDataTest(unittest.TestCase):
                         "name": "Door left open",
                         "enabled": True,
                         "notification_enabled": True,
-                        "writable": False,
+                        "writable": True,
                     }
                 ],
             },
@@ -191,6 +198,28 @@ class PowerNotificationDataTest(unittest.TestCase):
                 "automations": [],
             },
         )
+
+    def test_automation_is_read_only_without_api_setter(self):
+        wiserhub = SimpleNamespace(
+            devices=SimpleNamespace(
+                equipments=SimpleNamespace(all=[]),
+                smokealarms=SimpleNamespace(all=[]),
+                binary_sensor=SimpleNamespace(all=[]),
+            ),
+            raw_hub_data={
+                "Domain": {
+                    "Automation": [{
+                        "id": 3,
+                        "Name": "Door left open",
+                        "Enabled": True,
+                        "EnableNotification": False,
+                    }]
+                }
+            },
+        )
+
+        automation = build_native_notification_data(wiserhub)["automations"][0]
+        self.assertFalse(automation["writable"])
 
 
 if __name__ == "__main__":

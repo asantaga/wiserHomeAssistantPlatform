@@ -99,15 +99,22 @@ def build_native_notification_data(wiserhub):
     raw_data = getattr(wiserhub, "raw_hub_data", {}) or {}
     domain = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
     automation_data = domain.get("Automation", []) if isinstance(domain, dict) else []
+    automation_collection = getattr(wiserhub, "automations", None)
     automations = [
         {
             "automation_id": automation.get("id"),
             "name": automation.get("Name"),
             "enabled": automation.get("Enabled", False),
             "notification_enabled": automation.get("EnableNotification", False),
-            # The local hub API currently exposes no verified symmetric
-            # enable/disable operation for automation notifications.
-            "writable": False,
+            "writable": callable(
+                getattr(
+                    automation_collection.get_by_id(automation.get("id"))
+                    if automation_collection
+                    else None,
+                    "set_notification_enabled",
+                    None,
+                )
+            ),
         }
         for automation in automation_data
         if isinstance(automation, dict) and "EnableNotification" in automation
@@ -791,6 +798,38 @@ async def async_register_websockets(hass, data):
 
     @websocket_api.websocket_command(
         {
+            vol.Required("type"): "{}/automation_notification/set".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_automation_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Enable or disable notifications for a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        setter = getattr(automation, "set_notification_enabled", None)
+        if setter is None:
+            connection.send_error(
+                msg["id"], "not_found", "notification-capable automation not recognised"
+            )
+            return
+        await setter(msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
             vol.Required("type"): "{}/power_notification/set".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("equipment_id"): int,
@@ -883,6 +922,7 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_get_power_notifications)
     async_register_command(hass, websocket_get_notifications)
     async_register_command(hass, websocket_set_device_notification)
+    async_register_command(hass, websocket_set_automation_notification)
     async_register_command(hass, websocket_set_power_notification)
     async_register_command(hass, websocket_delete_power_notification)
 
