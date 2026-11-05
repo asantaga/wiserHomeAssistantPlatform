@@ -101,33 +101,31 @@ def build_native_notification_data(wiserhub):
     domain = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
     automation_data = domain.get("Automation", []) if isinstance(domain, dict) else []
     automation_collection = getattr(wiserhub, "automations", None)
-    automations = [
-        {
-            "automation_id": automation.get("id"),
-            "name": automation.get("Name"),
-            "enabled": automation.get("Enabled", False),
-            "writable": callable(
-                getattr(
-                    automation_collection.get_by_id(automation.get("id"))
-                    if automation_collection
-                    else None,
-                    "set_enabled",
-                    None,
-                )
-            ),
-            "deletable": callable(
-                getattr(
-                    automation_collection.get_by_id(automation.get("id"))
-                    if automation_collection
-                    else None,
-                    "delete",
-                    None,
-                )
-            ),
-        }
-        for automation in automation_data
-        if isinstance(automation, dict) and "Enabled" in automation
-    ]
+    automations = []
+    for automation in automation_data:
+        if not isinstance(automation, dict) or "Enabled" not in automation:
+            continue
+        automation_id = automation.get("id")
+        api_automation = (
+            automation_collection.get_by_id(automation_id)
+            if automation_collection
+            else None
+        )
+        automations.append(
+            {
+                "automation_id": automation_id,
+                "name": automation.get("Name"),
+                "enabled": automation.get("Enabled", False),
+                "notification_enabled": automation.get(
+                    "EnableNotification", False
+                ),
+                "writable": callable(getattr(api_automation, "set_enabled", None)),
+                "notification_writable": callable(
+                    getattr(api_automation, "set_notification_enabled", None)
+                ),
+                "deletable": callable(getattr(api_automation, "delete", None)),
+            }
+        )
 
     return {
         "equipment": build_power_notification_data(wiserhub),
@@ -839,6 +837,40 @@ async def async_register_websockets(hass, data):
 
     @websocket_api.websocket_command(
         {
+            vol.Required("type"): "{}/automation/set_notification_enabled".format(
+                DOMAIN
+            ),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_automation_notification_enabled(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Enable or disable notifications for a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        setter = getattr(automation, "set_notification_enabled", None)
+        if setter is None:
+            connection.send_error(
+                msg["id"], "not_found", "automation notification not recognised"
+            )
+            return
+        await setter(msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
             vol.Required("type"): "{}/automation/delete".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("automation_id"): int,
@@ -961,6 +993,7 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_get_notifications)
     async_register_command(hass, websocket_set_device_notification)
     async_register_command(hass, websocket_set_automation_enabled)
+    async_register_command(hass, websocket_set_automation_notification_enabled)
     async_register_command(hass, websocket_delete_automation)
     async_register_command(hass, websocket_set_power_notification)
     async_register_command(hass, websocket_delete_power_notification)

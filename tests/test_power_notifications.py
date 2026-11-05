@@ -122,6 +122,7 @@ class PowerNotificationDataTest(unittest.TestCase):
             automations=SimpleNamespace(
                 get_by_id=lambda automation_id: SimpleNamespace(
                     set_enabled=lambda enabled: None,
+                    set_notification_enabled=lambda enabled: None,
                     delete=lambda: None,
                 )
                 if automation_id == 3
@@ -134,6 +135,7 @@ class PowerNotificationDataTest(unittest.TestCase):
                             "id": 3,
                             "Name": "Door left open",
                             "Enabled": True,
+                            "EnableNotification": False,
                         }
                     ]
                 }
@@ -168,7 +170,9 @@ class PowerNotificationDataTest(unittest.TestCase):
                         "automation_id": 3,
                         "name": "Door left open",
                         "enabled": True,
+                        "notification_enabled": False,
                         "writable": True,
+                        "notification_writable": True,
                         "deletable": True,
                     }
                 ],
@@ -220,6 +224,7 @@ class PowerNotificationDataTest(unittest.TestCase):
 
         automation = build_native_notification_data(wiserhub)["automations"][0]
         self.assertFalse(automation["writable"])
+        self.assertFalse(automation["notification_writable"])
         self.assertFalse(automation["deletable"])
 
 
