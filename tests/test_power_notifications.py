@@ -110,7 +110,8 @@ class PowerNotificationDataTest(unittest.TestCase):
             name="Patio door",
             device_type="BinarySensor",
             type="WindowDoor",
-            enable_notification=False,
+            enable_notification="None",
+            notification_enabled=False,
         )
         wiserhub = SimpleNamespace(
             devices=SimpleNamespace(

@@ -83,9 +83,10 @@ def build_native_notification_data(wiserhub):
     sensors = []
     sensor_collection = getattr(devices, "binary_sensor", None)
     for sensor in getattr(sensor_collection, "all", []):
-        enabled = getattr(sensor, "enable_notification", None)
-        if enabled is None:
+        mode = getattr(sensor, "enable_notification", None)
+        if mode is None:
             continue
+        enabled = getattr(sensor, "notification_enabled", mode != "None")
         sensors.append(
             {
                 "device_id": sensor.id,
