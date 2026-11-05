@@ -115,6 +115,15 @@ def build_native_notification_data(wiserhub):
                     None,
                 )
             ),
+            "deletable": callable(
+                getattr(
+                    automation_collection.get_by_id(automation.get("id"))
+                    if automation_collection
+                    else None,
+                    "delete",
+                    None,
+                )
+            ),
         }
         for automation in automation_data
         if isinstance(automation, dict) and "Enabled" in automation
@@ -830,6 +839,35 @@ async def async_register_websockets(hass, data):
 
     @websocket_api.websocket_command(
         {
+            vol.Required("type"): "{}/automation/delete".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_delete_automation(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Delete a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        deleter = getattr(automation, "delete", None)
+        if deleter is None:
+            connection.send_error(msg["id"], "not_found", "automation not recognised")
+            return
+        await deleter()
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
             vol.Required("type"): "{}/power_notification/set".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("equipment_id"): int,
@@ -923,6 +961,7 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_get_notifications)
     async_register_command(hass, websocket_set_device_notification)
     async_register_command(hass, websocket_set_automation_enabled)
+    async_register_command(hass, websocket_delete_automation)
     async_register_command(hass, websocket_set_power_notification)
     async_register_command(hass, websocket_delete_power_notification)
 
