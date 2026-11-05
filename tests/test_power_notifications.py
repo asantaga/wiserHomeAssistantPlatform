@@ -24,10 +24,11 @@ def _load_helpers():
             )
         )
         or (
-            isinstance(node, ast.FunctionDef)
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and node.name in {
                 "build_power_notification_data",
                 "build_native_notification_data",
+                "async_build_native_notification_data",
             }
         )
     ]
@@ -39,6 +40,9 @@ def _load_helpers():
 HELPERS = _load_helpers()
 build_power_notification_data = HELPERS["build_power_notification_data"]
 build_native_notification_data = HELPERS["build_native_notification_data"]
+async_build_native_notification_data = HELPERS[
+    "async_build_native_notification_data"
+]
 
 
 class PowerNotificationDataTest(unittest.TestCase):
@@ -226,6 +230,64 @@ class PowerNotificationDataTest(unittest.TestCase):
         self.assertFalse(automation["writable"])
         self.assertFalse(automation["notification_writable"])
         self.assertFalse(automation["deletable"])
+
+
+class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
+    """Test serialization of the hub's detailed automation endpoint."""
+
+    async def test_serializes_automation_details(self):
+        async def get_details():
+            return {
+                "TriggerMode": "All",
+                "Triggers": [{"Domain": "SmartPlug", "Id": 1}],
+                "Actions": [{"Wait": 1}],
+                "TimeConstraints": [],
+            }
+
+        api_automation = SimpleNamespace(
+            set_enabled=lambda enabled: None,
+            set_notification_enabled=lambda enabled: None,
+            delete=lambda: None,
+            get_details=get_details,
+        )
+        wiserhub = SimpleNamespace(
+            devices=SimpleNamespace(
+                equipments=SimpleNamespace(all=[]),
+                smokealarms=SimpleNamespace(all=[]),
+                binary_sensor=SimpleNamespace(all=[]),
+            ),
+            automations=SimpleNamespace(
+                get_by_id=lambda automation_id: api_automation
+            ),
+            raw_hub_data={
+                "Domain": {
+                    "Automation": [
+                        {"id": 3, "Name": "Test", "Enabled": True}
+                    ],
+                    "SmartPlug": [{"id": 1, "Name": "Kitchen plug"}],
+                }
+            },
+        )
+
+        automation = (await async_build_native_notification_data(wiserhub))[
+            "automations"
+        ][0]
+
+        self.assertEqual(
+            automation["details"],
+            {
+                "trigger_mode": "All",
+                "triggers": [
+                    {
+                        "Domain": "SmartPlug",
+                        "Id": 1,
+                        "TargetName": "Kitchen plug",
+                    }
+                ],
+                "actions": [{"Wait": 1}],
+                "time_constraints": [],
+            },
+        )
 
 
 if __name__ == "__main__":

@@ -135,6 +135,73 @@ def build_native_notification_data(wiserhub):
     }
 
 
+async def async_build_native_notification_data(wiserhub):
+    """Return native notifications enriched with Wiser automation details."""
+    data = build_native_notification_data(wiserhub)
+    automation_collection = getattr(wiserhub, "automations", None)
+    raw_data = getattr(wiserhub, "raw_hub_data", {}) or {}
+    domain_data = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
+
+    def enrich_target(item):
+        enriched = dict(item)
+        domain = item.get("Domain")
+        item_id = item.get("Id")
+        records = domain_data.get(domain, []) if isinstance(domain_data, dict) else []
+        target = next(
+            (
+                record
+                for record in records
+                if isinstance(record, dict) and record.get("id") == item_id
+            ),
+            None,
+        )
+        if target:
+            name = target.get("Name") or target.get("EquipmentName")
+            if name:
+                enriched["TargetName"] = name
+        return enriched
+
+    for automation in data["automations"]:
+        api_automation = (
+            automation_collection.get_by_id(automation["automation_id"])
+            if automation_collection
+            else None
+        )
+        getter = getattr(api_automation, "get_details", None)
+        if not callable(getter):
+            continue
+        try:
+            details = await getter()
+        except Exception:  # Details must not block notification controls.
+            _LOGGER.debug(
+                "Unable to load details for Wiser automation %s",
+                automation["automation_id"],
+                exc_info=True,
+            )
+            continue
+        if not isinstance(details, dict):
+            continue
+        triggers = details.get("Triggers", [])
+        actions = details.get("Actions", [])
+        automation["details"] = {
+            "trigger_mode": details.get("TriggerMode"),
+            "triggers": [
+                enrich_target(item) for item in triggers if isinstance(item, dict)
+            ]
+            if isinstance(triggers, list)
+            else [],
+            "actions": [
+                enrich_target(item) for item in actions if isinstance(item, dict)
+            ]
+            if isinstance(actions, list)
+            else [],
+            "time_constraints": details.get("TimeConstraints", [])
+            if isinstance(details.get("TimeConstraints", []), list)
+            else [],
+        }
+    return data
+
+
 @callback
 @websocket_api.websocket_command(
     {
@@ -762,7 +829,7 @@ async def async_register_websockets(hass, data):
         d = get_api_for_hub(msg.get("hub"))
         if d:
             connection.send_result(
-                msg["id"], build_native_notification_data(d.wiserhub)
+                msg["id"], await async_build_native_notification_data(d.wiserhub)
             )
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
@@ -800,7 +867,7 @@ async def async_register_websockets(hass, data):
         await setter(msg["enabled"])
         await d.async_refresh()
         connection.send_result(
-            msg["id"], build_native_notification_data(d.wiserhub)
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
         )
 
     @websocket_api.websocket_command(
@@ -832,7 +899,7 @@ async def async_register_websockets(hass, data):
         await setter(msg["enabled"])
         await d.async_refresh()
         connection.send_result(
-            msg["id"], build_native_notification_data(d.wiserhub)
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
         )
 
     @websocket_api.websocket_command(
@@ -866,7 +933,7 @@ async def async_register_websockets(hass, data):
         await setter(msg["enabled"])
         await d.async_refresh()
         connection.send_result(
-            msg["id"], build_native_notification_data(d.wiserhub)
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
         )
 
     @websocket_api.websocket_command(
@@ -895,7 +962,7 @@ async def async_register_websockets(hass, data):
         await deleter()
         await d.async_refresh()
         connection.send_result(
-            msg["id"], build_native_notification_data(d.wiserhub)
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
         )
 
     @websocket_api.websocket_command(
