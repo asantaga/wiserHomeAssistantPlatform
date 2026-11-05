@@ -120,7 +120,7 @@ class PowerNotificationDataTest(unittest.TestCase):
             ),
             automations=SimpleNamespace(
                 get_by_id=lambda automation_id: SimpleNamespace(
-                    set_notification_enabled=lambda enabled: None
+                    set_enabled=lambda enabled: None
                 )
                 if automation_id == 3
                 else None
@@ -132,7 +132,6 @@ class PowerNotificationDataTest(unittest.TestCase):
                             "id": 3,
                             "Name": "Door left open",
                             "Enabled": True,
-                            "EnableNotification": True,
                         }
                     ]
                 }
@@ -167,7 +166,6 @@ class PowerNotificationDataTest(unittest.TestCase):
                         "automation_id": 3,
                         "name": "Door left open",
                         "enabled": True,
-                        "notification_enabled": True,
                         "writable": True,
                     }
                 ],
@@ -212,7 +210,6 @@ class PowerNotificationDataTest(unittest.TestCase):
                         "id": 3,
                         "Name": "Door left open",
                         "Enabled": True,
-                        "EnableNotification": False,
                     }]
                 }
             },

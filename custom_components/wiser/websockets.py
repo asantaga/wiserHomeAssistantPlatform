@@ -105,19 +105,18 @@ def build_native_notification_data(wiserhub):
             "automation_id": automation.get("id"),
             "name": automation.get("Name"),
             "enabled": automation.get("Enabled", False),
-            "notification_enabled": automation.get("EnableNotification", False),
             "writable": callable(
                 getattr(
                     automation_collection.get_by_id(automation.get("id"))
                     if automation_collection
                     else None,
-                    "set_notification_enabled",
+                    "set_enabled",
                     None,
                 )
             ),
         }
         for automation in automation_data
-        if isinstance(automation, dict) and "EnableNotification" in automation
+        if isinstance(automation, dict) and "Enabled" in automation
     ]
 
     return {
@@ -798,7 +797,7 @@ async def async_register_websockets(hass, data):
 
     @websocket_api.websocket_command(
         {
-            vol.Required("type"): "{}/automation_notification/set".format(DOMAIN),
+            vol.Required("type"): "{}/automation/set_enabled".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("automation_id"): int,
             vol.Required("enabled"): bool,
@@ -806,20 +805,20 @@ async def async_register_websockets(hass, data):
     )
     @websocket_api.require_admin
     @websocket_api.async_response
-    async def websocket_set_automation_notification(
+    async def websocket_set_automation_enabled(
         hass, connection: ActiveConnection, msg: dict
     ) -> None:
-        """Enable or disable notifications for a Wiser automation."""
+        """Enable or disable a Wiser automation."""
         d = get_api_for_hub(msg.get("hub"))
         if not d:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
             return
         collection = getattr(d.wiserhub, "automations", None)
         automation = collection.get_by_id(msg["automation_id"]) if collection else None
-        setter = getattr(automation, "set_notification_enabled", None)
+        setter = getattr(automation, "set_enabled", None)
         if setter is None:
             connection.send_error(
-                msg["id"], "not_found", "notification-capable automation not recognised"
+                msg["id"], "not_found", "automation not recognised"
             )
             return
         await setter(msg["enabled"])
@@ -922,7 +921,7 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_get_power_notifications)
     async_register_command(hass, websocket_get_notifications)
     async_register_command(hass, websocket_set_device_notification)
-    async_register_command(hass, websocket_set_automation_notification)
+    async_register_command(hass, websocket_set_automation_enabled)
     async_register_command(hass, websocket_set_power_notification)
     async_register_command(hass, websocket_delete_power_notification)
 
