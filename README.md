@@ -20,6 +20,10 @@ For more information checkout the AMAZING community thread available on
 
 ## What's New in 4.1.0b0?
 
+This diagnostic beta helps investigate duplicate and unavailable entities reported after upgrading to v4.
+
+- Adds Wiser entity-registry metadata to downloaded integration diagnostics, including entity IDs, unique IDs, associated device records and creation times
+- Makes no entity-registry changes; the additional information is read-only and intended to support issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792)
 
 ## What's New in 4.0.2?
 

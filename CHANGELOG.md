@@ -8,10 +8,11 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Upgrade notes
 
+- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
+
 ### Changed
 
-### Fixed
-
+- Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
 
 ## v4.0.2
 
