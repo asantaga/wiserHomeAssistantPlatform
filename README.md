@@ -18,6 +18,23 @@ Detailed information about this integration has now been moved to our [Wiki page
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
+## What's New in 4.0.2?
+
+This release focuses on upgrade fixes, device reliability and compatibility with Home Assistant 2026.11.
+
+- Battery sensors for Wiser wireless button panels, including combined dimmer/button-panel devices, when the hub provides usable battery data
+- Repairs for room and shared frontend update entities affected by the 4.0 migration, preserving existing entity IDs and history
+- Corrected room device metadata and exclusion of inactive rooms and rooms without heating capability from climate entity setup
+- Fixes for already-configured hubs being rediscovered and duplicate Zigbee nodes preventing the network view from loading
+- Restored climate preset icons, corrected Away Mode off temperatures and fixed **Advance Schedule** when the next heating period is off
+- Improved handling of temporarily missing battery devices, dependency installation and cleanup when hubs are unloaded
+- Updated temperature properties for Home Assistant 2026.11 while retaining compatibility with older supported releases
+- Updated `aioWiserHeatAPI` from 1.7.3 to 1.7.7
+
+**Compatibility note:** Climate `preset_modes` now exposes translation keys such as `boost_1h` and `advance_schedule`. Templates or custom cards that match the previous labels in this list need updating. Existing service calls using labels such as `Boost 1h` remain supported.
+
+See the [change log](CHANGELOG.md) for more details of the changes since 4.0.1.
+
 ## What's New in 4.0?
 
 This is a **major** and **big** release with a lot of new features, bug fixes and changes.
