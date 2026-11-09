@@ -15,6 +15,7 @@ CONF_LEGACY_NAMING = "legacy_naming"
 DATA_WISER_CONFIG = "wiser_config"
 URL_BASE = "/wiser"
 CONF_SHOW_WISER_SIDEBAR = "show_wiser_sidebar"
+CONF_WISER_CLIMATE_CONTROLS = "wiser_climate_controls"
 CONF_WISER_PANEL_CONFIG = "wiser_panel_config"
 CONF_WISER_ROOM_NAMES = "wiser_room_names"
 

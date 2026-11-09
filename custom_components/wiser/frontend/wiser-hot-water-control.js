@@ -16,6 +16,103 @@ const MDI_ARROW_LEFT =
 const localize = (hass, key, fallback, replacements) =>
   hass?.localize?.(key, replacements) || fallback;
 
+const nativeWaterHeaterStateColor = (stateObj) => {
+  const state = stateObj?.state;
+  if (state === "unavailable") return "var(--state-unavailable-color)";
+  const stateKey = String(state || "unknown")
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/^_|_$/g, "");
+  const activity = state === "off" ? "inactive" : "active";
+  return `var(--state-water_heater-${stateKey}-color, var(--state-water_heater-${activity}-color, var(--state-${activity}-color)))`;
+};
+
+const cssString = (value) =>
+  String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+
+const hotWaterStyleGenerations = new WeakMap();
+
+const hotWaterActivityForState = (stateObj) => {
+  if (stateObj.state === "unavailable") {
+    return { label: "Unavailable", active: false };
+  }
+  if (stateObj.state === "off") {
+    return { label: "Off", active: false };
+  }
+  if (stateObj.attributes.is_heating) {
+    return { label: "Heating water", active: true };
+  }
+  return { label: "Idle", active: false };
+};
+
+const applyOpenThermHotWaterStyle = async (control, stateObj) => {
+  if (!control?.shadowRoot) return;
+  const generation = (hotWaterStyleGenerations.get(control) || 0) + 1;
+  hotWaterStyleGenerations.set(control, generation);
+  const activity = hotWaterActivityForState(stateObj);
+  if (control._wiserHotWaterStateColorProperty) {
+    control.style.removeProperty(control._wiserHotWaterStateColorProperty);
+    control._wiserHotWaterStateColorProperty = undefined;
+  }
+  control.style.removeProperty("--action-color");
+  if (activity.active) {
+    const stateKey = String(stateObj.state)
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "_")
+      .replaceAll(/^_|_$/g, "");
+    const property = `--state-water_heater-${stateKey}-color`;
+    control.style.setProperty(
+      property,
+      "var(--state-climate-heat-color, var(--deep-orange-color))"
+    );
+    control.style.setProperty(
+      "--action-color",
+      "var(--state-climate-heat-color, var(--deep-orange-color))"
+    );
+    control._wiserHotWaterStateColorProperty = property;
+  }
+  control.style.setProperty(
+    "--wiser-hot-water-status",
+    `"${cssString(activity.label)}"`
+  );
+
+  if (control.updateComplete) await control.updateComplete;
+  if (
+    generation !== hotWaterStyleGenerations.get(control) ||
+    !control.shadowRoot
+  ) return;
+  let style = control.shadowRoot.querySelector("style[data-wiser-hot-water]");
+  if (!style) {
+    style = document.createElement("style");
+    style.dataset.wiserHotWater = "";
+    control.shadowRoot.append(style);
+  }
+  style.textContent = `
+    .info, .info > p {
+      color: var(--thermostat-primary-text-color, var(--primary-text-color)) !important;
+    }
+    .container .label {
+      color: ${activity.active
+        ? "var(--state-climate-heat-color, var(--deep-orange-color))"
+        : "var(--thermostat-primary-text-color, var(--primary-text-color))"} !important;
+    }
+    .info::after {
+      color: ${activity.active
+        ? "var(--state-climate-heat-color, var(--deep-orange-color))"
+        : "var(--extra-info-text-color, var(--secondary-text-color))"};
+      content: var(--wiser-hot-water-status);
+      font-weight: var(--ha-font-weight-medium, 500);
+      line-height: var(--ha-line-height-normal, 1.5);
+      margin-top: var(--extra-info-margin-top, -6px);
+      max-width: 90%;
+      overflow: visible;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .container.xs .info::after { display: none; }
+  `;
+};
+
 const showTemperatureError = (element, error) => {
   element.dispatchEvent(new CustomEvent("hass-notification", {
     bubbles: true,
@@ -1232,6 +1329,10 @@ class OpenThermHotWaterControlModesCardFeature extends HTMLElement {
       this._select.options = availableModes.map((mode) => this._option(mode));
       this._select.value = selectedValue;
       this._select.disabled = stateObj.state === "unavailable";
+      this._select.style.setProperty(
+        "--wiser-water-heater-state-color",
+        nativeWaterHeaterStateColor(stateObj)
+      );
       this._renderSignature = renderSignature;
       void this._replaceNativeCurrentlyLabel();
       return;
@@ -1246,10 +1347,7 @@ class OpenThermHotWaterControlModesCardFeature extends HTMLElement {
       ha-control-select {
         --control-select-thickness: var(--feature-height, 42px);
         --control-select-border-radius: var(--feature-border-radius, 12px);
-        --control-select-color: var(
-          --state-water_heater-active-color,
-          var(--primary-color)
-        );
+        --control-select-color: var(--wiser-water-heater-state-color);
       }
     `;
 
@@ -1263,6 +1361,10 @@ class OpenThermHotWaterControlModesCardFeature extends HTMLElement {
     );
     select.hideOptionLabel = true;
     select.disabled = stateObj.state === "unavailable";
+    select.style.setProperty(
+      "--wiser-water-heater-state-color",
+      nativeWaterHeaterStateColor(stateObj)
+    );
     const configuredMaxWidth = Number(this._config.max_width);
     select.style.maxWidth = `${
       Number.isFinite(configuredMaxWidth) && configuredMaxWidth > 0
@@ -1507,6 +1609,10 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
       }
       this._select.value = selected;
       this._select.disabled = stateObj.state === "unavailable";
+      this._select.style.setProperty(
+        "--feature-color",
+        nativeWaterHeaterStateColor(stateObj)
+      );
       return;
     }
 
@@ -1540,6 +1646,10 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     select.label = localize(this._hass, "ui.card.climate.preset", "Preset");
     select.showArrow = true;
     select.hideLabel = true;
+    select.style.setProperty(
+      "--feature-color",
+      nativeWaterHeaterStateColor(stateObj)
+    );
     const icon = document.createElement("ha-icon");
     icon.setAttribute("slot", "icon");
     icon.setAttribute("icon", "mdi:tune-variant");
@@ -1652,6 +1762,10 @@ class OpenThermHotWaterControlMoreInfo extends HTMLElement {
     return "Current temperature";
   }
 
+  _syncActivity(stateObj) {
+    void applyOpenThermHotWaterStyle(this._temperatureControl, stateObj);
+  }
+
   _render() {
     if (!this.shadowRoot || !this._hass || !this._stateObj) {
       return;
@@ -1682,6 +1796,7 @@ class OpenThermHotWaterControlMoreInfo extends HTMLElement {
         this._presets.hass = this._hass;
         this._presets.context = { entity_id: this._stateObj.entity_id };
       }
+      this._syncActivity(this._stateObj);
       return;
     }
 
@@ -1696,7 +1811,7 @@ class OpenThermHotWaterControlMoreInfo extends HTMLElement {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        margin-bottom: var(--ha-space-4, 16px);
+        margin-bottom: var(--ha-space-2, 8px);
         text-align: center;
       }
       .current .label {
@@ -1730,14 +1845,18 @@ class OpenThermHotWaterControlMoreInfo extends HTMLElement {
         justify-content: center;
         margin-top: var(--ha-space-4, 16px);
         margin-inline: auto;
-        max-width: 520px;
+        max-width: 352px;
         padding-inline: var(--ha-space-4, 16px);
         width: 100%;
       }
       .modes {
+        margin-inline: auto;
+        max-width: 320px;
         width: 100%;
       }
       .presets {
+        margin-inline: auto;
+        max-width: 320px;
         width: 100%;
       }
       ha-circular-progress {
@@ -1816,6 +1935,7 @@ class OpenThermHotWaterControlMoreInfo extends HTMLElement {
       this._presets = undefined;
     }
     this.shadowRoot.replaceChildren(style, content);
+    this._syncActivity(this._stateObj);
   }
 }
 

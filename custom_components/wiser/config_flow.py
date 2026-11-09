@@ -85,6 +85,7 @@ from .const import (
     CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_SETPOINT_MODE,
     CONF_SHOW_WISER_SIDEBAR,
+    CONF_WISER_CLIMATE_CONTROLS,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -1078,6 +1079,13 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_SHOW_WISER_SIDEBAR,
                             True,
+                        ),
+                    ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_WISER_CLIMATE_CONTROLS,
+                        default=self.config_entry.options.get(
+                            CONF_WISER_CLIMATE_CONTROLS,
+                            False,
                         ),
                     ): BooleanSelector(),
                 }
