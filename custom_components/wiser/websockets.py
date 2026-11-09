@@ -26,6 +26,194 @@ from .zigbee import build_zigbee_network_data
 
 _LOGGER = logging.getLogger(__name__)
 
+POWER_NOTIFICATION_TYPES = {
+    "under": "under_power_notification",
+    "over": "over_power_notification",
+}
+
+
+def build_power_notification_data(wiserhub):
+    """Return equipment power notifications in a frontend-friendly format."""
+    output = []
+    equipment_collection = getattr(wiserhub.devices, "equipments", None)
+    for equipment in getattr(equipment_collection, "all", []):
+        notifications = {}
+        for notification_type, attribute in POWER_NOTIFICATION_TYPES.items():
+            notification = getattr(equipment, attribute, None)
+            notifications[notification_type] = (
+                {
+                    "period_mins": notification.period_mins,
+                    "limit": notification.limit,
+                    "enabled": notification.enabled,
+                }
+                if notification is not None
+                else None
+            )
+        output.append(
+            {
+                "equipment_id": equipment.id,
+                "device_id": equipment.device_id,
+                "device_type": equipment.device_type,
+                "name": equipment.equipment_name,
+                "family": equipment.equipment_family,
+                "monitored": equipment.monitored,
+                "smart_supported": equipment.smart_supported,
+                "notifications": notifications,
+            }
+        )
+    return output
+
+
+def build_native_notification_data(wiserhub):
+    """Return all locally exposed native Wiser notification settings."""
+    devices = wiserhub.devices
+    smoke_alarms = []
+    smoke_collection = getattr(devices, "smokealarms", None)
+    for alarm in getattr(smoke_collection, "all", []):
+        if not getattr(alarm, "notification_supported", False):
+            continue
+        smoke_alarms.append(
+            {
+                "device_id": alarm.id,
+                "name": alarm.name,
+                "device_type": alarm.device_type,
+                "enabled": alarm.notification_enabled,
+                "supervision_notify": alarm.supervision_notify,
+                "restore_notify": alarm.restore_notify,
+            }
+        )
+
+    sensors = []
+    sensor_collection = getattr(devices, "binary_sensor", None)
+    for sensor in getattr(sensor_collection, "all", []):
+        mode = getattr(sensor, "enable_notification", None)
+        if mode is None:
+            continue
+        enabled = getattr(sensor, "notification_enabled", mode != "None")
+        sensors.append(
+            {
+                "device_id": sensor.id,
+                "name": sensor.name,
+                "device_type": sensor.device_type,
+                "sensor_type": sensor.type,
+                "enabled": enabled,
+            }
+        )
+
+    raw_data = getattr(wiserhub, "raw_hub_data", {}) or {}
+    domain = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
+    automation_data = domain.get("Automation", []) if isinstance(domain, dict) else []
+    automation_collection = getattr(wiserhub, "automations", None)
+    automations = []
+    for automation in automation_data:
+        if not isinstance(automation, dict) or "Enabled" not in automation:
+            continue
+        automation_id = automation.get("id")
+        api_automation = (
+            automation_collection.get_by_id(automation_id)
+            if automation_collection
+            else None
+        )
+        automations.append(
+            {
+                "automation_id": automation_id,
+                "name": automation.get("Name"),
+                "enabled": automation.get("Enabled", False),
+                "notification_enabled": automation.get(
+                    "EnableNotification", False
+                ),
+                "writable": callable(getattr(api_automation, "set_enabled", None)),
+                "notification_writable": callable(
+                    getattr(api_automation, "set_notification_enabled", None)
+                ),
+                "deletable": callable(getattr(api_automation, "delete", None)),
+            }
+        )
+
+    return {
+        "equipment": build_power_notification_data(wiserhub),
+        "smoke_alarms": smoke_alarms,
+        "sensors": sensors,
+        "automations": automations,
+    }
+
+
+async def async_build_native_notification_data(wiserhub):
+    """Return native notifications enriched with Wiser automation details."""
+    data = build_native_notification_data(wiserhub)
+    automation_collection = getattr(wiserhub, "automations", None)
+    devices = getattr(wiserhub, "devices", None)
+    raw_data = getattr(wiserhub, "raw_hub_data", {}) or {}
+    domain_data = raw_data.get("Domain", {}) if isinstance(raw_data, dict) else {}
+
+    def enrich_target(item):
+        enriched = dict(item)
+        domain = item.get("Domain")
+        item_id = item.get("Id")
+        records = domain_data.get(domain, []) if isinstance(domain_data, dict) else []
+        target = next(
+            (
+                record
+                for record in records
+                if isinstance(record, dict) and record.get("id") == item_id
+            ),
+            None,
+        )
+        if target:
+            name = target.get("Name") or target.get("EquipmentName")
+            get_device = getattr(devices, "get_by_id", None)
+            linked_device_id = target.get("DeviceId")
+            if (
+                not name
+                and callable(get_device)
+                and linked_device_id is not None
+            ):
+                linked_device = get_device(linked_device_id)
+                name = getattr(linked_device, "name", None)
+            if name:
+                enriched["TargetName"] = name
+        return enriched
+
+    for automation in data["automations"]:
+        api_automation = (
+            automation_collection.get_by_id(automation["automation_id"])
+            if automation_collection
+            else None
+        )
+        getter = getattr(api_automation, "get_details", None)
+        if not callable(getter):
+            continue
+        try:
+            details = await getter()
+        except Exception:  # Details must not block notification controls.
+            _LOGGER.debug(
+                "Unable to load details for Wiser automation %s",
+                automation["automation_id"],
+                exc_info=True,
+            )
+            continue
+        if not isinstance(details, dict):
+            continue
+        triggers = details.get("Triggers", [])
+        actions = details.get("Actions", [])
+        automation["details"] = {
+            "trigger_mode": details.get("TriggerMode"),
+            "triggers": [
+                enrich_target(item) for item in triggers if isinstance(item, dict)
+            ]
+            if isinstance(triggers, list)
+            else [],
+            "actions": [
+                enrich_target(item) for item in actions if isinstance(item, dict)
+            ]
+            if isinstance(actions, list)
+            else [],
+            "time_constraints": details.get("TimeConstraints", [])
+            if isinstance(details.get("TimeConstraints", []), list)
+            else [],
+        }
+    return data
+
 
 @callback
 @websocket_api.websocket_command(
@@ -753,6 +941,250 @@ async def async_register_websockets(hass, data):
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notifications".format(DOMAIN),
+            vol.Optional("hub"): str,
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_get_power_notifications(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Publish native equipment power notification data."""
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            connection.send_result(
+                msg["id"], build_power_notification_data(d.wiserhub)
+            )
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/notifications".format(DOMAIN),
+            vol.Optional("hub"): str,
+        }
+    )
+    @websocket_api.async_response
+    async def websocket_get_notifications(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Publish all locally exposed native Wiser notifications."""
+        d = get_api_for_hub(msg.get("hub"))
+        if d:
+            connection.send_result(
+                msg["id"], await async_build_native_notification_data(d.wiserhub)
+            )
+        else:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/device_notification/set".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("category"): vol.In(["smoke_alarm", "sensor"]),
+            vol.Required("device_id"): int,
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_device_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Enable or disable notifications for a supported Wiser device."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection_name = (
+            "smokealarms" if msg["category"] == "smoke_alarm" else "binary_sensor"
+        )
+        collection = getattr(d.wiserhub.devices, collection_name, None)
+        device = collection.get_by_id(msg["device_id"]) if collection else None
+        setter = getattr(device, "set_notification_enabled", None)
+        if setter is None:
+            connection.send_error(
+                msg["id"], "not_found", "notification-capable device not recognised"
+            )
+            return
+        await setter(msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/automation/set_enabled".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_automation_enabled(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Enable or disable a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        setter = getattr(automation, "set_enabled", None)
+        if setter is None:
+            connection.send_error(
+                msg["id"], "not_found", "automation not recognised"
+            )
+            return
+        await setter(msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/automation/set_notification_enabled".format(
+                DOMAIN
+            ),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_automation_notification_enabled(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Enable or disable notifications for a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        setter = getattr(automation, "set_notification_enabled", None)
+        if setter is None:
+            connection.send_error(
+                msg["id"], "not_found", "automation notification not recognised"
+            )
+            return
+        await setter(msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/automation/delete".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("automation_id"): int,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_delete_automation(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Delete a Wiser automation."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub, "automations", None)
+        automation = collection.get_by_id(msg["automation_id"]) if collection else None
+        deleter = getattr(automation, "delete", None)
+        if deleter is None:
+            connection.send_error(msg["id"], "not_found", "automation not recognised")
+            return
+        await deleter()
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notification/set".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("equipment_id"): int,
+            vol.Required("notification_type"): vol.In(
+                list(POWER_NOTIFICATION_TYPES)
+            ),
+            vol.Required("period_mins"): vol.All(int, vol.Range(min=0)),
+            vol.Required("limit"): vol.All(int, vol.Range(min=0)),
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_power_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Create or update a native equipment power notification."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        equipment = d.wiserhub.devices.equipments.get_by_id(msg["equipment_id"])
+        if equipment is None:
+            connection.send_error(
+                msg["id"], "not_found", "equipment not recognised"
+            )
+            return
+        setter = getattr(
+            equipment,
+            f"set_{msg['notification_type']}_power_notification",
+        )
+        await setter(msg["period_mins"], msg["limit"], msg["enabled"])
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_power_notification_data(d.wiserhub)
+        )
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "{}/power_notification/delete".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("equipment_id"): int,
+            vol.Required("notification_type"): vol.In(
+                list(POWER_NOTIFICATION_TYPES)
+            ),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_delete_power_notification(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Delete a native equipment power notification."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        equipment = d.wiserhub.devices.equipments.get_by_id(msg["equipment_id"])
+        if equipment is None:
+            connection.send_error(
+                msg["id"], "not_found", "equipment not recognised"
+            )
+            return
+        deleter = getattr(
+            equipment,
+            f"delete_{msg['notification_type']}_power_notification",
+        )
+        await deleter()
+        await d.async_refresh()
+        connection.send_result(
+            msg["id"], build_power_notification_data(d.wiserhub)
+        )
+
     async_register_command(hass, websocket_configure_panel)
     async_register_command(hass, websocket_configure_wiser_panel_tabs)
     async_register_command(hass, websocket_get_hubs)
@@ -769,5 +1201,13 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_save_schedule)
     async_register_command(hass, websocket_copy_schedule)
     async_register_command(hass, websocket_get_zigbee_data)
+    async_register_command(hass, websocket_get_power_notifications)
+    async_register_command(hass, websocket_get_notifications)
+    async_register_command(hass, websocket_set_device_notification)
+    async_register_command(hass, websocket_set_automation_enabled)
+    async_register_command(hass, websocket_set_automation_notification_enabled)
+    async_register_command(hass, websocket_delete_automation)
+    async_register_command(hass, websocket_set_power_notification)
+    async_register_command(hass, websocket_delete_power_notification)
 
     async_register_command(hass, handle_subscribe_updates)
