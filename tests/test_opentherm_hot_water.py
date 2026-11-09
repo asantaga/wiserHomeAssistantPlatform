@@ -1,11 +1,14 @@
 """Focused tests for the integration-owned OpenTherm hot-water schedule."""
 
 import ast
+import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import strptime
+from types import SimpleNamespace
 import unittest
+from unittest.mock import AsyncMock, Mock
 
 
 COMPONENT = Path(__file__).parents[1] / "custom_components/wiser"
@@ -57,6 +60,90 @@ validated_schedule = HELPERS["_validated_schedule"]
 schedule_position = HELPERS["_schedule_position"]
 
 
+class StandardHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        tree = ast.parse((COMPONENT / "opentherm_hot_water.py").read_text())
+        entity = next(
+            node for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserOpenThermHotWater"
+        )
+        methods = {
+            "operation_list", "_preset_for_mode", "_cancel_active_boost",
+            "_remaining_boost_seconds", "_start_boost", "_async_boost_finished",
+            "_async_finish_boost_safely", "async_set_operation_mode",
+        }
+        entity.bases = []
+        entity.body = [node for node in entity.body if getattr(node, "name", "") in methods]
+        standard_boosts = next(
+            node for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "_with_standard_boosts"
+        )
+        self.timer = Mock(side_effect=lambda *_: Mock())
+        self.tasks = []
+        namespace = {
+            "MODE_MANUAL": "Manual",
+            "MODE_AUTO": "Auto",
+            "STATE_OFF": "off",
+            "HOT_WATER_BOOST_DURATIONS": (30, 60, 120, 180),
+            "asyncio": asyncio,
+            "async_call_later": self.timer,
+            "callback": lambda method: method,
+            "HomeAssistantError": RuntimeError,
+        }
+        exec(
+            compile(ast.Module(body=[standard_boosts, entity], type_ignores=[]),
+                    "<hot-water-boost>", "exec"),
+            namespace,
+        )
+        self.presets = namespace["_with_standard_boosts"]
+        self.entity = namespace["WiserOpenThermHotWater"]()
+        self.entity.hass = SimpleNamespace(async_create_task=self.tasks.append)
+        self.entity._manual_temperature = 45
+        self.entity.min_temp = 35
+        self.entity._operation = "off"
+        self.entity._presets = self.presets([], 45)
+        self.entity._boost_deadline = None
+        self.entity._boost_return_operation = None
+        self.entity._cancel_boost_timer = None
+        self.entity._async_set_target = AsyncMock()
+        self.entity._async_apply_schedule = AsyncMock()
+        self.entity.async_write_ha_state = Mock()
+
+    async def test_standard_boost_uses_normal_target_and_returns_to_off(self):
+        self.assertEqual(
+            [preset["duration_minutes"] for preset in self.entity._presets],
+            [30, 60, 120, 180],
+        )
+        for name, seconds in (("Boost 30 Mins", 1800), ("Boost 60 Mins", 3600)):
+            await self.entity.async_set_operation_mode(name)
+            self.entity._async_set_target.assert_awaited_with(45)
+            self.assertEqual(self.timer.call_args.args[1], seconds)
+        self.timer.call_args.args[2](None)
+        await self.tasks.pop()
+        self.entity._async_set_target.assert_awaited_with(35)
+        self.assertEqual(self.entity._operation, "off")
+
+    async def test_standard_boost_returns_to_schedule(self):
+        self.entity._operation = "Auto"
+        await self.entity.async_set_operation_mode("Boost 30 Mins")
+        self.timer.call_args.args[2](None)
+        await self.tasks.pop()
+        self.assertEqual(self.entity._operation, "Auto")
+        self.entity._async_apply_schedule.assert_awaited_once()
+
+    async def test_configured_boost_uses_its_own_target_and_duration(self):
+        configured = [{"name": "Guests", "temperature": 52, "duration_minutes": 23}]
+        self.entity._presets = self.presets(configured, 45)
+        self.assertEqual(self.entity.operation_list, ["off", "Manual", "Auto", "Guests"])
+        await self.entity.async_set_operation_mode("Guests")
+        self.entity._async_set_target.assert_awaited_with(52)
+        self.assertEqual(self.timer.call_args.args[1], 23 * 60)
+        self.timer.call_args.args[2](None)
+        await self.tasks.pop()
+        self.assertEqual(self.entity._operation, "Manual")
+
+
 class OpenThermHotWaterScheduleTest(unittest.TestCase):
     def test_control_uses_water_heater_operations(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
@@ -83,7 +170,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
         self.assertIn('"opentherm_presets": self._presets', source)
         self.assertIn('*(preset["name"] for preset in self._presets)', source)
-        self.assertIn('self._start_boost(preset["duration_minutes"])', source)
+        self.assertIn('self._start_boost(preset["duration_minutes"], return_operation)', source)
 
     def test_external_temperature_sensor_updates_and_falls_back_to_opentherm(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
@@ -107,7 +194,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
         self.assertIn("reset_expired_boost = bool", source)
         self.assertIn(
-            "self.hass.async_create_task(self._async_finish_boost_safely())",
+            "self._async_finish_boost_safely(self._operation)",
             source,
         )
 
@@ -118,7 +205,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         self.assertIn("self._operation = previous_operation", source)
         self.assertIn("self._cancel_active_boost()", source)
         self.assertIn("self._pending_previous_boost_seconds", source)
-        self.assertIn("self._start_boost(previous_boost_seconds / 60)", source)
+        self.assertIn("self._start_boost(previous_boost_seconds / 60, previous_boost_return)", source)
         self.assertIn("self._operation = previous_operation", source)
         self.assertIn("(MODE_AUTO, failed_temperature)", source)
         self.assertIn("except HomeAssistantError:", source)
@@ -127,6 +214,11 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         source = (COMPONENT / "frontend/wiser-hot-water-control.js").read_text()
         self.assertIn("min: this._minimum", source)
         self.assertIn("max: this._maximum", source)
+        self.assertIn("temperature >= this._minimum", source)
+        self.assertIn("temperature <= this._maximum", source)
+        self.assertIn(
+            "save.disabled = this._validateDraftTemperature() === undefined", source
+        )
         self.assertNotIn("temperature between 35 and 55", source)
 
     def test_presets_are_list_only(self):
@@ -168,11 +260,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             {"Time": "06:00", "Setpoint": "50"},
             {"Time": "08:00", "Setpoint": "35"},
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 7, 0)
         )
         self.assertEqual(value, 50)
         self.assertEqual(next_event, datetime(2026, 10, 5, 8, 0))
+        self.assertEqual(next_temperature, 35)
 
     def test_schedule_wraps_to_the_previous_and_next_week(self):
         schedule = default_schedule(35)
@@ -181,11 +274,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         schedule["ScheduleData"][6]["slots"] = [
             {"Time": "22:00", "Setpoint": "48"}
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 5, 0)
         )
         self.assertEqual(value, 48)
         self.assertEqual(next_event, datetime(2026, 10, 11, 22, 0))
+        self.assertEqual(next_temperature, 48)
 
     def test_single_slot_at_current_time_advances_one_week(self):
         schedule = default_schedule(35)
@@ -194,11 +288,12 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         schedule["ScheduleData"][0]["slots"] = [
             {"Time": "06:00", "Setpoint": "50"}
         ]
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 5, 6, 0)
         )
         self.assertEqual(value, 50)
         self.assertEqual(next_event, datetime(2026, 10, 12, 6, 0))
+        self.assertEqual(next_temperature, 50)
 
     def test_schedule_changes_at_exact_sunday_minute(self):
         schedule = default_schedule(35)
@@ -208,12 +303,13 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             {"Time": "19:15", "Setpoint": "45"},
         ]
 
-        value, next_event = schedule_position(
+        value, next_event, next_temperature = schedule_position(
             schedule, datetime(2026, 10, 11, 19, 15, 32)
         )
 
         self.assertEqual(value, 45)
         self.assertEqual(next_event, datetime(2026, 10, 12, 0, 0))
+        self.assertEqual(next_temperature, 35)
 
     def test_schedule_has_timer_and_coordinator_recovery_paths(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
@@ -296,7 +392,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
             normalized["ScheduleData"][0]["slots"][0]["Setpoint"],
             "Hand wash",
         )
-        value, _ = schedule_position(
+        value, _, _ = schedule_position(
             normalized, datetime(2026, 10, 5, 7, 0)
         )
         self.assertEqual(value, 42)

@@ -823,7 +823,7 @@ class OpenThermPresetsDialog extends HTMLElement {
       "--ha-space-6",
       "var(--ha-space-2, 8px)"
     );
-    const buildSchema = () => [
+    form.schema = [
       {
         name: "",
         type: "grid",
@@ -842,7 +842,7 @@ class OpenThermPresetsDialog extends HTMLElement {
               number: {
                 min: this._minimum,
                 max: this._maximum,
-                step: 1,
+                step: "any",
                 mode: "box",
                 unit_of_measurement: "°C",
               },
@@ -864,7 +864,6 @@ class OpenThermPresetsDialog extends HTMLElement {
         ],
       },
     ];
-    form.schema = buildSchema();
     const labels = {
       name: localize(this._hass, "ui.common.name", "Name"),
       icon: localize(
@@ -884,17 +883,6 @@ class OpenThermPresetsDialog extends HTMLElement {
       ),
     };
     form.computeLabel = (schema) => labels[schema.name] || schema.name;
-    form.addEventListener("value-changed", (event) => {
-      this._draft = { ...event.detail.value };
-      if (!isNew) {
-        this._dialog.setAttribute(
-          "header-title",
-          String(this._draft.name || "").trim() || "Preset"
-        );
-      }
-      alert.hidden = true;
-    });
-
     this._forms = [form];
     this._alert = alert;
     content.append(form);
@@ -909,6 +897,18 @@ class OpenThermPresetsDialog extends HTMLElement {
       () => this._saveDraft(),
       { primary: true }
     );
+    save.disabled = this._validateDraftTemperature() === undefined;
+    form.addEventListener("value-changed", (event) => {
+      this._draft = { ...event.detail.value };
+      if (!isNew) {
+        this._dialog.setAttribute(
+          "header-title",
+          String(this._draft.name || "").trim() || "Preset"
+        );
+      }
+      alert.hidden = true;
+      save.disabled = this._validateDraftTemperature() === undefined;
+    });
     const footer = document.createElement("div");
     footer.className = "dialog-footer";
     footer.setAttribute("slot", "footer");
@@ -939,8 +939,26 @@ class OpenThermPresetsDialog extends HTMLElement {
     this._dialog.replaceChildren(content, footer, headerBack);
   }
 
-  _saveDraft() {
+  _validateDraftTemperature() {
+    const input = this._draft.temperature;
+    const temperature = input == null || input === "" ? NaN : Number(input);
     if (
+      Number.isFinite(temperature) &&
+      temperature >= this._minimum &&
+      temperature <= this._maximum
+    ) {
+      return temperature;
+    }
+    this._alert.textContent =
+      `Enter a temperature between ${this._minimum} and ${this._maximum} °C.`;
+    this._alert.hidden = false;
+    return undefined;
+  }
+
+  _saveDraft() {
+    const temperature = this._validateDraftTemperature();
+    if (
+      temperature === undefined ||
       this._forms?.some(
         (form) => form.reportValidity && !form.reportValidity()
       )
@@ -951,7 +969,7 @@ class OpenThermPresetsDialog extends HTMLElement {
     const preset = {
       name: String(this._draft.name || "").trim(),
       icon: String(this._draft.icon || "").trim(),
-      temperature: Number(this._draft.temperature),
+      temperature,
       duration_minutes: Math.max(
         0,
         Math.min(999, Number(this._draft.duration_minutes) || 0)
@@ -966,18 +984,12 @@ class OpenThermPresetsDialog extends HTMLElement {
     const reserved = ["off", "manual", "auto", "custom"].includes(
       preset.name.toLowerCase()
     );
-    if (
-      !preset.name ||
-      !Number.isFinite(preset.temperature) ||
-      preset.temperature < this._minimum ||
-      preset.temperature > this._maximum ||
-      duplicate || reserved
-    ) {
+    if (!preset.name || duplicate || reserved) {
       this._alert.textContent = reserved
         ? "Off, Manual, Auto and Custom are reserved names. Choose another preset name."
         : duplicate
         ? "Preset names must be unique."
-        : `Enter a name and temperature between ${this._minimum} and ${this._maximum} °C.`;
+        : "Enter a preset name.";
       this._alert.hidden = false;
       return;
     }

@@ -50,6 +50,73 @@ def _load_helper():
 HELPER = _load_helper()
 
 
+class HotWaterCurrentActionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        tree = ast.parse((COMPONENT / "opentherm_hot_water.py").read_text())
+        entity = next(
+            node for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserOpenThermHotWater"
+        )
+        methods = [
+            node for node in entity.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name in {"current_action", "extra_state_attributes"}
+        ]
+        namespace = {
+            "opentherm_sensor_value": HELPER.opentherm_sensor_value,
+            "LOCAL_HOT_WATER_SCHEDULE_ID": -1000,
+        }
+        exec(
+            compile(ast.Module(body=methods, type_ignores=[]), "<hot water>", "exec"),
+            namespace,
+        )
+        cls.properties = namespace
+
+    def test_action_tracks_dhw_activity_independently_of_mode_and_ch_flame(self):
+        for mode in ("off", "Manual", "Auto", "Boost"):
+            for status, expected in (
+                (0, "idle"), (2, "idle"), (8, "idle"),
+                (4, "heating"), (12, "heating"),
+            ):
+                with self.subTest(mode=mode, status=status):
+                    entity = SimpleNamespace(
+                        _operation=mode,
+                        _opentherm=SimpleNamespace(
+                            operational_data=SimpleNamespace(slave_status=status)
+                        ),
+                    )
+                    self.assertEqual(
+                        self.properties["current_action"].fget(entity), expected
+                    )
+
+    def test_missing_or_invalid_status_is_unknown(self):
+        readings = [None, SimpleNamespace()]
+        readings.extend(
+            SimpleNamespace(slave_status=value)
+            for value in (None, True, "4", 1.5)
+        )
+        for operational_data in readings:
+            with self.subTest(operational_data=operational_data):
+                entity = SimpleNamespace(
+                    _opentherm=SimpleNamespace(operational_data=operational_data)
+                )
+                self.assertIsNone(self.properties["current_action"].fget(entity))
+
+    def test_action_is_exposed_as_a_raw_state_for_frontend_localization(self):
+        entity = SimpleNamespace(
+            _schedule=SimpleNamespace(
+                current=lambda: (None, None, None), name="Hot water"
+            ),
+            _presets=[],
+            _boost_return_operation=None,
+            current_action="heating",
+        )
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        self.assertEqual(attributes["current_action"], "heating")
+
+
 def _system(generation=2, firmware="4.48.2", device_firmware="1.0.0"):
     return SimpleNamespace(
         hardware_generation=generation,
