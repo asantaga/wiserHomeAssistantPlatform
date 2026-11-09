@@ -6,6 +6,16 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ## v4.1.0b0
 
+### Added
+
+- External Room Control lets compatible Home Assistant climate devices follow a Wiser room. Eligible rooms can use modulating or temperature-limiter control in Passive Mode.
+- Rooms with a Wiser TRV and no native Wiser temperature sensor can use an external temperature sensor for feedback. Wiser applies configurable timed boosts when the room is below its scheduled target and leaves user overrides alone. [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619)
+
+### Changed
+
+- Existing native Passive Mode settings, lower schedules, and active lower overrides migrate to the new configuration. Experimental external control settings need to be configured again.
+- Local builds produce an unpacked integration directory alongside the ZIP.
+
 ### Upgrade notes
 
 ### Changed
