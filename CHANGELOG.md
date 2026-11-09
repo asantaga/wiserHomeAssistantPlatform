@@ -4,11 +4,16 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.0.2b1
+## v4.0.2
+
+### Upgrade notes
+
+- The room climate `preset_modes` list now uses translation keys such as `boost_1h` and `advance_schedule`. Update templates and custom cards that compare entries in this list to the old English labels. Existing preset service calls using the old labels still work.
 
 ### Added
 
 - Added battery sensors for Wiser wireless button panels when the hub reports usable battery information, including combined dimmer/button-panel devices - issue [#691](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/691), PR [#743](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/743).
+- Added missing entity names across supported languages.
 
 ### Changed
 
