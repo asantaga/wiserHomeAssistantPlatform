@@ -1383,10 +1383,12 @@ class ExternalRoomControlController:
         state = self.hass.states.get(entity_id) if entity_id else None
         if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return None
-        last_updated = getattr(state, "last_updated", None)
-        if last_updated is not None:
+        last_reported = getattr(state, "last_reported", None) or getattr(
+            state, "last_updated", None
+        )
+        if last_reported is not None:
             try:
-                age = dt_util.utcnow() - dt_util.as_utc(last_updated)
+                age = dt_util.utcnow() - dt_util.as_utc(last_reported)
             except (TypeError, ValueError):
                 return None
             if age > timedelta(minutes=self.temperature_stale_minutes):

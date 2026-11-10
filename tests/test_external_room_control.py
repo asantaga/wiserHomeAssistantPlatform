@@ -747,6 +747,18 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.controller.upper_temperature(1), 20.0)
         self.assertFalse(self.controller.has_passive_override(1))
 
+    async def test_external_sensor_accepts_a_recent_unchanged_report(self):
+        self._use_external_temperature_sensor(17.0)
+        self.state.last_updated = FakeDateTimeUtil.utcnow() - timedelta(hours=1)
+
+        await self.controller.async_update()
+        self.room.boost.assert_not_awaited()
+
+        self.state.last_reported = FakeDateTimeUtil.utcnow()
+
+        await self.controller.async_update()
+        self.room.boost.assert_awaited_once_with(3.0, 60)
+
     async def test_auto_lower_slider_creates_schedule_override(self):
         self.controller.coordinator.passive_room_strategies = {
             "1": "temperature_limiter"
