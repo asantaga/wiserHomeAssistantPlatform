@@ -207,7 +207,7 @@ class ClimateControlsFrontendTest(unittest.TestCase):
     def test_coordinator_captures_the_config_entry_option(self) -> None:
         coordinator = (COMPONENT_PATH / "coordinator.py").read_text()
         self.assertIn(
-            "self.wiser_climate_controls = config_entry.options.get(",
+            "(MAJOR_VERSION, MINOR_VERSION) >= WISER_CLIMATE_CONTROLS_MIN_HA_VERSION",
             coordinator,
         )
         self.assertIn("CONF_WISER_CLIMATE_CONTROLS, False", coordinator)

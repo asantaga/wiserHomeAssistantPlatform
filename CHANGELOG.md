@@ -13,7 +13,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
-- Added optional **Wiser climate controls** under **UI options**. Home Assistant's native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
+- Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
 - Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
 - Enabling OpenTherm hot water control saves editable 15-, 30- and 45-minute presets when no timed presets are configured. Existing enabled setups without timed presets receive the defaults automatically.

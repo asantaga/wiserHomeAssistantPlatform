@@ -18,7 +18,7 @@ from homeassistant.helpers.event import async_call_later
 from .card_files import CARD_CACHE, CARD_CACHE_URL, resolve_card
 from .registry import async_load_registry, get_manifest
 
-from ..const import URL_BASE  # noqa: TID252
+from ..const import URL_BASE, WISER_CLIMATE_CONTROLS_MIN_HA_VERSION  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,13 +82,14 @@ class JSModuleRegistration:
             self.hass,
             f"{URL_BASE}/wiser-hot-water-control.js?v={hot_water_version}",
         )
-        climate_controls_version = await self.hass.async_add_executor_job(
-            card_version, Path(__file__).parent / "wiser-climate-controls.js"
-        )
-        add_extra_js_url(
-            self.hass,
-            f"{URL_BASE}/wiser-climate-controls.js?v={climate_controls_version}",
-        )
+        if (MAJOR_VERSION, MINOR_VERSION) >= WISER_CLIMATE_CONTROLS_MIN_HA_VERSION:
+            climate_controls_version = await self.hass.async_add_executor_job(
+                card_version, Path(__file__).parent / "wiser-climate-controls.js"
+            )
+            add_extra_js_url(
+                self.hass,
+                f"{URL_BASE}/wiser-climate-controls.js?v={climate_controls_version}",
+            )
 
         if self.lovelace and self.resource_mode == MODE_STORAGE:
             await self._async_wait_for_lovelace_resources()

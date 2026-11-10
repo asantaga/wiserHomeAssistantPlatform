@@ -114,6 +114,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID": "opentherm_hot_water_sensor_entity_id",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_WISER_CLIMATE_CONTROLS": "wiser_climate_controls",
+            "WISER_CLIMATE_CONTROLS_MIN_HA_VERSION": (2026, 7),
             "CONF_NAME": "name",
             "DATA": "data",
             "DOMAIN": "wiser",
@@ -1972,3 +1973,27 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn(
                 ("wiser_climate_controls", enabled), result["data_schema"]
             )
+
+    async def test_climate_controls_option_requires_home_assistant_2026_7(self):
+        self.namespace.update(
+            MINOR_VERSION=6,
+            vol=SimpleNamespace(Optional=lambda key, default: (key, default), Schema=lambda data: data),
+            BooleanSelector=lambda: bool,
+        )
+        functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
+        flow = SimpleNamespace(
+            config_entry=SimpleNamespace(options={"wiser_climate_controls": True}),
+            async_show_form=lambda **kwargs: kwargs,
+            async_create_entry=lambda **kwargs: kwargs,
+        )
+        form = await functions.async_step_ui_options(flow)
+        self.assertNotIn(("wiser_climate_controls", True), form["data_schema"])
+        result = await functions.async_step_ui_options(
+            flow, {"wiser_climate_controls": False, "show_wiser_sidebar": True}
+        )
+        self.assertEqual(
+            result["data"], {"wiser_climate_controls": True, "show_wiser_sidebar": True}
+        )
+        self.namespace["MINOR_VERSION"] = 7
+        form = await functions.async_step_ui_options(flow)
+        self.assertIn(("wiser_climate_controls", True), form["data_schema"])
