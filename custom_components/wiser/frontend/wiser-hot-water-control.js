@@ -1365,6 +1365,10 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     this._render();
   }
 
+  disconnectedCallback() {
+    clearTimeout(this._boostCountdownTimer);
+  }
+
   get _stateObj() {
     const entityId = this._context?.entity_id;
     return entityId && this._hass ? this._hass.states[entityId] : undefined;
@@ -1458,6 +1462,7 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
   }
 
   _render() {
+    clearTimeout(this._boostCountdownTimer);
     if (!this.shadowRoot) {
       return;
     }
@@ -1469,21 +1474,36 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
       !stateObj ||
       !supportsWaterHeater(this._hass, this._context)
     ) {
+      this._select = undefined;
       this.shadowRoot.replaceChildren();
       return;
     }
 
     const availableModes = this._availableModes(stateObj);
     this.style.display = availableModes.length ? "" : "none";
+    const selected = availableModes.includes(stateObj.state) ? stateObj.state : undefined;
+    const remaining = selected && stateObj.attributes.is_boosted
+      ? Date.parse(stateObj.attributes.boost_end) - Date.now()
+      : 0;
+    const minutes = remaining > 0 ? Math.ceil(remaining / 60_000) : undefined;
+    if (minutes && this.isConnected) {
+      this._boostCountdownTimer = setTimeout(
+        () => this._render(),
+        remaining - (minutes - 1) * 60_000
+      );
+    }
     const renderSignature = JSON.stringify([
-      stateObj.state === "unavailable",
       availableModes,
       this._presetData(stateObj),
+      minutes ? selected : undefined,
+      minutes,
     ]);
-    if (this._select && this._renderSignature === renderSignature) {
-      this._select.value = availableModes.includes(stateObj.state)
-        ? stateObj.state
-        : undefined;
+    if (this._select) {
+      if (this._renderSignature !== renderSignature) {
+        this._select.options = this._options(availableModes, selected, minutes, stateObj);
+        this._renderSignature = renderSignature;
+      }
+      this._select.value = selected;
       this._select.disabled = stateObj.state === "unavailable";
       return;
     }
@@ -1513,14 +1533,8 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     const controls = document.createElement("div");
     controls.className = "controls";
     const select = document.createElement("ha-control-select-menu");
-    select.options = availableModes.map((mode) => ({
-        value: mode,
-        label: mode,
-        icon: this._presetIcon(mode, stateObj),
-    }));
-    select.value = availableModes.includes(stateObj.state)
-      ? stateObj.state
-      : undefined;
+    select.options = this._options(availableModes, selected, minutes, stateObj);
+    select.value = selected;
     select.label = localize(this._hass, "ui.card.climate.preset", "Preset");
     select.showArrow = true;
     select.hideLabel = true;
@@ -1536,6 +1550,14 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     this.style.gridRow = "";
     this._renderSignature = renderSignature;
     this.shadowRoot.replaceChildren(style, controls);
+  }
+
+  _options(modes, selected, minutes, stateObj) {
+    return modes.map((mode) => ({
+      value: mode,
+      label: minutes && mode === selected ? `${mode} · ${minutes}m` : mode,
+      icon: this._presetIcon(mode, stateObj),
+    }));
   }
 }
 

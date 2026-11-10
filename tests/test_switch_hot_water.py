@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import __future__
 import asyncio
+from datetime import UTC, datetime, timedelta, timezone
 import importlib.util
 from pathlib import Path
 import sys
@@ -134,6 +135,7 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
         hotwater = SimpleNamespace(
             id=0,
             current_state=current_state,
+            is_boosted=False,
             override_state=self._record_override_state,
         )
         self._override_calls = []
@@ -161,6 +163,22 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
         switch = self._switch(current_state="Off")
 
         self.assertFalse(switch.is_on)
+
+    def test_boost_attributes_follow_the_hub(self) -> None:
+        switch = self._switch(current_state="On")
+        self.assertEqual(switch.extra_state_attributes, {"is_boosted": False})
+
+        switch._hotwater.is_boosted = True
+        switch._hotwater.boost_end_time = datetime(
+            2026, 11, 10, 17, tzinfo=timezone(timedelta(hours=1))
+        )
+        self.assertEqual(
+            switch.extra_state_attributes,
+            {
+                "is_boosted": True,
+                "boost_end": datetime(2026, 11, 10, 16, tzinfo=UTC),
+            },
+        )
 
     def test_turn_on_overrides_hot_water_state_to_on(self) -> None:
         switch = self._switch(current_state="Off")

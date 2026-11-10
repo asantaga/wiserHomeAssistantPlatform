@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 import logging
 from math import isfinite
 from uuid import uuid4
@@ -183,6 +183,7 @@ class WiserOpenThermHotWater(
         self._cancel_schedule_timer = None
         self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._boost_end = None
         self._pending_boost_finish = None
         self._pending_request_id = None
         self._pending_previous_operation = None
@@ -314,6 +315,8 @@ class WiserOpenThermHotWater(
             "custom_ui_more_info": "opentherm-hot-water-control-more-info",
             "opentherm_presets": self._presets,
             "current_action": self.current_action,
+            "is_boosted": self._boost_end is not None,
+            **({"boost_end": self._boost_end} if self._boost_end is not None else {}),
             "schedule_id": LOCAL_HOT_WATER_SCHEDULE_ID,
             "schedule_name": self._schedule.name,
             "next_schedule_event": next_event,
@@ -419,6 +422,7 @@ class WiserOpenThermHotWater(
             self._cancel_boost_timer()
             self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._boost_end = None
         self._pending_boost_finish = None
 
     def _remaining_boost_seconds(self):
@@ -468,6 +472,7 @@ class WiserOpenThermHotWater(
         """Return a completed timed boost to its normal operation."""
         self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._boost_end = None
         self._queue_boost_finish(MODE_MANUAL)
 
     def _queue_boost_finish(self, operation):
@@ -497,6 +502,7 @@ class WiserOpenThermHotWater(
         """Start the return timer for a timed preset."""
         self._cancel_active_boost()
         if minutes:
+            self._boost_end = datetime.now(UTC) + timedelta(minutes=minutes)
             self._boost_deadline = (
                 asyncio.get_running_loop().time() + minutes * 60
             )

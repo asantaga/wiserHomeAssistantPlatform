@@ -1,6 +1,7 @@
 """OpenTherm action regression tests, without a running hub or HA instance."""
 
 import ast
+from datetime import UTC, datetime
 import importlib.util
 import inspect
 import json
@@ -113,10 +114,18 @@ class HotWaterCurrentActionTest(unittest.TestCase):
                 current=lambda: (None, None, None), name="Hot water"
             ),
             _presets=[],
+            _boost_end=None,
             current_action="heating",
         )
         attributes = self.properties["extra_state_attributes"].fget(entity)
         self.assertEqual(attributes["current_action"], "heating")
+        self.assertFalse(attributes["is_boosted"])
+        self.assertNotIn("boost_end", attributes)
+
+        entity._boost_end = datetime(2026, 1, 1, 12, tzinfo=UTC)
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        self.assertTrue(attributes["is_boosted"])
+        self.assertEqual(attributes["boost_end"], entity._boost_end)
 
     def test_next_scheduled_temperature_uses_display_units(self):
         convert = self.properties["TemperatureConverter"].convert
@@ -124,6 +133,7 @@ class HotWaterCurrentActionTest(unittest.TestCase):
         entity = SimpleNamespace(
             _schedule=SimpleNamespace(current=lambda: (45, None, 47), name="Hot water"),
             _presets=[],
+            _boost_end=None,
             current_action="idle",
             hass=SimpleNamespace(
                 config=SimpleNamespace(units=SimpleNamespace(temperature_unit="°F"))

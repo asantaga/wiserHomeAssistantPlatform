@@ -3,7 +3,7 @@
 import ast
 import asyncio
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import logging
 from pathlib import Path
 from time import strptime
@@ -84,6 +84,9 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             "MODE_AUTO": "Auto",
             "STATE_OFF": "off",
             "asyncio": asyncio,
+            "UTC": UTC,
+            "datetime": datetime,
+            "timedelta": timedelta,
             "async_call_later": self.timer,
             "callback": lambda method: method,
             "HomeAssistantError": RuntimeError,
@@ -103,6 +106,7 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             {"name": "Guests", "temperature": 52, "duration_minutes": 23}
         ]
         self.entity._boost_deadline = None
+        self.entity._boost_end = None
         self.entity._cancel_boost_timer = None
         self.entity._pending_boost_finish = None
         self.entity._target_write_in_progress = False
@@ -116,9 +120,15 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         await self.entity.async_set_operation_mode("Guests")
         self.entity._async_set_target.assert_awaited_with(52)
         self.assertEqual(self.timer.call_args.args[1], 23 * 60)
+        self.assertAlmostEqual(
+            (self.entity._boost_end - datetime.now(UTC)).total_seconds(),
+            23 * 60,
+            delta=1,
+        )
         self.timer.call_args.args[2](None)
         await self.tasks.pop()
         self.assertEqual(self.entity._operation, "Manual")
+        self.assertIsNone(self.entity._boost_end)
 
     async def test_expired_boost_retries_after_hub_recovers(self):
         await self.entity.async_set_operation_mode("Guests")
