@@ -1164,6 +1164,39 @@ async def async_register_websockets(hass, data):
 
     @websocket_api.websocket_command(
         {
+            vol.Required("type"): "{}/power_notification/set_enabled".format(DOMAIN),
+            vol.Optional("hub"): str,
+            vol.Required("equipment_id"): int,
+            vol.Required("notification_type"): vol.In(list(POWER_NOTIFICATION_TYPES)),
+            vol.Required("enabled"): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def websocket_set_power_notification_enabled(
+        hass, connection: ActiveConnection, msg: dict
+    ) -> None:
+        """Toggle an existing notification without replacing its settings."""
+        d = get_api_for_hub(msg.get("hub"))
+        if not d:
+            connection.send_error(msg["id"], "wiser error", "hub not recognised")
+            return
+        collection = getattr(d.wiserhub.devices, "equipments", None)
+        equipment = collection.get_by_id(msg["equipment_id"]) if collection else None
+        setter = getattr(
+            equipment, f"set_{msg['notification_type']}_power_notification_enabled", None
+        )
+        if not callable(setter):
+            connection.send_error(
+                msg["id"], "not_found", "writable equipment notification not recognised"
+            )
+            return
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await setter(msg["enabled"]), equipment_only=True
+        )
+
+    @websocket_api.websocket_command(
+        {
             vol.Required("type"): "{}/power_notification/delete".format(DOMAIN),
             vol.Optional("hub"): str,
             vol.Required("equipment_id"): int,
@@ -1219,6 +1252,7 @@ async def async_register_websockets(hass, data):
     async_register_command(hass, websocket_set_automation_notification_enabled)
     async_register_command(hass, websocket_delete_automation)
     async_register_command(hass, websocket_set_power_notification)
+    async_register_command(hass, websocket_set_power_notification_enabled)
     async_register_command(hass, websocket_delete_power_notification)
 
     async_register_command(hass, handle_subscribe_updates)

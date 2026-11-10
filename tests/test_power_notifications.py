@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
+from test_ui_options import load_functions
+
 
 SOURCE = Path(__file__).resolve().parents[1] / "custom_components/wiser/websockets.py"
 
@@ -236,6 +238,38 @@ class PowerNotificationDataTest(unittest.TestCase):
 
 
 class NotificationWriteResultTest(unittest.IsolatedAsyncioTestCase):
+    async def test_power_notification_toggle_uses_the_enabled_only_setter(self):
+        equipment = SimpleNamespace(
+            set_under_power_notification_enabled=AsyncMock(return_value=True),
+            set_under_power_notification=AsyncMock(),
+        )
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    equipments=SimpleNamespace(get_by_id={12: equipment}.get, all=[])
+                )
+            ),
+            async_refresh=AsyncMock(),
+            last_update_status="Success",
+        )
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        functions = load_functions(
+            "websockets.py",
+            {"websocket_set_power_notification_enabled"},
+            {
+                "get_api_for_hub": lambda _hub: data,
+                "async_send_notification_write_result": async_send_notification_write_result,
+            },
+        )
+
+        await functions.websocket_set_power_notification_enabled(
+            None, connection, {"id": 4, "equipment_id": 12, "notification_type": "under", "enabled": False}
+        )
+
+        equipment.set_under_power_notification_enabled.assert_awaited_once_with(False)
+        equipment.set_under_power_notification.assert_not_awaited()
+        connection.send_result.assert_called_once_with(4, [])
+
     async def test_refresh_failure_does_not_return_a_successful_stale_result(self):
         data = SimpleNamespace(last_update_status="Failed", async_refresh=AsyncMock())
         connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
