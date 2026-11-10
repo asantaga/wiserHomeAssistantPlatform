@@ -879,7 +879,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema[
                 vol.Optional(
                     field_name,
-                    default=sensor_assignments.get(room_id),
+                    description=(
+                        {"suggested_value": sensor_assignments[room_id]}
+                        if room_id in sensor_assignments
+                        else None
+                    ),
                 )
             ] = EntitySelector(
                 EntitySelectorConfig(

@@ -1215,6 +1215,44 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {"reason": "no_external_temperature_rooms"})
 
+    async def test_external_temperature_sensor_fields_have_no_submit_defaults(self):
+        optional = Mock(side_effect=lambda name, **_kwargs: name)
+        self.namespace.update(
+            vol=SimpleNamespace(Optional=optional, Schema=dict),
+            EntitySelector=lambda config: config,
+            EntitySelectorConfig=dict,
+        )
+        functions = load_functions(
+            "config_flow.py",
+            {"async_step_external_temperature_sensors"},
+            self.namespace,
+        )
+        flow = SimpleNamespace(
+            _external_room_control_form_rooms=lambda: (
+                {"Office": "1", "Bedroom": "2"},
+                {"1": ["sensor.office"], "2": ["sensor.bedroom"]},
+            ),
+            _external_temperature_sensor_room_ids=lambda: {"1", "2"},
+            _external_temperature_common_schema=lambda _options: {},
+            config_entry=SimpleNamespace(
+                options={
+                    "automations_external_room_control": {
+                        "external_temperature_sensor_assignments": {
+                            "1": "sensor.office"
+                        }
+                    }
+                }
+            ),
+            async_show_form=lambda **kwargs: kwargs,
+        )
+
+        await functions.async_step_external_temperature_sensors(flow)
+
+        optional.assert_any_call(
+            "Office", description={"suggested_value": "sensor.office"}
+        )
+        optional.assert_any_call("Bedroom", description=None)
+
     def test_room_has_wiser_temperature_sensor_supports_both_sensor_types(self):
         functions = load_functions(
             "helpers.py", {"room_has_wiser_temperature_sensor"}, {}
