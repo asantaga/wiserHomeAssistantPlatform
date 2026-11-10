@@ -341,7 +341,7 @@ class WiserPanel extends HTMLElement {
     const selected = [...this.shadowRoot.querySelectorAll(
       '#import-panels input[type="checkbox"]:checked:not(:disabled)'
     )].map((checkbox) => checkbox.dataset.panelId);
-    const panels = {};
+    const panels = Object.create(null);
     const skippedHubs = new Set();
     for (const panelId of selected) {
       const saved = this._importPayload.panels[panelId];
@@ -355,11 +355,12 @@ class WiserPanel extends HTMLElement {
         warning.hidden = false;
         return;
       }
-      panels[panelId] = {};
+      const matchingConfigs = Object.create(null);
       for (const [hub, config] of Object.entries(saved.configs)) {
-        if (currentHubs.has(hub)) panels[panelId][hub] = config;
+        if (currentHubs.has(hub)) matchingConfigs[hub] = config;
         else skippedHubs.add(hub);
       }
+      if (Object.keys(matchingConfigs).length) panels[panelId] = matchingConfigs;
     }
 
     const restoreLayout = this.shadowRoot.getElementById("import-layout").checked;
@@ -368,16 +369,25 @@ class WiserPanel extends HTMLElement {
       const importedTabs = this._importPayload.tabs
         .filter((tab) => currentPanelIds.has(tab?.id) && typeof tab?.title === "string")
         .map(({ id, title }) => ({ id, title }));
-      const importedIds = new Set(importedTabs.map((tab) => tab.id));
-      tabs = [
-        ...importedTabs,
-        ...this._config.panels
-          .filter((panel) => !importedIds.has(panel.id))
-          .map(({ id, title }) => ({ id, title })),
-      ];
+      if (importedTabs.length) {
+        const importedIds = new Set(importedTabs.map((tab) => tab.id));
+        tabs = [
+          ...importedTabs,
+          ...this._config.panels
+            .filter((panel) => !importedIds.has(panel.id))
+            .map(({ id, title }) => ({ id, title })),
+        ];
+      }
     }
-    if (selected.length === 0 && !tabs) {
-      warning.textContent = "Select at least one panel or restore the panel layout.";
+    const panelCount = Object.keys(panels).length;
+    const skipped = skippedHubs.size
+      ? `Settings for unavailable hubs were skipped: ${[...skippedHubs].join(", ")}.`
+      : "";
+    if (!panelCount && !tabs) {
+      warning.textContent = selected.length || restoreLayout
+        ? ["No selected panel settings or layout can be restored.", skipped]
+            .filter(Boolean).join(" ")
+        : "Select at least one panel or restore the panel layout.";
       warning.hidden = false;
       return;
     }
@@ -389,10 +399,11 @@ class WiserPanel extends HTMLElement {
       await this._hass.callWS(message);
       if (tabs) this._tabPreferences = tabs;
       this.shadowRoot.getElementById("import-dialog").close();
-      const skipped = skippedHubs.size
-        ? ` Settings for unavailable hubs were skipped: ${[...skippedHubs].join(", ")}.`
+      const imported = panelCount
+        ? `Imported ${panelCount} Wiser panel configuration(s).`
         : "";
-      this._notify(`Imported ${selected.length} Wiser panel configuration(s).${skipped}`);
+      const layout = tabs ? "Restored the Wiser panel layout." : "";
+      this._notify([imported, layout, skipped].filter(Boolean).join(" "));
     } catch (error) {
       warning.textContent = error?.message || "Unable to import panel configuration.";
       warning.hidden = false;
