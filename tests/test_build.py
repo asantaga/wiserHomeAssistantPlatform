@@ -254,8 +254,11 @@ class BuildTest(unittest.TestCase):
         for card in self.payloads:
             self.local(card)
         directory_output = self.output.with_suffix("")
-        directory_output.mkdir()
-        (directory_output / "obsolete.txt").write_text("old build")
+        obsolete = self.source / "obsolete.txt"
+        obsolete.write_text("old build")
+        self.build()
+        self.assertTrue((directory_output / "obsolete.txt").is_file())
+        obsolete.unlink()
 
         self.build()
 
@@ -264,6 +267,30 @@ class BuildTest(unittest.TestCase):
             json.loads((directory_output / "frontend/card-releases.json").read_text()),
             json.loads((self.output.parent / "card-releases.json").read_text()),
         )
+
+    def test_build_preserves_files_added_to_the_unpacked_directory(self):
+        for card in self.payloads:
+            self.local(card)
+        self.build()
+        original_archive = self.output.read_bytes()
+        added_file = self.output.with_suffix("") / "keep.txt"
+        added_file.write_text("unrelated data")
+
+        with self.assertRaisesRegex(ValueError, "does not match the previous build"):
+            self.build()
+
+        self.assertEqual(added_file.read_text(), "unrelated data")
+        self.assertEqual(self.output.read_bytes(), original_archive)
+
+    def test_build_accepts_an_extensionless_archive_path(self):
+        for card in self.payloads:
+            self.local(card)
+        self.output = self.output.with_suffix("")
+
+        self.build()
+
+        self.assertEqual(self.packaged_manifest()["domain"], "wiser")
+        self.assertTrue((self.output.with_suffix(".unpacked") / "manifest.json").is_file())
 
     def test_missing_local_bundle_falls_back_independently(self):
         self.local("zigbee")
