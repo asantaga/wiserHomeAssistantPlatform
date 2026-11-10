@@ -37,6 +37,8 @@ def _load_helpers_module() -> ModuleType:
     package.__path__ = []
     sys.modules[package.__name__] = package
     const = ModuleType("wiser_helpers_test.const")
+    const.CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL = "automations_external_room_control"
+    const.CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS = "external_room_control_assignments"
     const.DOMAIN = "wiser"
     const.ENTITY_PREFIX = "Wiser"
     const.MANUFACTURER = "Drayton Wiser"

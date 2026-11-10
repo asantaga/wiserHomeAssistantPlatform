@@ -68,7 +68,9 @@ class WiserScheduleEntity:
                 _LOGGER.debug(
                     f"Setting {self.schedule.name} schedule from file {filename}"
                 )
-                await self.schedule.set_schedule_from_yaml_file(filename)
+                await self.data.external_room_control.async_write_schedule(
+                    self.schedule, self.schedule.set_schedule_from_yaml_file, filename
+                )
                 await self.data.async_refresh()
         except WiserScheduleError as ex:
             raise HomeAssistantError(ex)
@@ -84,7 +86,9 @@ class WiserScheduleEntity:
                 _LOGGER.debug(
                     f"Setting {self.schedule.name} schedule from schedule data.\n{schedule}"
                 )
-                await self.schedule.set_schedule_from_yaml_data(schedule)
+                await self.data.external_room_control.async_write_schedule(
+                    self.schedule, self.schedule.set_schedule_from_yaml_data, schedule
+                )
                 await self.data.async_refresh()
         except WiserScheduleError as ex:
             raise HomeAssistantError(ex)
@@ -117,8 +121,12 @@ class WiserScheduleEntity:
                         _LOGGER.info(
                             f"Assigning {entity_name} schedule to {to_entity_name}"
                         )
-                        await self.schedule.assign_schedule(to_id)
+                        await self.data.external_room_control.async_assign_schedule(
+                            self.schedule, to_id
+                        )
                         await self.data.async_refresh()
+                    except HomeAssistantError:
+                        raise
                     except Exception as ex:  # pylint: disable=broad-exception-caught
                         _LOGGER.error(
                             f"Unknown error assigning {entity_name} schedule to {to_entity_name}. {ex}"
@@ -201,12 +209,16 @@ class WiserScheduleEntity:
                     )
 
                 if schedule:
-                    await schedule.assign_schedule(to_id)
+                    await self.data.external_room_control.async_assign_schedule(
+                        schedule, to_id
+                    )
                     await self.data.async_refresh()
                 else:
                     _LOGGER.error(
                         f"Error assigning schedule to {self.name}. {schedule_type.value} schedule with {schedule_identifier} does not exist"  # noqa: E501
                     )
+        except HomeAssistantError:
+            raise
         except Exception as ex:  # pylint: disable=broad-exception-caught
             _LOGGER.error(
                 f"Error assigning schedule with id {schedule_id} to {self.name}. {ex}"
@@ -257,10 +269,12 @@ class WiserScheduleEntity:
                                 f"Copying schedule from {self.name} to {to_entity.name}"
                             )
                             try:
-                                await self.schedule.copy_schedule(
-                                    to_entity.schedule.id,
+                                await self.data.external_room_control.async_copy_schedule(
+                                    self.schedule, to_entity.schedule
                                 )
                                 await self.data.async_refresh()
+                            except HomeAssistantError:
+                                raise
                             except (
                                 Exception  # pylint: disable=broad-exception-caught
                             ) as ex:

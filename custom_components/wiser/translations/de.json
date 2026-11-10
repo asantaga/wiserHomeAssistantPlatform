@@ -42,11 +42,15 @@
         "menu_options": {
           "main_params": "Hauptparameter",
           "automation_params": "Automatisierungsparameter",
+          "external_room_control": "External Room Control",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Gerätesensoren",
           "ui_options": "UI-Optionen"
         }
       },
+      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
+      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
+      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
       "ui_options": {
         "title": "UI-Optionen",
         "data": {
@@ -77,10 +81,24 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivmodus",
-            "description": "Aktiviert die passive TRV-Funktion. Sie muss für jeden Raum einzeln aktiviert werden.",
+            "description": "Aktiviert den Passivmodus. Konfigurieren Sie Modulierend oder Temperaturbegrenzer am jeweiligen Raumgerät.",
             "data": {
               "automations_passive_mode": "Passivmodus",
-              "passive_mode_temperature_increments": "Temperaturschritte im Passivmodus"
+              "temperature_increment": "Temperaturschritt"
+            }
+          },
+          "automations_external_room_control": {
+            "name": "Externe Raumregelung",
+            "description": "Weisen Sie externe Klima-Geräte ihrem Wiser-Raum zu, damit sie dem aktuellen Raum-Sollwert mit oder ohne Passivmodus folgen.",
+            "data": {
+              "automations_external_room_control": "Externe Raumregelung",
+              "external_temperature_tolerance": "Temperature tolerance",
+              "external_temperature_boost_duration": "Boost duration",
+              "external_temperature_boost_mode": "Boost calculation",
+              "external_temperature_fixed_boost": "Fixed boost amount",
+              "external_temperature_proportional_multiplier": "Proportional multiplier",
+              "external_temperature_max_boost": "Maximum boost amount",
+              "external_temperature_stale_minutes": "Sensor stale timeout"
             }
           },
           "hotwater_climate": {
@@ -219,9 +237,18 @@
         }
       }
     },
+    "error": {
+      "external_climate_must_not_be_wiser": "Wählen Sie eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes Gerät gesteuert werden.",
+      "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden.",
+      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
+      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
+      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
+      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+    },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
-      "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar."
+      "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar.",
+      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
     }
   },
   "services": {
@@ -245,6 +272,7 @@
     }
   },
   "selector": {
+    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",
@@ -298,7 +326,14 @@
     "select": {
       "mode": { "name": "Modus" },
       "power_on_behavior": { "name": "Einschaltverhalten" },
-      "led_indicator": { "name": "LED-Anzeige" }
+      "led_indicator": { "name": "LED-Anzeige" },
+      "passive_mode_strategy": {
+        "name": "Passivmodus-Strategie",
+        "state": {
+          "modulating": "Modulierend",
+          "temperature_limiter": "Temperaturbegrenzer"
+        }
+      }
     },
     "button": {
       "boost_all_heating": { "name": "Alle Heizungen verstärken" },

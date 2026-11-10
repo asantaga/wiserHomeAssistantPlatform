@@ -20,10 +20,34 @@ For more information checkout the AMAZING community thread available on
 
 ## What's New in 4.1.0b0?
 
+### Diagnostics
 This diagnostic beta helps investigate duplicate and unavailable entities reported after upgrading to v4.
 
 - Adds Wiser entity-registry metadata to downloaded integration diagnostics, including entity IDs, unique IDs, associated device records and creation times
 - Makes no entity-registry changes; the additional information is read-only and intended to support issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792)
+
+### External Room Control
+
+This beta adds External Room Control and expands Passive Mode. Downloaded diagnostics also include read-only Wiser entity-registry details, including entity IDs, unique IDs, associated device records and creation times, to help investigate duplicate or unavailable entities after upgrading to v4. [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792)
+
+Open the Wiser integration options and choose **External Room Control**. Assign the device or sensor to the Home Assistant area whose name matches the Wiser room. Choose one option per room.
+
+- **External climate devices** lets compatible single-target heating climates, such as Zigbee2MQTT TRVs, follow the room’s Wiser schedule, boosts, Away mode and overrides. Assign each climate to one Wiser room across all hubs.
+- **Temperature sensor feedback** lets rooms with a Wiser TRV and no native Wiser temperature sensor use an external reading. In Auto, a fresh reading below the scheduled target can trigger a configurable fixed or proportional timed boost. The feedback controller leaves user overrides alone.
+
+If the hub goes offline or the limiter temporarily loses the room temperature, the valve keeps its last target. When an assignment ends or room removal is confirmed, Wiser can restore the previous target if it still owns the current one.
+
+### Passive Mode
+
+Enable **Passive Mode** under **Automation Parameters**. For eligible rooms with an external climate, use the room device’s **Passive mode strategy** selector:
+
+- **Modulating** follows the Wiser room target.
+- **Temperature limiter** uses a high valve target below the upper limit and a frost-protection target at or above it. Hysteresis keeps the valve from cycling rapidly around the cutoff.
+
+Heating schedules can set Passive Mode and its strategy by period and include lower and upper temperature limits. In Auto, temporary range overrides expire at the next applicable transition. **Advance Schedule** applies both limiter thresholds from the next slot, and scheduled mode changes wait for manual boosts to finish.
+
+Existing native Passive Mode settings, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. See the [4.1.0b0 changelog](CHANGELOG.md#v410b0) for the release details.
+
 
 ## What's New in 4.0.2?
 

@@ -1,6 +1,15 @@
-import logging
 import asyncio
+import logging
+
+from homeassistant.components.select import SelectEntity
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from .const import (
+    CONF_AUTOMATIONS_PASSIVE,
+    CONF_PASSIVE_ROOM_STRATEGIES,
+    CONTROL_STRATEGIES,
     DATA,
     DOMAIN,
     HOT_WATER,
@@ -14,13 +23,10 @@ from .helpers import (
     get_light_entity_name,
     get_unique_id,
     get_identifier,
+    get_room_entity_unique_id,
     hub_error_handler,
 )
 from .schedules import WiserScheduleEntity
-
-from homeassistant.components.select import SelectEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,10 +35,32 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     """Set up Wiser climate device."""
     data = hass.data[DOMAIN][config_entry.entry_id][DATA]
     wiser_selects = []
+    entity_registry = er.async_get(hass)
 
     if data.wiserhub.hotwater and not data.enable_hw_climate:
         _LOGGER.debug("Setting up Hot Water mode select")
         wiser_selects.extend([WiserHotWaterModeSelect(data)])
+
+    for room in data.wiserhub.rooms.all:
+        eligible = bool(
+            data.passive_mode_enabled
+            and data.external_room_control.is_enabled(room.id)
+        )
+        unique_id = get_room_entity_unique_id(
+            data, room.id, "select_passive_mode_strategy"
+        )
+        if eligible:
+            wiser_selects.append(
+                WiserPassiveModeStrategySelect(
+                    hass, config_entry, data, room.id
+                )
+            )
+        else:
+            entity_id = entity_registry.async_get_entity_id(
+                "select", DOMAIN, unique_id
+            )
+            if entity_id is not None:
+                entity_registry.async_remove(entity_id)
 
     # Add SmartPlugs (if any)
     if data.wiserhub.devices.smartplugs.count > 0:
@@ -136,6 +164,68 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
             "manufacturer": MANUFACTURER,
             "model": self._device.product_type,
             "sw_version": self._device.firmware_version,
+            **get_hub_via_device_info(self._data),
+        }
+
+
+class WiserPassiveModeStrategySelect(
+    WiserEntityMixin, CoordinatorEntity, SelectEntity
+):
+    """Select the Passive Mode strategy for an externally controlled room."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "passive_mode_strategy"
+    _attr_icon = "mdi:tune-variant"
+    _attr_options = CONTROL_STRATEGIES
+
+    def __init__(self, hass, config_entry, coordinator, room_id) -> None:
+        """Initialize the room strategy select."""
+        super().__init__(coordinator)
+        self._hass = hass
+        self._config_entry = config_entry
+        self._data = coordinator
+        self._room_id = room_id
+
+    @property
+    def current_option(self) -> str:
+        """Return the configured room strategy."""
+        return self._data.passive_room_strategy(self._room_id)
+
+    async def async_select_option(self, option: str) -> None:
+        """Persist a new room strategy through the config entry."""
+        if option not in CONTROL_STRATEGIES:
+            raise ValueError(f"Unsupported Passive Mode strategy: {option}")
+
+        self._data.passive_room_strategies[str(self._room_id)] = option
+        options = dict(self._config_entry.options)
+        passive_options = dict(options.get(CONF_AUTOMATIONS_PASSIVE, {}))
+        passive_options[CONF_PASSIVE_ROOM_STRATEGIES] = dict(
+            self._data.passive_room_strategies
+        )
+        options[CONF_AUTOMATIONS_PASSIVE] = passive_options
+        self._hass.config_entries.async_update_entry(
+            self._config_entry, options=options
+        )
+
+    @property
+    def unique_id(self):
+        """Return the stable room-level unique ID."""
+        return get_room_entity_unique_id(
+            self._data,
+            self._room_id,
+            "select_passive_mode_strategy",
+        )
+
+    @property
+    def device_info(self):
+        """Attach the select to the Wiser room device."""
+        room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        return {
+            "name": get_device_name(self._data, self._room_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
+            },
+            "suggested_area": room.name,
             **get_hub_via_device_info(self._data),
         }
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 import tempfile
 from urllib.request import Request, urlopen
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import BadZipFile, ZIP_DEFLATED, ZipFile
 
 from packaging.version import InvalidVersion, Version
 
@@ -93,6 +93,33 @@ def set_api_requirement(
     manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n", encoding="utf-8")
 
 
+def unpacked_output_path(output):
+    """Keep the unpacked directory distinct from the archive path."""
+    return output.with_suffix("") if output.suffix else output.with_suffix(".unpacked")
+
+
+def matches_previous_build(directory, output):
+    """Check that replacing the unpacked directory will discard only build files."""
+    if directory.is_symlink() or not directory.is_dir() or not output.is_file():
+        return False
+
+    paths = list(directory.rglob("*"))
+    if any(path.is_symlink() or not (path.is_dir() or path.is_file()) for path in paths):
+        return False
+    files = {
+        path.relative_to(directory).as_posix(): path
+        for path in paths
+        if path.is_file() and path.name != ".DS_Store"
+    }
+    try:
+        with ZipFile(output) as archive:
+            return files.keys() == set(archive.namelist()) and all(
+                path.read_bytes() == archive.read(name) for name, path in files.items()
+            )
+    except (BadZipFile, OSError):
+        return False
+
+
 def build(
     source,
     output,
@@ -103,7 +130,7 @@ def build(
     without_frontend=False,
     use_installed_api=False,
 ):
-    """Stage a fresh integration and replace the ZIP only after a successful build."""
+    """Stage a fresh integration and replace both outputs after a successful build."""
     # Stable builds and explicit releases must never package local card builds.
     if release or channel == "stable":
         local_root = None
@@ -142,11 +169,33 @@ def build(
         with ZipFile(archive_path) as archive:
             if archive.testzip() is not None:
                 raise ValueError("Package integrity check failed")
-        archive_path.replace(output)
+        report_path = Path(temporary) / "card-releases.json"
         shutil.copyfile(
             staging / "frontend/card-releases.json",
-            output.parent / "card-releases.json",
+            report_path,
         )
+
+        directory_output = unpacked_output_path(output)
+        previous_directory = Path(temporary) / "previous-wiser"
+        if directory_output.exists() or directory_output.is_symlink():
+            if not matches_previous_build(directory_output, output):
+                raise ValueError(
+                    f"Cannot replace {directory_output}: it does not match the previous build ZIP"
+                )
+            directory_output.replace(previous_directory)
+        try:
+            staging.replace(directory_output)
+            archive_path.replace(output)
+        except Exception:
+            if directory_output.is_dir() and not directory_output.is_symlink():
+                shutil.rmtree(directory_output)
+            else:
+                directory_output.unlink(missing_ok=True)
+            if previous_directory.exists() or previous_directory.is_symlink():
+                previous_directory.replace(directory_output)
+            raise
+
+        report_path.replace(output.parent / "card-releases.json")
         (output.parent / "panel-config-release.json").unlink(missing_ok=True)
     return report
 
@@ -193,6 +242,7 @@ def main():
         parser.exit(1, f"Build failed: {error}\n")
     print(json.dumps(report, indent=2))
     print(f"Built {args.output.resolve()}")
+    print(f"Built {unpacked_output_path(args.output).resolve()}")
 
 
 if __name__ == "__main__":
