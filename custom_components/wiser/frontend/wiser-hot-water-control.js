@@ -507,7 +507,9 @@ class OpenThermPresetsSelector extends HTMLElement {
     this._button.textContent = this._label || "Presets";
     this._button.disabled = Boolean(this._disabled);
     const count = this._value?.length || 0;
-    this._summary.textContent = `${count} of ${MAX_PRESETS} presets configured`;
+    this._summary.textContent = count > MAX_PRESETS
+      ? `${count} presets configured`
+      : `${count} of ${MAX_PRESETS} presets configured`;
   }
 }
 
@@ -526,7 +528,7 @@ class OpenThermPresetsDialog extends HTMLElement {
     this._params = params;
     this._minimum = Number.isFinite(params.minimum) ? params.minimum : 35;
     this._maximum = Number.isFinite(params.maximum) ? params.maximum : 55;
-    this._presets = clonePresets(params.presets).slice(0, MAX_PRESETS);
+    this._presets = clonePresets(params.presets);
     this._editingIndex = undefined;
     this._ensureDialog();
     this._dialog.open = true;
@@ -823,7 +825,7 @@ class OpenThermPresetsDialog extends HTMLElement {
       "--ha-space-6",
       "var(--ha-space-2, 8px)"
     );
-    const buildSchema = () => [
+    form.schema = [
       {
         name: "",
         type: "grid",
@@ -842,7 +844,7 @@ class OpenThermPresetsDialog extends HTMLElement {
               number: {
                 min: this._minimum,
                 max: this._maximum,
-                step: 1,
+                step: "any",
                 mode: "box",
                 unit_of_measurement: "°C",
               },
@@ -864,7 +866,6 @@ class OpenThermPresetsDialog extends HTMLElement {
         ],
       },
     ];
-    form.schema = buildSchema();
     const labels = {
       name: localize(this._hass, "ui.common.name", "Name"),
       icon: localize(
@@ -884,17 +885,6 @@ class OpenThermPresetsDialog extends HTMLElement {
       ),
     };
     form.computeLabel = (schema) => labels[schema.name] || schema.name;
-    form.addEventListener("value-changed", (event) => {
-      this._draft = { ...event.detail.value };
-      if (!isNew) {
-        this._dialog.setAttribute(
-          "header-title",
-          String(this._draft.name || "").trim() || "Preset"
-        );
-      }
-      alert.hidden = true;
-    });
-
     this._forms = [form];
     this._alert = alert;
     content.append(form);
@@ -909,6 +899,18 @@ class OpenThermPresetsDialog extends HTMLElement {
       () => this._saveDraft(),
       { primary: true }
     );
+    save.disabled = this._validateDraftTemperature() === undefined;
+    form.addEventListener("value-changed", (event) => {
+      this._draft = { ...event.detail.value };
+      if (!isNew) {
+        this._dialog.setAttribute(
+          "header-title",
+          String(this._draft.name || "").trim() || "Preset"
+        );
+      }
+      alert.hidden = true;
+      save.disabled = this._validateDraftTemperature() === undefined;
+    });
     const footer = document.createElement("div");
     footer.className = "dialog-footer";
     footer.setAttribute("slot", "footer");
@@ -939,8 +941,26 @@ class OpenThermPresetsDialog extends HTMLElement {
     this._dialog.replaceChildren(content, footer, headerBack);
   }
 
-  _saveDraft() {
+  _validateDraftTemperature() {
+    const input = this._draft.temperature;
+    const temperature = input == null || input === "" ? NaN : Number(input);
     if (
+      Number.isFinite(temperature) &&
+      temperature >= this._minimum &&
+      temperature <= this._maximum
+    ) {
+      return temperature;
+    }
+    this._alert.textContent =
+      `Enter a temperature between ${this._minimum} and ${this._maximum} °C.`;
+    this._alert.hidden = false;
+    return undefined;
+  }
+
+  _saveDraft() {
+    const temperature = this._validateDraftTemperature();
+    if (
+      temperature === undefined ||
       this._forms?.some(
         (form) => form.reportValidity && !form.reportValidity()
       )
@@ -951,7 +971,7 @@ class OpenThermPresetsDialog extends HTMLElement {
     const preset = {
       name: String(this._draft.name || "").trim(),
       icon: String(this._draft.icon || "").trim(),
-      temperature: Number(this._draft.temperature),
+      temperature,
       duration_minutes: Math.max(
         0,
         Math.min(999, Number(this._draft.duration_minutes) || 0)
@@ -966,18 +986,12 @@ class OpenThermPresetsDialog extends HTMLElement {
     const reserved = ["off", "manual", "auto", "custom"].includes(
       preset.name.toLowerCase()
     );
-    if (
-      !preset.name ||
-      !Number.isFinite(preset.temperature) ||
-      preset.temperature < this._minimum ||
-      preset.temperature > this._maximum ||
-      duplicate || reserved
-    ) {
+    if (!preset.name || duplicate || reserved) {
       this._alert.textContent = reserved
         ? "Off, Manual, Auto and Custom are reserved names. Choose another preset name."
         : duplicate
         ? "Preset names must be unique."
-        : `Enter a name and temperature between ${this._minimum} and ${this._maximum} °C.`;
+        : "Enter a preset name.";
       this._alert.hidden = false;
       return;
     }
@@ -1353,6 +1367,10 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     this._render();
   }
 
+  disconnectedCallback() {
+    clearTimeout(this._boostCountdownTimer);
+  }
+
   get _stateObj() {
     const entityId = this._context?.entity_id;
     return entityId && this._hass ? this._hass.states[entityId] : undefined;
@@ -1446,6 +1464,7 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
   }
 
   _render() {
+    clearTimeout(this._boostCountdownTimer);
     if (!this.shadowRoot) {
       return;
     }
@@ -1457,21 +1476,36 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
       !stateObj ||
       !supportsWaterHeater(this._hass, this._context)
     ) {
+      this._select = undefined;
       this.shadowRoot.replaceChildren();
       return;
     }
 
     const availableModes = this._availableModes(stateObj);
     this.style.display = availableModes.length ? "" : "none";
+    const selected = availableModes.includes(stateObj.state) ? stateObj.state : undefined;
+    const remaining = selected && stateObj.attributes.is_boosted
+      ? Date.parse(stateObj.attributes.boost_end) - Date.now()
+      : 0;
+    const minutes = remaining > 0 ? Math.ceil(remaining / 60_000) : undefined;
+    if (minutes && this.isConnected) {
+      this._boostCountdownTimer = setTimeout(
+        () => this._render(),
+        remaining - (minutes - 1) * 60_000
+      );
+    }
     const renderSignature = JSON.stringify([
-      stateObj.state === "unavailable",
       availableModes,
       this._presetData(stateObj),
+      minutes ? selected : undefined,
+      minutes,
     ]);
-    if (this._select && this._renderSignature === renderSignature) {
-      this._select.value = availableModes.includes(stateObj.state)
-        ? stateObj.state
-        : undefined;
+    if (this._select) {
+      if (this._renderSignature !== renderSignature) {
+        this._select.options = this._options(availableModes, selected, minutes, stateObj);
+        this._renderSignature = renderSignature;
+      }
+      this._select.value = selected;
       this._select.disabled = stateObj.state === "unavailable";
       return;
     }
@@ -1501,14 +1535,8 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     const controls = document.createElement("div");
     controls.className = "controls";
     const select = document.createElement("ha-control-select-menu");
-    select.options = availableModes.map((mode) => ({
-        value: mode,
-        label: mode,
-        icon: this._presetIcon(mode, stateObj),
-    }));
-    select.value = availableModes.includes(stateObj.state)
-      ? stateObj.state
-      : undefined;
+    select.options = this._options(availableModes, selected, minutes, stateObj);
+    select.value = selected;
     select.label = localize(this._hass, "ui.card.climate.preset", "Preset");
     select.showArrow = true;
     select.hideLabel = true;
@@ -1524,6 +1552,14 @@ class OpenThermHotWaterControlPresetsCardFeature extends HTMLElement {
     this.style.gridRow = "";
     this._renderSignature = renderSignature;
     this.shadowRoot.replaceChildren(style, controls);
+  }
+
+  _options(modes, selected, minutes, stateObj) {
+    return modes.map((mode) => ({
+      value: mode,
+      label: minutes && mode === selected ? `${mode} · ${minutes}m` : mode,
+      icon: this._presetIcon(mode, stateObj),
+    }));
   }
 }
 

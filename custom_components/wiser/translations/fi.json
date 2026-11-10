@@ -747,7 +747,16 @@
     },
     "water_heater": {
       "opentherm_hot_water": {
-        "name": "OpenTherm-käyttövesi"
+        "name": "OpenTherm-käyttövesi",
+        "state_attributes": {
+          "current_action": {
+            "name": "Nykyinen toiminto",
+            "state": {
+              "idle": "Valmiustila",
+              "heating": "Lämmitys"
+            }
+          }
+        }
       }
     }
   },

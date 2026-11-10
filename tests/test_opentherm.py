@@ -1,6 +1,7 @@
 """OpenTherm action regression tests, without a running hub or HA instance."""
 
 import ast
+from datetime import UTC, datetime
 import importlib.util
 import inspect
 import json
@@ -48,6 +49,114 @@ def _load_helper():
 
 
 HELPER = _load_helper()
+
+
+class HotWaterCurrentActionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        tree = ast.parse((COMPONENT / "opentherm_hot_water.py").read_text())
+        entity = next(
+            node for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "WiserOpenThermHotWater"
+        )
+        methods = [
+            node for node in entity.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name in {"current_action", "extra_state_attributes"}
+        ]
+        namespace = {
+            "opentherm_sensor_value": HELPER.opentherm_sensor_value,
+            "LOCAL_HOT_WATER_SCHEDULE_ID": -1000,
+            "HVACAction": SimpleNamespace(IDLE="idle", HEATING="heating"),
+            "UnitOfTemperature": SimpleNamespace(CELSIUS="°C"),
+            "TemperatureConverter": SimpleNamespace(convert=Mock()),
+        }
+        exec(
+            compile(ast.Module(body=methods, type_ignores=[]), "<hot water>", "exec"),
+            namespace,
+        )
+        cls.properties = namespace
+
+    def test_action_tracks_dhw_activity_independently_of_mode_and_ch_flame(self):
+        for mode in ("off", "Manual", "Auto", "Boost"):
+            for status, expected in (
+                (0, "idle"), (2, "idle"), (8, "idle"),
+                (4, "heating"), (12, "heating"),
+            ):
+                with self.subTest(mode=mode, status=status):
+                    entity = SimpleNamespace(
+                        _operation=mode,
+                        _opentherm=SimpleNamespace(
+                            operational_data=SimpleNamespace(slave_status=status)
+                        ),
+                    )
+                    self.assertEqual(
+                        self.properties["current_action"].fget(entity), expected
+                    )
+
+    def test_missing_or_invalid_status_is_unknown(self):
+        readings = [None, SimpleNamespace()]
+        readings.extend(
+            SimpleNamespace(slave_status=value)
+            for value in (None, True, "4", 1.5)
+        )
+        for operational_data in readings:
+            with self.subTest(operational_data=operational_data):
+                entity = SimpleNamespace(
+                    _opentherm=SimpleNamespace(operational_data=operational_data)
+                )
+                self.assertIsNone(self.properties["current_action"].fget(entity))
+
+    def test_current_action_is_exposed_for_tile_cards(self):
+        entity = SimpleNamespace(
+            _schedule=SimpleNamespace(
+                current=lambda: (None, None, None), name="Hot water"
+            ),
+            _presets=[],
+            _boost_end=None,
+            current_action="heating",
+        )
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        self.assertEqual(attributes["current_action"], "heating")
+        self.assertFalse(attributes["is_boosted"])
+        self.assertNotIn("boost_end", attributes)
+
+        entity._boost_end = datetime(2026, 1, 1, 12, tzinfo=UTC)
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        self.assertTrue(attributes["is_boosted"])
+        self.assertEqual(attributes["boost_end"], entity._boost_end)
+
+    def test_next_scheduled_temperature_uses_display_units(self):
+        convert = self.properties["TemperatureConverter"].convert
+        convert.reset_mock()
+        entity = SimpleNamespace(
+            _schedule=SimpleNamespace(current=lambda: (45, None, 47), name="Hot water"),
+            _presets=[],
+            _boost_end=None,
+            current_action="idle",
+            hass=SimpleNamespace(
+                config=SimpleNamespace(units=SimpleNamespace(temperature_unit="°F"))
+            ),
+        )
+        convert.return_value = 116.6
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        convert.assert_called_once_with(47, "°C", "°F")
+        self.assertEqual(attributes["next_schedule_temp"], 116.6)
+
+    def test_current_action_translations_cover_every_language(self):
+        expected_states = {"idle", "heating"}
+
+        for path in (COMPONENT / "translations").glob("*.json"):
+            with self.subTest(language=path.stem):
+                translations = json.loads(path.read_text())
+                current_action = translations["entity"]["water_heater"][
+                    "opentherm_hot_water"
+                ]["state_attributes"]["current_action"]
+
+                self.assertTrue(current_action["name"])
+                self.assertEqual(set(current_action["state"]), expected_states)
+                self.assertTrue(all(current_action["state"].values()))
 
 
 def _system(generation=2, firmware="4.48.2", device_firmware="1.0.0"):

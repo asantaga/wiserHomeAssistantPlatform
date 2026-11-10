@@ -747,7 +747,16 @@
     },
     "water_heater": {
       "opentherm_hot_water": {
-        "name": "Água quente OpenTherm"
+        "name": "Água quente OpenTherm",
+        "state_attributes": {
+          "current_action": {
+            "name": "Ação atual",
+            "state": {
+              "idle": "Inativo",
+              "heating": "A aquecer"
+            }
+          }
+        }
       }
     }
   },

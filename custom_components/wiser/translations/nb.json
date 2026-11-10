@@ -747,7 +747,16 @@
     },
     "water_heater": {
       "opentherm_hot_water": {
-        "name": "OpenTherm-varmtvann"
+        "name": "OpenTherm-varmtvann",
+        "state_attributes": {
+          "current_action": {
+            "name": "Gjeldende handling",
+            "state": {
+              "idle": "Inaktiv",
+              "heating": "Oppvarming"
+            }
+          }
+        }
       }
     }
   },

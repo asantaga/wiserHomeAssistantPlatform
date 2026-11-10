@@ -157,6 +157,7 @@ def _load_wiser_init() -> ModuleType:
     _module("wiser_init_test.helpers", **helper_stubs)
     _module(
         "wiser_init_test.opentherm_detection",
+        ensure_opentherm_timed_presets=Mock(),
         opentherm_entity_unique_ids=Mock(return_value=set()),
         opentherm_hot_water_control_is_supported=Mock(return_value=False),
         opentherm_hot_water_limits=Mock(return_value=(35.0, 55.0)),

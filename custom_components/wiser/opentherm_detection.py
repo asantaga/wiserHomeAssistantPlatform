@@ -6,6 +6,8 @@ from .const import (
     CONF_OPENTHERM_EVER_CONNECTED,
     CONF_OPENTHERM_HOT_WATER_CAPABLE,
     CONF_OPENTHERM_HOT_WATER_CONTROL,
+    DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP,
+    OPENTHERM_HOT_WATER_DEFAULT_BOOSTS,
 )
 from .helpers import get_unique_id
 from .opentherm import (
@@ -63,6 +65,31 @@ def opentherm_hot_water_limits(opentherm) -> tuple[float, float]:
     if not isfinite(minimum) or not isfinite(maximum) or minimum > maximum:
         return 35.0, 55.0
     return minimum, maximum
+
+
+def ensure_opentherm_timed_presets(presets, minimum, maximum):
+    """Keep configured timed presets or add the OpenTherm defaults."""
+    if not isinstance(presets, list):
+        presets = []
+    presets = [preset for preset in presets if isinstance(preset, dict)]
+    if any(preset.get("duration_minutes", 0) in range(1, 1000) for preset in presets):
+        return presets
+
+    names = {str(preset.get("name", "")).strip().casefold() for preset in presets}
+    temperature = min(max(DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP, minimum), maximum)
+    for index, duration in enumerate(OPENTHERM_HOT_WATER_DEFAULT_BOOSTS, start=1):
+        name = f"Boost {duration} Mins"
+        while name.casefold() in names:
+            name += " (timed)"
+        presets.append(
+            {
+                "name": name,
+                "icon": f"mdi:numeric-{index}",
+                "temperature": temperature,
+                "duration_minutes": duration,
+            }
+        )
+    return presets
 
 
 def opentherm_entity_unique_ids(data):

@@ -335,18 +335,18 @@ async def async_setup_services(hass: HomeAssistant, data):
         hub = service_call.data[ATTR_HUB]
         instance = data
 
-        if get_instance_count(hass) > 1:
-            if not hub:
-                raise HomeAssistantError("Please specify a hub config entry id or name")
-            else:
-                # Find hub from config_entry_id or hub name
-                if is_wiser_config_id(hass, hub):
-                    instance = hass.data[DOMAIN][hub][DATA]
-                else:
-                    # Find hub by name
-                    config_entry_id = get_config_entry_id_by_name(hass, hub)
-                    if config_entry_id:
-                        instance = hass.data[DOMAIN][config_entry_id][DATA]
+        if hub:
+            config_entry_id = (
+                hub
+                if is_wiser_config_id(hass, hub)
+                else get_config_entry_id_by_name(hass, hub)
+            )
+            hub_data = hass.data[DOMAIN].get(config_entry_id, {})
+            instance = hub_data.get(DATA)
+            if instance is None:
+                raise HomeAssistantError("The specified Wiser hub is not loaded")
+        elif get_instance_count(hass) > 1:
+            raise HomeAssistantError("Please specify a hub config entry id or name")
 
         # If hub has hotwater functionality, call boost
         if instance.wiserhub.hotwater:
@@ -356,7 +356,7 @@ async def async_setup_services(hass: HomeAssistant, data):
             else:
                 _LOGGER.info("Cancelling Hot Water boost")
                 await instance.wiserhub.hotwater.cancel_overrides()
-            await data.async_refresh()
+            await instance.async_refresh()
         else:
             raise HomeAssistantError("This hub does not have hotwater functionality")
 

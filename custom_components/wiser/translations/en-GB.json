@@ -346,7 +346,15 @@
       "floor_temperature": { "name": "Floor temperature" }
     },
     "water_heater": {
-      "opentherm_hot_water": { "name": "OpenTherm hot water" }
+      "opentherm_hot_water": {
+        "name": "OpenTherm hot water",
+        "state_attributes": {
+          "current_action": {
+            "name": "Current action",
+            "state": { "idle": "Idle", "heating": "Heating" }
+          }
+        }
+      }
     },
     "number": {
       "away_mode_target_temperature": { "name": "Away mode target temperature" },

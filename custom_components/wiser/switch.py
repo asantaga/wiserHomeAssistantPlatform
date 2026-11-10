@@ -1300,6 +1300,15 @@ class WiserHotWaterSwitch(WiserSwitch):
         return self._hotwater.current_state == "On"
 
     @property
+    def extra_state_attributes(self):
+        """Expose the hub's active hot-water boost and its expiry."""
+        is_boosted = self._hotwater.is_boosted
+        attrs = {"is_boosted": is_boosted}
+        if is_boosted and (boost_end := self._hotwater.boost_end_time) is not None:
+            attrs["boost_end"] = boost_end.astimezone(dt.UTC)
+        return attrs
+
+    @property
     def device_info(self):
         """Return device specific attributes."""
         return {

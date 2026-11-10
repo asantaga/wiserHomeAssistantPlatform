@@ -307,22 +307,33 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-    def test_hot_water_presets_follow_boiler_limits(self):
+    async def test_hot_water_presets_follow_boiler_limits(self):
         self.namespace.update(
             vol=SimpleNamespace(Invalid=ValueError),
             MAX_OPENTHERM_HOT_WATER_PRESETS=10,
             DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP=55.0,
             OPENTHERM_HOT_WATER_DEFAULT_BOOSTS=(15, 30, 45),
+            CONF_OPENTHERM_HOT_WATER_PRESETS="presets",
+            CONF_OPENTHERM_HOT_WATER_MANUAL_TEMP="manual_temperature",
+            DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP=45.0,
+            opentherm_hot_water_limits=lambda _: (40, 50),
+            opentherm_hot_water_control_is_supported=lambda *_: True,
         )
         functions = load_functions(
             "config_flow.py",
             {
-                "_default_opentherm_hot_water_presets",
                 "_validate_opentherm_hot_water_presets",
+                "async_step_opentherm_hot_water_control",
             },
             self.namespace,
         )
-        defaults = functions._default_opentherm_hot_water_presets(40, 50)
+        ensure = load_functions(
+            "opentherm_detection.py",
+            {"ensure_opentherm_timed_presets"},
+            self.namespace,
+        ).ensure_opentherm_timed_presets
+        defaults = ensure(None, 40, 50)
+        self.assertEqual([preset["duration_minutes"] for preset in defaults], [15, 30, 45])
         self.assertTrue(
             all(preset["temperature"] == 50 for preset in defaults)
         )
@@ -337,6 +348,60 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             stored, 40, 50, clamp_temperature=True
         )
         self.assertEqual(clamped[0]["temperature"], 50)
+        self.assertEqual(ensure(clamped, 40, 50), clamped)
+        untimed = [{**defaults[0], "duration_minutes": 0}]
+        with_defaults = ensure(untimed, 40, 50)
+        self.assertEqual(with_defaults[0], untimed[0])
+        self.assertEqual(
+            [preset["duration_minutes"] for preset in with_defaults], [0, 15, 30, 45]
+        )
+        self.assertNotEqual(with_defaults[0]["name"], with_defaults[1]["name"])
+        for stored in ({}, {"presets": []}, {"presets": clamped}):
+            with self.subTest(stored=stored):
+                flow = SimpleNamespace(
+                    _opentherm=object,
+                    config_entry=SimpleNamespace(options=stored),
+                    async_create_entry=lambda *, data: data,
+                )
+                result = await functions.async_step_opentherm_hot_water_control(
+                    flow, {"opentherm_hot_water_control": True, **stored}
+                )
+                self.assertEqual(
+                    result["presets"], clamped if stored.get("presets") else defaults
+                )
+
+        existing_presets = [
+            {
+                "name": f"Untimed {index}",
+                "icon": "",
+                "temperature": 45,
+                "duration_minutes": 0,
+            }
+            for index in range(10)
+        ]
+        expanded_presets = existing_presets + defaults
+        enabled = "opentherm_hot_water_control"
+        for existing, submitted, enable, expected in (
+            (existing_presets, existing_presets, True, expanded_presets),
+            (existing_presets, expanded_presets, True, expanded_presets),
+            (expanded_presets, expanded_presets, True, expanded_presets),
+            (expanded_presets, expanded_presets, False, expanded_presets),
+        ):
+            with self.subTest(
+                existing=len(existing), submitted=len(submitted), enable=enable
+            ):
+                flow = SimpleNamespace(
+                    _opentherm=object,
+                    config_entry=SimpleNamespace(
+                        options={enabled: True, "presets": existing}
+                    ),
+                    async_create_entry=lambda *, data: data,
+                )
+                result = await functions.async_step_opentherm_hot_water_control(
+                    flow, {enabled: enable, "presets": submitted}
+                )
+                self.assertEqual(result["presets"], expected)
+                self.assertEqual(result[enabled], enable)
 
     def test_disabling_opentherm_clears_remembered_connection(self):
         sync_registry = Mock()

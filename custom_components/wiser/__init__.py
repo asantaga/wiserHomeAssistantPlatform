@@ -101,6 +101,7 @@ from .helpers import (
 )
 from .local_schedule import OpenThermHotWaterSchedule
 from .opentherm_detection import (
+    ensure_opentherm_timed_presets,
     opentherm_entity_unique_ids,
     opentherm_hot_water_control_is_supported,
     opentherm_hot_water_limits,
@@ -456,6 +457,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         and opentherm_hot_water_control_is_supported(config_entry, opentherm)
     ):
         minimum, maximum = opentherm_hot_water_limits(opentherm)
+        stored_presets = config_entry.options.get(CONF_OPENTHERM_HOT_WATER_PRESETS)
+        presets = ensure_opentherm_timed_presets(stored_presets, minimum, maximum)
+        if presets != stored_presets:
+            hass.config_entries.async_update_entry(
+                config_entry,
+                options=config_entry.options | {CONF_OPENTHERM_HOT_WATER_PRESETS: presets},
+            )
         local_hot_water_schedule = OpenThermHotWaterSchedule(
             hass,
             config_entry.entry_id,
@@ -467,9 +475,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
                     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
                 )
             ),
-            presets=config_entry.options.get(
-                CONF_OPENTHERM_HOT_WATER_PRESETS, []
-            ),
+            presets=presets,
         )
         await local_hot_water_schedule.async_load()
         hass.data[DOMAIN][config_entry.entry_id][

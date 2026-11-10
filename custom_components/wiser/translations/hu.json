@@ -747,7 +747,16 @@
     },
     "water_heater": {
       "opentherm_hot_water": {
-        "name": "OpenTherm meleg víz"
+        "name": "OpenTherm meleg víz",
+        "state_attributes": {
+          "current_action": {
+            "name": "Jelenlegi művelet",
+            "state": {
+              "idle": "Tétlen",
+              "heating": "Fűtés"
+            }
+          }
+        }
       }
     }
   },
