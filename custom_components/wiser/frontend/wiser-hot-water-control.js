@@ -526,7 +526,7 @@ class OpenThermPresetsDialog extends HTMLElement {
     this._params = params;
     this._minimum = Number.isFinite(params.minimum) ? params.minimum : 35;
     this._maximum = Number.isFinite(params.maximum) ? params.maximum : 55;
-    this._presets = clonePresets(params.presets).slice(0, MAX_PRESETS);
+    this._presets = clonePresets(params.presets);
     this._editingIndex = undefined;
     this._ensureDialog();
     this._dialog.open = true;

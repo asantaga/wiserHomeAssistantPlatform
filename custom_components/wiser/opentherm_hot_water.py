@@ -46,7 +46,6 @@ from .const import (
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
     DOMAIN,
     EVENT_OPENTHERM_COMMAND_FAILED,
-    HOT_WATER_BOOST_DURATIONS,
     OPENTHERM_HOT_WATER_SCHEDULE,
     WISER_SERVICES,
 )
@@ -97,29 +96,6 @@ def _normalize_presets(value, minimum=35.0, maximum=55.0):
             }
         )
     return presets
-
-
-def _with_standard_boosts(presets, temperature):
-    """Offer timed boosts at the normal target if none were configured."""
-    if any(preset["duration_minutes"] for preset in presets):
-        return presets
-
-    names = {preset["name"].casefold() for preset in presets}
-    result = list(presets)
-    for duration in HOT_WATER_BOOST_DURATIONS:
-        name = f"Boost {duration} Mins"
-        while name.casefold() in names:
-            name += " (timed)"
-        result.append(
-            {
-                "name": name,
-                "icon": "mdi:fire",
-                "temperature": temperature,
-                "duration_minutes": duration,
-                "standard_boost": True,
-            }
-        )
-    return result
 
 
 def _finite_float(value):
@@ -193,13 +169,10 @@ class WiserOpenThermHotWater(
         self._manual_temperature = min(
             max(self._manual_temperature, self.min_temp), self.max_temp
         )
-        self._presets = _with_standard_boosts(
-            _normalize_presets(
-                config_entry.options.get(CONF_OPENTHERM_HOT_WATER_PRESETS, []),
-                self._minimum,
-                self._maximum,
-            ),
-            self._manual_temperature,
+        self._presets = _normalize_presets(
+            config_entry.options.get(CONF_OPENTHERM_HOT_WATER_PRESETS, []),
+            self._minimum,
+            self._maximum,
         )
         self._temperature_sensor_entity_id = config_entry.options.get(
             CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID
@@ -210,11 +183,9 @@ class WiserOpenThermHotWater(
         self._cancel_schedule_timer = None
         self._cancel_boost_timer = None
         self._boost_deadline = None
-        self._boost_return_operation = None
         self._pending_request_id = None
         self._pending_previous_operation = None
         self._pending_previous_boost_seconds = None
-        self._pending_previous_boost_return_operation = None
         self._attr_unique_id = get_unique_id(
             data,
             "water_heater",
@@ -335,7 +306,6 @@ class WiserOpenThermHotWater(
             "wiser_opentherm_hot_water": True,
             "custom_ui_more_info": "opentherm-hot-water-control-more-info",
             "opentherm_presets": self._presets,
-            "boost_return_operation": self._boost_return_operation,
             "current_action": self.current_action,
             "schedule_id": LOCAL_HOT_WATER_SCHEDULE_ID,
             "schedule_name": self._schedule.name,
@@ -456,15 +426,12 @@ class WiserOpenThermHotWater(
         failed_temperature = _finite_float(event.data.get("requested"))
         previous_operation = self._pending_previous_operation
         previous_boost_seconds = self._pending_previous_boost_seconds
-        previous_boost_return = self._pending_previous_boost_return_operation
         self._pending_request_id = None
         self._pending_previous_operation = None
         self._pending_previous_boost_seconds = None
-        self._pending_previous_boost_return_operation = None
         if previous_operation not in self.operation_list:
             return
         self._cancel_active_boost()
-        self._boost_return_operation = None
         self._operation = previous_operation
         # A scheduled command has already had its one service-level retry.
         # Remember that failed request so coordinator reconciliation does not
@@ -481,7 +448,7 @@ class WiserOpenThermHotWater(
             and previous_preset["duration_minutes"]
             and previous_boost_seconds
         ):
-            self._start_boost(previous_boost_seconds / 60, previous_boost_return)
+            self._start_boost(previous_boost_seconds / 60)
         self.async_write_ha_state()
 
     @callback
@@ -491,7 +458,7 @@ class WiserOpenThermHotWater(
         self._boost_deadline = None
         self.hass.async_create_task(
             self._async_finish_boost_safely(
-                self._boost_return_operation or MODE_MANUAL,
+                MODE_MANUAL,
                 expected_operation=self._operation,
             )
         )
@@ -507,10 +474,9 @@ class WiserOpenThermHotWater(
         except HomeAssistantError as err:
             _LOGGER.warning("Unable to end OpenTherm hot-water boost: %s", err)
 
-    def _start_boost(self, minutes, return_operation=None):
+    def _start_boost(self, minutes):
         """Start the return timer for a timed preset."""
         self._cancel_active_boost()
-        self._boost_return_operation = return_operation
         if minutes:
             self._boost_deadline = (
                 asyncio.get_running_loop().time() + minutes * 60
@@ -614,7 +580,6 @@ class WiserOpenThermHotWater(
             if previous_boost_seconds is None
             else previous_boost_seconds
         )
-        self._pending_previous_boost_return_operation = self._boost_return_operation
         # The service refreshes the coordinator before returning. Suppress
         # Auto reconciliation during that refresh so it cannot race this
         # foreground write and send the schedule target prematurely.
@@ -638,7 +603,6 @@ class WiserOpenThermHotWater(
                 self._pending_request_id = None
                 self._pending_previous_operation = None
                 self._pending_previous_boost_seconds = None
-                self._pending_previous_boost_return_operation = None
             raise
         finally:
             self._target_write_in_progress = False
@@ -663,7 +627,6 @@ class WiserOpenThermHotWater(
             self._last_schedule_request = previous_schedule_request
             raise
         self._cancel_active_boost()
-        self._boost_return_operation = None
         if auto_override:
             # Treat a temperature adjustment in Auto like Wiser's native
             # temporary override. Mark the current schedule block as handled
@@ -687,7 +650,6 @@ class WiserOpenThermHotWater(
         preset = self._preset_for_mode(operation_mode)
         previous_operation = self._operation
         previous_boost_seconds = self._remaining_boost_seconds()
-        previous_boost_return = self._boost_return_operation
         if operation_mode == STATE_OFF:
             await self._async_set_target(self.min_temp)
         elif operation_mode == MODE_MANUAL:
@@ -714,17 +676,11 @@ class WiserOpenThermHotWater(
                 self._operation = previous_operation
                 self._last_schedule_request = None
                 if previous_boost_seconds:
-                    self._start_boost(
-                        previous_boost_seconds / 60, previous_boost_return
-                    )
+                    self._start_boost(previous_boost_seconds / 60)
                 self.async_write_ha_state()
                 raise
-        self._boost_return_operation = None
         if preset is not None:
-            return_operation = None
-            if preset.get("standard_boost"):
-                return_operation = previous_boost_return or previous_operation
-            self._start_boost(preset["duration_minutes"], return_operation)
+            self._start_boost(preset["duration_minutes"])
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs):

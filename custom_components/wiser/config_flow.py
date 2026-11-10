@@ -97,7 +97,6 @@ from .const import (
     DEFAULT_EXTERNAL_TEMPERATURE_TOLERANCE,
     CONTROL_STRATEGIES,
     DEFAULT_OPENTHERM_HOT_WATER_MANUAL_TEMP,
-    DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP,
     DEFAULT_SCAN_INTERVAL,
     DATA,
     DOMAIN,
@@ -107,7 +106,6 @@ from .const import (
     WISER_SETPOINT_MODES,
     HWCycleModes,
     MAX_OPENTHERM_HOT_WATER_PRESETS,
-    OPENTHERM_HOT_WATER_DEFAULT_BOOSTS,
 )
 from .opentherm import (
     OPENTHERM_SENSOR_CATEGORIES,
@@ -117,6 +115,7 @@ from .opentherm import (
     opentherm_sensor_is_enabled,
 )
 from .opentherm_detection import (
+    ensure_opentherm_timed_presets,
     opentherm_hot_water_control_is_supported,
     opentherm_hot_water_limits,
     opentherm_is_detected,
@@ -156,30 +155,18 @@ def _passive_room_strategies(strategies, assignments, external_control_enabled):
     }
 
 
-def _default_opentherm_hot_water_presets(minimum=35.0, maximum=55.0):
-    """Return the default timed hot-water boosts from the original control."""
-    return [
-        {
-            "name": f"Boost {duration} Mins",
-            "icon": f"mdi:numeric-{index}",
-            "temperature": min(
-                max(DEFAULT_OPENTHERM_HOT_WATER_PRESET_TEMP, minimum), maximum
-            ),
-            "duration_minutes": duration,
-        }
-        for index, duration in enumerate(
-            OPENTHERM_HOT_WATER_DEFAULT_BOOSTS, start=1
-        )
-    ]
-
-
 def _validate_opentherm_hot_water_presets(
-    value, minimum=35.0, maximum=55.0, *, clamp_temperature=False
+    value,
+    minimum=35.0,
+    maximum=55.0,
+    *,
+    clamp_temperature=False,
+    max_presets=MAX_OPENTHERM_HOT_WATER_PRESETS,
 ):
     """Validate the custom preset selector value."""
     if not isinstance(value, list):
         raise vol.Invalid("Presets must be a list")
-    if len(value) > MAX_OPENTHERM_HOT_WATER_PRESETS:
+    if max_presets is not None and len(value) > max_presets:
         raise vol.Invalid("Too many presets")
 
     presets = []
@@ -949,32 +936,38 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         manual_default = min(max(manual_default, minimum), maximum)
         try:
             preset_default = _validate_opentherm_hot_water_presets(
-                self.config_entry.options.get(
-                    CONF_OPENTHERM_HOT_WATER_PRESETS,
-                    _default_opentherm_hot_water_presets(minimum, maximum),
-                ),
+                self.config_entry.options.get(CONF_OPENTHERM_HOT_WATER_PRESETS, []),
                 minimum,
                 maximum,
                 clamp_temperature=True,
+                max_presets=None,
             )
         except vol.Invalid:
-            preset_default = _default_opentherm_hot_water_presets(
-                minimum, maximum
-            )
+            preset_default = []
+        preset_default = ensure_opentherm_timed_presets(
+            preset_default, minimum, maximum
+        )
         errors = {}
         if user_input is not None:
             try:
-                user_input[CONF_OPENTHERM_HOT_WATER_PRESETS] = (
-                    _validate_opentherm_hot_water_presets(
-                        user_input.get(CONF_OPENTHERM_HOT_WATER_PRESETS, []),
-                        minimum,
-                        maximum,
-                    )
+                presets = _validate_opentherm_hot_water_presets(
+                    user_input.get(CONF_OPENTHERM_HOT_WATER_PRESETS, preset_default),
+                    minimum,
+                    maximum,
                 )
+                if user_input.get(
+                    CONF_OPENTHERM_HOT_WATER_CONTROL,
+                    self.config_entry.options.get(CONF_OPENTHERM_HOT_WATER_CONTROL),
+                ):
+                    presets = ensure_opentherm_timed_presets(presets, minimum, maximum)
+                    if len(presets) > MAX_OPENTHERM_HOT_WATER_PRESETS:
+                        raise vol.Invalid("Too many presets")
             except vol.Invalid:
                 errors["base"] = "invalid_hot_water_presets"
             else:
-                options = self.config_entry.options | user_input
+                options = self.config_entry.options | user_input | {
+                    CONF_OPENTHERM_HOT_WATER_PRESETS: presets
+                }
                 if not user_input.get(
                     CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID
                 ):

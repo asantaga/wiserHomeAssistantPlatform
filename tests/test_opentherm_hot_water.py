@@ -60,7 +60,7 @@ validated_schedule = HELPERS["_validated_schedule"]
 schedule_position = HELPERS["_schedule_position"]
 
 
-class StandardHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
+class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         tree = ast.parse((COMPONENT / "opentherm_hot_water.py").read_text())
         entity = next(
@@ -75,66 +75,37 @@ class StandardHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         }
         entity.bases = []
         entity.body = [node for node in entity.body if getattr(node, "name", "") in methods]
-        standard_boosts = next(
-            node for node in tree.body
-            if isinstance(node, ast.FunctionDef) and node.name == "_with_standard_boosts"
-        )
         self.timer = Mock(side_effect=lambda *_: Mock())
         self.tasks = []
         namespace = {
             "MODE_MANUAL": "Manual",
             "MODE_AUTO": "Auto",
             "STATE_OFF": "off",
-            "HOT_WATER_BOOST_DURATIONS": (30, 60, 120, 180),
             "asyncio": asyncio,
             "async_call_later": self.timer,
             "callback": lambda method: method,
             "HomeAssistantError": RuntimeError,
         }
         exec(
-            compile(ast.Module(body=[standard_boosts, entity], type_ignores=[]),
+            compile(ast.Module(body=[entity], type_ignores=[]),
                     "<hot-water-boost>", "exec"),
             namespace,
         )
-        self.presets = namespace["_with_standard_boosts"]
         self.entity = namespace["WiserOpenThermHotWater"]()
         self.entity.hass = SimpleNamespace(async_create_task=self.tasks.append)
         self.entity._manual_temperature = 45
         self.entity.min_temp = 35
         self.entity._operation = "off"
-        self.entity._presets = self.presets([], 45)
+        self.entity._presets = []
         self.entity._boost_deadline = None
-        self.entity._boost_return_operation = None
         self.entity._cancel_boost_timer = None
         self.entity._async_set_target = AsyncMock()
         self.entity._async_apply_schedule = AsyncMock()
         self.entity.async_write_ha_state = Mock()
 
-    async def test_standard_boost_uses_normal_target_and_returns_to_off(self):
-        self.assertEqual(
-            [preset["duration_minutes"] for preset in self.entity._presets],
-            [30, 60, 120, 180],
-        )
-        for name, seconds in (("Boost 30 Mins", 1800), ("Boost 60 Mins", 3600)):
-            await self.entity.async_set_operation_mode(name)
-            self.entity._async_set_target.assert_awaited_with(45)
-            self.assertEqual(self.timer.call_args.args[1], seconds)
-        self.timer.call_args.args[2](None)
-        await self.tasks.pop()
-        self.entity._async_set_target.assert_awaited_with(35)
-        self.assertEqual(self.entity._operation, "off")
-
-    async def test_standard_boost_returns_to_schedule(self):
-        self.entity._operation = "Auto"
-        await self.entity.async_set_operation_mode("Boost 30 Mins")
-        self.timer.call_args.args[2](None)
-        await self.tasks.pop()
-        self.assertEqual(self.entity._operation, "Auto")
-        self.entity._async_apply_schedule.assert_awaited_once()
-
     async def test_configured_boost_uses_its_own_target_and_duration(self):
         configured = [{"name": "Guests", "temperature": 52, "duration_minutes": 23}]
-        self.entity._presets = self.presets(configured, 45)
+        self.entity._presets = configured
         self.assertEqual(self.entity.operation_list, ["off", "Manual", "Auto", "Guests"])
         await self.entity.async_set_operation_mode("Guests")
         self.entity._async_set_target.assert_awaited_with(52)
@@ -170,7 +141,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
         self.assertIn('"opentherm_presets": self._presets', source)
         self.assertIn('*(preset["name"] for preset in self._presets)', source)
-        self.assertIn('self._start_boost(preset["duration_minutes"], return_operation)', source)
+        self.assertIn('self._start_boost(preset["duration_minutes"])', source)
 
     def test_external_temperature_sensor_updates_and_falls_back_to_opentherm(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
@@ -205,7 +176,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         self.assertIn("self._operation = previous_operation", source)
         self.assertIn("self._cancel_active_boost()", source)
         self.assertIn("self._pending_previous_boost_seconds", source)
-        self.assertIn("self._start_boost(previous_boost_seconds / 60, previous_boost_return)", source)
+        self.assertIn("self._start_boost(previous_boost_seconds / 60)", source)
         self.assertIn("self._operation = previous_operation", source)
         self.assertIn("(MODE_AUTO, failed_temperature)", source)
         self.assertIn("except HomeAssistantError:", source)

@@ -14,7 +14,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Added
 
 - OpenTherm hot water now reports its current heating activity and the next scheduled temperature.
-- The Controls card can use configured timed OpenTherm presets for hot water boosts. Without a timed preset, it offers standard durations at the configured Manual temperature and restores the previous mode when the boost ends.
+- The Controls card can use configured timed OpenTherm presets for hot water boosts. Enabling OpenTherm hot water control supplies 15-, 30- and 45-minute presets when no timed presets are saved.
 - Administrators can export Wiser panel settings to one JSON file and selectively restore individual panels, tab order, and titles. Import and export are available from the desktop panel menu.
 - Added a **Notifications** tab for native Wiser power, device, and automation notifications. With compatible hub and API support, administrators can manage notification settings and view, enable, disable, or delete Wiser automations.
 - Optional Equipment sensors now include standalone equipment reported by the hub, such as EV chargers, and expose additional control, schedule, and rated power data where available.
