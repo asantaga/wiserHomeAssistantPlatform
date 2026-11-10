@@ -158,11 +158,10 @@ class WiserPanel extends HTMLElement {
   }
 
   set panel(panel) {
-    if (!this._tabPreferences) {
-      this._tabPreferences = panel.config.panels.map(({ id, title }) => ({
-        id,
-        title,
-      }));
+    const tabs = panel.config.panels.map(({ id, title }) => ({ id, title }));
+    if (JSON.stringify(tabs) !== JSON.stringify(this._registeredTabs)) {
+      this._registeredTabs = tabs;
+      this._tabPreferences = tabs;
     }
     const config = this._mergeTabPreferences(panel.config);
     if (JSON.stringify(config) === JSON.stringify(this._config)) return;
