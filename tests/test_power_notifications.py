@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+from unittest.mock import AsyncMock, Mock
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "custom_components/wiser/websockets.py"
@@ -29,6 +30,7 @@ def _load_helpers():
                 "build_power_notification_data",
                 "build_native_notification_data",
                 "async_build_native_notification_data",
+                "async_send_notification_write_result",
             }
         )
     ]
@@ -43,6 +45,7 @@ build_native_notification_data = HELPERS["build_native_notification_data"]
 async_build_native_notification_data = HELPERS[
     "async_build_native_notification_data"
 ]
+async_send_notification_write_result = HELPERS["async_send_notification_write_result"]
 
 
 class PowerNotificationDataTest(unittest.TestCase):
@@ -230,6 +233,32 @@ class PowerNotificationDataTest(unittest.TestCase):
         self.assertFalse(automation["writable"])
         self.assertFalse(automation["notification_writable"])
         self.assertFalse(automation["deletable"])
+
+
+class NotificationWriteResultTest(unittest.IsolatedAsyncioTestCase):
+    async def test_refresh_failure_does_not_return_a_successful_stale_result(self):
+        data = SimpleNamespace(last_update_status="Failed", async_refresh=AsyncMock())
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+
+        await async_send_notification_write_result(data, connection, 4, True)
+
+        data.async_refresh.assert_awaited_once()
+        connection.send_result.assert_not_called()
+        connection.send_error.assert_called_once_with(
+            4, "refresh_failed", "Wiser accepted the change, but the updated state could not be read"
+        )
+
+    async def test_rejected_write_does_not_refresh_or_return_success(self):
+        data = SimpleNamespace(async_refresh=AsyncMock())
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+
+        await async_send_notification_write_result(data, connection, 4, False)
+
+        data.async_refresh.assert_not_awaited()
+        connection.send_result.assert_not_called()
+        connection.send_error.assert_called_once_with(
+            4, "write_failed", "Wiser did not apply the change"
+        )
 
 
 class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):

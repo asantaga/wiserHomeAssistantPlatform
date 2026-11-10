@@ -215,6 +215,29 @@ async def async_build_native_notification_data(wiserhub):
     return data
 
 
+async def async_send_notification_write_result(
+    data, connection, msg_id, written, *, equipment_only=False
+):
+    """Return a notification write result only when hub state was refreshed."""
+    if not written:
+        connection.send_error(msg_id, "write_failed", "Wiser did not apply the change")
+        return
+    await data.async_refresh()
+    if data.last_update_status != "Success":
+        connection.send_error(
+            msg_id,
+            "refresh_failed",
+            "Wiser accepted the change, but the updated state could not be read",
+        )
+        return
+    result = (
+        build_power_notification_data(data.wiserhub)
+        if equipment_only
+        else await async_build_native_notification_data(data.wiserhub)
+    )
+    connection.send_result(msg_id, result)
+
+
 @callback
 @websocket_api.websocket_command(
     {
@@ -1009,10 +1032,8 @@ async def async_register_websockets(hass, data):
                 msg["id"], "not_found", "notification-capable device not recognised"
             )
             return
-        await setter(msg["enabled"])
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await setter(msg["enabled"])
         )
 
     @websocket_api.websocket_command(
@@ -1041,10 +1062,8 @@ async def async_register_websockets(hass, data):
                 msg["id"], "not_found", "automation not recognised"
             )
             return
-        await setter(msg["enabled"])
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await setter(msg["enabled"])
         )
 
     @websocket_api.websocket_command(
@@ -1075,10 +1094,8 @@ async def async_register_websockets(hass, data):
                 msg["id"], "not_found", "automation notification not recognised"
             )
             return
-        await setter(msg["enabled"])
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await setter(msg["enabled"])
         )
 
     @websocket_api.websocket_command(
@@ -1104,10 +1121,8 @@ async def async_register_websockets(hass, data):
         if deleter is None:
             connection.send_error(msg["id"], "not_found", "automation not recognised")
             return
-        await deleter()
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], await async_build_native_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await deleter()
         )
 
     @websocket_api.websocket_command(
@@ -1143,10 +1158,8 @@ async def async_register_websockets(hass, data):
             equipment,
             f"set_{msg['notification_type']}_power_notification",
         )
-        await setter(msg["period_mins"], msg["limit"], msg["enabled"])
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], build_power_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await setter(msg["period_mins"], msg["limit"], msg["enabled"]), equipment_only=True
         )
 
     @websocket_api.websocket_command(
@@ -1179,10 +1192,8 @@ async def async_register_websockets(hass, data):
             equipment,
             f"delete_{msg['notification_type']}_power_notification",
         )
-        await deleter()
-        await d.async_refresh()
-        connection.send_result(
-            msg["id"], build_power_notification_data(d.wiserhub)
+        await async_send_notification_write_result(
+            d, connection, msg["id"], await deleter(), equipment_only=True
         )
 
     async_register_command(hass, websocket_configure_panel)
