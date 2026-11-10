@@ -1055,14 +1055,26 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
             ),
         )
 
-        sensor = self.sensor_module.WiserEquipmentSensor(
-            data, equipment.device_id, equipment_id=equipment.id
-        )
+        for device_id in (99, 0):
+            with self.subTest(device_id=device_id):
+                equipment.device_id = device_id
+                sensor = self.sensor_module.WiserEquipmentSensor(
+                    data, device_id, equipment_id=equipment.id
+                )
+                self.assertIsNone(sensor._device)
+                self.assertTrue(sensor.available)
+                self.assertEqual(sensor.native_value, 2500)
+                self.assertEqual(sensor.device_info["name"], "Solar inverter")
+                self.assertEqual(sensor.device_info["model"], "SolarInverter")
+                self.assertEqual(
+                    sensor.device_info["identifiers"],
+                    {("wiser", "WiserHeat123456 equipment 21")},
+                )
 
-        self.assertTrue(sensor.available)
-        self.assertEqual(sensor.native_value, 2500)
-        self.assertEqual(sensor.device_info["name"], "Solar inverter")
-        self.assertEqual(sensor.device_info["model"], "SolarInverter")
+                sensor.async_write_ha_state = Mock()
+                sensor._handle_coordinator_update()
+                self.assertIsNone(sensor._device)
+                self.assertEqual(sensor.device_info["name"], "Solar inverter")
 
     def test_standalone_powertag_exposes_telemetry_without_a_device(self) -> None:
         equipment = Mock(

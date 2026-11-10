@@ -2432,11 +2432,14 @@ class WiserEquipmentSensor(WiserSensor):
             data, device_id, sensor_type, translation_key="equipment_power"
         )
         self._equipment_id = equipment_id
-        if self._device_id == 0:
-            self._device = self._data.wiserhub.system
-        else:
-            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device = self._get_equipment_device()
         self._state = self.native_value
+
+    def _get_equipment_device(self):
+        """Return the physical device associated with this equipment sensor."""
+        if self._device_id == 0:
+            return self._data.wiserhub.system if self._equipment_id is None else None
+        return self._data.wiserhub.devices.get_by_id(self._device_id)
 
     def _get_equipment(self):
         """Return linked or standalone equipment data."""
@@ -2451,10 +2454,7 @@ class WiserEquipmentSensor(WiserSensor):
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
-        if self._device_id == 0:
-            self._device = self._data.wiserhub.system
-        else:
-            self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._device = self._get_equipment_device()
         self._state = self.native_value
         self.async_write_ha_state()
 
