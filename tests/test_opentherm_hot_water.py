@@ -4,6 +4,7 @@ import ast
 import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta
+import logging
 from pathlib import Path
 from time import strptime
 from types import SimpleNamespace
@@ -72,6 +73,7 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             "operation_list", "_preset_for_mode", "_cancel_active_boost",
             "_remaining_boost_seconds", "_start_boost", "_async_boost_finished",
             "_async_finish_boost_safely", "async_set_operation_mode",
+            "_handle_coordinator_update", "_queue_boost_finish",
         }
         entity.bases = []
         entity.body = [node for node in entity.body if getattr(node, "name", "") in methods]
@@ -85,6 +87,7 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             "async_call_later": self.timer,
             "callback": lambda method: method,
             "HomeAssistantError": RuntimeError,
+            "_LOGGER": logging.getLogger(__name__),
         }
         exec(
             compile(ast.Module(body=[entity], type_ignores=[]),
@@ -96,16 +99,19 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         self.entity._manual_temperature = 45
         self.entity.min_temp = 35
         self.entity._operation = "off"
-        self.entity._presets = []
+        self.entity._presets = [
+            {"name": "Guests", "temperature": 52, "duration_minutes": 23}
+        ]
         self.entity._boost_deadline = None
         self.entity._cancel_boost_timer = None
+        self.entity._pending_boost_finish = None
+        self.entity._target_write_in_progress = False
+        self.entity.available = True
         self.entity._async_set_target = AsyncMock()
         self.entity._async_apply_schedule = AsyncMock()
         self.entity.async_write_ha_state = Mock()
 
     async def test_configured_boost_uses_its_own_target_and_duration(self):
-        configured = [{"name": "Guests", "temperature": 52, "duration_minutes": 23}]
-        self.entity._presets = configured
         self.assertEqual(self.entity.operation_list, ["off", "Manual", "Auto", "Guests"])
         await self.entity.async_set_operation_mode("Guests")
         self.entity._async_set_target.assert_awaited_with(52)
@@ -113,6 +119,34 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         self.timer.call_args.args[2](None)
         await self.tasks.pop()
         self.assertEqual(self.entity._operation, "Manual")
+
+    async def test_expired_boost_retries_after_hub_recovers(self):
+        await self.entity.async_set_operation_mode("Guests")
+        self.entity._async_set_target.side_effect = RuntimeError("Hub unavailable")
+        self.timer.call_args.args[2](None)
+        with self.assertLogs(__name__, level="WARNING"):
+            await self.tasks.pop()
+        self.assertEqual(self.entity._operation, "Guests")
+        self.entity.available = False
+        self.entity._handle_coordinator_update()
+        self.assertEqual(self.tasks, [])
+
+        self.entity.available = True
+        self.entity._async_set_target.side_effect = None
+        self.entity._handle_coordinator_update()
+        self.entity._handle_coordinator_update()
+        self.assertEqual(len(self.tasks), 1)
+        await self.tasks.pop()
+        self.entity._async_set_target.assert_awaited_with(45)
+        self.assertEqual(self.entity._operation, "Manual")
+
+    async def test_expired_boost_retry_does_not_override_new_mode(self):
+        await self.entity.async_set_operation_mode("Guests")
+        self.timer.call_args.args[2](None)
+        await self.entity.async_set_operation_mode("off")
+        await self.tasks.pop()
+        self.entity._async_set_target.assert_awaited_with(35)
+        self.assertEqual(self.entity._operation, "off")
 
 
 class OpenThermHotWaterScheduleTest(unittest.TestCase):
@@ -165,7 +199,7 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
         self.assertIn("reset_expired_boost = bool", source)
         self.assertIn(
-            "self._async_finish_boost_safely(self._operation)",
+            "self._queue_boost_finish(self._operation)",
             source,
         )
 

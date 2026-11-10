@@ -183,6 +183,7 @@ class WiserOpenThermHotWater(
         self._cancel_schedule_timer = None
         self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._pending_boost_finish = None
         self._pending_request_id = None
         self._pending_previous_operation = None
         self._pending_previous_boost_seconds = None
@@ -363,9 +364,7 @@ class WiserOpenThermHotWater(
         elif reset_expired_boost:
             # A timed boost has no persisted deadline. Restore its return mode
             # and target so the boiler cannot remain at boost heat.
-            self.hass.async_create_task(
-                self._async_finish_boost_safely(self._operation)
-            )
+            self._queue_boost_finish(self._operation)
         self._schedule_next_transition()
 
     @callback
@@ -375,7 +374,13 @@ class WiserOpenThermHotWater(
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Reconcile a scheduled target if its transition timer was missed."""
+        """Retry a failed boost return and reconcile scheduled targets."""
+        if (
+            self._pending_boost_finish is not None
+            and self.available
+            and not self._target_write_in_progress
+        ):
+            self._queue_boost_finish(self._pending_boost_finish)
         if self._operation == MODE_AUTO and not self._target_write_in_progress:
             temperature = self._scheduled_temperature()
             if (
@@ -408,6 +413,7 @@ class WiserOpenThermHotWater(
             self._cancel_boost_timer()
             self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._pending_boost_finish = None
 
     def _remaining_boost_seconds(self):
         """Return the remaining timed-preset duration, if any."""
@@ -456,22 +462,29 @@ class WiserOpenThermHotWater(
         """Return a completed timed boost to its normal operation."""
         self._cancel_boost_timer = None
         self._boost_deadline = None
+        self._queue_boost_finish(MODE_MANUAL)
+
+    def _queue_boost_finish(self, operation):
+        """Try a boost return once, including across coordinator refreshes."""
+        self._pending_boost_finish = None
         self.hass.async_create_task(
             self._async_finish_boost_safely(
-                MODE_MANUAL,
-                expected_operation=self._operation,
+                operation, expected_operation=self._operation
             )
         )
 
-    async def _async_finish_boost_safely(self, operation, expected_operation=None):
+    async def _async_finish_boost_safely(self, operation, expected_operation):
         """Apply the return mode unless a newer operation has taken over."""
-        if expected_operation is not None and (
-            self._operation != expected_operation or self._boost_deadline is not None
-        ):
+        if self._operation != expected_operation or self._boost_deadline is not None:
+            return
+        if self._target_write_in_progress:
+            self._pending_boost_finish = operation
             return
         try:
             await self.async_set_operation_mode(operation)
         except HomeAssistantError as err:
+            if self._operation == expected_operation and self._boost_deadline is None:
+                self._pending_boost_finish = operation
             _LOGGER.warning("Unable to end OpenTherm hot-water boost: %s", err)
 
     def _start_boost(self, minutes):
