@@ -2593,11 +2593,11 @@ class WiserEquipmentSensor(WiserSensor):
 
         # PowerTagE attributes
         if equipment.device_type in ("PTE", "PowerTagE"):
-            attrs["grid_limit"] = self._device.grid_limit
+            attrs["grid_limit"] = getattr(self._device, "grid_limit", None)
             # Retain the existing key spelling for attribute compatibility.
-            attrs["grid_limit_Uom"] = self._device.grid_limit_uom
-            attrs["energy_export"] = self._device.energy_export
-            attrs["self_consumption"] = self._device.self_consumption
+            attrs["grid_limit_Uom"] = getattr(self._device, "grid_limit_uom", None)
+            attrs["energy_export"] = getattr(self._device, "energy_export", None)
+            attrs["self_consumption"] = getattr(self._device, "self_consumption", None)
 
             attrs["rms_current"] = power.rms_current
             attrs["rms_voltage"] = power.rms_voltage

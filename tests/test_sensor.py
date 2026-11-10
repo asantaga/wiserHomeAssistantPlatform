@@ -1064,6 +1064,39 @@ class WiserDeviceSignalSensorNameTest(unittest.TestCase):
         self.assertEqual(sensor.device_info["name"], "Solar inverter")
         self.assertEqual(sensor.device_info["model"], "SolarInverter")
 
+    def test_standalone_powertag_exposes_telemetry_without_a_device(self) -> None:
+        equipment = Mock(
+            device_type="PTE",
+            power=SimpleNamespace(
+                active_power=200,
+                total_active_power=210,
+                current_summation_delivered=2000,
+                current_summation_received=1500,
+                rms_current=1,
+                rms_voltage=230,
+            ),
+        )
+        sensor = object.__new__(self.sensor_module.WiserEquipmentSensor)
+        sensor._device = None
+        sensor._equipment_id = 21
+        sensor._data = SimpleNamespace(
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    equipments=SimpleNamespace(get_by_id={21: equipment}.get)
+                )
+            )
+        )
+
+        attributes = sensor.extra_state_attributes
+
+        self.assertIsNone(attributes["grid_limit"])
+        self.assertIsNone(attributes["grid_limit_Uom"])
+        self.assertIsNone(attributes["energy_export"])
+        self.assertIsNone(attributes["self_consumption"])
+        self.assertEqual(attributes["rms_voltage"], 230)
+        self.assertEqual(attributes["energy_received"], 1500)
+        self.assertEqual(attributes["energy_delivered"], 2000)
+
     def test_live_equipment_attributes_are_excluded_from_recorder(self) -> None:
         self.assertEqual(
             self.sensor_module.WiserEquipmentSensor._unrecorded_attributes,
