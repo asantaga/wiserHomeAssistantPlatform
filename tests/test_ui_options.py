@@ -70,6 +70,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.namespace = {
             "CONF_ADDITIONAL_SENSORS": "additional_sensors",
             "ATTR_TEMPERATURE": "temperature",
+            "ATTR_HVAC_MODES": "hvac_modes",
+            "HVACMode": SimpleNamespace(HEAT="heat"),
             "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": (
                 "automations_external_room_control"
             ),
@@ -1001,6 +1003,12 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 original_device_class=None,
             ),
             SimpleNamespace(
+                entity_id="climate.office_ac",
+                platform="mqtt",
+                area_id="office",
+                original_device_class=None,
+            ),
+            SimpleNamespace(
                 entity_id="switch.office",
                 platform="mqtt",
                 area_id="office",
@@ -1070,13 +1078,16 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         states = {
             "climate.office_trv": SimpleNamespace(
-                attributes={"temperature": 20.0}
+                attributes={"temperature": 20.0, "hvac_modes": ["heat", "off"]}
             ),
             "climate.office_range": SimpleNamespace(
                 attributes={"target_temp_low": 18.0, "target_temp_high": 24.0}
             ),
             "climate.bedroom_trv": SimpleNamespace(
-                attributes={"temperature": 19.0}
+                attributes={"temperature": 19.0, "hvac_modes": ["heat", "off"]}
+            ),
+            "climate.office_ac": SimpleNamespace(
+                attributes={"temperature": 23.0, "hvac_modes": ["cool", "off"]}
             ),
         }
         flow = SimpleNamespace(

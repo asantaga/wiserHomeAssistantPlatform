@@ -15,6 +15,7 @@ from aioWiserHeatAPI.exceptions import (
 )
 from aioWiserHeatAPI.wiserhub import WiserAPI
 import voluptuous as vol
+from homeassistant.components.climate.const import ATTR_HVAC_MODES, HVACMode
 
 from homeassistant import config_entries, exceptions
 from homeassistant.const import (
@@ -645,6 +646,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 return bool(
                     state is not None
                     and ATTR_TEMPERATURE in state.attributes
+                    and HVACMode.HEAT in state.attributes.get(ATTR_HVAC_MODES, ())
                 )
             return bool(
                 entry.entity_id.startswith("sensor.")

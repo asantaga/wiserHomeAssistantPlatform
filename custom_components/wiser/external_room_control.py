@@ -8,7 +8,11 @@ import logging
 import math
 
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.climate.const import ATTR_TARGET_TEMP_STEP
+from homeassistant.components.climate.const import (
+    ATTR_HVAC_MODES,
+    ATTR_TARGET_TEMP_STEP,
+    HVACMode,
+)
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
@@ -1734,6 +1738,14 @@ class ExternalRoomControlController:
             state = self.hass.states.get(entity_id)
             if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 _LOGGER.debug("External climate entity %s is unavailable", entity_id)
+                continue
+            hvac_modes = state.attributes.get(ATTR_HVAC_MODES, ())
+            if state.state != HVACMode.HEAT and (
+                state.state not in (HVACMode.OFF, HVACMode.AUTO)
+                or HVACMode.HEAT not in hvac_modes
+                or HVACMode.COOL in hvac_modes
+                or HVACMode.HEAT_COOL in hvac_modes
+            ):
                 continue
             if ATTR_TEMPERATURE not in state.attributes:
                 _LOGGER.warning(

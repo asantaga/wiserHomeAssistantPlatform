@@ -144,6 +144,7 @@ def load_controller():
     registry = FakeRegistry()
     namespace = {
         "ATTR_ENTITY_ID": "entity_id",
+        "ATTR_HVAC_MODES": "hvac_modes",
         "ATTR_MAX_TEMP": "max_temp",
         "ATTR_MIN_TEMP": "min_temp",
         "ATTR_TARGET_TEMP_STEP": "target_temp_step",
@@ -172,6 +173,9 @@ def load_controller():
         "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
         "DOMAIN": "wiser",
         "FROST_PROTECTION_TEMPERATURE": 5.0,
+        "HVACMode": SimpleNamespace(
+            HEAT="heat", COOL="cool", HEAT_COOL="heat_cool", OFF="off", AUTO="auto"
+        ),
         "HomeAssistantError": Exception,
         "MAX_SCHEDULE_TEMPERATURE": 30.0,
         "OFF_TEMPERATURE": -20.0,
@@ -891,6 +895,24 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             {"entity_id": "climate.external_trv", "temperature": 7.0},
             blocking=True,
         )
+
+    async def test_wiser_off_does_not_lower_a_cooling_target(self):
+        self.room.mode = "Off"
+        self.room.current_target_temperature = -20.0
+        self.state.attributes.update(temperature=23.0, min_temp=16.0)
+
+        for mode, modes in (
+            ("cool", ["off", "cool"]),
+            ("off", ["off", "cool"]),
+            ("cool", ["off", "heat", "cool"]),
+            ("auto", ["off", "heat", "cool", "auto"]),
+            ("heat_cool", ["off", "heat", "heat_cool"]),
+        ):
+            with self.subTest(mode=mode, modes=modes):
+                self.state.state = mode
+                self.state.attributes["hvac_modes"] = modes
+                await self.controller.async_update()
+                self.hass.services.async_call.assert_not_awaited()
 
     async def test_target_is_clamped_to_external_maximum(self):
         self.room.current_target_temperature = 32.0
