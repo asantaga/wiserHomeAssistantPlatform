@@ -1,10 +1,13 @@
 """Focused tests for native Wiser equipment power notification data."""
 
 import ast
+from asyncio import Lock
+import logging
 from pathlib import Path
+from time import monotonic
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from test_ui_options import load_functions
 
@@ -22,7 +25,11 @@ def _load_helpers():
             isinstance(node, ast.Assign)
             and any(
                 isinstance(target, ast.Name)
-                and target.id == "POWER_NOTIFICATION_TYPES"
+                and target.id in {
+                    "POWER_NOTIFICATION_TYPES",
+                    "AUTOMATION_DETAILS_TTL",
+                    "AUTOMATION_DETAILS_RETRY_INTERVAL",
+                }
                 for target in node.targets
             )
         )
@@ -33,10 +40,12 @@ def _load_helpers():
                 "build_native_notification_data",
                 "async_build_native_notification_data",
                 "async_send_notification_write_result",
+                "notification_automation_details",
             }
         )
+        or isinstance(node, ast.ClassDef) and node.name == "NotificationAutomationDetails"
     ]
-    namespace = {}
+    namespace = {"Lock": Lock, "monotonic": monotonic, "_LOGGER": logging.getLogger(__name__)}
     exec(compile(ast.Module(body=selected, type_ignores=[]), SOURCE, "exec"), namespace)
     return namespace
 
@@ -48,6 +57,7 @@ async_build_native_notification_data = HELPERS[
     "async_build_native_notification_data"
 ]
 async_send_notification_write_result = HELPERS["async_send_notification_write_result"]
+notification_automation_details = HELPERS["notification_automation_details"]
 
 
 class PowerNotificationDataTest(unittest.TestCase):
@@ -339,7 +349,8 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        automation = (await async_build_native_notification_data(wiserhub))[
+        cache = HELPERS["NotificationAutomationDetails"]()
+        automation = (await async_build_native_notification_data(wiserhub, cache))[
             "automations"
         ][0]
 
@@ -363,6 +374,37 @@ class AutomationDetailsDataTest(unittest.IsolatedAsyncioTestCase):
                 "time_constraints": [],
             },
         )
+
+    async def test_details_survive_api_rebuilds_and_writes_use_the_cache(self):
+        details = {"Triggers": [{"Domain": "SmartPlug", "Id": 1}]}
+        first_automation = SimpleNamespace(get_details=AsyncMock(return_value=details))
+        new_automation = SimpleNamespace(get_details=AsyncMock(return_value=details))
+        wiserhub = SimpleNamespace(
+            devices=SimpleNamespace(),
+            raw_hub_data={"Domain": {"Automation": [{"id": 3, "Enabled": True}]}},
+            automations=SimpleNamespace(get_by_id=lambda _id: first_automation),
+        )
+        data = SimpleNamespace(
+            wiserhub=wiserhub, async_refresh=AsyncMock(), last_update_status="Success"
+        )
+        connection = SimpleNamespace(send_result=Mock(), send_error=Mock())
+        cache = notification_automation_details(data)
+        clock = Mock(return_value=0)
+        with patch.dict(HELPERS, {"monotonic": clock}):
+            first = await async_build_native_notification_data(wiserhub, cache)
+            wiserhub.automations.get_by_id = lambda _id: new_automation
+            clock.return_value = 30
+            self.assertEqual(await async_build_native_notification_data(wiserhub, cache), first)
+            first_automation.get_details.assert_awaited_once()
+            new_automation.get_details.assert_not_awaited()
+
+            clock.return_value = HELPERS["AUTOMATION_DETAILS_TTL"] + 1
+            await async_send_notification_write_result(data, connection, 4, True)
+            connection.send_result.assert_called_once_with(4, first)
+            new_automation.get_details.assert_not_awaited()
+
+            await async_build_native_notification_data(wiserhub, cache)
+            new_automation.get_details.assert_awaited_once()
 
 
 if __name__ == "__main__":

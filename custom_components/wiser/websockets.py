@@ -1,5 +1,7 @@
+from asyncio import Lock
 from copy import deepcopy
 import logging
+from time import monotonic
 
 import voluptuous as vol
 from homeassistant.components import websocket_api
@@ -30,6 +32,61 @@ POWER_NOTIFICATION_TYPES = {
     "under": "under_power_notification",
     "over": "over_power_notification",
 }
+AUTOMATION_DETAILS_TTL = 300
+AUTOMATION_DETAILS_RETRY_INTERVAL = 30
+
+
+class NotificationAutomationDetails:
+    """Cache automation details across coordinator polls for one hub."""
+
+    def __init__(self):
+        self._details = {}
+        self._lock = Lock()
+
+    def retain(self, keys):
+        """Forget details for removed or renamed automations."""
+        self._details = {
+            key: value for key, value in self._details.items() if key in keys
+        }
+
+    async def async_get(self, key, getter, *, fetch_details):
+        """Reuse cached details and share in-flight fetches among panel clients."""
+        cached = self._details.get(key)
+        if not fetch_details or not callable(getter):
+            return cached[1] if cached else None
+        if cached and cached[0] > monotonic():
+            return cached[1]
+
+        async with self._lock:
+            cached = self._details.get(key)
+            if cached and cached[0] > monotonic():
+                return cached[1]
+            try:
+                details = await getter()
+            except Exception:
+                _LOGGER.debug(
+                    "Unable to load details for Wiser automation %s",
+                    key[0],
+                    exc_info=True,
+                )
+                details = None
+            if isinstance(details, dict) and details:
+                self._details[key] = (monotonic() + AUTOMATION_DETAILS_TTL, details)
+            else:
+                details = cached[1] if cached else None
+                self._details[key] = (
+                    monotonic() + AUTOMATION_DETAILS_RETRY_INTERVAL,
+                    details,
+                )
+            return details
+
+
+def notification_automation_details(data):
+    """Get the details cache for the lifetime of the hub's coordinator."""
+    cache = getattr(data, "_notification_automation_details", None)
+    if cache is None:
+        cache = data._notification_automation_details = NotificationAutomationDetails()
+    return cache
 
 
 def build_power_notification_data(wiserhub):
@@ -109,6 +166,8 @@ def build_native_notification_data(wiserhub):
         if not isinstance(automation, dict) or "Enabled" not in automation:
             continue
         automation_id = automation.get("id")
+        if not isinstance(automation_id, int):
+            continue
         api_automation = (
             automation_collection.get_by_id(automation_id)
             if automation_collection
@@ -138,7 +197,9 @@ def build_native_notification_data(wiserhub):
     }
 
 
-async def async_build_native_notification_data(wiserhub):
+async def async_build_native_notification_data(
+    wiserhub, details_cache, *, fetch_details=True
+):
     """Return native notifications enriched with Wiser automation details."""
     data = build_native_notification_data(wiserhub)
     automation_collection = getattr(wiserhub, "automations", None)
@@ -174,24 +235,21 @@ async def async_build_native_notification_data(wiserhub):
                 enriched["TargetName"] = name
         return enriched
 
+    details_cache.retain({
+        (automation["automation_id"], str(automation["name"]))
+        for automation in data["automations"]
+    })
     for automation in data["automations"]:
         api_automation = (
             automation_collection.get_by_id(automation["automation_id"])
             if automation_collection
             else None
         )
-        getter = getattr(api_automation, "get_details", None)
-        if not callable(getter):
-            continue
-        try:
-            details = await getter()
-        except Exception:  # Details must not block notification controls.
-            _LOGGER.debug(
-                "Unable to load details for Wiser automation %s",
-                automation["automation_id"],
-                exc_info=True,
-            )
-            continue
+        details = await details_cache.async_get(
+            (automation["automation_id"], str(automation["name"])),
+            getattr(api_automation, "get_details", None),
+            fetch_details=fetch_details,
+        )
         if not isinstance(details, dict):
             continue
         triggers = details.get("Triggers", [])
@@ -233,7 +291,9 @@ async def async_send_notification_write_result(
     result = (
         build_power_notification_data(data.wiserhub)
         if equipment_only
-        else await async_build_native_notification_data(data.wiserhub)
+        else await async_build_native_notification_data(
+            data.wiserhub, notification_automation_details(data), fetch_details=False
+        )
     )
     connection.send_result(msg_id, result)
 
@@ -997,7 +1057,10 @@ async def async_register_websockets(hass, data):
         d = get_api_for_hub(msg.get("hub"))
         if d:
             connection.send_result(
-                msg["id"], await async_build_native_notification_data(d.wiserhub)
+                msg["id"],
+                await async_build_native_notification_data(
+                    d.wiserhub, notification_automation_details(d)
+                ),
             )
         else:
             connection.send_error(msg["id"], "wiser error", "hub not recognised")
