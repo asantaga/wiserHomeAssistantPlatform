@@ -1963,15 +1963,23 @@ class ExternalRoomControlController:
                 "expected_target": target,
                 "unit": display_temperature_unit,
             }
-            await self._async_save()
             try:
+                await self._async_save()
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN,
                     SERVICE_SET_TEMPERATURE,
                     {ATTR_ENTITY_ID: entity_id, ATTR_TEMPERATURE: target},
                     blocking=True,
                 )
-            except HomeAssistantError as ex:
+            except Exception as ex:
+                # A rejected write must leave the last accepted target owned.
+                if marker is None:
+                    self._controlled_climates.pop(entity_id, None)
+                else:
+                    self._controlled_climates[entity_id] = marker
+                await self._async_save()
+                if not isinstance(ex, HomeAssistantError):
+                    raise
                 _LOGGER.warning(
                     "Unable to set External Room Control target for %s: %s",
                     entity_id,

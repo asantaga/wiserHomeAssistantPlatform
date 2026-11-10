@@ -370,6 +370,29 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate.external_trv", self.controller._controlled_climates
         )
 
+    async def test_rejected_target_keeps_last_accepted_target_owned(self):
+        self.room.current_target_temperature = 30.0
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 30.0
+        self.room.current_target_temperature = 5.0
+        self.hass.services.async_call.side_effect = RuntimeError("target rejected")
+
+        await self.controller.async_update()
+
+        entity_id = "climate.external_trv"
+        saved = self.controller._store.async_save.await_args.args[0]
+        self.assertEqual(saved["controlled_climates"][entity_id]["expected_target"], 30.0)
+        self.hass.services.async_call.side_effect = None
+        self.hass.services.async_call.reset_mock()
+        await self.controller.async_shutdown()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": entity_id, "temperature": 25.0},
+            blocking=True,
+        )
+
     async def test_shutdown_does_not_restore_heat_target_in_cooling_mode(self):
         self.state.attributes.update(
             temperature=16.0, hvac_modes=["heat", "cool", "off"]
