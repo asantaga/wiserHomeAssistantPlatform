@@ -31,6 +31,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers import area_registry as ar, entity_registry as er
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.selector import (
     BooleanSelector,
     EntitySelector,
@@ -628,6 +629,15 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
         area_registry = ar.async_get(self.hass)
         entries = list(entity_registry.entities.values())
         entities_by_room = {}
+        get_effective_area_id = getattr(er, "async_get_effective_area_id", None)
+
+        def entity_area_id(entry):
+            if get_effective_area_id is not None:
+                return get_effective_area_id(self.hass, entry)
+            if entry.area_id is not None or entry.device_id is None:
+                return entry.area_id
+            device = dr.async_get(self.hass).async_get(entry.device_id)
+            return device.area_id if device is not None else None
 
         def supported_external_entity(entry):
             if entry.entity_id.startswith("climate."):
@@ -653,7 +663,7 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 for entry in entries
                 if area is not None
                 and entry.platform != DOMAIN
-                and er.async_get_effective_area_id(self.hass, entry) == area.id
+                and entity_area_id(entry) == area.id
                 and supported_external_entity(entry)
             )
         return entities_by_room

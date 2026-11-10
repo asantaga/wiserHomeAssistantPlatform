@@ -1021,7 +1021,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             SimpleNamespace(
                 entity_id="sensor.external_temperature",
                 platform="mqtt",
-                area_id="office",
+                area_id=None,
+                device_id="office_sensor",
                 original_device_class="temperature",
             ),
             SimpleNamespace(
@@ -1055,9 +1056,11 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         self.namespace.update(
             ar=SimpleNamespace(async_get=lambda _hass: area_registry),
-            er=SimpleNamespace(
-                async_get=lambda _hass: entity_registry,
-                async_get_effective_area_id=lambda _hass, entry: entry.area_id,
+            er=SimpleNamespace(async_get=lambda _hass: entity_registry),
+            dr=SimpleNamespace(
+                async_get=lambda _hass: SimpleNamespace(
+                    async_get={"office_sensor": SimpleNamespace(area_id="office")}.get
+                ),
             ),
         )
         functions = load_functions(
