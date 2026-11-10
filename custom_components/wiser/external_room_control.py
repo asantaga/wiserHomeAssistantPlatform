@@ -51,7 +51,8 @@ from .const import (
     EXTERNAL_TEMPERATURE_BOOST_FIXED,
     EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
 )
-from .helpers import room_supports_external_temperature_feedback
+from .device import confirmed_deleted_room_ids
+from .helpers import active_wiser_rooms, room_supports_external_temperature_feedback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -197,6 +198,7 @@ class ExternalRoomControlController:
         self._closed_limiter_rooms: set[str] = set()
         self._sensor_boosts: dict[str, dict] = {}
         self._controlled_climates: dict[str, dict] = {}
+        self._missing_room_counts: dict[str, int] = {}
 
     async def async_load(self) -> None:
         """Load Passive Mode lower schedules and migrate experimental data."""
@@ -1344,7 +1346,13 @@ class ExternalRoomControlController:
     async def async_update(self) -> None:
         """Update external climate mirroring and temperature feedback."""
         await self._async_remove_orphaned_schedules()
-        await self._async_release_unassigned_climates()
+        active_rooms = active_wiser_rooms(self.coordinator)
+        deleted_room_ids = confirmed_deleted_room_ids(
+            self.assignments,
+            {str(room.id) for room in active_rooms},
+            self._missing_room_counts,
+        )
+        await self._async_release_unassigned_climates(deleted_room_ids=deleted_room_ids)
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
             room_id = str(room.id)
@@ -1411,7 +1419,7 @@ class ExternalRoomControlController:
         if not self.available:
             return
 
-        for room in self.coordinator.wiserhub.rooms.all:
+        for room in active_rooms:
             if self.has_temperature_sensor(room.id):
                 self._closed_limiter_rooms.discard(str(room.id))
                 await self._async_update_temperature_sensor(room)
@@ -1592,11 +1600,12 @@ class ExternalRoomControlController:
         }
         await self._async_save()
 
-    def _assigned_climate_entity_ids(self) -> set[str]:
+    def _assigned_climate_entity_ids(self, deleted_room_ids) -> set[str]:
         """Return every climate entity assigned to this controller."""
         return {
             entity_id
-            for entity_ids in self.assignments.values()
+            for room_id, entity_ids in self.assignments.items()
+            if room_id not in deleted_room_ids
             for entity_id in entity_ids
         }
 
@@ -1644,11 +1653,11 @@ class ExternalRoomControlController:
         return temperature
 
     async def _async_release_unassigned_climates(
-        self, *, release_all: bool = False
+        self, *, release_all: bool = False, deleted_room_ids: set[str] | None = None
     ) -> None:
         """Restore climates that this controller no longer owns."""
         assigned = (
-            set() if release_all else self._assigned_climate_entity_ids()
+            set() if release_all else self._assigned_climate_entity_ids(deleted_room_ids or set())
         )
         changed = False
         for entity_id, marker in list(self._controlled_climates.items()):

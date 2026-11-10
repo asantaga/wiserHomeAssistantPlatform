@@ -12,6 +12,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock
 
+from test_ui_options import load_functions
+
 COMPONENT = Path(__file__).parents[1] / "custom_components/wiser"
 
 
@@ -196,6 +198,12 @@ def load_controller():
         ),
         "STORAGE_VERSION": 1,
         "Store": FakeStore,
+        "active_wiser_rooms": load_functions(
+            "helpers.py", {"active_wiser_rooms"}, {}
+        ).active_wiser_rooms,
+        "confirmed_deleted_room_ids": load_functions(
+            "device.py", {"confirmed_deleted_room_ids"}, {}
+        ).confirmed_deleted_room_ids,
         "WEEKDAYS": (
             "Monday",
             "Tuesday",
@@ -344,6 +352,31 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.hass.services.async_call.assert_not_awaited()
         self.assertNotIn(
             "climate.external_trv", self.controller._controlled_climates
+        )
+
+    async def test_limiter_holds_target_until_missing_room_is_confirmed_deleted(self):
+        self.controller.coordinator.passive_room_strategies = {"1": "temperature_limiter"}
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 30.0
+        self.hass.services.async_call.reset_mock()
+
+        self.room.current_temperature = None
+        await self.controller.async_update()
+        self.hass.services.async_call.assert_not_awaited()
+
+        rooms = self.controller.coordinator.wiserhub.rooms.all
+        rooms.clear()
+        for _ in range(2):
+            await self.controller.async_update()
+        self.hass.services.async_call.assert_not_awaited()
+
+        await self.controller.async_update()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 25.0},
+            blocking=True,
         )
 
     async def test_removing_assignment_converts_stored_target_unit(self):
