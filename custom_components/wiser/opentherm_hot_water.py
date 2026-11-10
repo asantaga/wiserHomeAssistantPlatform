@@ -301,6 +301,12 @@ class WiserOpenThermHotWater(
     def extra_state_attributes(self):
         """Expose the selected schedule and its next transition."""
         _, next_event, next_temperature = self._schedule.current()
+        if next_temperature is not None:
+            next_temperature = TemperatureConverter.convert(
+                next_temperature,
+                UnitOfTemperature.CELSIUS,
+                self.hass.config.units.temperature_unit,
+            )
         return {
             # Used by Wiser's card feature to scope its icon mode control to
             # this water heater rather than every water_heater entity in HA.

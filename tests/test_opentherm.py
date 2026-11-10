@@ -68,6 +68,8 @@ class HotWaterCurrentActionTest(unittest.TestCase):
             "opentherm_sensor_value": HELPER.opentherm_sensor_value,
             "LOCAL_HOT_WATER_SCHEDULE_ID": -1000,
             "HVACAction": SimpleNamespace(IDLE="idle", HEATING="heating"),
+            "UnitOfTemperature": SimpleNamespace(CELSIUS="°C"),
+            "TemperatureConverter": SimpleNamespace(convert=Mock()),
         }
         exec(
             compile(ast.Module(body=methods, type_ignores=[]), "<hot water>", "exec"),
@@ -111,11 +113,26 @@ class HotWaterCurrentActionTest(unittest.TestCase):
                 current=lambda: (None, None, None), name="Hot water"
             ),
             _presets=[],
-            _boost_return_operation=None,
             current_action="heating",
         )
         attributes = self.properties["extra_state_attributes"].fget(entity)
         self.assertEqual(attributes["current_action"], "heating")
+
+    def test_next_scheduled_temperature_uses_display_units(self):
+        convert = self.properties["TemperatureConverter"].convert
+        convert.reset_mock()
+        entity = SimpleNamespace(
+            _schedule=SimpleNamespace(current=lambda: (45, None, 47), name="Hot water"),
+            _presets=[],
+            current_action="idle",
+            hass=SimpleNamespace(
+                config=SimpleNamespace(units=SimpleNamespace(temperature_unit="°F"))
+            ),
+        )
+        convert.return_value = 116.6
+        attributes = self.properties["extra_state_attributes"].fget(entity)
+        convert.assert_called_once_with(47, "°C", "°F")
+        self.assertEqual(attributes["next_schedule_temp"], 116.6)
 
     def test_current_action_translations_cover_every_language(self):
         expected_states = {"idle", "heating"}
