@@ -8,6 +8,10 @@ import logging
 from math import isfinite
 from uuid import uuid4
 
+from homeassistant.components.climate.const import (
+    ClimateEntityStateAttribute,
+    HVACAction,
+)
 from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
@@ -322,7 +326,7 @@ class WiserOpenThermHotWater(
         active = opentherm_sensor_value(self._opentherm, "hot_water_active")
         if active is None:
             return None
-        return "heating" if active else "idle"
+        return HVACAction.HEATING if active else HVACAction.IDLE
 
     @property
     def extra_state_attributes(self):
@@ -335,7 +339,7 @@ class WiserOpenThermHotWater(
             "custom_ui_more_info": "opentherm-hot-water-control-more-info",
             "opentherm_presets": self._presets,
             "boost_return_operation": self._boost_return_operation,
-            "current_action": self.current_action,
+            ClimateEntityStateAttribute.HVAC_ACTION: self.current_action,
             "schedule_id": LOCAL_HOT_WATER_SCHEDULE_ID,
             "schedule_name": self._schedule.name,
             "next_schedule_event": next_event,

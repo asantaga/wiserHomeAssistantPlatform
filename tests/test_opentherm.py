@@ -67,6 +67,10 @@ class HotWaterCurrentActionTest(unittest.TestCase):
         namespace = {
             "opentherm_sensor_value": HELPER.opentherm_sensor_value,
             "LOCAL_HOT_WATER_SCHEDULE_ID": -1000,
+            "HVACAction": SimpleNamespace(IDLE="idle", HEATING="heating"),
+            "ClimateEntityStateAttribute": SimpleNamespace(
+                HVAC_ACTION="hvac_action"
+            ),
         }
         exec(
             compile(ast.Module(body=methods, type_ignores=[]), "<hot water>", "exec"),
@@ -104,7 +108,7 @@ class HotWaterCurrentActionTest(unittest.TestCase):
                 )
                 self.assertIsNone(self.properties["current_action"].fget(entity))
 
-    def test_action_is_exposed_as_a_raw_state_for_frontend_localization(self):
+    def test_action_uses_native_hvac_action_attribute(self):
         entity = SimpleNamespace(
             _schedule=SimpleNamespace(
                 current=lambda: (None, None, None), name="Hot water"
@@ -114,7 +118,7 @@ class HotWaterCurrentActionTest(unittest.TestCase):
             current_action="heating",
         )
         attributes = self.properties["extra_state_attributes"].fget(entity)
-        self.assertEqual(attributes["current_action"], "heating")
+        self.assertEqual(attributes["hvac_action"], "heating")
 
 
 def _system(generation=2, firmware="4.48.2", device_firmware="1.0.0"):
