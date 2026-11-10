@@ -1610,6 +1610,19 @@ class ExternalRoomControlController:
         }
 
     @staticmethod
+    def _can_control_heating(state) -> bool:
+        """Return whether writing a target is safe in the current HVAC mode."""
+        if state.state == HVACMode.HEAT:
+            return True
+        hvac_modes = state.attributes.get(ATTR_HVAC_MODES) or ()
+        return (
+            state.state in (HVACMode.OFF, HVACMode.AUTO)
+            and HVACMode.HEAT in hvac_modes
+            and HVACMode.COOL not in hvac_modes
+            and HVACMode.HEAT_COOL not in hvac_modes
+        )
+
+    @staticmethod
     def _target_temperature_step(state) -> float | None:
         """Return a climate entity's usable target-temperature step."""
         try:
@@ -1669,6 +1682,10 @@ class ExternalRoomControlController:
                 continue
             state = self.hass.states.get(entity_id)
             if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                continue
+            if not self._can_control_heating(state):
+                self._controlled_climates.pop(entity_id)
+                changed = True
                 continue
             current_unit = self.hass.config.units.temperature_unit
             try:
@@ -1822,13 +1839,7 @@ class ExternalRoomControlController:
             if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 _LOGGER.debug("External climate entity %s is unavailable", entity_id)
                 continue
-            hvac_modes = state.attributes.get(ATTR_HVAC_MODES, ())
-            if state.state != HVACMode.HEAT and (
-                state.state not in (HVACMode.OFF, HVACMode.AUTO)
-                or HVACMode.HEAT not in hvac_modes
-                or HVACMode.COOL in hvac_modes
-                or HVACMode.HEAT_COOL in hvac_modes
-            ):
+            if not self._can_control_heating(state):
                 continue
             if ATTR_TEMPERATURE not in state.attributes:
                 _LOGGER.warning(

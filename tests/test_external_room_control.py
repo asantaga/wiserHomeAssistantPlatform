@@ -354,6 +354,20 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "climate.external_trv", self.controller._controlled_climates
         )
 
+    async def test_shutdown_does_not_restore_heat_target_in_cooling_mode(self):
+        self.state.attributes.update(
+            temperature=16.0, hvac_modes=["heat", "cool", "off"]
+        )
+        await self.controller.async_update()
+        self.state.state = "cool"
+        self.state.attributes["temperature"] = 19.0
+        self.hass.services.async_call.reset_mock()
+
+        await self.controller.async_shutdown()
+
+        self.hass.services.async_call.assert_not_awaited()
+        self.assertNotIn("climate.external_trv", self.controller._controlled_climates)
+
     async def test_limiter_holds_target_until_missing_room_is_confirmed_deleted(self):
         self.controller.coordinator.passive_room_strategies = {"1": "temperature_limiter"}
         self.room.is_passive_mode = self.room.passive_mode_enabled = True
