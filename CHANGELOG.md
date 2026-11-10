@@ -6,21 +6,20 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ## v4.1.0b0
 
-### Added
-
-- External Room Control lets compatible Home Assistant climate devices follow a Wiser room. Eligible rooms can use modulating or temperature-limiter control in Passive Mode.
-- Rooms with a Wiser TRV and no native Wiser temperature sensor can use an external temperature sensor for feedback. Wiser applies configurable timed boosts when the room is below its scheduled target and leaves user overrides alone. [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619)
-
-### Changed
-
-- Existing native Passive Mode settings, lower schedules, and active lower overrides migrate to the new configuration. Experimental external control settings need to be configured again.
-- Local builds produce an unpacked integration directory alongside the ZIP.
-
 ### Upgrade notes
 
+- Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+
+### Added
+
+- Added External Room Control for compatible Home Assistant heating climates, with one Wiser room per climate across all hubs. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+- Added optional temperature sensor feedback for rooms with a Wiser TRV and no native Wiser temperature sensor. A fresh reading below the scheduled target can trigger a configurable fixed or proportional timed boost in Auto. [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619)
+- Added per-room Modulating and Temperature limiter strategies, plus per-period Passive Mode settings and paired schedule limits. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+
 ### Changed
 
-### Fixed
+- Schedule copies carry Passive Mode metadata, and panel and service calls share limiter assignment validation. Advance Schedule applies both limiter thresholds from the next slot, and scheduled mode changes preserve manual boosts. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+- Local builds produce an unpacked integration alongside the ZIP. A build replaces an existing unpacked directory only when it matches the previous ZIP. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 
 
 ## v4.0.2
