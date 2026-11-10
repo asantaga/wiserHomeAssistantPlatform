@@ -52,7 +52,11 @@ from .const import (
     EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
 )
 from .device import confirmed_deleted_room_ids
-from .helpers import active_wiser_rooms, room_supports_external_temperature_feedback
+from .helpers import (
+    active_wiser_rooms,
+    external_climates_assigned_to_other_hubs,
+    room_supports_external_temperature_feedback,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,6 +86,7 @@ class ExternalRoomControlController:
         """Initialise the controller from config-entry options."""
         self.hass = hass
         self.coordinator = coordinator
+        self._entry_id = config_entry.entry_id
         options = config_entry.options.get(CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {})
         configured_assignments = {
             str(room_id): list(entity_ids)
@@ -392,8 +397,17 @@ class ExternalRoomControlController:
             settings["passive_override_schedule_transition"] = None
 
     def assigned_entity_ids(self, room_id) -> list[str]:
-        """Return climate entities assigned to a Wiser room."""
-        return self.assignments.get(str(room_id), [])
+        """Return climate entities this room can control exclusively."""
+        entity_ids = self.assignments.get(str(room_id))
+        if not entity_ids:
+            return []
+        assigned_to_other_hubs = external_climates_assigned_to_other_hubs(
+            self.hass, self._entry_id
+        )
+        return [
+            entity_id for entity_id in entity_ids
+            if entity_id not in assigned_to_other_hubs
+        ]
 
     def has_assignment(self, room_id) -> bool:
         """Return whether a room has at least one external climate entity."""
@@ -1684,11 +1698,14 @@ class ExternalRoomControlController:
         assigned = (
             set() if release_all else self._assigned_climate_entity_ids(deleted_room_ids or set())
         )
+        assigned_to_other_hubs = external_climates_assigned_to_other_hubs(
+            self.hass, self._entry_id
+        )
         changed = False
         for entity_id, marker in list(self._controlled_climates.items()):
             if entity_id in assigned:
                 continue
-            if not isinstance(marker, dict):
+            if entity_id in assigned_to_other_hubs or not isinstance(marker, dict):
                 self._controlled_climates.pop(entity_id, None)
                 changed = True
                 continue

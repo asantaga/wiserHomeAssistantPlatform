@@ -7,7 +7,13 @@ from aioWiserHeatAPI.wiserhub import (
 )
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ENTITY_PREFIX, MANUFACTURER
+from .const import (
+    CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL,
+    CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS,
+    DOMAIN,
+    ENTITY_PREFIX,
+    MANUFACTURER,
+)
 import logging
 import re
 from uuid import UUID, uuid5
@@ -37,6 +43,19 @@ def active_wiser_rooms(data):
         if str(getattr(room, "_data", {}).get("Invalid", "")).casefold()
         != "nothingassigned"
     ]
+
+
+def external_climates_assigned_to_other_hubs(hass, entry_id) -> set[str]:
+    """Return external climates reserved by other enabled Wiser entries."""
+    return {
+        entity_id
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.entry_id != entry_id and entry.disabled_by is None
+        for entity_ids in entry.options.get(
+            CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL, {}
+        ).get(CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS, {}).values()
+        for entity_id in entity_ids
+    }
 
 
 def room_has_climate(room):

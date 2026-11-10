@@ -123,6 +123,7 @@ from .opentherm_detection import (
 )
 from .helpers import (
     active_wiser_rooms,
+    external_climates_assigned_to_other_hubs,
     room_has_climate,
     room_supports_external_temperature_feedback,
     room_supports_temperature_control,
@@ -769,7 +770,13 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     errors["base"] = "external_climate_must_not_be_wiser"
                 if entity_ids:
                     submitted_assignments[room_id] = entity_ids
-            if _external_room_control_duplicate_entities(submitted_assignments):
+            assigned_to_other_hubs = external_climates_assigned_to_other_hubs(
+                self.hass, self.config_entry.entry_id
+            )
+            if _external_room_control_duplicate_entities(submitted_assignments) or any(
+                assigned_to_other_hubs.intersection(entity_ids)
+                for entity_ids in submitted_assignments.values()
+            ):
                 errors["base"] = "external_climate_duplicate_assignment"
             if not errors:
                 for room_id in submitted_assignments:

@@ -204,6 +204,15 @@ def load_controller():
         "confirmed_deleted_room_ids": load_functions(
             "device.py", {"confirmed_deleted_room_ids"}, {}
         ).confirmed_deleted_room_ids,
+        "external_climates_assigned_to_other_hubs": load_functions(
+            "helpers.py",
+            {"external_climates_assigned_to_other_hubs"},
+            {
+                "DOMAIN": "wiser",
+                "CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL": "automations_external_room_control",
+                "CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS": "external_room_control_assignments",
+            },
+        ).external_climates_assigned_to_other_hubs,
         "WEEKDAYS": (
             "Monday",
             "Tuesday",
@@ -270,6 +279,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.hass = SimpleNamespace(
             states=SimpleNamespace(get=lambda _entity_id: self.state),
             services=SimpleNamespace(async_call=AsyncMock()),
+            config_entries=SimpleNamespace(async_entries=lambda _domain: []),
             config=SimpleNamespace(
                 units=SimpleNamespace(temperature_unit="°C")
             ),
@@ -1069,6 +1079,40 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.controller.available = False
 
         self.assertFalse(self.controller.is_enabled(1))
+
+    async def test_external_climate_control_waits_for_cross_hub_conflict_to_clear(self):
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 19.0
+        self.room.current_target_temperature = 24.0
+        self.hass.services.async_call.reset_mock()
+        other_entry = SimpleNamespace(
+            entry_id="other",
+            disabled_by=None,
+            options={
+                "automations_external_room_control": {
+                    "external_room_control_assignments": {
+                        "2": ["climate.external_trv"]
+                    }
+                }
+            },
+        )
+        self.hass.config_entries.async_entries = lambda _domain: [other_entry]
+
+        await self.controller.async_update()
+        self.assertFalse(self.controller.is_enabled(1))
+        self.hass.services.async_call.assert_not_awaited()
+
+        await self.controller.async_shutdown()
+        self.hass.services.async_call.assert_not_awaited()
+
+        other_entry.disabled_by = "user"
+        await self.controller.async_update()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 24.0},
+            blocking=True,
+        )
 
     async def test_limiter_requires_room_strategy(self):
         self.controller.coordinator.passive_room_strategies = {

@@ -48,7 +48,12 @@ def _load_helpers_module() -> ModuleType:
     package = _module("wiser")
     package.__path__ = []
     _module(
-        "wiser.const", DOMAIN="wiser", ENTITY_PREFIX=ENTITY_PREFIX, MANUFACTURER="Drayton"
+        "wiser.const",
+        CONF_AUTOMATIONS_EXTERNAL_ROOM_CONTROL="automations_external_room_control",
+        CONF_EXTERNAL_ROOM_CONTROL_ASSIGNMENTS="external_room_control_assignments",
+        DOMAIN="wiser",
+        ENTITY_PREFIX=ENTITY_PREFIX,
+        MANUFACTURER="Drayton",
     )
 
     spec = importlib.util.spec_from_file_location("wiser.helpers", SOURCE_PATH)
