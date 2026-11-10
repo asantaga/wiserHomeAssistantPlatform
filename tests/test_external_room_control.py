@@ -1023,6 +1023,21 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             blocking=True,
         )
 
+    async def test_target_rounds_down_when_external_maximum_is_between_steps(self):
+        self.state.attributes.update(
+            min_temp=7.0, max_temp=30.5, target_temp_step=2.0
+        )
+        self.room.current_target_temperature = 32.0
+
+        await self.controller.async_update()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 29.0},
+            blocking=True,
+        )
+
     async def test_matching_target_does_not_write_again(self):
         self.state.attributes["temperature"] = 19.0
 

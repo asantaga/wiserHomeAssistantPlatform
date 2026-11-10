@@ -1638,13 +1638,20 @@ class ExternalRoomControlController:
 
     @staticmethod
     def _snap_target_temperature(
-        temperature: float, step: float | None, minimum: float | None
+        temperature: float,
+        step: float | None,
+        minimum: float | None,
+        maximum: float | None = None,
     ) -> float:
         """Round a target to a climate entity's supported temperature grid."""
         if step is None:
             return temperature
         base = minimum if minimum is not None else 0.0
-        return round(base + round((temperature - base) / step) * step, 6)
+        steps = round((temperature - base) / step)
+        if maximum is not None:
+            # A maximum between steps must round down to stay on the grid.
+            steps = min(steps, math.floor((maximum - base) / step + 1e-9))
+        return round(base + steps * step, 6)
 
     def _targets_match(self, state, current: float, expected: float) -> bool:
         """Return whether two targets resolve to the same supported value."""
@@ -1730,6 +1737,7 @@ class ExternalRoomControlController:
                         original_target,
                         self._target_temperature_step(state),
                         minimum_target,
+                        maximum_target,
                     )
                     try:
                         await self.hass.services.async_call(
@@ -1901,6 +1909,7 @@ class ExternalRoomControlController:
                 target,
                 self._target_temperature_step(state),
                 minimum_target,
+                maximum_target,
             )
             if (
                 current_target is not None
