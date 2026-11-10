@@ -1,6 +1,7 @@
 /*! WISER-CARD-VERSION wiser-panel 1.1.1 */
 
 const WISER_ACTIVE_PANEL_KEY = "wiser-active-panel";
+const WISER_PANEL_CONFIG_MAX_BYTES = 2 * 1024 * 1024;
 
 class WiserPanel extends HTMLElement {
   constructor() {
@@ -245,9 +246,17 @@ class WiserPanel extends HTMLElement {
       tabs: this._config.panels.map(({ id, title }) => ({ id, title })),
       panels,
     };
-    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+    const blobOptions = {
       type: "application/json",
-    });
+    };
+    let blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], blobOptions);
+    if (blob.size > WISER_PANEL_CONFIG_MAX_BYTES) {
+      blob = new Blob([JSON.stringify(payload)], blobOptions);
+    }
+    if (blob.size > WISER_PANEL_CONFIG_MAX_BYTES) {
+      this._notify("The Wiser panel configuration exceeds the 2 MiB import limit and cannot be exported.");
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -258,7 +267,7 @@ class WiserPanel extends HTMLElement {
 
   async _prepareImport(file) {
     try {
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > WISER_PANEL_CONFIG_MAX_BYTES) {
         throw new Error("The Wiser panel configuration file is too large.");
       }
       const payload = JSON.parse(await file.text());
