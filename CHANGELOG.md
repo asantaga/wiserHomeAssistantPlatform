@@ -13,8 +13,10 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
-- OpenTherm hot water now reports its current heating activity and the next scheduled temperature.
-- The Controls card can use configured timed OpenTherm presets for hot water boosts. Enabling OpenTherm hot water control supplies 15-, 30- and 45-minute presets when no timed presets are saved.
+- OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
+- Enabling OpenTherm hot water control saves editable 15-, 30- and 45-minute presets when no timed presets are configured. Existing enabled setups without timed presets receive the defaults automatically.
+- The OpenTherm preset selector shows the remaining time during an active timed boost.
+- Stored hot water switches report when a boost is active and when it ends.
 - Administrators can export Wiser panel settings to one JSON file and selectively restore individual panels, tab order, and titles. Import and export are available from the desktop panel menu.
 - Added a **Notifications** tab for native Wiser power, device, and automation notifications. With compatible hub and API support, administrators can manage notification settings and view, enable, disable, or delete Wiser automations.
 - Optional Equipment sensors now include standalone equipment reported by the hub, such as EV chargers, and expose additional control, schedule, and rated power data where available.
@@ -31,6 +33,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Fixed
 
 - The OpenTherm preset editor blocks saving temperatures outside the boiler's reported minimum and maximum while keeping numeric input.
+- If the hub is unreachable when an OpenTherm boost expires, the integration retries the return to Manual after the hub recovers.
 - Stored hot water boost actions refresh the selected hub and reject a hub that is no longer loaded.
 
 
