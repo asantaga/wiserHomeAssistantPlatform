@@ -272,6 +272,10 @@ class WiserClimateMoreInfo extends HTMLElement {
     this._render();
   }
 
+  disconnectedCallback() {
+    clearTimeout(this._boostCountdownTimer);
+  }
+
   async _ensureNativeTemperatureControl() {
     if (customElements.get(NATIVE_TEMPERATURE_CONTROL)) {
       return;
@@ -551,6 +555,13 @@ class WiserClimateMoreInfo extends HTMLElement {
       MODE_ICONS[stateObj.state] || "mdi:radiator"
     );
 
+    this._syncPresetSelect();
+    void this._applyClimateStyle();
+  }
+
+  _syncPresetSelect() {
+    clearTimeout(this._boostCountdownTimer);
+    const stateObj = this._stateObj;
     const presets = Array.isArray(stateObj.attributes.preset_modes)
       ? stateObj.attributes.preset_modes
       : [];
@@ -564,13 +575,18 @@ class WiserClimateMoreInfo extends HTMLElement {
     );
     this._presetSelect.value = stateObj.attributes.preset_mode;
     this._presetSelect.disabled = stateObj.state === "unavailable";
-    this._presetSelect.options = presets.map((preset) => ({
+    const options = presets.map((preset) => ({
       value: preset,
       label: this._formatPreset(preset),
     }));
+    this._presetSelect.options = addBoostCountdownOption(stateObj, options);
     this._presetSelect.renderIcon = () => this._presetIcon();
 
-    void this._applyClimateStyle();
+    if (this.isConnected && supportsPresets && stateObj.attributes.is_boosted) {
+      this._boostCountdownTimer = setTimeout(
+        () => this._syncPresetSelect(), boostCountdownUpdateDelay(stateObj)
+      );
+    }
   }
 
   async _applyClimateStyle() {
@@ -728,6 +744,14 @@ const boostMinutesRemaining = (stateObj) => {
   return Number.isFinite(reported) ? Math.max(0, Math.ceil(reported)) : undefined;
 };
 
+const boostCountdownUpdateDelay = (stateObj) => {
+  const end = new Date(stateObj.attributes.boost_end).getTime();
+  const untilNextMinute = Number.isFinite(end)
+    ? ((end - Date.now()) % 60000 + 60000) % 60000
+    : 60000;
+  return Math.max(untilNextMinute + 50, 1000);
+};
+
 const renderInlineThermostatFeatures = (card) => {
   const config = card._config;
   const features = Array.isArray(config?.features) ? config.features : [];
@@ -820,16 +844,11 @@ const climateStateForPresetFeature = (feature) =>
 const getBoostPresetDisplayMode = (width) =>
   width >= 180 ? "full" : width >= 105 ? "compact" : "icon";
 
-const addBoostCountdownOption = (feature, options) => {
-  const stateObj = climateStateForPresetFeature(feature);
+const addBoostCountdownOption = (stateObj, options, widthMode = "full") => {
   const minutes = boostMinutesRemaining(stateObj);
-  if (!wiserClimateControlsEnabled(stateObj) || minutes === undefined) {
+  if (!wiserClimateControlsEnabled(stateObj) || minutes === undefined || widthMode === "icon") {
     return options;
   }
-
-  const width = feature.__wiserBoostCountdownWidth || feature.clientWidth || 0;
-  const widthMode = getBoostPresetDisplayMode(width);
-  if (widthMode === "icon") return options;
 
   const remaining = minutes > 0 ? `${minutes}m` : "<1m";
   const presetValue = String(stateObj.attributes.preset_mode || "Boost");
@@ -872,14 +891,10 @@ const syncBoostCountdown = (feature) => {
     feature.__wiserBoostCountdownResizeObserver.observe(feature);
   }
 
-  const end = new Date(stateObj.attributes.boost_end).getTime();
-  const untilNextMinute = Number.isFinite(end)
-    ? ((end - Date.now()) % 60000 + 60000) % 60000
-    : 60000;
   feature.__wiserBoostCountdownTimer = setTimeout(() => {
     feature.__wiserBoostCountdownTimer = undefined;
     if (feature.isConnected) feature.requestUpdate();
-  }, Math.max(untilNextMinute + 50, 1000));
+  }, boostCountdownUpdateDelay(stateObj));
 };
 
 const installBoostPresetEnhancement = async () => {
@@ -913,7 +928,10 @@ const installBoostPresetEnhancement = async () => {
     prototype.__wiserBoostCountdownInstalled = true;
   }
   prototype.__wiserAddBoostCountdownOption = function (options) {
-    return addBoostCountdownOption(this, options);
+    const width = this.__wiserBoostCountdownWidth || this.clientWidth || 0;
+    return addBoostCountdownOption(
+      climateStateForPresetFeature(this), options, getBoostPresetDisplayMode(width)
+    );
   };
   prototype.__wiserSyncBoostCountdown = function () {
     syncBoostCountdown(this);
