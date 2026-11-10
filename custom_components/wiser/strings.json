@@ -349,7 +349,16 @@
     },
     "water_heater": {
       "opentherm_hot_water": {
-        "name": "OpenTherm hot water"
+        "name": "OpenTherm hot water",
+        "state_attributes": {
+          "current_action": {
+            "name": "[%key:component::climate::entity_component::_::state_attributes::hvac_action::name%]",
+            "state": {
+              "idle": "[%key:component::climate::entity_component::_::state_attributes::hvac_action::state::idle%]",
+              "heating": "[%key:component::climate::entity_component::_::state_attributes::hvac_action::state::heating%]"
+            }
+          }
+        }
       }
     },
     "number": {

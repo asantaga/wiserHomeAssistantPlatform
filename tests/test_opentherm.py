@@ -68,9 +68,6 @@ class HotWaterCurrentActionTest(unittest.TestCase):
             "opentherm_sensor_value": HELPER.opentherm_sensor_value,
             "LOCAL_HOT_WATER_SCHEDULE_ID": -1000,
             "HVACAction": SimpleNamespace(IDLE="idle", HEATING="heating"),
-            "ClimateEntityStateAttribute": SimpleNamespace(
-                HVAC_ACTION="hvac_action"
-            ),
         }
         exec(
             compile(ast.Module(body=methods, type_ignores=[]), "<hot water>", "exec"),
@@ -108,7 +105,7 @@ class HotWaterCurrentActionTest(unittest.TestCase):
                 )
                 self.assertIsNone(self.properties["current_action"].fget(entity))
 
-    def test_action_uses_native_hvac_action_attribute(self):
+    def test_current_action_is_exposed_for_tile_cards(self):
         entity = SimpleNamespace(
             _schedule=SimpleNamespace(
                 current=lambda: (None, None, None), name="Hot water"
@@ -118,7 +115,21 @@ class HotWaterCurrentActionTest(unittest.TestCase):
             current_action="heating",
         )
         attributes = self.properties["extra_state_attributes"].fget(entity)
-        self.assertEqual(attributes["hvac_action"], "heating")
+        self.assertEqual(attributes["current_action"], "heating")
+
+    def test_current_action_translations_cover_every_language(self):
+        expected_states = {"idle", "heating"}
+
+        for path in (COMPONENT / "translations").glob("*.json"):
+            with self.subTest(language=path.stem):
+                translations = json.loads(path.read_text())
+                current_action = translations["entity"]["water_heater"][
+                    "opentherm_hot_water"
+                ]["state_attributes"]["current_action"]
+
+                self.assertTrue(current_action["name"])
+                self.assertEqual(set(current_action["state"]), expected_states)
+                self.assertTrue(all(current_action["state"].values()))
 
 
 def _system(generation=2, firmware="4.48.2", device_firmware="1.0.0"):
