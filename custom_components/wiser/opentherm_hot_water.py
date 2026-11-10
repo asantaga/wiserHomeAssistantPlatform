@@ -188,6 +188,7 @@ class WiserOpenThermHotWater(
         self._pending_request_id = None
         self._pending_previous_operation = None
         self._pending_previous_boost_seconds = None
+        self._pending_boost_finish_confirmation = None
         self._attr_unique_id = get_unique_id(
             data,
             "water_heater",
@@ -389,7 +390,7 @@ class WiserOpenThermHotWater(
             and self.available
             and not self._target_write_in_progress
         ):
-            self._queue_boost_finish(self._pending_boost_finish)
+            self._queue_boost_finish(*self._pending_boost_finish)
         if self._operation == MODE_AUTO and not self._target_write_in_progress:
             temperature = self._scheduled_temperature()
             if (
@@ -442,9 +443,18 @@ class WiserOpenThermHotWater(
         failed_temperature = _finite_float(event.data.get("requested"))
         previous_operation = self._pending_previous_operation
         previous_boost_seconds = self._pending_previous_boost_seconds
+        boost_finish = self._pending_boost_finish_confirmation
         self._pending_request_id = None
         self._pending_previous_operation = None
         self._pending_previous_boost_seconds = None
+        self._pending_boost_finish_confirmation = None
+        if boost_finish is not None:
+            operation, retry_on_rejection = boost_finish
+            # The boost has already expired. Keep its return mode selected
+            # and try the return once more after the next good hub update.
+            if retry_on_rejection and self._operation == operation:
+                self._pending_boost_finish = (operation, False)
+            return
         if previous_operation not in self.operation_list:
             return
         self._cancel_active_boost()
@@ -475,27 +485,31 @@ class WiserOpenThermHotWater(
         self._boost_end = None
         self._queue_boost_finish(MODE_MANUAL)
 
-    def _queue_boost_finish(self, operation):
+    def _queue_boost_finish(self, operation, retry_on_rejection=True):
         """Try a boost return once, including across coordinator refreshes."""
         self._pending_boost_finish = None
         self.hass.async_create_task(
             self._async_finish_boost_safely(
-                operation, expected_operation=self._operation
+                operation, self._operation, retry_on_rejection
             )
         )
 
-    async def _async_finish_boost_safely(self, operation, expected_operation):
+    async def _async_finish_boost_safely(
+        self, operation, expected_operation, retry_on_rejection
+    ):
         """Apply the return mode unless a newer operation has taken over."""
         if self._operation != expected_operation or self._boost_deadline is not None:
             return
         if self._target_write_in_progress:
-            self._pending_boost_finish = operation
+            self._pending_boost_finish = (operation, retry_on_rejection)
             return
         try:
-            await self.async_set_operation_mode(operation)
+            await self.async_set_operation_mode(
+                operation, boost_finish=(operation, retry_on_rejection)
+            )
         except HomeAssistantError as err:
             if self._operation == expected_operation and self._boost_deadline is None:
-                self._pending_boost_finish = operation
+                self._pending_boost_finish = (operation, retry_on_rejection)
             _LOGGER.warning("Unable to end OpenTherm hot-water boost: %s", err)
 
     def _start_boost(self, minutes):
@@ -586,6 +600,7 @@ class WiserOpenThermHotWater(
         temperature,
         previous_operation=None,
         previous_boost_seconds=None,
+        boost_finish=None,
     ):
         """Use Wiser's existing serialized write and confirmation path."""
         if not self.min_temp <= temperature <= self.max_temp:
@@ -595,6 +610,7 @@ class WiserOpenThermHotWater(
             )
         request_id = uuid4().hex
         self._pending_request_id = request_id
+        self._pending_boost_finish_confirmation = boost_finish
         self._pending_previous_operation = (
             self._operation
             if previous_operation is None
@@ -628,6 +644,7 @@ class WiserOpenThermHotWater(
                 self._pending_request_id = None
                 self._pending_previous_operation = None
                 self._pending_previous_boost_seconds = None
+                self._pending_boost_finish_confirmation = None
             raise
         finally:
             self._target_write_in_progress = False
@@ -666,7 +683,7 @@ class WiserOpenThermHotWater(
             self._last_schedule_request = None
         self.async_write_ha_state()
 
-    async def async_set_operation_mode(self, operation_mode):
+    async def async_set_operation_mode(self, operation_mode, *, boost_finish=None):
         """Select off, manual, or scheduled operation."""
         if operation_mode not in self.operation_list:
             raise HomeAssistantError(
@@ -676,15 +693,15 @@ class WiserOpenThermHotWater(
         previous_operation = self._operation
         previous_boost_seconds = self._remaining_boost_seconds()
         if operation_mode == STATE_OFF:
-            await self._async_set_target(self.min_temp)
+            target = self.min_temp
         elif operation_mode == MODE_MANUAL:
-            await self._async_set_target(self._manual_temperature)
+            target = self._manual_temperature
         elif preset is not None:
-            await self._async_set_target(preset["temperature"])
-        elif operation_mode != MODE_AUTO:
-            raise HomeAssistantError(
-                f"Unknown hot-water preset: {operation_mode}"
-            )
+            target = preset["temperature"]
+        else:
+            target = None
+        if target is not None:
+            await self._async_set_target(target, boost_finish=boost_finish)
         self._cancel_active_boost()
         self._operation = operation_mode
         self._last_schedule_request = None

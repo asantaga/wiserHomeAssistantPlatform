@@ -5,9 +5,11 @@ import asyncio
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 import logging
+from math import isfinite
 from pathlib import Path
 from time import strptime
 from types import SimpleNamespace
+from uuid import uuid4
 import unittest
 from unittest.mock import AsyncMock, Mock
 
@@ -74,9 +76,13 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             "_remaining_boost_seconds", "_start_boost", "_async_boost_finished",
             "_async_finish_boost_safely", "async_set_operation_mode",
             "_handle_coordinator_update", "_queue_boost_finish",
+            "_async_set_target", "_async_command_failed",
         }
         entity.bases = []
         entity.body = [node for node in entity.body if getattr(node, "name", "") in methods]
+        finite_float = next(
+            node for node in tree.body if getattr(node, "name", "") == "_finite_float"
+        )
         self.timer = Mock(side_effect=lambda *_: Mock())
         self.tasks = []
         namespace = {
@@ -91,9 +97,20 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
             "callback": lambda method: method,
             "HomeAssistantError": RuntimeError,
             "_LOGGER": logging.getLogger(__name__),
+            "isfinite": isfinite,
+            "uuid4": uuid4,
+            "DOMAIN": "wiser",
+            "WISER_SERVICES": {
+                "SERVICE_SEND_OPENTHERM_COMMAND": "set_opentherm_parameter",
+            },
+            "ATTR_HUB": "hub",
+            "ATTR_OPENTHERM_ENDPOINT": "endpoint",
+            "ATTR_OPENTHERM_PARAM": "parameter",
+            "ATTR_OPENTHERM_TEMPERATURE": "temperature",
+            "ATTR_OPENTHERM_REQUEST_ID": "request_id",
         }
         exec(
-            compile(ast.Module(body=[entity], type_ignores=[]),
+            compile(ast.Module(body=[finite_float, entity], type_ignores=[]),
                     "<hot-water-boost>", "exec"),
             namespace,
         )
@@ -118,7 +135,7 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
     async def test_configured_boost_uses_its_own_target_and_duration(self):
         self.assertEqual(self.entity.operation_list, ["off", "Manual", "Auto", "Guests"])
         await self.entity.async_set_operation_mode("Guests")
-        self.entity._async_set_target.assert_awaited_with(52)
+        self.entity._async_set_target.assert_awaited_with(52, boost_finish=None)
         self.assertEqual(self.timer.call_args.args[1], 23 * 60)
         self.assertAlmostEqual(
             (self.entity._boost_end - datetime.now(UTC)).total_seconds(),
@@ -147,7 +164,9 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         self.entity._handle_coordinator_update()
         self.assertEqual(len(self.tasks), 1)
         await self.tasks.pop()
-        self.entity._async_set_target.assert_awaited_with(45)
+        self.entity._async_set_target.assert_awaited_with(
+            45, boost_finish=("Manual", True)
+        )
         self.assertEqual(self.entity._operation, "Manual")
 
     async def test_expired_boost_retry_does_not_override_new_mode(self):
@@ -155,8 +174,36 @@ class OpenThermHotWaterBoostTest(unittest.IsolatedAsyncioTestCase):
         self.timer.call_args.args[2](None)
         await self.entity.async_set_operation_mode("off")
         await self.tasks.pop()
-        self.entity._async_set_target.assert_awaited_with(35)
+        self.entity._async_set_target.assert_awaited_with(35, boost_finish=None)
         self.assertEqual(self.entity._operation, "off")
+
+    async def test_rejected_boost_return_retries_without_restoring_expired_preset(self):
+        del self.entity._async_set_target
+        self.entity.max_temp = 55
+        self.entity._entry_id = "test-hub"
+        self.entity._context = None
+        call = AsyncMock()
+        self.entity.hass.services = SimpleNamespace(async_call=call)
+        await self.entity.async_set_operation_mode("Guests")
+        self.timer.call_args.args[2](None)
+        await self.tasks.pop()
+
+        def reject_last_write():
+            request = call.call_args.args[2]
+            self.assertEqual(request["temperature"], 45)
+            self.entity._async_command_failed(
+                SimpleNamespace(data={"request_id": request["request_id"], "requested": 45})
+            )
+            self.assertEqual(self.entity._operation, "Manual")
+            self.assertIsNone(self.entity._boost_end)
+
+        reject_last_write()
+        self.entity._handle_coordinator_update()
+        await self.tasks.pop()
+        reject_last_write()
+        self.entity._handle_coordinator_update()
+        self.assertEqual(self.tasks, [])
+        self.assertEqual(call.await_count, 3)
 
 
 class OpenThermHotWaterScheduleTest(unittest.TestCase):
