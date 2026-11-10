@@ -1343,6 +1343,17 @@ class ExternalRoomControlController:
         self._set_schedule_override_marker(settings, room)
         await self._async_save()
 
+    async def _async_set_scheduled_passive_mode(self, room, enabled: bool) -> bool:
+        """Apply a scheduled mode change and verify the room accepted it."""
+        if bool(room.passive_mode_enabled) == enabled:
+            return True
+        await room.set_passive_mode(enabled)
+        if bool(room.passive_mode_enabled) != enabled:
+            return False
+        if not enabled:
+            await room.cancel_overrides()
+        return True
+
     async def async_update(self) -> None:
         """Update external climate mirroring and temperature feedback."""
         await self._async_remove_orphaned_schedules()
@@ -1370,16 +1381,10 @@ class ExternalRoomControlController:
                         room.passive_mode_enabled
                     )
                     storage_changed = True
-                enabled = bool(control["enabled"])
-                if bool(room.passive_mode_enabled) != enabled:
-                    await room.set_passive_mode(enabled)
-                    if not enabled:
-                        await room.cancel_overrides()
+                await self._async_set_scheduled_passive_mode(room, bool(control["enabled"]))
             elif original is not None:
-                if bool(room.passive_mode_enabled) != bool(original):
-                    await room.set_passive_mode(bool(original))
-                    if not original:
-                        await room.cancel_overrides()
+                if not await self._async_set_scheduled_passive_mode(room, bool(original)):
+                    continue
                 settings["passive_schedule_original_enabled"] = None
                 storage_changed = True
         for room in self.coordinator.wiserhub.rooms.all:
@@ -1758,20 +1763,16 @@ class ExternalRoomControlController:
             original = settings.get("passive_schedule_original_enabled")
             if original is None:
                 continue
-            if bool(room.passive_mode_enabled) != bool(original):
-                try:
-                    restored = await room.set_passive_mode(bool(original))
-                    if restored is False:
-                        continue
-                    if not original:
-                        await room.cancel_overrides()
-                except Exception:  # pylint: disable=broad-except  # noqa: BLE001
-                    _LOGGER.warning(
-                        "Unable to restore scheduled Passive Mode for %s",
-                        room.name,
-                        exc_info=True,
-                    )
+            try:
+                if not await self._async_set_scheduled_passive_mode(room, bool(original)):
                     continue
+            except Exception:  # pylint: disable=broad-except  # noqa: BLE001
+                _LOGGER.warning(
+                    "Unable to restore scheduled Passive Mode for %s",
+                    room.name,
+                    exc_info=True,
+                )
+                continue
             settings["passive_schedule_original_enabled"] = None
             storage_changed = True
 

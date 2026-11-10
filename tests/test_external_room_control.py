@@ -256,6 +256,9 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             boost=AsyncMock(return_value=True),
             cancel_boost=AsyncMock(return_value=True),
         )
+        self.room.set_passive_mode.side_effect = lambda enabled: setattr(
+            self.room, "passive_mode_enabled", enabled
+        )
         wiserhub = SimpleNamespace(
             rooms=SimpleNamespace(all=[self.room]),
             system=SimpleNamespace(sunrise_times={}, sunset_times={}),
@@ -1454,6 +1457,27 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             (False,),
         )
         self.room.cancel_overrides.assert_awaited_once()
+
+    async def test_failed_passive_restore_keeps_original_mode_and_retries(self):
+        self.room.passive_mode_enabled = True
+        settings = self.controller._rooms["1"]
+        settings["passive_schedule_original_enabled"] = False
+        update_room_mode = self.room.set_passive_mode.side_effect
+        self.room.set_passive_mode.side_effect = None
+        self.room.set_passive_mode.return_value = None
+
+        await self.controller.async_shutdown()
+        await self.controller.async_update()
+
+        self.assertIs(settings["passive_schedule_original_enabled"], False)
+        self.room.cancel_overrides.assert_not_awaited()
+
+        self.room.set_passive_mode.side_effect = update_room_mode
+        await self.controller.async_update()
+
+        self.assertEqual(self.room.set_passive_mode.await_count, 3)
+        self.room.cancel_overrides.assert_awaited_once()
+        self.assertIsNone(settings["passive_schedule_original_enabled"])
 
     async def test_native_passive_lower_uses_local_schedule(self):
         self.controller.coordinator.passive_room_strategies = {}
