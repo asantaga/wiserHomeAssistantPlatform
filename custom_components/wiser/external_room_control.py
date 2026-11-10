@@ -1201,13 +1201,46 @@ class ExternalRoomControlController:
         self._clear_unused_schedule_override_marker(settings)
         await self._async_save()
 
-    async def async_set_passive_lower_temperature(
-        self, room_id, temperature: float
+    async def async_set_passive_temperature_range(
+        self, room_id, lower: float | None, upper: float | None
     ) -> None:
-        """Set a scheduled Passive lower override or the static lower value."""
+        """Apply changed limits in an order that keeps a valid temperature range."""
         room = self._room(room_id)
         if room is None:
             return
+        limiter = self.uses_temperature_limiter(room_id)
+        current_upper = float(
+            self.upper_temperature(room_id) if limiter else room.passive_mode_upper_temp
+        )
+        lower = float(lower) if lower is not None else None
+        upper = float(upper) if upper is not None else None
+        if lower == room.passive_mode_lower_temp:
+            lower = None
+        if upper == current_upper or not (limiter or room.mode == "Manual"):
+            upper = None
+
+        # Raise the upper limit first if the new lower limit crosses the old one.
+        if (
+            lower is not None
+            and upper is not None
+            and current_upper < lower <= upper
+        ):
+            await self.async_set_upper_temperature(room_id, upper)
+            upper = None
+        if lower is not None:
+            lower = await self.async_set_passive_lower_temperature(room_id, lower)
+        if upper is not None:
+            await self.async_set_upper_temperature(
+                room_id, upper, lower_temperature=lower
+            )
+
+    async def async_set_passive_lower_temperature(
+        self, room_id, temperature: float
+    ) -> float | None:
+        """Set a scheduled Passive lower override or the static lower value."""
+        room = self._room(room_id)
+        if room is None:
+            return None
         upper_temperature = (
             self.upper_temperature(room_id)
             if self.uses_temperature_limiter(room_id)
@@ -1222,15 +1255,19 @@ class ExternalRoomControlController:
                 or self.schedule_uses_native_range(room.schedule)
             )
         ):
-            await room.set_target_temperature(temperature)
+            if not await room.set_target_temperature(temperature):
+                return None
             settings = self._settings(room_id)
             settings["passive_lower_override"] = temperature
             self._set_schedule_override_marker(settings, room)
             await self._async_save()
-            return
+            return temperature
         await room.set_passive_mode_lower_temp(temperature)
+        return float(room.passive_mode_lower_temp)
 
-    async def async_set_upper_temperature(self, room_id, temperature: float) -> None:
+    async def async_set_upper_temperature(
+        self, room_id, temperature: float, *, lower_temperature: float | None = None
+    ) -> None:
         """Set the cutoff used only by an external temperature limiter."""
         room = self._room(room_id)
         if room is None:
@@ -1239,7 +1276,12 @@ class ExternalRoomControlController:
             if room.mode == "Manual":
                 await room.set_passive_mode_upper_temp(float(temperature))
             return
-        temperature = max(float(temperature), float(room.passive_mode_lower_temp))
+        if lower_temperature is None:
+            lower_temperature = float(room.passive_mode_lower_temp)
+        temperature = max(float(temperature), lower_temperature)
+        if room.mode == "Manual":
+            # The hub's manual upper limit also caps its effective lower limit.
+            await room.set_passive_mode_upper_temp(temperature)
         settings = self._settings(room_id)
         if room.mode == "Auto" and room.schedule is not None:
             settings["passive_upper_override"] = temperature

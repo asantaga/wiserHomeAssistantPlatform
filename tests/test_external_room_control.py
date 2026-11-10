@@ -818,13 +818,48 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             assignment_ids=[1],
         )
 
-        await self.controller.async_set_passive_lower_temperature(1, 17.0)
-        await self.controller.async_set_upper_temperature(1, 22.0)
+        await self.controller.async_set_passive_temperature_range(1, 17.0, 22.0)
 
         self.room.set_target_temperature.assert_awaited_once_with(17.0)
         self.assertEqual(
             self.controller._rooms["1"]["passive_upper_override"], 22.0
         )
+
+    async def test_manual_range_can_move_above_its_previous_upper_limit(self):
+        for strategy in ("modulating", "temperature_limiter"):
+            with self.subTest(strategy=strategy):
+                self.setUp()
+                self.room.mode = "Manual"
+                self.controller.coordinator.passive_room_strategies = {"1": strategy}
+
+                async def set_upper(temperature):
+                    self.room.passive_mode_upper_temp = temperature
+                    self.room.configured_passive_mode_upper_temp = temperature
+
+                self.room.set_passive_mode_upper_temp.side_effect = set_upper
+
+                await self.controller.async_set_passive_temperature_range(
+                    1, 22.0, 25.0
+                )
+
+                self.room.set_passive_mode_lower_temp.assert_awaited_once_with(22.0)
+                self.room.set_passive_mode_upper_temp.assert_awaited_once_with(25.0)
+
+    async def test_auto_limiter_range_can_move_below_its_previous_lower_limit(self):
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        self.room.is_passive_mode = True
+        self.room.passive_mode_enabled = True
+        self.room.passive_mode_lower_temp = 18.0
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1]
+        )
+
+        await self.controller.async_set_passive_temperature_range(1, 14.0, 16.0)
+
+        self.room.set_target_temperature.assert_awaited_once_with(14.0)
+        self.assertEqual(self.controller.upper_temperature(1), 16.0)
 
     def test_lower_override_keeps_external_upper_limit(self):
         self.controller.coordinator.passive_room_strategies = {
