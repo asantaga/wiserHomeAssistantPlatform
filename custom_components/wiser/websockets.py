@@ -4,6 +4,7 @@ import logging
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.websocket_api import (
     async_register_command,
     ActiveConnection,
@@ -383,23 +384,17 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                if (
-                    not remove
-                    and d.external_room_control.passive_control_schedule_uses_temperature_limiter(
-                        schedule_id
-                    )
-                    and not d.external_room_control.is_enabled(msg["entity_id"])
-                ):
-                    connection.send_error(
-                        msg["id"],
-                        "invalid_schedule",
-                        "Temperature limiter periods require External Room Control for every assigned room",
-                    )
-                    return
+                target_id = int(msg["entity_id"])
                 if not remove:
-                    await schedule.assign_schedule(int(msg["entity_id"]))
+                    try:
+                        await d.external_room_control.async_assign_schedule(
+                            schedule, target_id
+                        )
+                    except HomeAssistantError as err:
+                        connection.send_error(msg["id"], "invalid_schedule", str(err))
+                        return
                 else:
-                    await schedule.unassign_schedule(int(msg["entity_id"]))
+                    await schedule.unassign_schedule(target_id)
                 await d.async_refresh()
             connection.send_result(msg["id"], "success")
         else:
@@ -563,7 +558,6 @@ async def async_register_websockets(hass, data):
             schedule_type_enum = WiserScheduleTypeEnum[schedule_type]
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
-                previous_native_schedule = deepcopy(schedule.ws_schedule_data)
                 upper_schedule = None
                 lower_schedule = None
                 passive_control_schedule = None
@@ -661,26 +655,16 @@ async def async_register_websockets(hass, data):
                                 "PassiveStrategy",
                             ):
                                 slot.pop(key, None)
-                await schedule.set_schedule_from_ws_data(native_schedule)
                 try:
-                    await d.external_room_control.async_save_schedule_metadata(
-                        schedule_id,
+                    await d.external_room_control.async_write_schedule(
+                        schedule,
+                        schedule.set_schedule_from_ws_data,
+                        native_schedule,
                         upper_schedule=upper_schedule,
                         lower_schedule=lower_schedule,
                         passive_control_schedule=passive_control_schedule,
                     )
                 except Exception as err:
-                    try:
-                        await schedule.set_schedule_from_ws_data(
-                            previous_native_schedule
-                        )
-                    except Exception as rollback_err:
-                        _LOGGER.error(
-                            "Unable to restore Wiser schedule %s after saving "
-                            "its Passive Mode range failed: %s",
-                            schedule_id,
-                            rollback_err,
-                        )
                     connection.send_error(
                         msg["id"], "wiser error", str(err)
                     )

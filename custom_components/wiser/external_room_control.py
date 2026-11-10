@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from asyncio import CancelledError, Lock
 from copy import deepcopy
 from datetime import datetime, timedelta
 import logging
@@ -204,6 +205,7 @@ class ExternalRoomControlController:
         self._sensor_boosts: dict[str, dict] = {}
         self._controlled_climates: dict[str, dict] = {}
         self._missing_room_counts: dict[str, int] = {}
+        self._schedule_write_lock = Lock()
 
     async def async_load(self) -> None:
         """Load Passive Mode lower schedules and migrate experimental data."""
@@ -1010,7 +1012,7 @@ class ExternalRoomControlController:
                 schedules[schedule_id] = replacement
         try:
             await self._async_save()
-        except Exception:
+        except (Exception, CancelledError):
             for schedules, value in zip(schedule_stores, previous):
                 if value is None:
                     schedules.pop(schedule_id, None)
@@ -1018,63 +1020,76 @@ class ExternalRoomControlController:
                     schedules[schedule_id] = value
             raise
 
-    async def async_copy_schedule(self, source, target) -> None:
-        """Copy the hub schedule and its Passive Mode metadata together."""
-        if str(source.schedule_type).casefold() != "heating":
-            await source.copy_schedule(target.id)
+    async def async_assign_schedule(self, schedule, target_id) -> None:
+        """Check limiter eligibility before assigning a hub schedule."""
+        async with self._schedule_write_lock:
+            if (
+                str(schedule.schedule_type).casefold() == "heating"
+                and self.passive_control_schedule_uses_temperature_limiter(schedule.id)
+                and not self.is_enabled(target_id)
+            ):
+                raise HomeAssistantError(
+                    "Temperature limiter periods require External Room Control "
+                    "for every assigned room"
+                )
+            await schedule.assign_schedule(target_id)
+
+    async def async_write_schedule(self, schedule, write_native, payload, **metadata) -> None:
+        """Replace a hub schedule and update its associated Passive Mode metadata."""
+        async with self._schedule_write_lock:
+            await self._async_write_schedule(schedule, write_native, payload, **metadata)
+
+    async def _async_write_schedule(self, schedule, write_native, payload, **metadata) -> None:
+        schedule_id = str(schedule.id)
+        if str(schedule.schedule_type).casefold() != "heating" or not (
+            any(value is not None for value in metadata.values())
+            or schedule_id in self._upper_schedules
+            or schedule_id in self._lower_schedules
+            or schedule_id in self._passive_control_schedules
+        ):
+            await write_native(payload)
             return
 
-        if (
-            self.passive_control_schedule_uses_temperature_limiter(source.id)
-            and not self.schedule_supports_temperature_limiter(target)
-        ):
-            raise HomeAssistantError(
-                "Temperature limiter periods require External Room Control "
-                "for every room assigned to the destination schedule"
-            )
-
-        previous_target_schedule = deepcopy(target.ws_schedule_data)
-        await source.copy_schedule(target.id)
+        previous_schedule = deepcopy(schedule.ws_schedule_data)
+        await write_native(payload)
         try:
-            await self.async_copy_schedule_metadata(source.id, target.id)
-        except Exception:
+            await self.async_save_schedule_metadata(schedule_id, **metadata)
+        except (Exception, CancelledError):
             try:
-                await target.set_schedule_from_ws_data(previous_target_schedule)
+                await schedule.set_schedule_from_ws_data(previous_schedule)
             except Exception:
                 _LOGGER.exception(
-                    "Unable to restore Wiser schedule %s after copying its "
-                    "Passive Mode metadata failed",
-                    target.id,
+                    "Unable to restore Wiser schedule %s after its Passive Mode "
+                    "metadata could not be saved",
+                    schedule.id,
                 )
             raise
 
-    async def async_copy_schedule_metadata(
-        self, schedule_id, to_schedule_id
-    ) -> None:
-        """Copy all locally stored schedule metadata without stale values."""
-        source_id = str(schedule_id)
-        target_id = str(to_schedule_id)
-        schedule_stores = (
-            self._upper_schedules,
-            self._lower_schedules,
-            self._passive_control_schedules,
-        )
-        previous = [deepcopy(schedules.get(target_id)) for schedules in schedule_stores]
-        for schedules in schedule_stores:
-            source = schedules.get(source_id)
-            if source is None:
-                schedules.pop(target_id, None)
-            else:
-                schedules[target_id] = deepcopy(source)
-        try:
-            await self._async_save()
-        except Exception:
-            for schedules, value in zip(schedule_stores, previous):
-                if value is None:
-                    schedules.pop(target_id, None)
-                else:
-                    schedules[target_id] = value
-            raise
+    async def async_copy_schedule(self, source, target) -> None:
+        """Copy the hub schedule and its Passive Mode metadata together."""
+        async with self._schedule_write_lock:
+            if str(source.schedule_type).casefold() != "heating":
+                await source.copy_schedule(target.id)
+                return
+            if (
+                self.passive_control_schedule_uses_temperature_limiter(source.id)
+                and not self.schedule_supports_temperature_limiter(target)
+            ):
+                raise HomeAssistantError(
+                    "Temperature limiter periods require External Room Control "
+                    "for every room assigned to the destination schedule"
+                )
+            source_id = str(source.id)
+            await self._async_write_schedule(
+                target,
+                source.copy_schedule,
+                target.id,
+                upper_schedule=deepcopy(self._upper_schedules.get(source_id)),
+                lower_schedule=deepcopy(self._lower_schedules.get(source_id)),
+                passive_control_schedule=deepcopy(
+                    self._passive_control_schedules.get(source_id)
+                ),
+            )
 
     async def async_delete_schedule_metadata(self, schedule_id) -> None:
         """Remove all locally stored metadata after schedule deletion."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from asyncio import CancelledError, Lock
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import logging
@@ -179,6 +180,8 @@ def load_controller():
             HEAT="heat", COOL="cool", HEAT_COOL="heat_cool", OFF="off", AUTO="auto"
         ),
         "HomeAssistantError": Exception,
+        "CancelledError": CancelledError,
+        "Lock": Lock,
         "MAX_SCHEDULE_TEMPERATURE": 30.0,
         "OFF_TEMPERATURE": -20.0,
         "SERVICE_SET_TEMPERATURE": "set_temperature",
@@ -1734,16 +1737,86 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
     def test_websocket_saves_schedule_metadata_in_one_operation(self):
         source = (COMPONENT / "websockets.py").read_text()
 
-        self.assertIn("async_save_schedule_metadata", source)
+        self.assertIn("await d.external_room_control.async_write_schedule", source)
         self.assertNotIn(
             "await d.external_room_control.async_save_upper_schedule", source
         )
+
+    async def test_schedule_services_clear_old_passive_metadata(self):
+        methods = load_functions(
+            "schedules.py",
+            {"set_schedule", "set_schedule_from_data"},
+            {
+                "_LOGGER": logging.getLogger(__name__),
+                "HomeAssistantError": RuntimeError,
+                "WiserScheduleError": RuntimeError,
+            },
+        )
+        schedule = SimpleNamespace(
+            id=7,
+            name="Heating schedule",
+            schedule_type="Heating",
+            ws_schedule_data={},
+            set_schedule_from_yaml_file=AsyncMock(),
+            set_schedule_from_yaml_data=AsyncMock(),
+        )
+        entity = SimpleNamespace(
+            name="Office",
+            schedule=schedule,
+            data=SimpleNamespace(
+                external_room_control=self.controller, async_refresh=AsyncMock()
+            ),
+        )
+        for method, writer, payload in (
+            (methods.set_schedule, schedule.set_schedule_from_yaml_file, "heating.yaml"),
+            (methods.set_schedule_from_data, schedule.set_schedule_from_yaml_data, "Monday: []"),
+        ):
+            with self.subTest(method=method.__name__):
+                self.controller._upper_schedules["7"] = {"Monday": {"06:00": 22.0}}
+                self.controller._passive_control_schedules["7"] = {
+                    "Monday": {"06:00": {"enabled": True, "strategy": "modulating"}}
+                }
+
+                await method(entity, payload)
+
+                writer.assert_awaited_once_with(payload)
+                self.assertNotIn("7", self.controller._upper_schedules)
+                self.assertNotIn("7", self.controller._passive_control_schedules)
+
+    async def test_assign_schedule_service_rejects_ineligible_rooms(self):
+        methods = load_functions(
+            "schedules.py",
+            {"assign_schedule_by_id_or_name"},
+            {"_LOGGER": logging.getLogger(__name__), "HomeAssistantError": Exception},
+        )
+        schedule = SimpleNamespace(id=7, schedule_type="Heating", assign_schedule=AsyncMock())
+        self.controller.assignments = {}
+        self.controller._passive_control_schedules["7"] = {
+            "Monday": {"06:00": {"enabled": True, "strategy": "temperature_limiter"}}
+        }
+        self.room.name = "Office"
+        entity = SimpleNamespace(
+            room=self.room,
+            get_schedule_type=lambda: SimpleNamespace(value="Heating"),
+            data=SimpleNamespace(
+                external_room_control=self.controller,
+                wiserhub=SimpleNamespace(
+                    schedules=SimpleNamespace(get_by_id=lambda *_: schedule)
+                ),
+            ),
+        )
+
+        with self.assertRaisesRegex(Exception, "External Room Control"):
+            await methods.assign_schedule_by_id_or_name(entity, 7, None)
+
+        schedule.assign_schedule.assert_not_awaited()
 
     async def test_copy_rolls_back_hub_schedule_when_saving_metadata_fails(self):
         source = SimpleNamespace(id=7, schedule_type="Heating", copy_schedule=AsyncMock())
         original_schedule = {"ScheduleData": [{"day": "Monday", "slots": []}]}
         target = SimpleNamespace(
             id=8,
+            schedule_type="Heating",
             ws_schedule_data=original_schedule,
             set_schedule_from_ws_data=AsyncMock(),
         )
@@ -1795,7 +1868,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         }
 
         source = SimpleNamespace(id=7, schedule_type="Heating", copy_schedule=AsyncMock())
-        target = SimpleNamespace(id=8, ws_schedule_data={})
+        target = SimpleNamespace(id=8, schedule_type="Heating", ws_schedule_data={})
 
         await self.controller.async_copy_schedule(source, target)
 
