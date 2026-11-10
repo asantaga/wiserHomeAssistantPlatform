@@ -728,26 +728,11 @@ async def async_register_websockets(hass, data):
                 schedule_type_enum, to_schedule_id
             )
             if schedule and target_schedule:
-                previous_target_schedule = deepcopy(
-                    target_schedule.ws_schedule_data
-                )
-                await schedule.copy_schedule(to_schedule_id)
                 try:
-                    await d.external_room_control.async_copy_schedule_metadata(
-                        schedule_id, to_schedule_id
+                    await d.external_room_control.async_copy_schedule(
+                        schedule, target_schedule
                     )
                 except Exception as err:
-                    try:
-                        await target_schedule.set_schedule_from_ws_data(
-                            previous_target_schedule
-                        )
-                    except Exception as rollback_err:
-                        _LOGGER.error(
-                            "Unable to restore destination schedule %s after "
-                            "copying its Passive Mode metadata failed: %s",
-                            to_schedule_id,
-                            rollback_err,
-                        )
                     connection.send_error(
                         msg["id"], "wiser error", str(err)
                     )

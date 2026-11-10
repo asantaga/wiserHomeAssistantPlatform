@@ -1002,6 +1002,36 @@ class ExternalRoomControlController:
                     schedules[schedule_id] = value
             raise
 
+    async def async_copy_schedule(self, source, target) -> None:
+        """Copy the hub schedule and its Passive Mode metadata together."""
+        if str(source.schedule_type).casefold() != "heating":
+            await source.copy_schedule(target.id)
+            return
+
+        if (
+            self.passive_control_schedule_uses_temperature_limiter(source.id)
+            and not self.schedule_supports_temperature_limiter(target)
+        ):
+            raise HomeAssistantError(
+                "Temperature limiter periods require External Room Control "
+                "for every room assigned to the destination schedule"
+            )
+
+        previous_target_schedule = deepcopy(target.ws_schedule_data)
+        await source.copy_schedule(target.id)
+        try:
+            await self.async_copy_schedule_metadata(source.id, target.id)
+        except Exception:
+            try:
+                await target.set_schedule_from_ws_data(previous_target_schedule)
+            except Exception:
+                _LOGGER.exception(
+                    "Unable to restore Wiser schedule %s after copying its "
+                    "Passive Mode metadata failed",
+                    target.id,
+                )
+            raise
+
     async def async_copy_schedule_metadata(
         self, schedule_id, to_schedule_id
     ) -> None:

@@ -257,10 +257,12 @@ class WiserScheduleEntity:
                                 f"Copying schedule from {self.name} to {to_entity.name}"
                             )
                             try:
-                                await self.schedule.copy_schedule(
-                                    to_entity.schedule.id,
+                                await self.data.external_room_control.async_copy_schedule(
+                                    self.schedule, to_entity.schedule
                                 )
                                 await self.data.async_refresh()
+                            except HomeAssistantError:
+                                raise
                             except (
                                 Exception  # pylint: disable=broad-exception-caught
                             ) as ex:

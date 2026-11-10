@@ -1574,13 +1574,40 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             "await d.external_room_control.async_save_upper_schedule", source
         )
 
-    def test_websocket_rolls_back_failed_schedule_metadata_copy(self):
-        source = (COMPONENT / "websockets.py").read_text()
-
-        self.assertIn("previous_target_schedule = deepcopy", source)
-        self.assertIn(
-            "await target_schedule.set_schedule_from_ws_data", source
+    async def test_copy_rolls_back_hub_schedule_when_saving_metadata_fails(self):
+        source = SimpleNamespace(id=7, schedule_type="Heating", copy_schedule=AsyncMock())
+        original_schedule = {"ScheduleData": [{"day": "Monday", "slots": []}]}
+        target = SimpleNamespace(
+            id=8,
+            ws_schedule_data=original_schedule,
+            set_schedule_from_ws_data=AsyncMock(),
         )
+        original_lower = {"Monday": {"06:00": 12.0}}
+        self.controller._lower_schedules["8"] = original_lower
+        self.controller._store.async_save.side_effect = OSError("disk full")
+
+        with self.assertRaisesRegex(OSError, "disk full"):
+            await self.controller.async_copy_schedule(source, target)
+
+        source.copy_schedule.assert_awaited_once_with(8)
+        target.set_schedule_from_ws_data.assert_awaited_once_with(original_schedule)
+        self.assertEqual(self.controller._lower_schedules["8"], original_lower)
+
+    async def test_copy_rejects_limiter_schedule_for_an_ineligible_room(self):
+        source = SimpleNamespace(id=7, schedule_type="Heating", copy_schedule=AsyncMock())
+        target = SimpleNamespace(id=8, assignment_ids=[1])
+        self.controller.assignments = {}
+        self.controller._passive_control_schedules["7"] = {
+            "Monday": {
+                "06:00": {"enabled": True, "strategy": "temperature_limiter"}
+            }
+        }
+
+        with self.assertRaisesRegex(Exception, "every room assigned to the destination"):
+            await self.controller.async_copy_schedule(source, target)
+
+        source.copy_schedule.assert_not_awaited()
+        self.assertNotIn("8", self.controller._passive_control_schedules)
 
     async def test_copy_schedule_metadata_replaces_stale_target_values(self):
         self.controller._upper_schedules = {
@@ -1602,8 +1629,12 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             }
         }
 
-        await self.controller.async_copy_schedule_metadata(7, 8)
+        source = SimpleNamespace(id=7, schedule_type="Heating", copy_schedule=AsyncMock())
+        target = SimpleNamespace(id=8, ws_schedule_data={})
 
+        await self.controller.async_copy_schedule(source, target)
+
+        source.copy_schedule.assert_awaited_once_with(8)
         self.assertNotIn("8", self.controller._upper_schedules)
         self.assertNotIn("8", self.controller._lower_schedules)
         self.assertEqual(
