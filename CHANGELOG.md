@@ -13,6 +13,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added a **Notifications** tab for native Wiser power, device, and automation notifications. With compatible hub and API support, administrators can manage notification settings and view, enable, disable, or delete Wiser automations.
 - Optional Equipment sensors now include standalone equipment reported by the hub, such as EV chargers, and expose additional control, schedule, and rated power data where available.
 - Added External Room Control for compatible Home Assistant heating climates, with one Wiser room per climate across all hubs. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Added optional temperature sensor feedback for rooms with a Wiser TRV and no native Wiser temperature sensor. A fresh reading below the scheduled target can trigger a configurable fixed or proportional timed boost in Auto. [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619)

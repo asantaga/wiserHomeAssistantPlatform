@@ -39,6 +39,7 @@ class BuildTest(unittest.TestCase):
                 b'customElements.define("wiser-controls-panel",class{})'
             ),
             "hub": b'customElements.define("wiser-hub-panel",class{})',
+            "notifications": b'customElements.define("wiser-notifications-panel",class{})',
         }
         (frontend / "cards.json").write_text(
             json.dumps({"schema_version": 1, "cards": CARD_MANIFEST}),
@@ -224,7 +225,9 @@ class BuildTest(unittest.TestCase):
         with patch.object(FETCH, "list_releases") as releases:
             report = self.build()
         releases.assert_not_called()
-        self.assertEqual([r["source"] for r in report], ["local"] * 4)
+        self.assertEqual(
+            [r["source"] for r in report], ["local"] * len(CARD_MANIFEST)
+        )
         with ZipFile(self.output) as archive:
             for card, payload in self.payloads.items():
                 filename = self.filename(card)
@@ -296,12 +299,13 @@ class BuildTest(unittest.TestCase):
         self.local("zigbee")
         self.local("rooms")
         self.local("hub")
+        self.local("notifications")
         with patch.object(FETCH, "list_releases", return_value=[release("v1", "2026", card="schedule")]) as releases, patch.object(FETCH, "download_asset", return_value=(self.payloads["schedule"], "sha256:test")):
             report = self.build()
         releases.assert_called_once_with(CARD_REPOSITORIES["schedule"])
         self.assertEqual(
             [r["source"] for r in report],
-            ["release", "local", "local", "local"],
+            ["release", "local", "local", "local", "local"],
         )
 
     def test_without_frontend_keeps_registry_and_omits_every_bundle(self):
@@ -322,7 +326,10 @@ class BuildTest(unittest.TestCase):
             )
 
         releases.assert_not_called()
-        self.assertEqual([item["source"] for item in report], ["omitted"] * 4)
+        self.assertEqual(
+            [item["source"] for item in report],
+            ["omitted"] * len(CARD_MANIFEST),
+        )
         with ZipFile(self.output) as archive:
             names = archive.namelist()
             for definition in CARD_MANIFEST:
@@ -339,14 +346,18 @@ class BuildTest(unittest.TestCase):
             [release("v2", "2026", card="zigbee")],
             [release("v3", "2026", card="rooms")],
             [release("v4", "2026", card="hub")],
+            [release("v5", "2026", card="notifications")],
         ]), patch.object(FETCH, "download_asset", side_effect=[
             (self.payloads["schedule"], "sha256:schedule"),
             (self.payloads["zigbee"], "sha256:zigbee"),
             (self.payloads["rooms"], "sha256:rooms"),
             (self.payloads["hub"], "sha256:hub"),
+            (self.payloads["notifications"], "sha256:notifications"),
         ]):
             report = self.build()
-        self.assertEqual([r["source"] for r in report], ["release"] * 4)
+        self.assertEqual(
+            [r["source"] for r in report], ["release"] * len(CARD_MANIFEST)
+        )
         with ZipFile(self.output) as archive:
             for card, payload in self.payloads.items():
                 self.assertEqual(
@@ -396,12 +407,13 @@ class BuildTest(unittest.TestCase):
         self.local("schedule")
         self.local("rooms")
         self.local("hub")
+        self.local("notifications")
         self.output.write_bytes(b"previous package")
         with patch.object(FETCH, "list_releases", side_effect=ValueError("unavailable")):
             report = self.build()
         self.assertEqual(
             [record["source"] for record in report],
-            ["local", "unavailable", "local", "local"],
+            ["local", "unavailable", "local", "local", "local"],
         )
         self.assertEqual(report[1]["error"], "unavailable")
         with ZipFile(self.output) as archive:
@@ -438,6 +450,7 @@ class BuildTest(unittest.TestCase):
                     [release("v2", "2026", card="zigbee")],
                     [release("v3", "2026", card="rooms")],
                     [release("v4", "2026", card="hub")],
+                    [release("v5", "2026", card="notifications")],
                 ]), patch.object(FETCH, "download_asset", side_effect=[
                     (self.payloads["schedule"], "sha256:schedule"),
                     (self.payloads["zigbee"], "sha256:zigbee"),
@@ -447,6 +460,10 @@ class BuildTest(unittest.TestCase):
                         "sha256:rooms",
                     ),
                     (self.payloads["hub"], "sha256:hub"),
+                    (
+                        self.payloads["notifications"],
+                        "sha256:notifications",
+                    ),
                 ]) as download, patch.object(
                     BUILD, "latest_api_prerelease", return_value=None
                 ):
@@ -454,8 +471,11 @@ class BuildTest(unittest.TestCase):
                         self.source, self.output, self.root, channel,
                         CARD_REPOSITORIES, release=explicit_release,
                     )
-                self.assertEqual(download.call_count, 4)
-                self.assertEqual([r["source"] for r in report], ["release"] * 4)
+                self.assertEqual(download.call_count, len(CARD_MANIFEST))
+                self.assertEqual(
+                    [r["source"] for r in report],
+                    ["release"] * len(CARD_MANIFEST),
+                )
                 with ZipFile(self.output) as archive:
                     self.assertEqual(
                         archive.read("frontend/wiser-zigbee-card.js"),
@@ -476,10 +496,12 @@ class BuildTest(unittest.TestCase):
             ValueError("repository unavailable"),
             [release("v3", "2026", card="rooms")],
             [release("v4", "2026", card="hub")],
+            [release("v5", "2026", card="notifications")],
         ]), patch.object(FETCH, "download_asset", side_effect=[
             (self.payloads["schedule"], "sha256:schedule"),
             (self.payloads["rooms"], "sha256:rooms"),
             (self.payloads["hub"], "sha256:hub"),
+            (self.payloads["notifications"], "sha256:notifications"),
         ]):
             report = BUILD.build(
                 self.source, self.output, self.root, "stable", CARD_REPOSITORIES,
@@ -487,7 +509,7 @@ class BuildTest(unittest.TestCase):
 
         self.assertEqual(
             [record["source"] for record in report],
-            ["release", "unavailable", "release", "release"],
+            ["release", "unavailable", "release", "release", "release"],
         )
         with ZipFile(self.output) as archive:
             self.assertIn("frontend/wiser-schedule-card.js", archive.namelist())
