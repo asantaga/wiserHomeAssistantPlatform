@@ -264,6 +264,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             set_passive_mode_upper_temp=AsyncMock(),
             set_passive_mode=AsyncMock(),
             set_target_temperature=AsyncMock(),
+            schedule_advance=AsyncMock(return_value=True),
             cancel_overrides=AsyncMock(),
             boost=AsyncMock(return_value=True),
             cancel_boost=AsyncMock(return_value=True),
@@ -1322,6 +1323,37 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
                 1, datetime(2026, 10, 19, 20, 0)
             )["enabled"]
         )
+
+    async def test_advance_schedule_pairs_limits_from_the_hub_next_slot(self):
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.controller.coordinator.passive_room_strategies["1"] = "temperature_limiter"
+        next_time = datetime(2026, 10, 19, 18, 0)
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1],
+            next=SimpleNamespace(datetime=next_time, setting=18.0),
+        )
+        self.controller._passive_control_schedules["7"] = {
+            "Monday": {
+                "06:00": {"enabled": True, "lower": 15.0, "upper": 22.0},
+                "18:00": {"enabled": True, "lower": 18.0, "upper": 25.0},
+            }
+        }
+        settings = self.controller._rooms["1"]
+        self.room.schedule_advance.return_value = False
+
+        await self.controller.async_advance_passive_schedule(self.room)
+
+        self.assertIsNone(settings["passive_lower_override"])
+        self.assertIsNone(settings["passive_upper_override"])
+        self.controller._store.async_save.assert_not_awaited()
+        self.room.schedule_advance.return_value = True
+
+        await self.controller.async_advance_passive_schedule(self.room)
+
+        self.assertEqual(settings["passive_lower_override"], 18.0)
+        self.assertEqual(settings["passive_upper_override"], 25.0)
+        self.assertEqual(settings["passive_override_schedule_transition"], next_time.isoformat())
+        self.controller._store.async_save.assert_awaited_once()
 
     def test_validated_passive_controls_select_the_hub_setpoint(self):
         schedule = {

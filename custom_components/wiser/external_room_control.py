@@ -1332,43 +1332,55 @@ class ExternalRoomControlController:
         self._clear_unused_schedule_override_marker(settings)
         await self._async_save()
 
-    async def async_advance_upper_schedule(self, room_id) -> None:
-        """Pair Wiser Advance Schedule with the next external cutoff."""
-        room = self._room(room_id)
-        if room is None or not self.uses_temperature_limiter(room_id):
+    async def async_advance_passive_schedule(self, room) -> None:
+        """Advance the hub schedule and pair it with the next slot's limits."""
+        schedule = room.schedule
+        next_period = getattr(schedule, "next", None)
+        if next_period is None or not await room.schedule_advance():
             return
-        upper = self._scheduled_temperature(
-            room, self._upper_schedules, next_period=True
-        )
-        if upper is None:
+        if not self.coordinator.passive_mode_enabled:
             return
-        settings = self._settings(room_id)
-        settings["passive_upper_override"] = upper
-        self._set_schedule_override_marker(settings, room)
-        await self._async_save()
 
-    async def async_advance_passive_lower_schedule(self, room_id) -> None:
-        """Pair Wiser's Advance Schedule override with the next lower slot."""
-        room = self._room(room_id)
-        schedule = getattr(room, "schedule", None)
-        if room is None or schedule is None:
-            return
-        if self.schedule_uses_external_range(schedule):
-            next_period = getattr(schedule, "next", None)
-            try:
-                lower = float(next_period.setting)
-            except (AttributeError, TypeError, ValueError):
-                return
-        elif self.schedule_uses_native_range(schedule):
-            lower = self._scheduled_temperature(
-                room, self._lower_schedules, next_period=True
+        transition = getattr(next_period, "datetime", None)
+        control = None
+        if isinstance(transition, datetime):
+            controls = self._passive_control_schedules.get(str(schedule.id), {})
+            control = controls.get(WEEKDAYS[transition.weekday()], {}).get(
+                transition.strftime("%H:%M")
             )
+
+        limiter = self.uses_temperature_limiter(room.id)
+        if (
+            isinstance(control, dict)
+            and control.get("scheduled", True)
+            and control.get("enabled")
+        ):
+            lower = float(control["lower"])
+            upper = float(control["upper"]) if limiter else None
         else:
+            lower = None
+            upper = (
+                self._scheduled_temperature(room, self._upper_schedules, next_period=True)
+                if limiter
+                else None
+            )
+            if self.schedule_uses_external_range(schedule):
+                try:
+                    lower = float(next_period.setting)
+                except (AttributeError, TypeError, ValueError):
+                    pass
+            elif self.schedule_uses_native_range(schedule):
+                lower = self._scheduled_temperature(
+                    room, self._lower_schedules, next_period=True
+                )
+
+        if lower is None and upper is None:
             return
-        if lower is None:
-            return
-        settings = self._settings(room_id)
-        settings["passive_lower_override"] = lower
+        settings = self._settings(room.id)
+        if lower is not None:
+            settings["passive_lower_override"] = lower
+        if upper is not None:
+            settings["passive_upper_override"] = upper
         self._set_schedule_override_marker(settings, room)
         await self._async_save()
 

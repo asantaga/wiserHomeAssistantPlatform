@@ -495,7 +495,16 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         _LOGGER.debug("Setting Preset Mode %s for %s", preset_mode, self._room.name)
         try:
             api_preset_mode = WISER_PRESET_TO_API.get(preset_mode, preset_mode)
-            await self._room.set_preset(api_preset_mode)
+            if (
+                self._room.passive_mode_enabled
+                and api_preset_mode == WiserPresetOptionsEnum.advance_schedule.value
+                and api_preset_mode in self._room.available_presets
+            ):
+                await self._data.external_room_control.async_advance_passive_schedule(
+                    self._room
+                )
+            else:
+                await self._room.set_preset(api_preset_mode)
             if (
                 self._room.passive_mode_enabled
                 and api_preset_mode == WiserPresetOptionsEnum.cancel_overrides.value
@@ -504,16 +513,6 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
                     self._room_id
                 )
                 await self._data.external_room_control.async_cancel_upper_override(
-                    self._room_id
-                )
-            if (
-                self._room.passive_mode_enabled
-                and api_preset_mode == WiserPresetOptionsEnum.advance_schedule.value
-            ):
-                await self._data.external_room_control.async_advance_passive_lower_schedule(
-                    self._room_id
-                )
-                await self._data.external_room_control.async_advance_upper_schedule(
                     self._room_id
                 )
         except ValueError as ex:
