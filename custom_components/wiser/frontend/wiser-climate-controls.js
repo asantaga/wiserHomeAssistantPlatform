@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-climate-controls 1.7.0 */
+/*! WISER-CARD-VERSION wiser-climate-controls 1.7.1 */
 
 // The structure and behaviour in this control deliberately follow Home
 // Assistant's native MoreInfoClimate and HaStateControlClimateTemperature:
@@ -38,6 +38,7 @@ const cssString = (value) =>
   String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 
 const climateStyleGenerations = new WeakMap();
+const originalClimateModeColors = new WeakMap();
 
 const visitShadowDom = (root, visitor) => {
   for (const element of root.querySelectorAll?.("*") || []) {
@@ -78,6 +79,29 @@ const climateStatusForState = (stateObj) => {
 const wiserClimateControlsEnabled = (stateObj) =>
   stateObj?.attributes?.custom_ui_more_info === WISER_MORE_INFO_TYPE;
 
+const setWiserModeColor = (control, property, color) => {
+  const original = originalClimateModeColors.get(control);
+  if (original && original.property !== property) {
+    if (original.value) {
+      control.style.setProperty(
+        original.property, original.value, original.priority
+      );
+    } else {
+      control.style.removeProperty(original.property);
+    }
+    originalClimateModeColors.delete(control);
+  }
+  if (!property) return;
+  if (original?.property !== property) {
+    originalClimateModeColors.set(control, {
+      property,
+      value: control.style.getPropertyValue(property),
+      priority: control.style.getPropertyPriority(property),
+    });
+  }
+  control.style.setProperty(property, color);
+};
+
 const clearWiserClimateStyle = (control) => {
   const injectedStyle = control.shadowRoot?.querySelector(
     "style[data-wiser-theme]"
@@ -99,12 +123,10 @@ const clearWiserClimateStyle = (control) => {
     "--wiser-slider-opacity",
     "--wiser-label-color",
     "--wiser-extra-info-text",
-    "--state-climate-auto-color",
-    "--state-climate-heat-color",
-    "--state-climate-off-color",
   ]) {
     control.style.removeProperty(property);
   }
+  setWiserModeColor(control);
   injectedStyle?.remove();
   control.shadowRoot
     ?.querySelector("ha-control-circular-slider")
@@ -160,7 +182,11 @@ const applyWiserClimateStyle = async (control, stateObj) => {
   control.style.setProperty("--wiser-slider-color", sliderColor);
   control.style.setProperty("--wiser-slider-opacity", sliderOpacity);
   control.style.setProperty("--wiser-label-color", labelColor);
-  control.style.setProperty(`--state-climate-${state}-color`, modeColor);
+  // Heating hot water in Heat mode already reads the theme's heat colour.
+  const modeProperty = heatingWater && state === "heat"
+    ? undefined
+    : `--state-climate-${state}-color`;
+  setWiserModeColor(control, modeProperty, modeColor);
   control.style.setProperty(
     "--wiser-extra-info-text",
     `"${cssString(climateStatusForState(stateObj))}"`
