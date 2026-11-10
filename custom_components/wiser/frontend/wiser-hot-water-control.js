@@ -507,7 +507,9 @@ class OpenThermPresetsSelector extends HTMLElement {
     this._button.textContent = this._label || "Presets";
     this._button.disabled = Boolean(this._disabled);
     const count = this._value?.length || 0;
-    this._summary.textContent = `${count} of ${MAX_PRESETS} presets configured`;
+    this._summary.textContent = count > MAX_PRESETS
+      ? `${count} presets configured`
+      : `${count} of ${MAX_PRESETS} presets configured`;
   }
 }
 

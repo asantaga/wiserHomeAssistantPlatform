@@ -954,14 +954,26 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     user_input.get(CONF_OPENTHERM_HOT_WATER_PRESETS, preset_default),
                     minimum,
                     maximum,
+                    max_presets=max(
+                        MAX_OPENTHERM_HOT_WATER_PRESETS, len(preset_default)
+                    ),
                 )
-                if user_input.get(
+                control_enabled = user_input.get(
                     CONF_OPENTHERM_HOT_WATER_CONTROL,
                     self.config_entry.options.get(CONF_OPENTHERM_HOT_WATER_CONTROL),
-                ):
-                    presets = ensure_opentherm_timed_presets(presets, minimum, maximum)
-                    if len(presets) > MAX_OPENTHERM_HOT_WATER_PRESETS:
-                        raise vol.Invalid("Too many presets")
+                )
+                if control_enabled or len(presets) > MAX_OPENTHERM_HOT_WATER_PRESETS:
+                    with_timed_presets = ensure_opentherm_timed_presets(
+                        presets, minimum, maximum
+                    )
+                    if (
+                        len(presets) > MAX_OPENTHERM_HOT_WATER_PRESETS
+                        and len(with_timed_presets) > len(presets)
+                    ):
+                        raise vol.Invalid(
+                            "An expanded preset list must keep a timed preset"
+                        )
+                    presets = with_timed_presets
             except vol.Invalid:
                 errors["base"] = "invalid_hot_water_presets"
             else:
