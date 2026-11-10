@@ -20,6 +20,12 @@ For more information checkout the AMAZING community thread available on
 
 ## What's New in 4.1.0b0?
 
+### Diagnostics
+This diagnostic beta helps investigate duplicate and unavailable entities reported after upgrading to v4.
+
+- Adds Wiser entity-registry metadata to downloaded integration diagnostics, including entity IDs, unique IDs, associated device records and creation times
+- Makes no entity-registry changes; the additional information is read-only and intended to support issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792)
+
 ### External Room Control
 
 This beta adds External Room Control and expands Passive Mode. Downloaded diagnostics also include read-only Wiser entity-registry details, including entity IDs, unique IDs, associated device records and creation times, to help investigate duplicate or unavailable entities after upgrading to v4. [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792)

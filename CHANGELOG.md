@@ -9,6 +9,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Upgrade notes
 
 - Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
 
 ### Added
 
@@ -20,6 +21,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 - Schedule copies carry Passive Mode metadata, and panel and service calls share limiter assignment validation. Advance Schedule applies both limiter thresholds from the next slot, and scheduled mode changes preserve manual boosts. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Local builds produce an unpacked integration alongside the ZIP. A build replaces an existing unpacked directory only when it matches the previous ZIP. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+- Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
 
 
 ## v4.0.2
