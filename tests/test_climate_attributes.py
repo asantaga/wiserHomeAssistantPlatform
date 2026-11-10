@@ -159,8 +159,9 @@ class ClimateControlsFrontendTest(unittest.TestCase):
         self.assertIn("element?.editMode === true", self.source)
         self.assertIn('max-width: 360px', self.source)
         self.assertIn('row.toggleAttribute("data-editor-preview"', self.source)
-        self.assertIn('bottom.style.display = "none"', self.source)
-        self.assertIn("bottom.columns = 1", self.source)
+        self.assertIn('bottom.style.setProperty("display", "none")', self.source)
+        self.assertIn("nativeFeatureDisplays.get(bottom)", self.source)
+        self.assertNotIn("bottom.columns =", self.source)
         self.assertNotIn("thermostatFeatureObservers", self.source)
 
     def test_preset_select_shows_responsive_boost_time_remaining(self) -> None:

@@ -664,6 +664,8 @@ const climateStateForCard = (element) =>
     ? element.hass?.states?.[element._config.entity]
     : undefined;
 
+const nativeFeatureDisplays = new WeakMap();
+
 const restoreNativeThermostatFeatures = (card) => {
   const root = card.shadowRoot;
   if (!root) return;
@@ -674,10 +676,14 @@ const restoreNativeThermostatFeatures = (card) => {
     .querySelector(`style[${THERMOSTAT_FEATURE_STYLE_ATTRIBUTE}]`)
     ?.remove();
   const bottom = root.querySelector("ha-card > hui-card-features");
-  if (bottom) {
-    bottom.style.removeProperty("display");
-    bottom.columns = 1;
-    bottom.features = card._config?.features || [];
+  const display = bottom && nativeFeatureDisplays.get(bottom);
+  if (display) {
+    if (display.value) {
+      bottom.style.setProperty("display", display.value, display.priority);
+    } else {
+      bottom.style.removeProperty("display");
+    }
+    nativeFeatureDisplays.delete(bottom);
   }
 };
 
@@ -835,7 +841,13 @@ const renderInlineThermostatFeatures = (card) => {
     }
   });
   slots.slice(features.length).forEach((slot) => slot.remove());
-  bottom.style.display = "none";
+  if (!nativeFeatureDisplays.has(bottom)) {
+    nativeFeatureDisplays.set(bottom, {
+      value: bottom.style.getPropertyValue("display"),
+      priority: bottom.style.getPropertyPriority("display"),
+    });
+  }
+  bottom.style.setProperty("display", "none");
 };
 
 const climateStateForPresetFeature = (feature) =>
