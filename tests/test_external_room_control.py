@@ -1564,6 +1564,27 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.room.cancel_overrides.assert_awaited_once()
         self.assertIsNone(settings["passive_schedule_original_enabled"])
 
+    async def test_scheduled_passive_exit_waits_for_manual_boost_to_end(self):
+        self.room.passive_mode_enabled = True
+        self.room.is_boosted = True
+        self.room.is_override = True
+        settings = self.controller._rooms["1"]
+        settings["passive_schedule_original_enabled"] = False
+
+        await self.controller.async_update()
+        await self.controller.async_shutdown()
+
+        self.room.set_passive_mode.assert_not_awaited()
+        self.room.cancel_overrides.assert_not_awaited()
+        self.assertIs(settings["passive_schedule_original_enabled"], False)
+
+        self.room.is_boosted = False
+        self.room.is_override = False
+        await self.controller.async_update()
+
+        self.room.set_passive_mode.assert_awaited_once_with(False)
+        self.assertIsNone(settings["passive_schedule_original_enabled"])
+
     async def test_native_passive_lower_uses_local_schedule(self):
         self.controller.coordinator.passive_room_strategies = {}
         self.room.passive_mode_enabled = True

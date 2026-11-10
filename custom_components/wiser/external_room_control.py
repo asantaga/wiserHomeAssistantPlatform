@@ -1376,6 +1376,9 @@ class ExternalRoomControlController:
         """Apply a scheduled mode change and verify the room accepted it."""
         if bool(room.passive_mode_enabled) == enabled:
             return True
+        if room.is_boosted and not self._sensor_boost_is_owned(room):
+            # Changing Passive Mode can replace the active override on the hub.
+            return False
         await room.set_passive_mode(enabled)
         if bool(room.passive_mode_enabled) != enabled:
             return False
