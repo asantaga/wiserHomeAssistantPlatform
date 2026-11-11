@@ -26,6 +26,9 @@
             }
         },
         "select": {
+            "heating_actuator_output_type": {
+                "default": "mdi:radiator"
+            },
             "smartplug_led_indicator": {
                 "default": "mdi:led-on"
             },

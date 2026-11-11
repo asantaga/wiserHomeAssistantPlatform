@@ -362,6 +362,13 @@
       }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Uitgangstype",
+        "state": {
+          "relay": "Relais",
+          "pilot_wire": "Stuurdraad"
+        }
+      },
       "smartplug_mode": {
         "name": "Modus",
         "state": {

@@ -338,6 +338,13 @@
       "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Type de sortie",
+        "state": {
+          "relay": "Relais",
+          "pilot_wire": "Fil pilote"
+        }
+      },
       "smartplug_mode": {
         "name": "Mode",
         "state": {

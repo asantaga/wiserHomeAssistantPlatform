@@ -33,6 +33,7 @@ def _load_select_module() -> ModuleType:
     _module("homeassistant.helpers", entity_registry=SimpleNamespace(async_get=lambda hass: None))
     _module("homeassistant.exceptions", HomeAssistantError=type("HomeAssistantError", (Exception,), {}))
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
+    _module("homeassistant.const", EntityCategory=SimpleNamespace(CONFIG="config"))
 
     class CoordinatorEntity:
         def __init__(self, *_args: object) -> None:
@@ -122,6 +123,7 @@ class SmartPlugSelectTest(unittest.TestCase):
                     get_by_id=self.plugs.get, all=[self.plug], count=1,
                 ),
                 lights=empty, shutters=empty, power_tags_c=empty,
+                heating_actuators=empty,
             ),
         ))
 

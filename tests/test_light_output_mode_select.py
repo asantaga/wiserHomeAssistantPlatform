@@ -33,6 +33,7 @@ def _load_select_module() -> ModuleType:
     _module("homeassistant.helpers", entity_registry=SimpleNamespace(async_get=lambda hass: None))
     _module("homeassistant.exceptions", HomeAssistantError=type("HomeAssistantError", (Exception,), {}))
     _module("homeassistant.core", HomeAssistant=object, callback=lambda func: func)
+    _module("homeassistant.const", EntityCategory=SimpleNamespace(CONFIG="config"))
 
     class CoordinatorEntity:
         def __init__(self, *_args: object) -> None:
@@ -179,6 +180,7 @@ class LightOutputModeSelectTest(unittest.TestCase):
         hub.devices.smartplugs = empty
         hub.devices.shutters = empty
         hub.devices.power_tags_c = empty
+        hub.devices.heating_actuators = empty
         hub.devices.lights.count = 4
         hub.devices.lights.all = [light, old_api, unsupported, onoff]
         hass = SimpleNamespace(data={"wiser": {"entry": {"data": self.data}}})

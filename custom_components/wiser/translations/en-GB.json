@@ -369,6 +369,13 @@
       "power_on_level": { "name": "Power-on level" }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Output type",
+        "state": {
+          "relay": "Relay",
+          "pilot_wire": "Pilot wire"
+        }
+      },
       "smartplug_mode": {
         "name": "Mode",
         "state": {
