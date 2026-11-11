@@ -4,12 +4,11 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.1.0b0
+## v4.1.0b1
 
 ### Upgrade notes
 
 - Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
-- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
 
 ### Added
 
@@ -33,7 +32,6 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Updated hot water More Info controls and added a heating glow when hot water is active.
 - Schedule copies carry Passive Mode metadata, and panel and service calls share limiter assignment validation. Advance Schedule applies both limiter thresholds from the next slot, and scheduled mode changes preserve manual boosts. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Local builds produce an unpacked integration alongside the ZIP. A build replaces an existing unpacked directory only when it matches the previous ZIP. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
-- Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
 
 ### Fixed
 
@@ -41,6 +39,16 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - The OpenTherm preset editor blocks saving temperatures outside the boiler's reported minimum and maximum while keeping numeric input.
 - If the hub is unreachable when an OpenTherm boost expires, the integration retries the return to Manual after the hub recovers. A delayed boiler rejection also triggers one more attempt without restoring the expired preset.
 - Stored hot water boost actions refresh the selected hub and reject a hub that is no longer loaded.
+
+## v4.1.0b0
+
+### Upgrade notes
+
+- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
+
+### Changed
+
+- Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
 
 
 ## v4.0.2
