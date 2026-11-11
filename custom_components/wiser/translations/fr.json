@@ -334,6 +334,13 @@
       "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Type de sortie",
+        "state": {
+          "relay": "Relais",
+          "pilot_wire": "Fil pilote"
+        }
+      },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Comportement à la mise sous tension" },
       "led_indicator": { "name": "Voyant LED" },

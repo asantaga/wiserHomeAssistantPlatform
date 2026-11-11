@@ -356,6 +356,13 @@
       }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Tipo de salida",
+        "state": {
+          "relay": "Relé",
+          "pilot_wire": "Hilo piloto"
+        }
+      },
       "mode": {
         "name": "Modo"
       },

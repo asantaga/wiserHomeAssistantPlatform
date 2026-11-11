@@ -365,6 +365,13 @@
       "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Output type",
+        "state": {
+          "relay": "Relay",
+          "pilot_wire": "Pilot wire"
+        }
+      },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Power-on behavior" },
       "led_indicator": { "name": "LED indicator" },

@@ -356,6 +356,13 @@
       }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Utgångstyp",
+        "state": {
+          "relay": "Relä",
+          "pilot_wire": "Styrledning"
+        }
+      },
       "mode": {
         "name": "Läge"
       },

@@ -12,6 +12,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added a translated output-type selector for compatible heating actuators, supporting Relay and Pilot wire where the hub and API provide control - issue [#797](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/797).
 - Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
 - Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.

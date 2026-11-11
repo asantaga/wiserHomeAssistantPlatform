@@ -356,6 +356,13 @@
       }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Kimenet típusa",
+        "state": {
+          "relay": "Relé",
+          "pilot_wire": "Vezérlővezeték"
+        }
+      },
       "mode": {
         "name": "Mód"
       },
