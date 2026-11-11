@@ -21,6 +21,8 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
+    MAJOR_VERSION,
+    MINOR_VERSION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -42,6 +44,7 @@ from .const import (
     CONF_LEGACY_NAMING,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
+    CONF_WISER_CLIMATE_CONTROLS,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -55,6 +58,7 @@ from .const import (
     DEFAULT_SETPOINT_MODE,
     DOMAIN,
     MIN_SCAN_INTERVAL,
+    WISER_CLIMATE_CONTROLS_MIN_HA_VERSION,
 )
 from .external_room_control import ExternalRoomControlController
 
@@ -118,6 +122,10 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         self.maximum_temp = TEMP_MAXIMUM
 
         self.legacy_naming = config_entry.options.get(CONF_LEGACY_NAMING, True)
+        self.wiser_climate_controls = (
+            (MAJOR_VERSION, MINOR_VERSION) >= WISER_CLIMATE_CONTROLS_MIN_HA_VERSION
+            and config_entry.options.get(CONF_WISER_CLIMATE_CONTROLS, False)
+        )
 
         # Main option params
         self.boost_temp = config_entry.options.get(

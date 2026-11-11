@@ -85,6 +85,7 @@ from .const import (
     CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_SETPOINT_MODE,
     CONF_SHOW_WISER_SIDEBAR,
+    CONF_WISER_CLIMATE_CONTROLS,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
     DEFAULT_BOOST_TEMP_TIME,
@@ -104,6 +105,7 @@ from .const import (
     EXTERNAL_TEMPERATURE_BOOST_PROPORTIONAL,
     WISER_RESTORE_TEMP_DEFAULT_OPTIONS,
     WISER_SETPOINT_MODES,
+    WISER_CLIMATE_CONTROLS_MIN_HA_VERSION,
     HWCycleModes,
     MAX_OPENTHERM_HOT_WATER_PRESETS,
 )
@@ -1058,30 +1060,37 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_ui_options(self, user_input=None):
         """Configure Wiser UI options, including legacy naming and sidebar panels."""
+        supports_climate_controls = (
+            MAJOR_VERSION, MINOR_VERSION
+        ) >= WISER_CLIMATE_CONTROLS_MIN_HA_VERSION
         if user_input is not None:
-            return self.async_create_entry(
-                data=self.config_entry.options | user_input
-            )
+            if not supports_climate_controls:
+                user_input = dict(user_input)
+                user_input.pop(CONF_WISER_CLIMATE_CONTROLS, None)
+            return self.async_create_entry(data=self.config_entry.options | user_input)
 
+        schema = {
+            vol.Optional(
+                CONF_LEGACY_NAMING,
+                default=self.config_entry.options.get(CONF_LEGACY_NAMING, True),
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_SHOW_WISER_SIDEBAR,
+                default=self.config_entry.options.get(CONF_SHOW_WISER_SIDEBAR, True),
+            ): BooleanSelector(),
+        }
+        if supports_climate_controls:
+            schema[
+                vol.Optional(
+                    CONF_WISER_CLIMATE_CONTROLS,
+                    default=self.config_entry.options.get(
+                        CONF_WISER_CLIMATE_CONTROLS, False
+                    ),
+                )
+            ] = BooleanSelector()
         return self.async_show_form(
             step_id="ui_options",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_LEGACY_NAMING,
-                        default=self.config_entry.options.get(
-                            CONF_LEGACY_NAMING, True
-                        ),
-                    ): BooleanSelector(),
-                    vol.Optional(
-                        CONF_SHOW_WISER_SIDEBAR,
-                        default=self.config_entry.options.get(
-                            CONF_SHOW_WISER_SIDEBAR,
-                            True,
-                        ),
-                    ): BooleanSelector(),
-                }
-            ),
+            data_schema=vol.Schema(schema),
         )
 
     async def async_step_opentherm_sensors(self, user_input=None):

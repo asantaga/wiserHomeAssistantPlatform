@@ -26,6 +26,8 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
             "card_version": version, "add_extra_js_url": register,
             "async_load_registry": AsyncMock(),
             "URL_BASE": "/wiser", "MODE_STORAGE": "storage",
+            "MAJOR_VERSION": 2026, "MINOR_VERSION": 7,
+            "WISER_CLIMATE_CONTROLS_MIN_HA_VERSION": (2026, 7),
         }
         exec(compile(ast.Module(body=[method], type_ignores=[]), str(ROOT / "__init__.py"), "exec"), namespace)
         host = SimpleNamespace(
@@ -41,6 +43,7 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
             [
                 call(ROOT / "wiser-icons.js"),
                 call(ROOT / "wiser-hot-water-control.js"),
+                call(ROOT / "wiser-climate-controls.js"),
             ],
         )
         self.assertEqual(
@@ -51,6 +54,22 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
                     host.hass,
                     "/wiser/wiser-hot-water-control.js?v=sha256-icons",
                 ),
+                call(
+                    host.hass,
+                    "/wiser/wiser-climate-controls.js?v=sha256-icons",
+                ),
             ],
         )
         host._async_wait_for_lovelace_resources.assert_not_awaited()
+
+        register.reset_mock()
+        host._async_register_path.reset_mock()
+        namespace["MINOR_VERSION"] = 6
+        await namespace["async_register"](host)
+        self.assertEqual(
+            register.call_args_list,
+            [
+                call(host.hass, "/wiser/wiser-icons.js?v=sha256-icons"),
+                call(host.hass, "/wiser/wiser-hot-water-control.js?v=sha256-icons"),
+            ],
+        )

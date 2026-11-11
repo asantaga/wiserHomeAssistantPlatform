@@ -234,6 +234,24 @@ class OpenThermHotWaterScheduleTest(unittest.TestCase):
         self.assertIn('*(preset["name"] for preset in self._presets)', source)
         self.assertIn('self._start_boost(preset["duration_minutes"])', source)
 
+    def test_more_info_exposes_and_styles_heating_state(self):
+        entity_source = (COMPONENT / "opentherm_hot_water.py").read_text()
+        frontend_source = (
+            COMPONENT / "frontend/wiser-hot-water-control.js"
+        ).read_text()
+        self.assertIn('"is_heating": hot_water_active is True', entity_source)
+        self.assertIn('label: "Heating water"', frontend_source)
+        self.assertIn('label: "Idle"', frontend_source)
+        self.assertIn("nativeWaterHeaterStateColor", frontend_source)
+        self.assertIn("--state-water_heater-${activity}-color", frontend_source)
+        self.assertIn("--state-${activity}-color", frontend_source)
+        self.assertIn("--state-climate-heat-color", frontend_source)
+        self.assertIn('setProperty(\n      "--action-color"', frontend_source)
+        self.assertIn('removeProperty("--action-color")', frontend_source)
+        self.assertNotIn("--hot-water-heating-color", frontend_source)
+        self.assertNotIn("--hot-water-idle-color", frontend_source)
+        self.assertIn("max-width: 320px", frontend_source)
+
     def test_external_temperature_sensor_updates_and_falls_back_to_opentherm(self):
         source = (COMPONENT / "opentherm_hot_water.py").read_text()
         self.assertIn("CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID", source)

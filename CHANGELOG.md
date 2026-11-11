@@ -13,6 +13,8 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
+- Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
 - Enabling OpenTherm hot water control saves editable 15-, 30- and 45-minute presets when no timed presets are configured. Existing enabled setups without timed presets receive the defaults automatically.
 - The OpenTherm preset selector shows the remaining time during an active timed boost.
@@ -26,6 +28,9 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Changed
 
+- Passive Mode demand now shows **Modulation** or **Limiter**. OpenTherm and relay-controlled rooms continue to show a demand percentage.
+- The Thermostat card editor preview uses dashboard card sizing so the controls wrap as they do on the dashboard.
+- Updated hot water More Info controls and added a heating glow when hot water is active.
 - Schedule copies carry Passive Mode metadata, and panel and service calls share limiter assignment validation. Advance Schedule applies both limiter thresholds from the next slot, and scheduled mode changes preserve manual boosts. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Local builds produce an unpacked integration alongside the ZIP. A build replaces an existing unpacked directory only when it matches the previous ZIP. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
