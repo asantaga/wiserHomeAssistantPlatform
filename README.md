@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v4.1.0b0
+# Wiser Home Assistant Integration v4.1.0b1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -18,7 +18,7 @@ Detailed information about this integration has now been moved to our [Wiki page
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 4.1.0b0?
+## What's New in 4.1.0b1?
 
 ### Diagnostics
 This diagnostic beta helps investigate duplicate and unavailable entities reported after upgrading to v4.
