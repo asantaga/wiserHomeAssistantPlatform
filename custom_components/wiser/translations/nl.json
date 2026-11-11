@@ -359,15 +359,32 @@
       }
     },
     "select": {
-      "output_mode": { "name": "Uitgangsmodus" },
+      "output_mode": {
+        "name": "Uitgangsmodus",
+        "state": {
+          "auto": "Automatisch",
+          "rl_led": "RL-ledmodus"
+        }
+      },
       "mode": {
         "name": "Modus"
       },
       "power_on_behavior": {
-        "name": "Inschakelgedrag"
+        "name": "Inschakelgedrag",
+        "state": {
+          "last_brightness": "Laatste helderheid",
+          "specified_brightness": "Ingestelde helderheid"
+        }
       },
       "led_indicator": {
-        "name": "LED-indicator"
+        "name": "LED-indicator",
+        "state": {
+          "reverse_with_load": "Tegengesteld aan belasting",
+          "consistent_with_load": "Belasting volgen",
+          "always_on": "Altijd aan",
+          "always_off": "Altijd uit",
+          "off_after_2s": "Uit na 2 seconden"
+        }
       },
       "passive_mode_strategy": {
         "name": "Strategie voor passieve modus",

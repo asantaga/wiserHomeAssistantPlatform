@@ -335,10 +335,31 @@
       "power_on_level": { "name": "Einschaltniveau" }
     },
     "select": {
-      "output_mode": { "name": "Ausgangsmodus" },
+      "output_mode": {
+        "name": "Ausgangsmodus",
+        "state": {
+          "auto": "Automatisch",
+          "rl_led": "RL-LED-Modus"
+        }
+      },
       "mode": { "name": "Modus" },
-      "power_on_behavior": { "name": "Einschaltverhalten" },
-      "led_indicator": { "name": "LED-Anzeige" },
+      "power_on_behavior": {
+        "name": "Einschaltverhalten",
+        "state": {
+          "last_brightness": "Letzte Helligkeit",
+          "specified_brightness": "Festgelegte Helligkeit"
+        }
+      },
+      "led_indicator": {
+        "name": "LED-Anzeige",
+        "state": {
+          "reverse_with_load": "Entgegengesetzt zur Last",
+          "consistent_with_load": "Last folgen",
+          "always_on": "Immer an",
+          "always_off": "Immer aus",
+          "off_after_2s": "Nach 2 Sekunden aus"
+        }
+      },
       "passive_mode_strategy": {
         "name": "Passivmodus-Strategie",
         "state": {

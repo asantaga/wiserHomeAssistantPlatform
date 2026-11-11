@@ -389,8 +389,53 @@ class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self.async_write_ha_state()
 
 
-class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
+class _WiserTranslatedLightSelect(WiserSelectEntity):
+    """Translate stable option keys while keeping hub commands in API format."""
+
+    _option_values: dict[str, str]
+    _value_attribute: str
+    _setter: str
+
+    @property
+    def options(self) -> list[str]:
+        """Return translatable keys for the options supported by this light."""
+        return [
+            key for key, value in self._option_values.items() if value in self._options
+        ]
+
+    @property
+    def current_option(self) -> str | None:
+        """Map the hub-reported value to its stable translation key."""
+        value = getattr(self._device, self._value_attribute)
+        return next(
+            (key for key, raw in self._option_values.items() if raw == value), None
+        )
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        """Send the API value, accepting legacy raw values from service calls."""
+        value = self._option_values.get(option, option)
+        if value not in self._option_values.values() or value not in self._options:
+            raise HomeAssistantError(f"Unsupported light configuration option: {option}")
+        if await getattr(self._device, self._setter)(value) is False:
+            raise HomeAssistantError(
+                "The Wiser hub rejected the light configuration update."
+            )
+        await self.async_force_update()
+
+
+class WiserLightPowerOnBehaviourSelect(_WiserTranslatedLightSelect):
+    """Configure translated power-on behaviour for a light channel."""
+
+    _option_values = {
+        "last_brightness": "LastOnBrightness",
+        "specified_brightness": "LevelPercent",
+    }
+    _value_attribute = "power_on_behaviour"
+    _setter = "set_power_on_behaviour"
+
     _attr_translation_key = "power_on_behavior"
+
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         # See WiserLightModeSelect: resolve by the unique per-channel light_id.
@@ -420,31 +465,22 @@ class WiserLightPowerOnBehaviourSelect(WiserSelectEntity):
             self._light_id,
         )
 
-    @property
-    def name(self):
-        """Return Name of device."""
-        return get_light_entity_name(
-            self._data, self._device, "Power On Behaviour"
-        )
 
-    @property
-    def current_option(self) -> str:
-        return self._device.power_on_behaviour
+class WiserLightLedIndicatorSelect(_WiserTranslatedLightSelect):
+    """Configure translated LED indicator behaviour for a light channel."""
 
-    @hub_error_handler
-    async def async_select_option(self, option: str) -> None:
-        _LOGGER.debug(f"Setting {self.name} to {option}")
-        if option in self._options:
-            await self._device.set_power_on_behaviour(option)
-            await self.async_force_update()
-        else:
-            _LOGGER.error(
-                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
-            )
+    _option_values = {
+        "reverse_with_load": "ReverseWithLoad",
+        "consistent_with_load": "ConsistentWithLoad",
+        "always_on": "AlwaysOn",
+        "always_off": "AlwaysOff",
+        "off_after_2s": "OffAfter2s",
+    }
+    _value_attribute = "led_indicator"
+    _setter = "set_led_indicator"
 
-
-class WiserLightLedIndicatorSelect(WiserSelectEntity):
     _attr_translation_key = "led_indicator"
+
     def __init__(self, data, light_id) -> None:
         """Initialize the sensor."""
         # See WiserLightModeSelect: resolve by the unique per-channel light_id.
@@ -474,29 +510,13 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             self._light_id,
         )
 
-    @property
-    def name(self):
-        """Return Name of device."""
-        return get_light_entity_name(self._data, self._device, "LED Indicator")
 
-    @property
-    def current_option(self) -> str:
-        return self._device.led_indicator
-
-    @hub_error_handler
-    async def async_select_option(self, option: str) -> None:
-        _LOGGER.debug(f"Setting {self.name} to {option}")
-        if option in self._options:
-            await self._device.set_led_indicator(option)
-            await self.async_force_update()
-        else:
-            _LOGGER.error(
-                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
-            )
-
-
-class WiserLightOutputModeSelect(WiserSelectEntity):
+class WiserLightOutputModeSelect(_WiserTranslatedLightSelect):
     """Configure the output mode of one dimmer channel."""
+
+    _option_values = {"auto": "Auto", "rl_led": "RL_LED"}
+    _value_attribute = "output_mode"
+    _setter = "set_output_mode"
 
     _attr_translation_key = "output_mode"
 
@@ -523,17 +543,3 @@ class WiserLightOutputModeSelect(WiserSelectEntity):
         return get_unique_id(
             self._data, self._device.product_type, "output_mode", self._light_id
         )
-
-    @property
-    def current_option(self) -> str:
-        """Return the hub-reported output mode."""
-        return self._device.output_mode
-
-    @hub_error_handler
-    async def async_select_option(self, option: str) -> None:
-        """Apply a supported output mode and refresh the hub."""
-        if option not in self._options:
-            raise HomeAssistantError(f"Unsupported light output mode: {option}")
-        if await self._device.set_output_mode(option) is False:
-            raise HomeAssistantError("The Wiser hub rejected the output-mode update.")
-        await self.async_force_update()

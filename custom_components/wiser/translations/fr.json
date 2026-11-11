@@ -335,10 +335,31 @@
       "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
-      "output_mode": { "name": "Mode de sortie" },
+      "output_mode": {
+        "name": "Mode de sortie",
+        "state": {
+          "auto": "Automatique",
+          "rl_led": "Mode LED RL"
+        }
+      },
       "mode": { "name": "Mode" },
-      "power_on_behavior": { "name": "Comportement à la mise sous tension" },
-      "led_indicator": { "name": "Voyant LED" },
+      "power_on_behavior": {
+        "name": "Comportement à la mise sous tension",
+        "state": {
+          "last_brightness": "Dernière luminosité",
+          "specified_brightness": "Luminosité définie"
+        }
+      },
+      "led_indicator": {
+        "name": "Voyant LED",
+        "state": {
+          "reverse_with_load": "Inverse de la charge",
+          "consistent_with_load": "Suivre la charge",
+          "always_on": "Toujours allumé",
+          "always_off": "Toujours éteint",
+          "off_after_2s": "Éteint après 2 secondes"
+        }
+      },
       "passive_mode_strategy": {
         "name": "Stratégie du mode passif",
         "state": {

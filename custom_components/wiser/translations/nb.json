@@ -359,15 +359,32 @@
       }
     },
     "select": {
-      "output_mode": { "name": "Utgangsmodus" },
+      "output_mode": {
+        "name": "Utgangsmodus",
+        "state": {
+          "auto": "Automatisk",
+          "rl_led": "RL LED-modus"
+        }
+      },
       "mode": {
         "name": "Modus"
       },
       "power_on_behavior": {
-        "name": "Oppstartsadferd"
+        "name": "Oppstartsadferd",
+        "state": {
+          "last_brightness": "Siste lysstyrke",
+          "specified_brightness": "Angitt lysstyrke"
+        }
       },
       "led_indicator": {
-        "name": "LED-indikator"
+        "name": "LED-indikator",
+        "state": {
+          "reverse_with_load": "Motsatt av lasten",
+          "consistent_with_load": "Følg lasten",
+          "always_on": "Alltid på",
+          "always_off": "Alltid av",
+          "off_after_2s": "Av etter 2 sekunder"
+        }
       },
       "passive_mode_strategy": {
         "name": "Strategi for passiv modus",

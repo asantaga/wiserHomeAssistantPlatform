@@ -359,15 +359,32 @@
       }
     },
     "select": {
-      "output_mode": { "name": "Lähtötila" },
+      "output_mode": {
+        "name": "Lähtötila",
+        "state": {
+          "auto": "Automaattinen",
+          "rl_led": "RL LED -tila"
+        }
+      },
       "mode": {
         "name": "Tila"
       },
       "power_on_behavior": {
-        "name": "Käynnistyskäyttäytyminen"
+        "name": "Käynnistyskäyttäytyminen",
+        "state": {
+          "last_brightness": "Viimeisin kirkkaus",
+          "specified_brightness": "Määritetty kirkkaus"
+        }
       },
       "led_indicator": {
-        "name": "LED-merkkivalo"
+        "name": "LED-merkkivalo",
+        "state": {
+          "reverse_with_load": "Kuorman vastainen",
+          "consistent_with_load": "Seuraa kuormaa",
+          "always_on": "Aina päällä",
+          "always_off": "Aina pois",
+          "off_after_2s": "Pois 2 sekunnin jälkeen"
+        }
       },
       "passive_mode_strategy": {
         "name": "Passiivitilan strategia",

@@ -120,7 +120,7 @@ class LightOutputModeSelectTest(unittest.TestCase):
 
         self.assertIs(select._device, light)
         self.assertEqual(select._device_id, light.id)
-        self.assertEqual(select.options, light.available_output_mode)
+        self.assertEqual(select.options, ["auto", "rl_led"])
         self.assertEqual(select.unique_id[-1], light.light_id)
 
         self.data.wiserhub.devices.lights.get_by_light_id = lambda _id: SimpleNamespace(
@@ -128,11 +128,11 @@ class LightOutputModeSelectTest(unittest.TestCase):
         )
         select._handle_coordinator_update()
 
-        self.assertEqual(select.current_option, "RL_LED")
-        self.assertEqual(select.options, light.available_output_mode)
+        self.assertEqual(select.current_option, "rl_led")
+        self.assertEqual(select.options, ["auto", "rl_led"])
 
     def test_valid_selection_sends_to_channel_and_refreshes(self) -> None:
-        asyncio.run(self.entity.async_select_option("RL_LED"))
+        asyncio.run(self.entity.async_select_option("rl_led"))
         self.light.set_output_mode.assert_awaited_once_with("RL_LED")
         self.entity.async_force_update.assert_awaited_once()
 
@@ -145,7 +145,7 @@ class LightOutputModeSelectTest(unittest.TestCase):
     def test_failed_selection_does_not_refresh(self) -> None:
         self.light.set_output_mode.return_value = False
         with self.assertRaises(self.select_module.HomeAssistantError):
-            asyncio.run(self.entity.async_select_option("RL_LED"))
+            asyncio.run(self.entity.async_select_option("rl_led"))
         self.entity.async_force_update.assert_not_awaited()
 
     def test_shared_physical_device_has_distinct_channel_ids(self) -> None:
@@ -187,6 +187,82 @@ class LightOutputModeSelectTest(unittest.TestCase):
         )]
         self.assertEqual(len(controls), 1)
         self.assertEqual(controls[0]._light_id, light.light_id)
+
+    def test_legacy_api_option_still_sends_the_original_value(self) -> None:
+        asyncio.run(self.entity.async_select_option("RL_LED"))
+        self.light.set_output_mode.assert_awaited_once_with("RL_LED")
+
+
+class LightConfigurationTranslationsTest(unittest.TestCase):
+    """Translate option states while retaining the API command contract."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.module = _load_select_module()
+
+    def make_entity(self, entity_class, options_attribute, state_attribute, options):
+        """Create a configuration select backed by a distinct light channel."""
+        light = SimpleNamespace(
+            id=200, light_id=3, product_type="DimmableLight", firmware_version="1.0",
+        )
+        setattr(light, options_attribute, options)
+        setattr(light, state_attribute, options[0])
+        setter = AsyncMock(return_value=True)
+        setattr(light, entity_class._setter, setter)
+        data = SimpleNamespace(wiserhub=SimpleNamespace(
+            system=SimpleNamespace(name="Test"),
+            devices=SimpleNamespace(lights=SimpleNamespace(get_by_light_id=lambda _id: light)),
+        ))
+        entity = entity_class(data, 3)
+        entity.async_force_update = AsyncMock()
+        entity.async_write_ha_state = lambda: None
+        return entity, light, setter
+
+    def test_power_on_and_led_options_round_trip(self) -> None:
+        for cls_name, options_attr, state_attr in (
+            ("WiserLightPowerOnBehaviourSelect", "available_power_on_behaviour", "power_on_behaviour"),
+            ("WiserLightLedIndicatorSelect", "available_led_indicator", "led_indicator"),
+        ):
+            entity_class = getattr(self.module, cls_name)
+            mapping = entity_class._option_values
+            entity, light, setter = self.make_entity(
+                entity_class, options_attr, state_attr, list(mapping.values())
+            )
+            self.assertEqual(entity.options, list(mapping))
+            for key, raw in mapping.items():
+                with self.subTest(entity=cls_name, option=key):
+                    setattr(light, state_attr, raw)
+                    self.assertEqual(entity.current_option, key)
+                    for option in (key, raw):
+                        setter.reset_mock()
+                        asyncio.run(entity.async_select_option(option))
+                        setter.assert_awaited_once_with(raw)
+
+    def test_only_hub_supported_options_are_exposed(self) -> None:
+        entity, light, setter = self.make_entity(
+            self.module.WiserLightLedIndicatorSelect,
+            "available_led_indicator", "led_indicator", ["AlwaysOn"],
+        )
+        self.assertEqual(entity.options, ["always_on"])
+        with self.assertRaises(self.module.HomeAssistantError):
+            asyncio.run(entity.async_select_option("always_off"))
+        setter.assert_not_awaited()
+        light.led_indicator = "Unknown"
+        self.assertIsNone(entity.current_option)
+
+    def test_all_catalogues_translate_each_configuration_option(self) -> None:
+        import json
+        component = SOURCE_PATH.parent
+        for path in [component / "strings.json", *(component / "translations").glob("*.json")]:
+            catalogue = json.loads(path.read_text())["entity"]["select"]
+            for cls_name in (
+                "WiserLightPowerOnBehaviourSelect", "WiserLightLedIndicatorSelect", "WiserLightOutputModeSelect"
+            ):
+                cls = getattr(self.module, cls_name)
+                with self.subTest(path=path.name, entity=cls_name):
+                    states = catalogue[cls._attr_translation_key]["state"]
+                    self.assertEqual(set(states), set(cls._option_values))
+                    self.assertTrue(all(isinstance(label, str) and label for label in states.values()))
 
 
 if __name__ == "__main__":

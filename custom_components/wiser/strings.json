@@ -371,10 +371,31 @@
       "power_on_level": { "name": "Power-on level" }
     },
     "select": {
-      "output_mode": { "name": "Output mode" },
+      "output_mode": {
+        "name": "Output mode",
+        "state": {
+          "auto": "Automatic",
+          "rl_led": "RL LED mode"
+        }
+      },
       "mode": { "name": "Mode" },
-      "power_on_behavior": { "name": "Power-on behavior" },
-      "led_indicator": { "name": "LED indicator" },
+      "power_on_behavior": {
+        "name": "Power-on behavior",
+        "state": {
+          "last_brightness": "Last brightness",
+          "specified_brightness": "Specified brightness"
+        }
+      },
+      "led_indicator": {
+        "name": "LED indicator",
+        "state": {
+          "reverse_with_load": "Opposite to load",
+          "consistent_with_load": "Follow load",
+          "always_on": "Always on",
+          "always_off": "Always off",
+          "off_after_2s": "Off after 2 seconds"
+        }
+      },
       "passive_mode_strategy": {
         "name": "Passive mode strategy",
         "state": {

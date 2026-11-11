@@ -359,15 +359,32 @@
       }
     },
     "select": {
-      "output_mode": { "name": "Udgangstilstand" },
+      "output_mode": {
+        "name": "Udgangstilstand",
+        "state": {
+          "auto": "Automatisk",
+          "rl_led": "RL LED-tilstand"
+        }
+      },
       "mode": {
         "name": "Tilstand"
       },
       "power_on_behavior": {
-        "name": "Startadfærd"
+        "name": "Startadfærd",
+        "state": {
+          "last_brightness": "Seneste lysstyrke",
+          "specified_brightness": "Angivet lysstyrke"
+        }
       },
       "led_indicator": {
-        "name": "LED-indikator"
+        "name": "LED-indikator",
+        "state": {
+          "reverse_with_load": "Modsat belastningen",
+          "consistent_with_load": "Følg belastningen",
+          "always_on": "Altid tændt",
+          "always_off": "Altid slukket",
+          "off_after_2s": "Sluk efter 2 sekunder"
+        }
       },
       "passive_mode_strategy": {
         "name": "Strategi for passiv tilstand",

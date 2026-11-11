@@ -8,6 +8,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Upgrade notes
 
+- Light configuration selectors now report translation keys such as `last_brightness` and `specified_brightness`. Update automations that compare their states; service calls using the previous API option values remain accepted - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
 - Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 
 ### Added
@@ -28,6 +29,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Changed
 
+- Light power-on behaviour, LED indicator and output-mode selectors show translated option descriptions instead of raw API values - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
 - Passive Mode demand now shows **Modulation** or **Limiter**. OpenTherm and relay-controlled rooms continue to show a demand percentage.
 - The Thermostat card editor preview uses dashboard card sizing so the controls wrap as they do on the dashboard.
 - Updated hot water More Info controls and added a heating glow when hot water is active.

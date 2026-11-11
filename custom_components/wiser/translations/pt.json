@@ -359,15 +359,32 @@
       }
     },
     "select": {
-      "output_mode": { "name": "Modo de saída" },
+      "output_mode": {
+        "name": "Modo de saída",
+        "state": {
+          "auto": "Automático",
+          "rl_led": "Modo LED RL"
+        }
+      },
       "mode": {
         "name": "Modo"
       },
       "power_on_behavior": {
-        "name": "Comportamento de inicialização"
+        "name": "Comportamento de inicialização",
+        "state": {
+          "last_brightness": "Último brilho",
+          "specified_brightness": "Brilho definido"
+        }
       },
       "led_indicator": {
-        "name": "Indicador LED"
+        "name": "Indicador LED",
+        "state": {
+          "reverse_with_load": "Oposto à carga",
+          "consistent_with_load": "Seguir a carga",
+          "always_on": "Sempre ligado",
+          "always_off": "Sempre desligado",
+          "off_after_2s": "Desligar após 2 segundos"
+        }
       },
       "passive_mode_strategy": {
         "name": "Estratégia do modo passivo",
