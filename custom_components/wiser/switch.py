@@ -697,9 +697,10 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
             attrs["next_schedule_change"] = str(self._device.schedule.next.time)
             attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
             attrs["next_schedule_state"] = self._device.schedule.next.setting
-        # smart schedules
-        attrs["next_scheduled_date"] = self._device.next_scheduled_date
-        attrs["next_scheduled_end_date"] = self._device.next_scheduled_end_date
+        # These smart-schedule fields are absent from older released APIs.
+        for attribute in ("next_scheduled_date", "next_scheduled_end_date"):
+            if hasattr(self._device, attribute):
+                attrs[attribute] = getattr(self._device, attribute)
         return attrs
 
     @hub_error_handler

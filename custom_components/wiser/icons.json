@@ -16,6 +16,11 @@
                     }
                 }
             }
+        },
+        "select": {
+            "smartplug_led_indicator": {
+                "default": "mdi:led-on"
+            }
         }
     },
     "services": {

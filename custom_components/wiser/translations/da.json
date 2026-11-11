@@ -356,6 +356,22 @@
       }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Tilstand",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuel"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED-indikator",
+        "state": {
+          "reverse_with_load": "Modsat belastningen",
+          "consistent_with_load": "Følg belastningen",
+          "always_on": "Altid tændt",
+          "always_off": "Altid slukket"
+        }
+      },
       "mode": {
         "name": "Tilstand"
       },
