@@ -371,6 +371,7 @@
       "power_on_level": { "name": "Power-on level" }
     },
     "select": {
+      "output_mode": { "name": "Output mode" },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Power-on behavior" },
       "led_indicator": { "name": "LED indicator" },

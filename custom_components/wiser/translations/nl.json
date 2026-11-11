@@ -359,6 +359,7 @@
       }
     },
     "select": {
+      "output_mode": { "name": "Uitgangsmodus" },
       "mode": {
         "name": "Modus"
       },

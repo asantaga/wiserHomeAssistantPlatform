@@ -335,6 +335,7 @@
       "power_on_level": { "name": "Einschaltniveau" }
     },
     "select": {
+      "output_mode": { "name": "Ausgangsmodus" },
       "mode": { "name": "Modus" },
       "power_on_behavior": { "name": "Einschaltverhalten" },
       "led_indicator": { "name": "LED-Anzeige" },

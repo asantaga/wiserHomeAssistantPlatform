@@ -359,6 +359,7 @@
       }
     },
     "select": {
+      "output_mode": { "name": "Utgångsläge" },
       "mode": {
         "name": "Läge"
       },

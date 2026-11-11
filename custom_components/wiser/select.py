@@ -1,8 +1,13 @@
+"""Wiser configuration and operating-mode selects."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -82,14 +87,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 )
 
             if light.is_dimmable:
-#                if light.is_led_indicator_supported:
-#                    wiser_selects.extend([WiserLightLedIndicatorSelect(data, light.id)])
                 if light.is_power_on_behaviour_supported:
                     wiser_selects.extend(
                         [WiserLightPowerOnBehaviourSelect(data, light.light_id)]
                     )
-                # Add output_mode for dimmable lights
-                if light.is_output_mode_supported:
+                if (
+                    light.is_output_mode_supported
+                    and hasattr(light, "available_output_mode")
+                    and callable(getattr(light, "set_output_mode", None))
+                ):
                     wiser_selects.extend(
                         [WiserLightOutputModeSelect(data, light.light_id)]
                     )
@@ -490,8 +496,12 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
 
 
 class WiserLightOutputModeSelect(WiserSelectEntity):
-    def __init__(self, data, light_id) -> None:
-        """Initialize the sensor."""
+    """Configure the output mode of one dimmer channel."""
+
+    _attr_translation_key = "output_mode"
+
+    def __init__(self, data, light_id: int) -> None:
+        """Resolve the light by channel ID, retaining physical device grouping."""
         self._light_id = light_id
         self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
         self._device_id = self._device.id
@@ -500,8 +510,7 @@ class WiserLightOutputModeSelect(WiserSelectEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        super()._handle_coordinator_update()
+        """Refresh the selected channel and its supported output modes."""
         self._device = self._data.wiserhub.devices.lights.get_by_light_id(
             self._light_id
         )
@@ -510,30 +519,21 @@ class WiserLightOutputModeSelect(WiserSelectEntity):
 
     @property
     def unique_id(self):
-        """Return unique ID of device."""
+        """Return a stable ID for this channel's output-mode selector."""
         return get_unique_id(
-            self._data,
-            self._device.product_type,
-            "ouput_mode",
-            self._light_id,
+            self._data, self._device.product_type, "output_mode", self._light_id
         )
 
     @property
-    def name(self):
-        """Return Name of device."""
-        return get_light_entity_name(self._data, self._device, "Output Mode")
-
-    @property
     def current_option(self) -> str:
+        """Return the hub-reported output mode."""
         return self._device.output_mode
 
     @hub_error_handler
     async def async_select_option(self, option: str) -> None:
-        _LOGGER.debug(f"Setting {self.name} to {option}")
-        if option in self._options:
-            await self._device.set_output_mode(option)
-            await self.async_force_update()
-        else:
-            _LOGGER.error(
-                f"{option} is not a valid {self.name}.  Please choose from {self._options}"
-            )
+        """Apply a supported output mode and refresh the hub."""
+        if option not in self._options:
+            raise HomeAssistantError(f"Unsupported light output mode: {option}")
+        if await self._device.set_output_mode(option) is False:
+            raise HomeAssistantError("The Wiser hub rejected the output-mode update.")
+        await self.async_force_update()

@@ -268,6 +268,31 @@ class NumberPowerOnLevelTest(unittest.TestCase):
             )
         )
 
+    def test_invalid_values_do_not_send_commands(self) -> None:
+        for value in (-1, 101, 41.5, True, False, "50", None, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                with self.assertRaises(self.number_module.HomeAssistantError):
+                    asyncio.run(self.entity.async_set_native_value(value))
+                self.assertIsNone(self.light.set_value)
+                self.assertEqual(self.refresh_count, 0)
+
+    def test_percentage_boundaries_are_sent_as_integers(self) -> None:
+        for value in (0.0, 100.0):
+            with self.subTest(value=value):
+                asyncio.run(self.entity.async_set_native_value(value))
+                self.assertEqual(self.light.set_value, value)
+                self.assertIs(type(self.light.set_value), int)
+
+    def test_coordinator_replaces_the_channel_object(self) -> None:
+        replacement = _FakeLight(12)
+        replacement.power_on_level = 75
+        self.lights_by_id[12] = replacement
+        self.entity._handle_coordinator_update()
+        self.assertEqual(self.entity.native_value, 75)
+        asyncio.run(self.entity.async_set_native_value(80))
+        self.assertEqual(replacement.set_value, 80)
+        self.assertIsNone(self.light.set_value)
+
 
 if __name__ == "__main__":
     unittest.main()

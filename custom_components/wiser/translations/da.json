@@ -359,6 +359,7 @@
       }
     },
     "select": {
+      "output_mode": { "name": "Udgangstilstand" },
       "mode": {
         "name": "Tilstand"
       },

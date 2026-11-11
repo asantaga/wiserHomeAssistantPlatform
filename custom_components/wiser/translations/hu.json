@@ -359,6 +359,7 @@
       }
     },
     "select": {
+      "output_mode": { "name": "Kimeneti mód" },
       "mode": {
         "name": "Mód"
       },

@@ -1,3 +1,7 @@
+"""Wiser temperature and light configuration numbers."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 
@@ -423,9 +427,13 @@ class WiserDiscomfortOutdoorTempNumber(
         await self._data.wiserhub.system.set_outdoor_discomfort_temperature(value)
         await self.async_force_update()
 
+
 class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity):
+    """Configure the power-on brightness of one dimmer channel."""
+
     _attr_has_entity_name = True
     _attr_translation_key = "power_on_level"
+    _attr_native_unit_of_measurement = "%"
 
     def __init__(self, coordinator, light_id) -> None:
         """Initialize the sensor."""
@@ -436,13 +444,6 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
         self._light = self._data.wiserhub.devices.lights.get_by_light_id(light_id)
         self._device_id = self._light.id
         self._value = self._light.power_on_level
-
-        # Support prior to 2022.7.0 Versions without deprecation warning
-        if HA_VERSION_OBJ < "2022.7.0":
-            self._attr_min_value = self.native_min_value
-            self._attr_max_value = self.native_max_value
-            self._attr_value = self._light.power_on_level
-            self.set_value = self.set_native_value
 
         _LOGGER.debug(f"{self._light.name} {self._name} initialise")
 
@@ -460,9 +461,6 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
             self._light_id
         )
         self._value = self._light.power_on_level
-        # Support prior to 2022.7.0 Versions without deprecation warning
-        if hasattr(self, "_attr_value"):
-            self._attr_value = self._light.power_on_level
         self.async_write_ha_state()
 
     @property
@@ -477,6 +475,7 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
 
     @property
     def native_step(self) -> float:
+        """Use whole percentage steps."""
         return 1
 
     @property
@@ -485,12 +484,8 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
         return NumberMode.AUTO
 
     @property
-    def icon(self):
-        """Icon for device"""
-        return "mdi:lightbulb-on"
-
-    @property
     def unique_id(self):
+        """Return a stable per-channel identifier."""
         return get_physical_entity_unique_id(
             self._data,
             "number",
@@ -512,11 +507,19 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
         """Return device value"""
         return self._value
 
-    async def async_set_native_value(self, value: int) -> None:
-        """Set new value."""
+    @hub_error_handler
+    async def async_set_native_value(self, value: float) -> None:
+        """Set a whole percentage without sending malformed values to the hub."""
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not 0 <= value <= 100
+            or int(value) != value
+        ):
+            raise HomeAssistantError(
+                "Power-on level must be a whole number between 0 and 100."
+            )
         level = int(value)
-        if level != value:
-            raise HomeAssistantError("Power-on level must be a whole number.")
 
         _LOGGER.debug(f"Setting {self._name} to {level}%")
         set_power_on_level = getattr(self._light, "set_power_on_level", None)

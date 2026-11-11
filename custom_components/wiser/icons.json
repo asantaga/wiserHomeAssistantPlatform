@@ -16,6 +16,16 @@
                     }
                 }
             }
+        },
+        "number": {
+            "power_on_level": {
+                "default": "mdi:lightbulb-on"
+            }
+        },
+        "select": {
+            "output_mode": {
+                "default": "mdi:tune-variant"
+            }
         }
     },
     "services": {

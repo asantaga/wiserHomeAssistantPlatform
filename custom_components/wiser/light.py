@@ -246,9 +246,10 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             attrs["is_output_mode_supported"] = self._device.is_output_mode_supported
             attrs["output_mode"] = self._device.output_mode
 
-        attrs["target_percentage"] = self._device.target_percentage
-        attrs["manual_level"] = self._device.manual_level
-        attrs["scheduled_percentage"] = self._device.scheduled_percentage
+        # Older released APIs expose these only on dimmable lights.
+        for attribute in ("target_percentage", "manual_level", "scheduled_percentage"):
+            if hasattr(self._device, attribute):
+                attrs[attribute] = getattr(self._device, attribute)
 
         # end added by LGO
 
@@ -260,7 +261,7 @@ class WiserLight(WiserEntityMixin, CoordinatorEntity, LightEntity, WiserSchedule
             attrs["next_schedule_change"] = str(self._device.schedule.next.time)
             attrs["next_schedule_datetime"] = str(self._device.schedule.next.datetime)
             attrs["next_schedule_state"] = self._device.schedule.next.setting
-    
+
         return attrs
 
     @hub_error_handler
@@ -374,8 +375,6 @@ class WiserDimmableLight(WiserLight):
         # Status
         attrs["current_percentage"] = self._device.current_percentage
         attrs["current_level"] = self._device.current_level
-        attrs["target_percentage"] = self._device.target_percentage
-        attrs["manual_level"] = self._device.manual_level
         attrs["override_level"] = self._device.override_level
 
         # Schedule

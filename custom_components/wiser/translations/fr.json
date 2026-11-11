@@ -335,6 +335,7 @@
       "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
+      "output_mode": { "name": "Mode de sortie" },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Comportement à la mise sous tension" },
       "led_indicator": { "name": "Voyant LED" },

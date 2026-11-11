@@ -12,6 +12,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added per-channel dimmable-light output-mode and power-on brightness controls where supported, and exposed target, manual and scheduled brightness attributes on all lights with API support - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
 - Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
 - Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
