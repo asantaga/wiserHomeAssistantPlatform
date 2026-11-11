@@ -26,6 +26,9 @@
             }
         },
         "select": {
+            "smartplug_led_indicator": {
+                "default": "mdi:led-on"
+            },
             "output_mode": {
                 "default": "mdi:tune-variant"
             },
