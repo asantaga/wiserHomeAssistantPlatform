@@ -109,7 +109,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passive Mode",
-            "description": "Enable Passive Mode. Configure Modulating or Temperature limiter control on each eligible room device.",
+            "description": "Enable Passive Mode. Control strategies are configured separately on each eligible room device.",
             "data": {
               "automations_passive_mode": "Passive Mode",
               "temperature_increment": "Temperature increment"

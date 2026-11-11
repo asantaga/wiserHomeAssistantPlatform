@@ -83,7 +83,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Modo pasivo",
-            "description": "Activa el modo pasivo. Configura el control modulante o el limitador de temperatura en cada dispositivo de habitación compatible.",
+            "description": "Activa el modo pasivo. Las estrategias de control se configuran por separado en cada dispositivo de habitación compatible.",
             "data": {
               "automations_passive_mode": "Modo pasivo",
               "temperature_increment": "Incremento de temperatura"

@@ -83,7 +83,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passiv tilstand",
-            "description": "Aktivér passiv tilstand. Konfigurer modulerende styring eller temperaturbegrænsning på hver kvalificeret rumenhed.",
+            "description": "Aktivér passiv tilstand. Styringsstrategier konfigureres separat på hver kompatibel rumenhed.",
             "data": {
               "automations_passive_mode": "Passiv tilstand",
               "temperature_increment": "Temperaturtrin"

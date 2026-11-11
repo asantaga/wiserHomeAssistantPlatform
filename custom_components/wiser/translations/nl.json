@@ -83,7 +83,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passieve modus",
-            "description": "Schakel de passieve modus in. Configureer modulerende regeling of temperatuurbegrenzing op elk geschikt kamerapparaat.",
+            "description": "Schakel de passieve modus in. Regelstrategieën worden afzonderlijk ingesteld op elk geschikt kamerapparaat.",
             "data": {
               "automations_passive_mode": "Passieve modus",
               "temperature_increment": "Temperatuurstap"

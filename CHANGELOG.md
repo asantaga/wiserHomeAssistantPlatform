@@ -37,6 +37,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Preserved Temperature limiter hysteresis across reloads and restarts, and removed cooling-mode restrictions on target updates and restoration for assigned heating-capable TRVs.
 - The OpenTherm preset editor blocks saving temperatures outside the boiler's reported minimum and maximum while keeping numeric input.
 - If the hub is unreachable when an OpenTherm boost expires, the integration retries the return to Manual after the hub recovers. A delayed boiler rejection also triggers one more attempt without restoring the expired preset.
 - Stored hot water boost actions refresh the selected hub and reject a hub that is no longer loaded.
