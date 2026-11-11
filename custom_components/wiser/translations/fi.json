@@ -354,11 +354,35 @@
       "outdoor_discomfort_temperature": {
         "name": "Ulkoilman epämukavuuslämpötila"
       },
+      "power_on_level_channel": {
+        "name": "{channel} Käynnistystaso"
+      },
       "power_on_level": {
         "name": "Käynnistystaso"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Tila",
+        "state": {
+          "auto": "Automaattinen",
+          "manual": "Manuaalinen"
+        }
+      },
+      "light_mode": {
+        "name": "Tila",
+        "state": {
+          "auto": "Automaattinen",
+          "manual": "Manuaalinen"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Lähtötila",
+        "state": {
+          "auto": "Automaattinen",
+          "rl_led": "RL LED -tila"
+        }
+      },
       "output_mode": {
         "name": "Lähtötila",
         "state": {
@@ -369,11 +393,28 @@
       "mode": {
         "name": "Tila"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Käynnistyskäyttäytyminen",
+        "state": {
+          "last_brightness": "Viimeisin kirkkaus",
+          "specified_brightness": "Määritetty kirkkaus"
+        }
+      },
       "power_on_behavior": {
         "name": "Käynnistyskäyttäytyminen",
         "state": {
           "last_brightness": "Viimeisin kirkkaus",
           "specified_brightness": "Määritetty kirkkaus"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED-merkkivalo",
+        "state": {
+          "reverse_with_load": "Kuorman vastainen",
+          "consistent_with_load": "Seuraa kuormaa",
+          "always_on": "Aina päällä",
+          "always_off": "Aina pois",
+          "off_after_2s": "Pois 2 sekunnin jälkeen"
         }
       },
       "led_indicator": {

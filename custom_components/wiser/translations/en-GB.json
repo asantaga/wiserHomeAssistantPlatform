@@ -363,9 +363,33 @@
       "floor_temperature_offset": { "name": "Floor temperature offset" },
       "indoor_discomfort_temperature": { "name": "Indoor discomfort temperature" },
       "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" },
+      "power_on_level_channel": {
+        "name": "{channel} Power-on level"
+      },
       "power_on_level": { "name": "Power-on level" }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Mode",
+        "state": {
+          "auto": "Automatic",
+          "manual": "Manual"
+        }
+      },
+      "light_mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Automatic",
+          "manual": "Manual"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Output mode",
+        "state": {
+          "auto": "Automatic",
+          "rl_led": "RL LED mode"
+        }
+      },
       "output_mode": {
         "name": "Output mode",
         "state": {
@@ -374,11 +398,28 @@
         }
       },
       "mode": { "name": "Mode" },
+      "power_on_behavior_channel": {
+        "name": "{channel} Power-on behaviour",
+        "state": {
+          "last_brightness": "Last brightness",
+          "specified_brightness": "Specified brightness"
+        }
+      },
       "power_on_behavior": {
         "name": "Power-on behaviour",
         "state": {
           "last_brightness": "Last brightness",
           "specified_brightness": "Specified brightness"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED indicator",
+        "state": {
+          "reverse_with_load": "Opposite to load",
+          "consistent_with_load": "Follow load",
+          "always_on": "Always on",
+          "always_off": "Always off",
+          "off_after_2s": "Off after 2 seconds"
         }
       },
       "led_indicator": {

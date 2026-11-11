@@ -12,6 +12,7 @@ from .helpers import (
     get_hub_device_info,
     get_hub_via_device_info,
     get_identifier,
+    get_light_translation_context,
     get_physical_entity_unique_id,
     get_unique_id,
     hub_error_handler,
@@ -443,6 +444,9 @@ class WiserPowerOnLevelNumber(WiserEntityMixin, CoordinatorEntity, NumberEntity)
         self._name = light_id
         self._light = self._data.wiserhub.devices.lights.get_by_light_id(light_id)
         self._device_id = self._light.id
+        self._attr_translation_key, self._attr_translation_placeholders = (
+            get_light_translation_context(coordinator, self._light, "power_on_level")
+        )
         self._value = self._light.power_on_level
 
         _LOGGER.debug(f"{self._light.name} {self._name} initialise")

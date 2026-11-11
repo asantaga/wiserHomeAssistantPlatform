@@ -57,6 +57,10 @@ def _load_number_module() -> ModuleType:
 
     _module(
         "wiser.helpers",
+        get_light_translation_context=lambda _data, light, key: (
+            (key + "_channel", {"channel": light.channel})
+            if getattr(light, "channel", "") else (key, {})
+        ),
         get_device_name=lambda *_args: "Wiser Light",
         get_hub_device_info=lambda _data: {},
         get_hub_via_device_info=lambda _data: {},
@@ -292,6 +296,19 @@ class NumberPowerOnLevelTest(unittest.TestCase):
         asyncio.run(self.entity.async_set_native_value(80))
         self.assertEqual(replacement.set_value, 80)
         self.assertIsNone(self.light.set_value)
+
+    def test_power_on_numbers_keep_distinct_translated_channel_names(self) -> None:
+        import json
+        catalogue = json.loads((SOURCE_PATH.parent / "translations/en.json").read_text())
+        names = []
+        for light_id, channel in ((12, "Light 1"), (13, "Light 2")):
+            light = _FakeLight(light_id)
+            light.channel = channel
+            self.lights_by_id[light_id] = light
+            entity = self.number_module.WiserPowerOnLevelNumber(self.data, light_id)
+            translation = catalogue["entity"]["number"][entity._attr_translation_key]
+            names.append(translation["name"].format(**entity._attr_translation_placeholders))
+        self.assertEqual(names, ["Light 1 Power-on level", "Light 2 Power-on level"])
 
 
 if __name__ == "__main__":

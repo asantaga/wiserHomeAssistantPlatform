@@ -213,6 +213,34 @@ class LightUniqueIdMigrationTest(unittest.TestCase):
             "Lightsource1 Away Mode Turns Off",
         )
 
+    def test_translated_single_channel_name_has_no_redundant_prefix(self) -> None:
+        data = _hub_data()
+        light = data.wiserhub.devices.lights.all[0]
+        self.assertEqual(
+            self.helpers.get_light_translation_context(data, light, "power_on_behavior"),
+            ("power_on_behavior", {}),
+        )
+
+    def test_translated_multi_gang_names_retain_distinct_channel_labels(self) -> None:
+        data = _hub_data()
+        channels = data.wiserhub.devices.lights.all[2:]
+        contexts = [self.helpers.get_light_translation_context(
+            data, light, "power_on_behavior"
+        ) for light in channels]
+        self.assertEqual(contexts, [
+            ("power_on_behavior_channel", {"channel": "Lightsource1"}),
+            ("power_on_behavior_channel", {"channel": "Lightsource2"}),
+        ])
+
+    def test_translated_names_preserve_legacy_naming(self) -> None:
+        data = _hub_data()
+        data.legacy_naming = True
+        light = data.wiserhub.devices.lights.all[0]
+        self.assertEqual(
+            self.helpers.get_light_translation_context(data, light, "power_on_behavior"),
+            ("power_on_behavior_channel", {"channel": "Wiser Diele"}),
+        )
+
     def test_prefixed_device_name_is_removed_from_channel_name(self) -> None:
         light = _light(
             device_id=300,

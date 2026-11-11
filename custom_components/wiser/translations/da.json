@@ -354,11 +354,35 @@
       "outdoor_discomfort_temperature": {
         "name": "Udendørs ubehagstemperatur"
       },
+      "power_on_level_channel": {
+        "name": "{channel} Tændingsniveau"
+      },
       "power_on_level": {
         "name": "Tændingsniveau"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Tilstand",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuel"
+        }
+      },
+      "light_mode": {
+        "name": "Tilstand",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuel"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Udgangstilstand",
+        "state": {
+          "auto": "Automatisk",
+          "rl_led": "RL LED-tilstand"
+        }
+      },
       "output_mode": {
         "name": "Udgangstilstand",
         "state": {
@@ -369,11 +393,28 @@
       "mode": {
         "name": "Tilstand"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Startadfærd",
+        "state": {
+          "last_brightness": "Seneste lysstyrke",
+          "specified_brightness": "Angivet lysstyrke"
+        }
+      },
       "power_on_behavior": {
         "name": "Startadfærd",
         "state": {
           "last_brightness": "Seneste lysstyrke",
           "specified_brightness": "Angivet lysstyrke"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED-indikator",
+        "state": {
+          "reverse_with_load": "Modsat belastningen",
+          "consistent_with_load": "Følg belastningen",
+          "always_on": "Altid tændt",
+          "always_off": "Altid slukket",
+          "off_after_2s": "Sluk efter 2 sekunder"
         }
       },
       "led_indicator": {

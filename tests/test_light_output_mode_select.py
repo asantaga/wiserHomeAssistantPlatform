@@ -64,6 +64,10 @@ def _load_select_module() -> ModuleType:
     _module("wiser.entity", WiserEntityMixin=WiserEntityMixin)
     _module(
         "wiser.helpers",
+        get_light_translation_context=lambda _data, light, key: (
+            (key + "_channel", {"channel": light.channel})
+            if getattr(light, "channel", "") else (key, {})
+        ),
         get_device_name=lambda *_args, **_kwargs: "Wiser Light",
         get_hub_via_device_info=lambda _data: {},
         get_light_entity_name=lambda _data, light, suffix: f"{light.name} {suffix}",
@@ -203,7 +207,7 @@ class LightConfigurationTranslationsTest(unittest.TestCase):
     def make_entity(self, entity_class, options_attribute, state_attribute, options):
         """Create a configuration select backed by a distinct light channel."""
         light = SimpleNamespace(
-            id=200, light_id=3, product_type="DimmableLight", firmware_version="1.0",
+            id=200, light_id=3, product_type="DimmableLight", firmware_version="1.0", schedule=None,
         )
         setattr(light, options_attribute, options)
         setattr(light, state_attribute, options[0])
@@ -220,6 +224,7 @@ class LightConfigurationTranslationsTest(unittest.TestCase):
 
     def test_power_on_and_led_options_round_trip(self) -> None:
         for cls_name, options_attr, state_attr in (
+            ("WiserLightModeSelect", "available_modes", "mode"),
             ("WiserLightPowerOnBehaviourSelect", "available_power_on_behaviour", "power_on_behaviour"),
             ("WiserLightLedIndicatorSelect", "available_led_indicator", "led_indicator"),
         ):
@@ -250,19 +255,50 @@ class LightConfigurationTranslationsTest(unittest.TestCase):
         light.led_indicator = "Unknown"
         self.assertIsNone(entity.current_option)
 
+    def test_channel_names_use_placeholders_with_translated_labels(self) -> None:
+        import json
+        catalogue = json.loads((SOURCE_PATH.parent / "translations/en.json").read_text())
+        for cls_name, options_attr, state_attr in (
+            ("WiserLightModeSelect", "available_modes", "mode"),
+            ("WiserLightPowerOnBehaviourSelect", "available_power_on_behaviour", "power_on_behaviour"),
+            ("WiserLightLedIndicatorSelect", "available_led_indicator", "led_indicator"),
+            ("WiserLightOutputModeSelect", "available_output_mode", "output_mode"),
+        ):
+            cls = getattr(self.module, cls_name)
+            names = []
+            ids = []
+            for channel, light_id in (("Light 1", 3), ("Light 2", 4)):
+                entity, light, _ = self.make_entity(
+                    cls, options_attr, state_attr, list(cls._option_values.values())
+                )
+                light.channel = channel
+                light.light_id = light_id
+                entity = cls(entity._data, light_id)
+                translation = catalogue["entity"]["select"][entity._attr_translation_key]
+                names.append(translation["name"].format(**entity._attr_translation_placeholders))
+                ids.append(entity.unique_id)
+            with self.subTest(entity=cls_name):
+                self.assertNotEqual(names[0], names[1])
+                self.assertTrue(names[0].startswith("Light 1 "))
+                self.assertTrue(names[1].startswith("Light 2 "))
+                self.assertNotEqual(ids[0], ids[1])
+
     def test_all_catalogues_translate_each_configuration_option(self) -> None:
         import json
         component = SOURCE_PATH.parent
         for path in [component / "strings.json", *(component / "translations").glob("*.json")]:
             catalogue = json.loads(path.read_text())["entity"]["select"]
             for cls_name in (
-                "WiserLightPowerOnBehaviourSelect", "WiserLightLedIndicatorSelect", "WiserLightOutputModeSelect"
+                "WiserLightModeSelect", "WiserLightPowerOnBehaviourSelect", "WiserLightLedIndicatorSelect", "WiserLightOutputModeSelect"
             ):
                 cls = getattr(self.module, cls_name)
                 with self.subTest(path=path.name, entity=cls_name):
                     states = catalogue[cls._attr_translation_key]["state"]
                     self.assertEqual(set(states), set(cls._option_values))
                     self.assertTrue(all(isinstance(label, str) and label for label in states.values()))
+                    channel = catalogue[cls._attr_translation_key + "_channel"]
+                    self.assertEqual(channel["state"], states)
+                    self.assertIn("{channel}", channel["name"])
 
 
 if __name__ == "__main__":

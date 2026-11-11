@@ -354,11 +354,35 @@
       "outdoor_discomfort_temperature": {
         "name": "Ongemakstemperatuur buiten"
       },
+      "power_on_level_channel": {
+        "name": "{channel} Inschakelniveau"
+      },
       "power_on_level": {
         "name": "Inschakelniveau"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Modus",
+        "state": {
+          "auto": "Automatisch",
+          "manual": "Handmatig"
+        }
+      },
+      "light_mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisch",
+          "manual": "Handmatig"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Uitgangsmodus",
+        "state": {
+          "auto": "Automatisch",
+          "rl_led": "RL-ledmodus"
+        }
+      },
       "output_mode": {
         "name": "Uitgangsmodus",
         "state": {
@@ -369,11 +393,28 @@
       "mode": {
         "name": "Modus"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Inschakelgedrag",
+        "state": {
+          "last_brightness": "Laatste helderheid",
+          "specified_brightness": "Ingestelde helderheid"
+        }
+      },
       "power_on_behavior": {
         "name": "Inschakelgedrag",
         "state": {
           "last_brightness": "Laatste helderheid",
           "specified_brightness": "Ingestelde helderheid"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED-indicator",
+        "state": {
+          "reverse_with_load": "Tegengesteld aan belasting",
+          "consistent_with_load": "Belasting volgen",
+          "always_on": "Altijd aan",
+          "always_off": "Altijd uit",
+          "off_after_2s": "Uit na 2 seconden"
         }
       },
       "led_indicator": {

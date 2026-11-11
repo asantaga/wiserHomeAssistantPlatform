@@ -25,7 +25,7 @@ from .entity import WiserEntityMixin
 from .helpers import (
     get_device_name,
     get_hub_via_device_info,
-    get_light_entity_name,
+    get_light_translation_context,
     get_unique_id,
     get_identifier,
     get_room_entity_unique_id,
@@ -335,66 +335,21 @@ class WiserPowerTagCModeSelect(WiserSelectEntity, WiserScheduleEntity):
         self.async_write_ha_state()
 
 
-class WiserLightModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, light_id) -> None:
-        """Initialize the sensor."""
-        # light_id is the unique per-channel id; resolve the light through it and
-        # derive the (possibly shared) physical device id from the light object,
-        # so device grouping still works for multi-gang dimmers.
-        self._light_id = light_id
-        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
-        self._device_id = self._device.id
-        super().__init__(data)
-        self._options = self._device.available_modes
-        self._schedule = self._device.schedule
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
-            self._light_id
-        )
-        self._schedule = self._device.schedule
-        self.async_write_ha_state()
-
-    @property
-    def name(self):
-        """Return Name of device."""
-        return get_light_entity_name(self._data, self._device, "Mode")
-
-    @property
-    def unique_id(self):
-        """Return unique ID of device"""
-        return get_unique_id(
-            self._data, self._device.product_type, "mode-select", self._light_id
-        )
-
-
-class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, shutter_id) -> None:
-        """Initialize the sensor."""
-        self._device_id = shutter_id
-        super().__init__(data)
-        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
-        self._options = self._device.available_modes
-        self._schedule = self._device.schedule
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        super()._handle_coordinator_update()
-        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
-        self._schedule = self._device.schedule
-        self.async_write_ha_state()
-
-
 class _WiserTranslatedLightSelect(WiserSelectEntity):
     """Translate stable option keys while keeping hub commands in API format."""
 
     _option_values: dict[str, str]
     _value_attribute: str
     _setter: str
+
+    def __init__(self, coordinator) -> None:
+        """Add a translated channel placeholder when a channel label is needed."""
+        super().__init__(coordinator)
+        self._attr_translation_key, self._attr_translation_placeholders = (
+            get_light_translation_context(
+                coordinator, self._device, self._attr_translation_key
+            )
+        )
 
     @property
     def options(self) -> list[str]:
@@ -422,6 +377,62 @@ class _WiserTranslatedLightSelect(WiserSelectEntity):
                 "The Wiser hub rejected the light configuration update."
             )
         await self.async_force_update()
+
+
+class WiserLightModeSelect(_WiserTranslatedLightSelect, WiserScheduleEntity):
+    """Select a channel's operating mode using translated option labels."""
+
+    _attr_translation_key = "light_mode"
+    _option_values = {"auto": "Auto", "manual": "Manual"}
+    _value_attribute = "mode"
+    _setter = "set_mode"
+
+    def __init__(self, data, light_id) -> None:
+        """Initialize the sensor."""
+        # light_id is the unique per-channel id; resolve the light through it and
+        # derive the (possibly shared) physical device id from the light object,
+        # so device grouping still works for multi-gang dimmers.
+        self._light_id = light_id
+        self._device = data.wiserhub.devices.lights.get_by_light_id(light_id)
+        self._device_id = self._device.id
+        super().__init__(data)
+        self._options = self._device.available_modes
+        self._schedule = self._device.schedule
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.lights.get_by_light_id(
+            self._light_id
+        )
+        self._schedule = self._device.schedule
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return unique ID of device"""
+        return get_unique_id(
+            self._data, self._device.product_type, "mode-select", self._light_id
+        )
+
+
+class WiserShutterModeSelect(WiserSelectEntity, WiserScheduleEntity):
+    def __init__(self, data, shutter_id) -> None:
+        """Initialize the sensor."""
+        self._device_id = shutter_id
+        super().__init__(data)
+        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
+        self._options = self._device.available_modes
+        self._schedule = self._device.schedule
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.shutters.get_by_id(self._device_id)
+        self._schedule = self._device.schedule
+        self.async_write_ha_state()
 
 
 class WiserLightPowerOnBehaviourSelect(_WiserTranslatedLightSelect):

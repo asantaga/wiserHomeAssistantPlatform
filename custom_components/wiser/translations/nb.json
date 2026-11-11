@@ -354,11 +354,35 @@
       "outdoor_discomfort_temperature": {
         "name": "Utendørs ubehagstemperatur"
       },
+      "power_on_level_channel": {
+        "name": "{channel} Oppstartsnivå"
+      },
       "power_on_level": {
         "name": "Oppstartsnivå"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Modus",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuell"
+        }
+      },
+      "light_mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuell"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Utgangsmodus",
+        "state": {
+          "auto": "Automatisk",
+          "rl_led": "RL LED-modus"
+        }
+      },
       "output_mode": {
         "name": "Utgangsmodus",
         "state": {
@@ -369,11 +393,28 @@
       "mode": {
         "name": "Modus"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Oppstartsadferd",
+        "state": {
+          "last_brightness": "Siste lysstyrke",
+          "specified_brightness": "Angitt lysstyrke"
+        }
+      },
       "power_on_behavior": {
         "name": "Oppstartsadferd",
         "state": {
           "last_brightness": "Siste lysstyrke",
           "specified_brightness": "Angitt lysstyrke"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED-indikator",
+        "state": {
+          "reverse_with_load": "Motsatt av lasten",
+          "consistent_with_load": "Følg lasten",
+          "always_on": "Alltid på",
+          "always_off": "Alltid av",
+          "off_after_2s": "Av etter 2 sekunder"
         }
       },
       "led_indicator": {
