@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivt läge",
-            "description": "Aktivera passivt läge. Konfigurera modulerande styrning eller temperaturbegränsning på varje kvalificerad rumsenhet.",
+            "description": "Aktivera passivt läge. Styrstrategier konfigureras separat på varje kompatibel rumsenhet.",
             "data": {
               "automations_passive_mode": "Passivt läge",
               "temperature_increment": "Temperatursteg"

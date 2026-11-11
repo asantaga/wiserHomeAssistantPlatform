@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Mode passif",
-            "description": "Active le mode passif. Configurez Modulation ou Limiteur de température sur chaque appareil de pièce éligible.",
+            "description": "Active le mode passif. Les stratégies de régulation sont configurées séparément sur chaque appareil de pièce compatible.",
             "data": {
               "automations_passive_mode": "Mode passif",
               "temperature_increment": "Incrément de température"

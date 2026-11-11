@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Modo passivo",
-            "description": "Ative o modo passivo. Configure o controlo modulante ou o limitador de temperatura em cada dispositivo de divisão elegível.",
+            "description": "Ative o modo passivo. As estratégias de controlo são configuradas separadamente em cada dispositivo de divisão compatível.",
             "data": {
               "automations_passive_mode": "Modo passivo",
               "temperature_increment": "Incremento de temperatura"

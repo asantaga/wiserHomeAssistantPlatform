@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passiv modus",
-            "description": "Aktiver passiv modus. Konfigurer modulerende styring eller temperaturbegrenser på hver kvalifiserte romenhet.",
+            "description": "Aktiver passiv modus. Styringsstrategier konfigureres separat på hver kompatible romenhet.",
             "data": {
               "automations_passive_mode": "Passiv modus",
               "temperature_increment": "Temperaturtrinn"

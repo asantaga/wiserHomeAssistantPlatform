@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passzív mód",
-            "description": "A passzív mód engedélyezése. Állítsa be a moduláló vezérlést vagy a hőmérséklet-korlátozót minden alkalmas helyiségeszközön.",
+            "description": "Engedélyezi a passzív módot. A vezérlési stratégiák külön állíthatók be az egyes kompatibilis helyiségeszközökön.",
             "data": {
               "automations_passive_mode": "Passzív mód",
               "temperature_increment": "Hőmérséklet-növekmény"

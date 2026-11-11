@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passivmodus",
-            "description": "Aktiviert den Passivmodus. Konfigurieren Sie Modulierend oder Temperaturbegrenzer am jeweiligen Raumgerät.",
+            "description": "Aktiviert den Passivmodus. Die Regelungsstrategien werden separat am jeweiligen geeigneten Raumgerät konfiguriert.",
             "data": {
               "automations_passive_mode": "Passivmodus",
               "temperature_increment": "Temperaturschritt"

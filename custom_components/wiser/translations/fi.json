@@ -81,7 +81,7 @@
         "sections": {
           "automations_passive_mode": {
             "name": "Passiivinen tila",
-            "description": "Ota passiivitila käyttöön. Määritä moduloiva ohjaus tai lämpötilan rajoitin jokaiselle soveltuvalle huonelaitteelle.",
+            "description": "Ota passiivitila käyttöön. Ohjausstrategiat määritetään erikseen kullekin yhteensopivalle huonelaitteelle.",
             "data": {
               "automations_passive_mode": "Passiivinen tila",
               "temperature_increment": "Lämpötilan lisäys"
