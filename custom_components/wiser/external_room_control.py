@@ -208,7 +208,7 @@ class ExternalRoomControlController:
         self._schedule_write_lock = Lock()
 
     async def async_load(self) -> None:
-        """Load Passive Mode lower schedules and migrate experimental data."""
+        """Load schedules and control state, and migrate experimental data."""
         stored = await self._store.async_load() or {}
         rooms = stored.get("rooms", {})
         self._rooms = rooms if isinstance(rooms, dict) else {}
@@ -228,6 +228,16 @@ class ExternalRoomControlController:
         )
         self._native_passive_migrated = bool(
             stored.get("native_passive_migrated", False)
+        )
+        closed_limiter_rooms = stored.get("closed_limiter_rooms", [])
+        self._closed_limiter_rooms = (
+            {
+                str(room_id)
+                for room_id in closed_limiter_rooms
+                if isinstance(room_id, (str, int)) and str(room_id) in self.assignments
+            }
+            if isinstance(closed_limiter_rooms, list)
+            else set()
         )
         sensor_boosts = stored.get("sensor_boosts", {})
         self._sensor_boosts = (
@@ -284,6 +294,7 @@ class ExternalRoomControlController:
                 "lower_schedules": self._lower_schedules,
                 "passive_control_schedules": self._passive_control_schedules,
                 "native_passive_migrated": self._native_passive_migrated,
+                "closed_limiter_rooms": sorted(self._closed_limiter_rooms),
                 "sensor_boosts": self._sensor_boosts,
                 "controlled_climates": self._controlled_climates,
             }
@@ -1398,6 +1409,17 @@ class ExternalRoomControlController:
             await room.cancel_overrides()
         return True
 
+    async def _async_set_limiter_closed(self, room_id, closed: bool) -> None:
+        """Persist hysteresis transitions even when the valve target is unchanged."""
+        room_id = str(room_id)
+        if (room_id in self._closed_limiter_rooms) == closed:
+            return
+        if closed:
+            self._closed_limiter_rooms.add(room_id)
+        else:
+            self._closed_limiter_rooms.discard(room_id)
+        await self._async_save()
+
     async def async_update(self) -> None:
         """Update external climate mirroring and temperature feedback."""
         await self._async_remove_orphaned_schedules()
@@ -1408,6 +1430,8 @@ class ExternalRoomControlController:
             self._missing_room_counts,
         )
         await self._async_release_unassigned_climates(deleted_room_ids=deleted_room_ids)
+        for room_id in deleted_room_ids:
+            await self._async_set_limiter_closed(room_id, False)
         storage_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
             room_id = str(room.id)
@@ -1470,11 +1494,11 @@ class ExternalRoomControlController:
 
         for room in active_rooms:
             if self.has_temperature_sensor(room.id):
-                self._closed_limiter_rooms.discard(str(room.id))
+                await self._async_set_limiter_closed(room.id, False)
                 await self._async_update_temperature_sensor(room)
                 continue
             if not self.is_enabled(room.id):
-                self._closed_limiter_rooms.discard(str(room.id))
+                await self._async_set_limiter_closed(room.id, False)
                 continue
             if room.is_passive_mode and self.uses_temperature_limiter(room.id):
                 current_temperature = room.current_temperature
@@ -1483,14 +1507,14 @@ class ExternalRoomControlController:
                 room_id = str(room.id)
                 upper_temperature = self.upper_temperature(room.id)
                 if current_temperature >= upper_temperature:
-                    self._closed_limiter_rooms.add(room_id)
+                    await self._async_set_limiter_closed(room_id, True)
                 elif (
                     room_id in self._closed_limiter_rooms
                     and current_temperature
                     <= upper_temperature
                     - float(self.coordinator.passive_temperature_increment)
                 ):
-                    self._closed_limiter_rooms.discard(room_id)
+                    await self._async_set_limiter_closed(room_id, False)
                 target_temperature = (
                     FROST_PROTECTION_TEMPERATURE
                     if room_id in self._closed_limiter_rooms
@@ -1500,7 +1524,7 @@ class ExternalRoomControlController:
                     room.id, target_temperature
                 )
                 continue
-            self._closed_limiter_rooms.discard(str(room.id))
+            await self._async_set_limiter_closed(room.id, False)
             target_temperature = room.current_target_temperature
             if target_temperature is None:
                 continue
@@ -1660,15 +1684,10 @@ class ExternalRoomControlController:
 
     @staticmethod
     def _can_control_heating(state) -> bool:
-        """Return whether writing a target is safe in the current HVAC mode."""
-        if state.state == HVACMode.HEAT:
-            return True
-        hvac_modes = state.attributes.get(ATTR_HVAC_MODES) or ()
+        """Return whether the assigned climate supports heating targets."""
         return (
-            state.state in (HVACMode.OFF, HVACMode.AUTO)
-            and HVACMode.HEAT in hvac_modes
-            and HVACMode.COOL not in hvac_modes
-            and HVACMode.HEAT_COOL not in hvac_modes
+            state.state == HVACMode.HEAT
+            or HVACMode.HEAT in (state.attributes.get(ATTR_HVAC_MODES) or ())
         )
 
     @staticmethod

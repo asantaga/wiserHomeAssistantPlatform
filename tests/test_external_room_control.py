@@ -394,7 +394,8 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             blocking=True,
         )
 
-    async def test_shutdown_does_not_restore_heat_target_in_cooling_mode(self):
+    async def test_shutdown_restores_owned_target_despite_reported_cooling_mode(self):
+        """Reported HVAC mode must not prevent releasing an assigned TRV."""
         self.state.attributes.update(
             temperature=16.0, hvac_modes=["heat", "cool", "off"]
         )
@@ -405,7 +406,12 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
 
         await self.controller.async_shutdown()
 
-        self.hass.services.async_call.assert_not_awaited()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 16.0},
+            blocking=True,
+        )
         self.assertNotIn("climate.external_trv", self.controller._controlled_climates)
 
     async def test_limiter_holds_target_until_missing_room_is_confirmed_deleted(self):
@@ -705,6 +711,59 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             blocking=True,
         )
 
+    async def test_limiter_controls_off_and_auto_trvs_with_generic_hvac_modes(self):
+        """Zigbee2MQTT TRVs may report cooling modes while used as valves."""
+        self.controller.coordinator.passive_room_strategies = {
+            "1": "temperature_limiter"
+        }
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.state.attributes["hvac_modes"] = [
+            "auto", "off", "cool", "heat", "dry", "fan_only",
+        ]
+
+        for mode in ("off", "auto"):
+            self.state.state = mode
+            for measured, previous_target, expected_target in (
+                (17.0, 5.0, 30.0),
+                (20.0, 30.0, 5.0),
+                (19.8, 5.0, None),
+                (19.5, 5.0, 30.0),
+            ):
+                with self.subTest(mode=mode, measured=measured):
+                    self.room.current_temperature = measured
+                    self.state.attributes["temperature"] = previous_target
+                    self.hass.services.async_call.reset_mock()
+                    await self.controller.async_update()
+                    if expected_target is None:
+                        self.hass.services.async_call.assert_not_awaited()
+                    else:
+                        self.hass.services.async_call.assert_awaited_once_with(
+                            "climate",
+                            "set_temperature",
+                            {
+                                "entity_id": "climate.external_trv",
+                                "temperature": expected_target,
+                            },
+                            blocking=True,
+                        )
+
+    async def test_off_trv_with_generic_modes_restores_owned_target(self):
+        """Restore the original target after releasing an Off TRV."""
+        self.state.state = "off"
+        self.state.attributes["hvac_modes"] = ["off", "heat", "cool", "auto"]
+        await self.controller.async_update()
+        self.state.attributes["temperature"] = 19.0
+        self.hass.services.async_call.reset_mock()
+
+        await self.controller.async_shutdown()
+
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 25.0},
+            blocking=True,
+        )
+
     async def test_external_limiter_uses_native_passive_flag(self):
         self.controller.coordinator.passive_room_strategies = {
             "1": "temperature_limiter"
@@ -788,6 +847,64 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             {"entity_id": "climate.external_trv", "temperature": 30.0},
             blocking=True,
         )
+
+    async def test_limiter_hysteresis_survives_reload(self):
+        """Save the closed latch even when the TRV already has its closed target."""
+        controller = self.controller
+        controller.coordinator.passive_room_strategies = {"1": "temperature_limiter"}
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.room.current_temperature = 20.0
+        self.state.attributes["temperature"] = 5.0
+        await controller.async_update()
+        self.hass.services.async_call.assert_not_awaited()
+        saved = deepcopy(controller._store.async_save.await_args.args[0])
+        self.assertEqual(saved["closed_limiter_rooms"], ["1"])
+
+        reloaded = type(controller)(
+            self.hass,
+            SimpleNamespace(
+                entry_id="entry",
+                options={
+                    "automations_external_room_control": {
+                        "external_room_control_assignments": {
+                            "1": ["climate.external_trv"]
+                        }
+                    }
+                },
+            ),
+            controller.coordinator,
+        )
+        reloaded._store.async_load.return_value = saved
+        await reloaded.async_load()
+        self.room.current_temperature = 19.8
+        await reloaded.async_update()
+        self.hass.services.async_call.assert_not_awaited()
+
+        self.room.current_temperature = 19.5
+        await reloaded.async_update()
+        self.hass.services.async_call.assert_awaited_once_with(
+            "climate",
+            "set_temperature",
+            {"entity_id": "climate.external_trv", "temperature": 30.0},
+            blocking=True,
+        )
+        saved = deepcopy(reloaded._store.async_save.await_args.args[0])
+        self.assertEqual(saved["closed_limiter_rooms"], [])
+        reloaded._store.async_load.return_value = saved
+        await reloaded.async_load()
+        self.state.attributes["temperature"] = 30.0
+        self.room.current_temperature = 19.8
+        self.hass.services.async_call.reset_mock()
+        await reloaded.async_update()
+        self.hass.services.async_call.assert_not_awaited()
+        self.assertEqual(reloaded._closed_limiter_rooms, set())
+
+    async def test_leaving_limiter_mode_persists_cleared_hysteresis(self):
+        """An old closed latch must not return after changing strategy."""
+        self.controller._closed_limiter_rooms.add("1")
+        await self.controller.async_update()
+        saved = self.controller._store.async_save.await_args.args[0]
+        self.assertEqual(saved["closed_limiter_rooms"], [])
 
     async def test_temperature_limiter_uses_immediate_upper_override(self):
         self.controller.coordinator.passive_room_strategies = {
@@ -1030,7 +1147,8 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             blocking=True,
         )
 
-    async def test_wiser_off_does_not_lower_a_cooling_target(self):
+    async def test_climates_without_heating_capability_are_not_controlled(self):
+        """External Room Control requires heating capability."""
         self.room.mode = "Off"
         self.room.current_target_temperature = -20.0
         self.state.attributes.update(temperature=23.0, min_temp=16.0)
@@ -1038,15 +1156,32 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         for mode, modes in (
             ("cool", ["off", "cool"]),
             ("off", ["off", "cool"]),
-            ("cool", ["off", "heat", "cool"]),
-            ("auto", ["off", "heat", "cool", "auto"]),
-            ("heat_cool", ["off", "heat", "heat_cool"]),
+            ("auto", ["off", "cool", "auto"]),
+            ("heat_cool", ["off", "cool", "heat_cool"]),
         ):
             with self.subTest(mode=mode, modes=modes):
                 self.state.state = mode
                 self.state.attributes["hvac_modes"] = modes
                 await self.controller.async_update()
                 self.hass.services.async_call.assert_not_awaited()
+
+    async def test_assigned_heating_climate_is_controlled_regardless_of_reported_mode(self):
+        """Generic cooling states and actions must not block assigned TRVs."""
+        self.state.attributes.update(
+            hvac_modes=["off", "heat", "cool", "auto", "heat_cool"],
+            hvac_action="cooling",
+        )
+        for mode in ("off", "heat", "auto", "cool", "heat_cool"):
+            with self.subTest(mode=mode):
+                self.state.state = mode
+                self.hass.services.async_call.reset_mock()
+                await self.controller.async_update()
+                self.hass.services.async_call.assert_awaited_once_with(
+                    "climate",
+                    "set_temperature",
+                    {"entity_id": "climate.external_trv", "temperature": 19.0},
+                    blocking=True,
+                )
 
     async def test_target_is_clamped_to_external_maximum(self):
         self.room.current_target_temperature = 32.0
