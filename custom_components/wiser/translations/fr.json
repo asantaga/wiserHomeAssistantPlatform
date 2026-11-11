@@ -334,6 +334,22 @@
       "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Automatique",
+          "manual": "Manuel"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "Voyant LED",
+        "state": {
+          "reverse_with_load": "Inverse de la charge",
+          "consistent_with_load": "Suivre la charge",
+          "always_on": "Toujours allumé",
+          "always_off": "Toujours éteint"
+        }
+      },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Comportement à la mise sous tension" },
       "led_indicator": { "name": "Voyant LED" },

@@ -356,6 +356,22 @@
       }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Modo",
+        "state": {
+          "auto": "Automático",
+          "manual": "Manual"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "Indicador LED",
+        "state": {
+          "reverse_with_load": "Opuesto a la carga",
+          "consistent_with_load": "Seguir la carga",
+          "always_on": "Siempre encendido",
+          "always_off": "Siempre apagado"
+        }
+      },
       "mode": {
         "name": "Modo"
       },

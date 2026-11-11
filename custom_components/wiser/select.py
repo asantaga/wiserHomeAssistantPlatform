@@ -1,8 +1,13 @@
+"""Wiser configuration and operating-mode selects."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -67,6 +72,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Smartplug mode select")
         for plug in data.wiserhub.devices.smartplugs.all:
             wiser_selects.extend([WiserSmartPlugModeSelect(data, plug.id)])
+
+            if (
+                getattr(plug, "is_led_indicator_supported", False)
+                and hasattr(plug, "available_led_indicator")
+                and callable(getattr(plug, "set_led_indicator", None))
+            ):
+                wiser_selects.append(WiserSmartPlugLedIndicatorSelect(data, plug.id))
 
     if data.wiserhub.devices.lights.count > 0:
         _LOGGER.debug("Setting up Light mode select")
@@ -284,22 +296,64 @@ class WiserHotWaterModeSelect(WiserSelectEntity, WiserScheduleEntity):
         }
 
 
-class WiserSmartPlugModeSelect(WiserSelectEntity, WiserScheduleEntity):
-    def __init__(self, data, smartplug_id) -> None:
-        """Initialize the sensor."""
+class _WiserSmartPlugSelect(WiserSelectEntity):
+    """Map translated smart-plug option keys to hub API values."""
+
+    _option_values: dict[str, str]
+    _options_attribute: str
+    _value_attribute: str
+    _setter: str
+
+    def __init__(self, data, smartplug_id: int) -> None:
+        """Resolve the plug using its stable physical device ID."""
         self._device_id = smartplug_id
         super().__init__(data)
-        self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
-        self._options = self._device.available_modes
+        self._device = data.wiserhub.devices.smartplugs.get_by_id(smartplug_id)
+        self._options = getattr(self._device, self._options_attribute)
         self._schedule = self._device.schedule
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        super()._handle_coordinator_update()
+        """Refresh the plug, its supported options, and schedule."""
         self._device = self._data.wiserhub.devices.smartplugs.get_by_id(self._device_id)
+        self._options = getattr(self._device, self._options_attribute)
         self._schedule = self._device.schedule
         self.async_write_ha_state()
+
+    @property
+    def options(self) -> list[str]:
+        """Return translatable keys for the options advertised by the plug."""
+        return [
+            key for key, raw in self._option_values.items() if raw in self._options
+        ]
+
+    @property
+    def current_option(self) -> str | None:
+        """Translate the hub-reported value into a stable state key."""
+        value = getattr(self._device, self._value_attribute)
+        return next(
+            (key for key, raw in self._option_values.items() if raw == value), None
+        )
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        """Send the API value, accepting legacy raw service-call options."""
+        value = self._option_values.get(option, option)
+        if value not in self._option_values.values() or value not in self._options:
+            raise HomeAssistantError(f"Unsupported smart-plug option: {option}")
+        if await getattr(self._device, self._setter)(value) is False:
+            raise HomeAssistantError("The Wiser hub rejected the smart-plug update.")
+        await self.async_force_update()
+
+
+class WiserSmartPlugModeSelect(_WiserSmartPlugSelect, WiserScheduleEntity):
+    """Select the plug's operating mode with translated option labels."""
+
+    _attr_translation_key = "smartplug_mode"
+    _option_values = {"auto": "Auto", "manual": "Manual"}
+    _options_attribute = "available_modes"
+    _value_attribute = "mode"
+    _setter = "set_mode"
 
 
 class WiserPowerTagCModeSelect(WiserSelectEntity, WiserScheduleEntity):
@@ -482,3 +536,25 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             _LOGGER.error(
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
+
+
+class WiserSmartPlugLedIndicatorSelect(_WiserSmartPlugSelect):
+    """Configure a supported plug's LED indicator using translated options."""
+
+    _attr_translation_key = "smartplug_led_indicator"
+    _option_values = {
+        "reverse_with_load": "ReverseWithLoad",
+        "consistent_with_load": "ConsistentWithLoad",
+        "always_on": "AlwaysOn",
+        "always_off": "AlwaysOff",
+    }
+    _options_attribute = "available_led_indicator"
+    _value_attribute = "led_indicator"
+    _setter = "set_led_indicator"
+
+    @property
+    def unique_id(self):
+        """Keep the original stable physical-device identifier for this select."""
+        return get_unique_id(
+            self._data, self._device.product_type, "led-indicator", self._device_id
+        )

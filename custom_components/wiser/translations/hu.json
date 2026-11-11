@@ -356,6 +356,22 @@
       }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Mód",
+        "state": {
+          "auto": "Automatikus",
+          "manual": "Kézi"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED-jelzőfény",
+        "state": {
+          "reverse_with_load": "A terheléssel ellentétes",
+          "consistent_with_load": "Terhelés követése",
+          "always_on": "Mindig bekapcsolva",
+          "always_off": "Mindig kikapcsolva"
+        }
+      },
       "mode": {
         "name": "Mód"
       },

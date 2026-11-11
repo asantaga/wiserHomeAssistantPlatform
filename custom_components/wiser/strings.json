@@ -370,6 +370,22 @@
       "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Automatic",
+          "manual": "Manual"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED indicator",
+        "state": {
+          "reverse_with_load": "Opposite to load",
+          "consistent_with_load": "Follow load",
+          "always_on": "Always on",
+          "always_off": "Always off"
+        }
+      },
       "mode": { "name": "Mode" },
       "power_on_behavior": { "name": "Power-on behavior" },
       "led_indicator": { "name": "LED indicator" },

@@ -356,6 +356,22 @@
       }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisch",
+          "manual": "Handmatig"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED-indicator",
+        "state": {
+          "reverse_with_load": "Tegengesteld aan belasting",
+          "consistent_with_load": "Belasting volgen",
+          "always_on": "Altijd aan",
+          "always_off": "Altijd uit"
+        }
+      },
       "mode": {
         "name": "Modus"
       },
