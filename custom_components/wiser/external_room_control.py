@@ -205,6 +205,8 @@ class ExternalRoomControlController:
         self._sensor_boosts: dict[str, dict] = {}
         self._controlled_climates: dict[str, dict] = {}
         self._missing_room_counts: dict[str, int] = {}
+        self._pending_passive_lower_rooms: dict[str, object] = {}
+        self._passive_lower_changed = False
         self._schedule_write_lock = Lock()
 
     async def async_load(self) -> None:
@@ -1215,24 +1217,56 @@ class ExternalRoomControlController:
         )
 
     def passive_lower_temperature(self, room, now: datetime | None = None):
-        """Return the scheduled lower limit for either Passive range type."""
+        """Return the Passive lower limit, including hub-side limiter changes."""
         schedule = getattr(room, "schedule", None)
         if schedule is None:
             return None
-        override = self._settings(room.id).get("passive_lower_override")
+        settings = self._settings(room.id)
+        override = settings.get("passive_lower_override")
+        lower = override if room.is_override else None
+        if lower is None:
+            control = self.scheduled_passive_control(room.id, now)
+            if control is not None:
+                lower = float(control["lower"]) if control["enabled"] else None
+            elif self.schedule_uses_external_range(schedule):
+                try:
+                    lower = float(schedule.current_setting)
+                except (TypeError, ValueError):
+                    pass
+            elif self.schedule_uses_native_range(schedule):
+                lower = self._scheduled_temperature(room, self._lower_schedules, now)
+        if (
+            self.uses_temperature_limiter(room.id)
+            and room.is_passive_mode
+            and room.mode == "Auto"
+            and room.is_override
+            and not room.is_boosted
+            and not room.is_away_mode
+            and lower is not None
+            and self._pending_passive_lower_rooms.get(str(room.id)) is not room
+        ):
+            # The API asks for this limit before running its Passive automation.
+            # Adopt hub changes here so that automation cannot overwrite them.
+            target = room.current_target_temperature
+            expected = settings.get(
+                "passive_lower_override_target", target if override is not None else lower
+            )
+            if target is not None and target != expected:
+                override = min(float(target), float(room.passive_mode_upper_temp))
+                settings["passive_lower_override"] = override
+                settings["passive_lower_override_target"] = target
+                self._set_schedule_override_marker(settings, room)
+                self._passive_lower_changed = True
+            elif (
+                override is not None
+                and "passive_lower_override_target" not in settings
+            ):
+                # Older stored overrides have no record of their hub setpoint.
+                settings["passive_lower_override_target"] = target
+                self._passive_lower_changed = True
         if override is not None and room.is_override:
             return min(float(override), float(room.passive_mode_upper_temp))
-        control = self.scheduled_passive_control(room.id, now)
-        if control is not None:
-            return float(control["lower"]) if control["enabled"] else None
-        if self.schedule_uses_external_range(schedule):
-            try:
-                return float(schedule.current_setting)
-            except (TypeError, ValueError):
-                return None
-        if self.schedule_uses_native_range(schedule):
-            return self._scheduled_temperature(room, self._lower_schedules, now)
-        return None
+        return lower
 
     async def async_cancel_passive_lower_override(self, room_id) -> None:
         """Return a native Passive lower limit to its current schedule slot."""
@@ -1240,6 +1274,8 @@ class ExternalRoomControlController:
         if settings.get("passive_lower_override") is None:
             return
         settings["passive_lower_override"] = None
+        settings.pop("passive_lower_override_target", None)
+        self._pending_passive_lower_rooms.pop(str(room_id), None)
         self._clear_unused_schedule_override_marker(settings)
         await self._async_save()
 
@@ -1301,6 +1337,9 @@ class ExternalRoomControlController:
                 return None
             settings = self._settings(room_id)
             settings["passive_lower_override"] = temperature
+            settings["passive_lower_override_target"] = temperature
+            # This room still contains the old hub target until the next read.
+            self._pending_passive_lower_rooms[str(room_id)] = room
             self._set_schedule_override_marker(settings, room)
             await self._async_save()
             return temperature
@@ -1390,6 +1429,10 @@ class ExternalRoomControlController:
         settings = self._settings(room.id)
         if lower is not None:
             settings["passive_lower_override"] = lower
+            settings["passive_lower_override_target"] = getattr(
+                next_period, "setting", lower
+            )
+            self._pending_passive_lower_rooms[str(room.id)] = room
         if upper is not None:
             settings["passive_upper_override"] = upper
         self._set_schedule_override_marker(settings, room)
@@ -1473,11 +1516,14 @@ class ExternalRoomControlController:
                     storage_changed = True
             elif marker is not None and marker != stored_marker:
                 settings["passive_lower_override"] = None
+                settings.pop("passive_lower_override_target", None)
+                self._pending_passive_lower_rooms.pop(str(room.id), None)
                 settings["passive_upper_override"] = None
                 settings["passive_override_schedule_transition"] = None
                 storage_changed = True
-        if storage_changed:
+        if storage_changed or self._passive_lower_changed:
             await self._async_save()
+            self._passive_lower_changed = False
         for room in self.coordinator.wiserhub.rooms.all:
             room_id = str(room.id)
             if room_id not in self._sensor_boosts:
