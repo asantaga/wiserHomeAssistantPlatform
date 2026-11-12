@@ -16,6 +16,11 @@
                     }
                 }
             }
+        },
+        "select": {
+            "heating_actuator_output_type": {
+                "default": "mdi:radiator"
+            }
         }
     },
     "services": {

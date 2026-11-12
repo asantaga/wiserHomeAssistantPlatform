@@ -1,8 +1,14 @@
+"""Wiser configuration and operating-mode selects."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -93,6 +99,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         _LOGGER.debug("Setting up Shutter mode select")
         for shutter in data.wiserhub.devices.shutters.all:
             wiser_selects.extend([WiserShutterModeSelect(data, shutter.id)])
+
+    for actuator in data.wiserhub.devices.heating_actuators.all:
+        if (
+            callable(getattr(actuator, "set_output_type", None))
+            and getattr(actuator, "output_type", None)
+            in getattr(actuator, "available_output_type", [])
+            and actuator.output_type in ("Relay", "FilPilote")
+        ):
+            wiser_selects.append(WiserHeatingActuatorOutputTypeSelect(data, actuator.id))
 
     # Add PTCs
     if data.wiserhub.devices.power_tags_c.count > 0:
@@ -482,3 +497,60 @@ class WiserLightLedIndicatorSelect(WiserSelectEntity):
             _LOGGER.error(
                 f"{option} is not a valid {self.name}.  Please choose from {self._options}"
             )
+
+
+class WiserHeatingActuatorOutputTypeSelect(WiserSelectEntity):
+    """Configure a compatible actuator's output type with translated labels."""
+
+    _attr_translation_key = "heating_actuator_output_type"
+    _attr_entity_category = EntityCategory.CONFIG
+    _option_values = {"relay": "Relay", "pilot_wire": "FilPilote"}
+
+    def __init__(self, data, heating_actuator_id: int) -> None:
+        """Resolve the actuator by its stable physical device ID."""
+        self._heating_actuator_id = heating_actuator_id
+        self._device = data.wiserhub.devices.heating_actuators.get_by_id(
+            heating_actuator_id
+        )
+        self._device_id = self._device.id
+        super().__init__(data)
+        self._options = self._device.available_output_type
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh the actuator and the output types supported by its API."""
+        self._device = self._data.wiserhub.devices.heating_actuators.get_by_id(
+            self._heating_actuator_id
+        )
+        self._options = self._device.available_output_type
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Preserve the original per-device output-type identifier."""
+        return get_unique_id(
+            self._data, self._device.product_type, "output-type", self._heating_actuator_id
+        )
+
+    @property
+    def options(self) -> list[str]:
+        """Return translated option keys for the actuator's advertised types."""
+        return [key for key, raw in self._option_values.items() if raw in self._options]
+
+    @property
+    def current_option(self) -> str | None:
+        """Map the reported API type to a stable translation key."""
+        value = self._device.output_type
+        return next(
+            (key for key, raw in self._option_values.items() if raw == value), None
+        )
+
+    @hub_error_handler
+    async def async_select_option(self, option: str) -> None:
+        """Set the output type, also accepting the original API option values."""
+        value = self._option_values.get(option, option)
+        if value not in self._option_values.values() or value not in self._options:
+            raise HomeAssistantError(f"Unsupported heating-actuator output type: {option}")
+        if await self._device.set_output_type(value) is False:
+            raise HomeAssistantError("The Wiser hub rejected the output-type update.")
+        await self.async_force_update()
