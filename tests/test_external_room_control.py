@@ -1010,6 +1010,77 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
             self.controller._rooms["1"]["passive_lower_override"]
         )
 
+    async def test_hub_limiter_changes_replace_the_lower_override(self):
+        self.controller.coordinator.passive_room_strategies["1"] = "temperature_limiter"
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.room.is_override = True
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1],
+            current_setting=15.0,
+            next=SimpleNamespace(datetime=datetime(2026, 10, 17, 9, 0)),
+        )
+        settings = self.controller._settings(1)
+        settings["passive_upper_override"] = 20.0
+
+        for target in (18.0, 16.0, 21.0):
+            with self.subTest(target=target):
+                self.room.current_target_temperature = target
+                lower = self.controller.passive_lower_temperature(self.room)
+
+                self.assertEqual(lower, min(target, 20.0))
+                self.assertEqual(settings["passive_lower_override"], lower)
+                self.assertEqual(self.controller.upper_temperature(1), 20.0)
+                await self.controller.async_update()
+                self.assertFalse(self.controller._passive_lower_changed)
+                self.assertEqual(
+                    self.controller._store.async_save.call_args.args[0]["rooms"]["1"][
+                        "passive_lower_override"
+                    ], lower,
+                )
+
+        self.room.is_override = False
+        self.room.current_target_temperature = 15.0
+        self.room.schedule.next.datetime = datetime(2026, 10, 17, 10, 0)
+        self.assertEqual(self.controller.passive_lower_temperature(self.room), 15.0)
+        await self.controller.async_update()
+        self.assertIsNone(settings["passive_lower_override"])
+
+    async def test_hub_target_does_not_replace_a_pending_ha_lower_change(self):
+        self.controller.coordinator.passive_room_strategies["1"] = "temperature_limiter"
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.room.is_override = True
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1], current_setting=15.0,
+        )
+
+        await self.controller.async_set_passive_lower_temperature(1, 17.0)
+
+        self.assertEqual(self.controller.passive_lower_temperature(self.room), 17.0)
+        refreshed = deepcopy(self.room)
+        refreshed.current_target_temperature = 17.0
+        self.assertEqual(self.controller.passive_lower_temperature(refreshed), 17.0)
+        refreshed.current_target_temperature = 18.0
+        self.assertEqual(self.controller.passive_lower_temperature(refreshed), 18.0)
+
+    def test_limiter_does_not_adopt_its_own_target_or_a_boost(self):
+        self.controller.coordinator.passive_room_strategies["1"] = "temperature_limiter"
+        self.room.is_passive_mode = self.room.passive_mode_enabled = True
+        self.room.is_override = True
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1], current_setting=15.0,
+        )
+        self.room.current_target_temperature = 15.0
+        self.assertEqual(self.controller.passive_lower_temperature(self.room), 15.0)
+        self.assertIsNone(self.controller._settings(1)["passive_lower_override"])
+
+        self.room.current_target_temperature = 19.0
+        for state in ("is_boosted", "is_away_mode"):
+            with self.subTest(state=state):
+                setattr(self.room, state, True)
+                self.assertEqual(self.controller.passive_lower_temperature(self.room), 15.0)
+                self.assertIsNone(self.controller._settings(1)["passive_lower_override"])
+                setattr(self.room, state, False)
+
     async def test_combined_auto_range_change_keeps_new_lower_override(self):
         self.controller.coordinator.passive_room_strategies = {
             "1": "temperature_limiter"
@@ -1465,7 +1536,7 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         next_time = datetime(2026, 10, 19, 18, 0)
         self.room.schedule = SimpleNamespace(
             id=7, schedule_type="Heating", assignment_ids=[1],
-            next=SimpleNamespace(datetime=next_time, setting=18.0),
+            next=SimpleNamespace(datetime=next_time, setting=25.0),
         )
         self.controller._passive_control_schedules["7"] = {
             "Monday": {
@@ -1489,6 +1560,17 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(settings["passive_upper_override"], 25.0)
         self.assertEqual(settings["passive_override_schedule_transition"], next_time.isoformat())
         self.controller._store.async_save.assert_awaited_once()
+
+        # Shared/native schedules advance the hub to the upper setpoint.
+        # That write must keep the paired lower setpoint until a user changes it.
+        self.room.is_override = True
+        self.room.passive_mode_upper_temp = 25.0
+        self.assertEqual(self.controller.passive_lower_temperature(self.room), 18.0)
+        refreshed = deepcopy(self.room)
+        refreshed.current_target_temperature = 25.0
+        self.assertEqual(self.controller.passive_lower_temperature(refreshed), 18.0)
+        refreshed.current_target_temperature = 19.0
+        self.assertEqual(self.controller.passive_lower_temperature(refreshed), 19.0)
 
     def test_validated_passive_controls_select_the_hub_setpoint(self):
         schedule = {
