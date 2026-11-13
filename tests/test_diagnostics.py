@@ -20,14 +20,22 @@ def _module(name: str, **attributes: object) -> ModuleType:
     return module
 
 
-def _load_diagnostics(entity_entries):
+def _load_diagnostics(entity_entries, device_entries=()):
     entity_registry = _module(
         "homeassistant.helpers.entity_registry",
         async_get=Mock(return_value="entity-registry"),
         async_entries_for_config_entry=Mock(return_value=entity_entries),
     )
+    device_registry = _module(
+        "homeassistant.helpers.device_registry",
+        DeviceEntry=object,
+        async_get=Mock(return_value="device-registry"),
+        async_entries_for_config_entry=Mock(return_value=device_entries),
+    )
     helpers = _module(
-        "homeassistant.helpers", entity_registry=entity_registry
+        "homeassistant.helpers",
+        entity_registry=entity_registry,
+        device_registry=device_registry,
     )
     package = _module("wiser_diagnostics_test")
     package.__path__ = []
@@ -42,9 +50,7 @@ def _load_diagnostics(entity_entries):
             callback=lambda function: function,
         ),
         "homeassistant.helpers": helpers,
-        "homeassistant.helpers.device_registry": _module(
-            "homeassistant.helpers.device_registry", DeviceEntry=object
-        ),
+        "homeassistant.helpers.device_registry": device_registry,
         "homeassistant.helpers.entity_registry": entity_registry,
         "aioWiserHeatAPI": _module("aioWiserHeatAPI"),
         "aioWiserHeatAPI.cli": _module(
@@ -79,10 +85,21 @@ class DiagnosticsTest(unittest.TestCase):
             domain="sensor",
             platform="wiser",
             original_name="Battery",
+            name="Custom battery",
+            has_entity_name=True,
+            object_id_base="battery",
+            suggested_object_id=None,
             disabled_by=None,
             created_at=created_at,
         )
-        diagnostics, entity_registry = _load_diagnostics([registry_entry])
+        device_entry = SimpleNamespace(
+            id="device-row-four",
+            name="Wiser iTRV",
+            name_by_user="Kitchen radiator",
+        )
+        diagnostics, entity_registry = _load_diagnostics(
+            [registry_entry], [device_entry]
+        )
         hass = SimpleNamespace(
             data={
                 "wiser": {
@@ -103,7 +120,7 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(
             result,
             {
-                "diagnostics_version": 2,
+                "diagnostics_version": 3,
                 "hub": {"anonymised": {"Room": "Kitchen"}},
                 "entity_registry": [
                     {
@@ -113,8 +130,20 @@ class DiagnosticsTest(unittest.TestCase):
                         "domain": "sensor",
                         "platform": "wiser",
                         "original_name": "Battery",
+                        "name": "Custom battery",
+                        "has_entity_name": True,
+                        "object_id_base": "battery",
+                        "suggested_object_id": None,
                         "disabled_by": None,
                         "created_at": "2026-11-03T00:00:00+00:00",
+                    }
+                ],
+                "device_registry": [
+                    {
+                        "id": "device-row-four",
+                        "name": "Wiser iTRV",
+                        "name_by_user": "Kitchen radiator",
+                        "effective_name": "Kitchen radiator",
                     }
                 ],
             },
@@ -122,6 +151,15 @@ class DiagnosticsTest(unittest.TestCase):
         entity_registry.async_entries_for_config_entry.assert_called_once_with(
             "entity-registry", "entry-id"
         )
+        diagnostics.dr.async_entries_for_config_entry.assert_called_once_with(
+            "device-registry", "entry-id"
+        )
+
+        device_entry.name_by_user = None
+        del registry_entry.object_id_base
+        result = diagnostics._async_get_diagnostics(hass, entry)
+        self.assertEqual(result["device_registry"][0]["effective_name"], "Wiser iTRV")
+        self.assertIsNone(result["entity_registry"][0]["object_id_base"])
 
 
 if __name__ == "__main__":
