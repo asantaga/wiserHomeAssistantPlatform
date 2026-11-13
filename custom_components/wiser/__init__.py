@@ -89,6 +89,7 @@ from .helpers import (
     build_physical_entity_unique_id_migration,
     get_device_name,
     get_hub_device_name,
+    get_hub_entity_object_id,
     get_hub_via_device_info,
     get_identifier,
     get_legacy_device_identifier,
@@ -596,6 +597,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     # Setup platforms after services so entities can safely restore scheduled
     # actions from async_added_to_hass.
     await hass.config_entries.async_forward_entry_setups(config_entry, WISER_PLATFORMS)
+    async_track_hub_name_changes(hass, config_entry, coordinator)
 
     # Setup websocket services for frontend cards
     await async_register_websockets(hass, coordinator)
@@ -609,6 +611,53 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
         "Wiser Component Setup Completed (%s)", coordinator.wiserhub.system.name
     )
     return True
+
+
+@callback
+def async_track_hub_name_changes(hass, config_entry, coordinator) -> None:
+    """Refresh regeneration inputs when the physical hub is renamed."""
+    hub_device_id = coordinator.hub_device_id
+
+    @callback
+    def async_hub_name_changed(event) -> None:
+        if (
+            event.data["action"] != "update"
+            or event.data["device_id"] != hub_device_id
+            or not {"name", "name_by_user"}.intersection(event.data["changes"])
+        ):
+            return
+
+        device = dr.async_get(hass).async_get(hub_device_id)
+        if device is None:
+            return
+        device_name = device.name_by_user or device.name
+        registry = er.async_get(hass)
+        entities = er.async_entries_for_config_entry(registry, config_entry.entry_id)
+        for entity in entities:
+            if (
+                entity.device_id != hub_device_id
+                or entity.platform != DOMAIN
+                or not entity.has_entity_name
+                or entity.original_name is None
+                or not hasattr(entity, "object_id_base")
+            ):
+                continue
+            object_id_base = get_hub_entity_object_id(
+                coordinator, entity.original_name, device_name
+            )
+            if entity.object_id_base != object_id_base:
+                registry.async_get_or_create(
+                    entity.domain,
+                    entity.platform,
+                    entity.unique_id,
+                    config_entry=config_entry,
+                    object_id_base=object_id_base,
+                    supported_features=entity.supported_features,
+                )
+
+    config_entry.async_on_unload(
+        hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, async_hub_name_changed)
+    )
 
 
 @callback
