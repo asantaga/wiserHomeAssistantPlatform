@@ -353,17 +353,79 @@
       },
       "outdoor_discomfort_temperature": {
         "name": "Kültéri diszkomfort-hőmérséklet"
+      },
+      "power_on_level_channel": {
+        "name": "{channel} Bekapcsolási szint"
+      },
+      "power_on_level": {
+        "name": "Bekapcsolási szint"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Mód",
+        "state": {
+          "auto": "Automatikus",
+          "manual": "Kézi"
+        }
+      },
+      "light_mode": {
+        "name": "Mód",
+        "state": {
+          "auto": "Automatikus",
+          "manual": "Kézi"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Kimeneti mód",
+        "state": {
+          "auto": "Automatikus",
+          "rl_led": "RL LED mód"
+        }
+      },
+      "output_mode": {
+        "name": "Kimeneti mód",
+        "state": {
+          "auto": "Automatikus",
+          "rl_led": "RL LED mód"
+        }
+      },
       "mode": {
         "name": "Mód"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Bekapcsolás utáni viselkedés",
+        "state": {
+          "last_brightness": "Utolsó fényerő",
+          "specified_brightness": "Beállított fényerő"
+        }
+      },
       "power_on_behavior": {
-        "name": "Bekapcsolás utáni viselkedés"
+        "name": "Bekapcsolás utáni viselkedés",
+        "state": {
+          "last_brightness": "Utolsó fényerő",
+          "specified_brightness": "Beállított fényerő"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} LED-jelzőfény",
+        "state": {
+          "reverse_with_load": "A terheléssel ellentétes",
+          "consistent_with_load": "Terhelés követése",
+          "always_on": "Mindig bekapcsolva",
+          "always_off": "Mindig kikapcsolva",
+          "off_after_2s": "Kikapcsolás 2 másodperc után"
+        }
       },
       "led_indicator": {
-        "name": "LED-jelzőfény"
+        "name": "LED-jelzőfény",
+        "state": {
+          "reverse_with_load": "A terheléssel ellentétes",
+          "consistent_with_load": "Terhelés követése",
+          "always_on": "Mindig bekapcsolva",
+          "always_off": "Mindig kikapcsolva",
+          "off_after_2s": "Kikapcsolás 2 másodperc után"
+        }
       },
       "passive_mode_strategy": {
         "name": "Passzív mód stratégiája",

@@ -331,12 +331,76 @@
       "away_mode_target_temperature": { "name": "Température cible du mode absence" },
       "floor_temperature_offset": { "name": "Décalage de température du sol" },
       "indoor_discomfort_temperature": { "name": "Température d’inconfort intérieure" },
-      "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" }
+      "outdoor_discomfort_temperature": { "name": "Température d’inconfort extérieure" },
+      "power_on_level_channel": {
+        "name": "{channel} Niveau à l’allumage"
+      },
+      "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Mode",
+        "state": {
+          "auto": "Automatique",
+          "manual": "Manuel"
+        }
+      },
+      "light_mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Automatique",
+          "manual": "Manuel"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Mode de sortie",
+        "state": {
+          "auto": "Automatique",
+          "rl_led": "Mode LED RL"
+        }
+      },
+      "output_mode": {
+        "name": "Mode de sortie",
+        "state": {
+          "auto": "Automatique",
+          "rl_led": "Mode LED RL"
+        }
+      },
       "mode": { "name": "Mode" },
-      "power_on_behavior": { "name": "Comportement à la mise sous tension" },
-      "led_indicator": { "name": "Voyant LED" },
+      "power_on_behavior_channel": {
+        "name": "{channel} Comportement à la mise sous tension",
+        "state": {
+          "last_brightness": "Dernière luminosité",
+          "specified_brightness": "Luminosité définie"
+        }
+      },
+      "power_on_behavior": {
+        "name": "Comportement à la mise sous tension",
+        "state": {
+          "last_brightness": "Dernière luminosité",
+          "specified_brightness": "Luminosité définie"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} Voyant LED",
+        "state": {
+          "reverse_with_load": "Inverse de la charge",
+          "consistent_with_load": "Suivre la charge",
+          "always_on": "Toujours allumé",
+          "always_off": "Toujours éteint",
+          "off_after_2s": "Éteint après 2 secondes"
+        }
+      },
+      "led_indicator": {
+        "name": "Voyant LED",
+        "state": {
+          "reverse_with_load": "Inverse de la charge",
+          "consistent_with_load": "Suivre la charge",
+          "always_on": "Toujours allumé",
+          "always_off": "Toujours éteint",
+          "off_after_2s": "Éteint après 2 secondes"
+        }
+      },
       "passive_mode_strategy": {
         "name": "Stratégie du mode passif",
         "state": {
