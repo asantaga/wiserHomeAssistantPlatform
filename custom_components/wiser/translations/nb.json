@@ -362,6 +362,22 @@
       }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisk",
+          "manual": "Manuell"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED-indikator",
+        "state": {
+          "reverse_with_load": "Motsatt av lasten",
+          "consistent_with_load": "Følg lasten",
+          "always_on": "Alltid på",
+          "always_off": "Alltid av"
+        }
+      },
       "light_mode_channel": {
         "name": "{channel} Modus",
         "state": {

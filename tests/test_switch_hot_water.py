@@ -339,6 +339,8 @@ class _FakeSmartPlug:
         self.away_mode_action = "Off"
         self.scheduled_state = "Off"
         self.schedule_id = 0
+        self.next_scheduled_date = None
+        self.next_scheduled_end_date = None
         self.commands = []
 
     async def turn_on(self) -> None:
@@ -512,6 +514,41 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
         self.assertEqual(switch._optimistic_gen, previous_gen + 1)
         self.assertIsNone(switch._confirmation_task)
         self.assertTrue(switch.removed)
+
+    def test_smart_schedule_dates_are_exposed_without_standard_schedule(self) -> None:
+        switch, plug, _events, _scheduled = self._switch(is_on=False)
+        plug.next_scheduled_date = "2026-11-11T18:00:00"
+        plug.next_scheduled_end_date = "2026-11-11T19:00:00"
+        attrs = switch.extra_state_attributes
+        self.assertEqual(attrs["next_scheduled_date"], plug.next_scheduled_date)
+        self.assertEqual(attrs["next_scheduled_end_date"], plug.next_scheduled_end_date)
+        self.assertEqual(attrs["output_state"], "Off")
+
+    def test_missing_smart_schedule_values_are_preserved(self) -> None:
+        switch, _plug, _events, _scheduled = self._switch(is_on=False)
+        attrs = switch.extra_state_attributes
+        self.assertIsNone(attrs["next_scheduled_date"])
+        self.assertIsNone(attrs["next_scheduled_end_date"])
+
+    def test_older_api_without_smart_schedule_fields_still_reports_state(self) -> None:
+        switch, plug, _events, _scheduled = self._switch(is_on=True)
+        del plug.next_scheduled_date
+        del plug.next_scheduled_end_date
+        attrs = switch.extra_state_attributes
+        self.assertNotIn("next_scheduled_date", attrs)
+        self.assertNotIn("next_scheduled_end_date", attrs)
+        self.assertEqual(attrs["output_state"], "On")
+
+    def test_smart_schedule_dates_preserve_standard_schedule_attributes(self) -> None:
+        switch, plug, _events, _scheduled = self._switch(is_on=False)
+        plug.schedule = SimpleNamespace(name="Evening", next=SimpleNamespace(
+            day="Wednesday", time="18:00", datetime="2026-11-11T18:00:00", setting="On",
+        ))
+        plug.next_scheduled_date = "2026-11-11T18:00:00"
+        attrs = switch.extra_state_attributes
+        self.assertEqual(attrs["schedule_name"], "Evening")
+        self.assertEqual(attrs["next_schedule_state"], "On")
+        self.assertEqual(attrs["next_schedule_datetime"], plug.next_scheduled_date)
 
 
 class _FakeEVSE:

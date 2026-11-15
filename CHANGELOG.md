@@ -9,11 +9,13 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Upgrade notes
 
 - Light configuration selectors now report translation keys such as `auto`, `manual`, `last_brightness` and `specified_brightness`. Update automations that compare their states; service calls using the previous API option values remain accepted - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
+- Smart-plug Mode selectors now report `auto` and `manual` states. Update automations that compare their states; service calls using `Auto` and `Manual` remain accepted - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
 - Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 
 ### Added
 
 - Added per-channel dimmable-light output-mode and power-on brightness controls where supported, and exposed target, manual and scheduled brightness attributes on all lights with API support - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
+- Added translated smart-plug LED indicator controls on compatible hubs and APIs, plus next scheduled start and end dates on plug switches where available - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
 - Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
 - Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
@@ -30,6 +32,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 ### Changed
 
 - Light mode, power-on behaviour, LED indicator and output-mode selectors show translated option descriptions instead of raw API values - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
+- Smart-plug Mode options now use translated descriptions while preserving their API command values - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
 - Passive Mode demand now shows **Modulation** or **Limiter**. OpenTherm and relay-controlled rooms continue to show a demand percentage.
 - The Thermostat card editor preview uses dashboard card sizing so the controls wrap as they do on the dashboard.
 - Updated hot water More Info controls and added a heating glow when hot water is active.

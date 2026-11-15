@@ -338,6 +338,22 @@
       "power_on_level": { "name": "Niveau à l’allumage" }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Automatique",
+          "manual": "Manuel"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "Voyant LED",
+        "state": {
+          "reverse_with_load": "Inverse de la charge",
+          "consistent_with_load": "Suivre la charge",
+          "always_on": "Toujours allumé",
+          "always_off": "Toujours éteint"
+        }
+      },
       "light_mode_channel": {
         "name": "{channel} Mode",
         "state": {

@@ -338,6 +338,22 @@
       "power_on_level": { "name": "Einschaltniveau" }
     },
     "select": {
+      "smartplug_mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisch",
+          "manual": "Manuell"
+        }
+      },
+      "smartplug_led_indicator": {
+        "name": "LED-Anzeige",
+        "state": {
+          "reverse_with_load": "Entgegengesetzt zur Last",
+          "consistent_with_load": "Last folgen",
+          "always_on": "Immer an",
+          "always_off": "Immer aus"
+        }
+      },
       "light_mode_channel": {
         "name": "{channel} Modus",
         "state": {
