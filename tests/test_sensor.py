@@ -311,6 +311,7 @@ def _load_binary_sensor_module() -> ModuleType:
             OPENING="opening",
             WINDOW="window",
             DOOR="door",
+            CONNECTIVITY="connectivity",
             RUNNING="running",
         ),
         BinarySensorEntity=BinarySensorEntity,

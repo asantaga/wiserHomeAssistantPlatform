@@ -563,6 +563,15 @@
       "pcm_device_limit_reached": {
         "name": "Elérte a PCM-eszközök maximális számát"
       },
+      "pcm_online": {
+        "name": "PCM online"
+      },
+      "can_activate_pcm": {
+        "name": "Can activate PCM"
+      },
+      "rmb_follow_smart": {
+        "name": "RMB follow smart"
+      },
       "smoke_alarm": {
         "name": "Füstjelzés"
       },

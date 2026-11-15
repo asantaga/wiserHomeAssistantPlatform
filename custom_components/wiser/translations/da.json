@@ -563,6 +563,15 @@
       "pcm_device_limit_reached": {
         "name": "Grænsen for PCM-enheder er nået"
       },
+      "pcm_online": {
+        "name": "PCM online"
+      },
+      "can_activate_pcm": {
+        "name": "Can activate PCM"
+      },
+      "rmb_follow_smart": {
+        "name": "RMB follow smart"
+      },
       "smoke_alarm": {
         "name": "Røgalarm"
       },

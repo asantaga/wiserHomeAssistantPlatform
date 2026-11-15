@@ -49,13 +49,18 @@ _LOGGER = logging.getLogger(__name__)
 
 SUMMER_DISCOMFORT_PREVENTION = "Summer Discomfort Prevention"
 SUMMER_COMFORT_AVAILABLE = "Summer Comfort Available"
+RMB_FOLLOW_SMART = "RMB Follow Smart"
 PCM_DEVICE_LIMIT_REACHED = "PCM Device Limit Reached"
+PCM_ONLINE = "PCM Online"
+CAN_ACTIVATE_PCM = "Can Activate PCM"
 SUMMER_COMFORT_BINARY_SENSOR_TYPES = (
     SUMMER_DISCOMFORT_PREVENTION,
     SUMMER_COMFORT_AVAILABLE,
 )
 PCM_BINARY_SENSOR_TYPES = (PCM_DEVICE_LIMIT_REACHED,)
-
+PCM_STATUS_BINARY_SENSOR_TYPES = (PCM_ONLINE,)
+PCM_CONTROL_BINARY_SENSOR_TYPES = (CAN_ACTIVATE_PCM,)
+RMB_BINARY_SENSOR_TYPES = (RMB_FOLLOW_SMART,)
 
 def _entity_translation_key(name: str) -> str:
     """Return the stable translation key for a fixed Wiser entity label."""
@@ -92,6 +97,12 @@ def _supports_pcm_binary_sensor(data) -> bool:
         TEXT_UNKNOWN,
     )
 
+def _supports_rmb_follow_smart(data) -> bool:
+    """Return whether the hub supplies RMB follow smart data."""
+    if data.hub_version < 2:
+        return False
+    return getattr(data.wiserhub.system, "RMB_follow_smart", None) is not None
+    
 
 def _requires_v2_entity_cleanup(data) -> bool:
     """Return whether the hub is definitively unable to support V2 entities."""
@@ -160,12 +171,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         binary_sensors.append(
             WiserPCMDeviceLimitReached(data, 0, PCM_DEVICE_LIMIT_REACHED)
         )
+    if _supports_v2_system_property(data, "pcm_online"):
+        binary_sensors.append(WiserPCMOnline(data, 0, PCM_ONLINE))
+    if _supports_v2_system_property(data, "can_activate_pcm"):
+        binary_sensors.append(WiserCanActivatePCM(data, 0, CAN_ACTIVATE_PCM))
+    if _supports_rmb_follow_smart(data):
+        binary_sensors.append(
+            WiserRMBFollowSmart(data, 0, RMB_FOLLOW_SMART)
+        )
     if _requires_v2_entity_cleanup(data):
         _remove_unsupported_v2_entities(
             hass,
             config_entry.entry_id,
             data,
-            SUMMER_COMFORT_BINARY_SENSOR_TYPES + PCM_BINARY_SENSOR_TYPES,
+            SUMMER_COMFORT_BINARY_SENSOR_TYPES
+            + PCM_BINARY_SENSOR_TYPES
+            + PCM_STATUS_BINARY_SENSOR_TYPES
+            + PCM_CONTROL_BINARY_SENSOR_TYPES
+            + RMB_BINARY_SENSOR_TYPES,
         )
 
     # Smoke alarm sensors
@@ -405,7 +428,14 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
         self._device_name = None
         self._sensor_type = sensor_type
         self._attr_translation_key = _entity_translation_key(sensor_type)
-        self._state = getattr(self._data.wiserhub.system, self._sensor_type.replace(" ", "_").lower())
+        self._state = getattr(
+            self._data.wiserhub.system,
+            getattr(
+                self,
+                "_state_attribute",
+                self._sensor_type.replace(" ", "_").lower(),
+            ),
+        )
         _LOGGER.debug(
             f"{self._data.wiserhub.system.name} {self._sensor_type} initialise"
         )
@@ -416,7 +446,11 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
         _LOGGER.debug(f"{self._sensor_type} device update requested")
         self._state = getattr(
             self._data.wiserhub.system,
-            self._sensor_type.replace(" ", "_").lower(),
+            getattr(
+                self,
+                "_state_attribute",
+                self._sensor_type.replace(" ", "_").lower(),
+            ),
             None,
         )
         self.async_write_ha_state()
@@ -609,6 +643,34 @@ class WiserSummerComfortAvailable(SystemBinarySensor):
 class WiserPCMDeviceLimitReached(SystemBinarySensor):
     """PCM device limit reached sensor."""
     _attr_device_class = BinarySensorDeviceClass.POWER
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes of PCM device limit reached sensor."""
+        attrs = {}   
+        attrs["pcm_version"] = self._data.wiserhub.system.pcm_version
+        attrs["pcm_status"] = self._data.wiserhub.system.pcm_status
+        attrs["can_activate_pcm"] = self._data.wiserhub.system.can_activate_pcm
+        attrs["pcm_online"] = self._data.wiserhub.system.pcm_online                
+        return attrs
+
+
+class WiserPCMOnline(SystemBinarySensor):
+    """PCM online status sensor."""
+
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+
+class WiserCanActivatePCM(SystemBinarySensor):
+    """Whether PCM can be activated."""
+
+    _attr_device_class = BinarySensorDeviceClass.POWER
+
+
+class WiserRMBFollowSmart(SystemBinarySensor):
+    """RMB Reduce My Bill follow smart sensor."""
+    _attr_device_class = BinarySensorDeviceClass.POWER
+    _state_attribute = "RMB_follow_smart"
 
 
 class WiserStateIsDimmable(BaseBinarySensor):
