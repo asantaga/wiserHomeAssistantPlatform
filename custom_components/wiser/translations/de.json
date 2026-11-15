@@ -338,6 +338,13 @@
       "power_on_level": { "name": "Einschaltniveau" }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Ausgangstyp",
+        "state": {
+          "relay": "Relais",
+          "pilot_wire": "Steuerleitung"
+        }
+      },
       "smartplug_mode": {
         "name": "Modus",
         "state": {

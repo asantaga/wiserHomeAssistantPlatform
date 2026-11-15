@@ -362,6 +362,13 @@
       }
     },
     "select": {
+      "heating_actuator_output_type": {
+        "name": "Lähtötyyppi",
+        "state": {
+          "relay": "Rele",
+          "pilot_wire": "Ohjausjohdin"
+        }
+      },
       "smartplug_mode": {
         "name": "Tila",
         "state": {
