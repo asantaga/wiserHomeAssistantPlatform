@@ -49,7 +49,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SUMMER_DISCOMFORT_PREVENTION = "Summer Discomfort Prevention"
 SUMMER_COMFORT_AVAILABLE = "Summer Comfort Available"
-RMB_FOLLOW_SMART = "RMB Follow Smart"
+RMB_FOLLOW_SMART = "rmb_follow_smart"
 PCM_DEVICE_LIMIT_REACHED = "PCM Device Limit Reached"
 PCM_ONLINE = "PCM Online"
 CAN_ACTIVATE_PCM = "Can Activate PCM"
@@ -101,7 +101,7 @@ def _supports_rmb_follow_smart(data) -> bool:
     """Return whether the hub supplies RMB follow smart data."""
     if data.hub_version < 2:
         return False
-    return getattr(data.wiserhub.system, "RMB_follow_smart", None) is not None
+    return getattr(data.wiserhub.system, "rmb_follow_smart", None) is not None
     
 
 def _requires_v2_entity_cleanup(data) -> bool:
@@ -469,7 +469,7 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
         )
         legacy_name = f"{legacy_hub_name} {self._sensor_type}"
         return get_unique_id(
-            self._data, "sensor", self._sensor_type, legacy_name
+            self._data, "binary_sensor", self._sensor_type, legacy_name
         )
 
     @property
@@ -670,7 +670,7 @@ class WiserCanActivatePCM(SystemBinarySensor):
 class WiserRMBFollowSmart(SystemBinarySensor):
     """RMB Reduce My Bill follow smart sensor."""
     _attr_device_class = BinarySensorDeviceClass.POWER
-    _state_attribute = "RMB_follow_smart"
+    _state_attribute = "rmb_follow_smart"
 
 
 class WiserStateIsDimmable(BaseBinarySensor):
