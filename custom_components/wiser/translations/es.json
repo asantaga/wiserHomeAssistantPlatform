@@ -353,17 +353,79 @@
       },
       "outdoor_discomfort_temperature": {
         "name": "Temperatura de incomodidad exterior"
+      },
+      "power_on_level_channel": {
+        "name": "{channel} Nivel de encendido"
+      },
+      "power_on_level": {
+        "name": "Nivel de encendido"
       }
     },
     "select": {
+      "light_mode_channel": {
+        "name": "{channel} Modo",
+        "state": {
+          "auto": "Automático",
+          "manual": "Manual"
+        }
+      },
+      "light_mode": {
+        "name": "Modo",
+        "state": {
+          "auto": "Automático",
+          "manual": "Manual"
+        }
+      },
+      "output_mode_channel": {
+        "name": "{channel} Modo de salida",
+        "state": {
+          "auto": "Automático",
+          "rl_led": "Modo LED RL"
+        }
+      },
+      "output_mode": {
+        "name": "Modo de salida",
+        "state": {
+          "auto": "Automático",
+          "rl_led": "Modo LED RL"
+        }
+      },
       "mode": {
         "name": "Modo"
       },
+      "power_on_behavior_channel": {
+        "name": "{channel} Comportamiento de encendido",
+        "state": {
+          "last_brightness": "Último brillo",
+          "specified_brightness": "Brillo especificado"
+        }
+      },
       "power_on_behavior": {
-        "name": "Comportamiento de encendido"
+        "name": "Comportamiento de encendido",
+        "state": {
+          "last_brightness": "Último brillo",
+          "specified_brightness": "Brillo especificado"
+        }
+      },
+      "led_indicator_channel": {
+        "name": "{channel} Indicador LED",
+        "state": {
+          "reverse_with_load": "Opuesto a la carga",
+          "consistent_with_load": "Seguir la carga",
+          "always_on": "Siempre encendido",
+          "always_off": "Siempre apagado",
+          "off_after_2s": "Apagar después de 2 segundos"
+        }
       },
       "led_indicator": {
-        "name": "Indicador LED"
+        "name": "Indicador LED",
+        "state": {
+          "reverse_with_load": "Opuesto a la carga",
+          "consistent_with_load": "Seguir la carga",
+          "always_on": "Siempre encendido",
+          "always_off": "Siempre apagado",
+          "off_after_2s": "Apagar después de 2 segundos"
+        }
       },
       "passive_mode_strategy": {
         "name": "Estrategia del modo pasivo",

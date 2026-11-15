@@ -380,6 +380,14 @@ def get_light_entity_name(data, light, entity_name):
     return " ".join(part for part in (channel_name, entity_name) if part)
 
 
+def get_light_translation_context(data, light, translation_key: str):
+    """Keep a light channel's name separate from its translated control label."""
+    channel = get_light_entity_name(data, light, "")
+    if channel:
+        return f"{translation_key}_channel", {"channel": channel}
+    return translation_key, {}
+
+
 def get_legacy_device_name(data, device_id):
     """Return a physical device name used by historical entity unique IDs."""
     device = data.wiserhub.devices.get_by_id(device_id)
