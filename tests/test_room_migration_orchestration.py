@@ -136,6 +136,7 @@ def _load_wiser_init() -> ModuleType:
         "build_physical_entity_unique_id_migration",
         "get_device_name",
         "get_hub_device_name",
+        "get_hub_entity_object_id",
         "get_hub_via_device_info",
         "get_identifier",
         "get_instance_count",

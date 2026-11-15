@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
+from unittest.mock import Mock
 from uuid import UUID
 
 
@@ -234,6 +236,126 @@ class HubNamingTest(unittest.TestCase):
     def test_hub_entity_object_id_does_not_repeat_device_name(self) -> None:
         object_id = self.helpers.get_hub_entity_object_id(self.data, "Away Mode")
         self.assertNotIn("wiser_heathub", object_id)
+
+    def test_hub_renames_refresh_registry_naming_inputs_without_reload(self) -> None:
+        tree = ast.parse((COMPONENT_PATH / "__init__.py").read_text())
+        listener = next(
+            node for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "async_track_hub_name_changes"
+        )
+        device = SimpleNamespace(
+            name="Wiser HeatHub (058A52)", name_by_user="Wiser HeatHub"
+        )
+        hub_entity = SimpleNamespace(
+            entity_id="switch.office_wiser_heathub_058a52_away_mode",
+            device_id="hub-id",
+            platform="wiser",
+            has_entity_name=True,
+            original_name="Away Mode",
+            object_id_base="058a52_away_mode",
+            domain="switch",
+            unique_id="away-mode-uuid",
+            supported_features=1,
+        )
+        disabled_entity = SimpleNamespace(
+            entity_id="sensor.office_wiser_heathub_058a52_cloud",
+            device_id="hub-id",
+            platform="wiser",
+            has_entity_name=True,
+            original_name="Cloud",
+            object_id_base="058a52_cloud",
+            disabled_by="user",
+            domain="sensor",
+            unique_id="cloud-uuid",
+            supported_features=0,
+        )
+        other_device = SimpleNamespace(device_id="another-hub", platform="wiser")
+        other_platform = SimpleNamespace(device_id="hub-id", platform="other")
+        entries = [hub_entity, disabled_entity, other_device, other_platform]
+
+        def register_entry(
+            domain,
+            platform,
+            unique_id,
+            *,
+            config_entry,
+            object_id_base,
+            supported_features,
+        ):
+            entity = next(
+                item for item in entries
+                if getattr(item, "unique_id", None) == unique_id
+            )
+            self.assertEqual((domain, platform), (entity.domain, entity.platform))
+            self.assertEqual(config_entry.entry_id, "entry-id")
+            self.assertEqual(supported_features, entity.supported_features)
+            entity.object_id_base = object_id_base
+
+        registry = SimpleNamespace(async_get_or_create=Mock(side_effect=register_entry))
+        entity_registry = SimpleNamespace(
+            async_get=lambda hass: registry,
+            async_entries_for_config_entry=Mock(return_value=entries),
+        )
+        namespace = {
+            "callback": lambda function: function,
+            "DOMAIN": "wiser",
+            "dr": SimpleNamespace(
+                EVENT_DEVICE_REGISTRY_UPDATED="device_registry_updated",
+                async_get=lambda hass: SimpleNamespace(
+                    async_get=lambda device_id: device
+                ),
+            ),
+            "er": entity_registry,
+            "get_hub_entity_object_id": self.helpers.get_hub_entity_object_id,
+        }
+        exec(
+            compile(ast.Module(body=[listener], type_ignores=[]), "<hub rename>", "exec"),
+            namespace,
+        )
+        unsubscribe = Mock()
+        hass = SimpleNamespace(
+            bus=SimpleNamespace(async_listen=Mock(return_value=unsubscribe))
+        )
+        config_entry = SimpleNamespace(entry_id="entry-id", async_on_unload=Mock())
+        self.data.hub_device_id = "hub-id"
+        namespace["async_track_hub_name_changes"](hass, config_entry, self.data)
+        config_entry.async_on_unload.assert_called_once_with(unsubscribe)
+        handler = hass.bus.async_listen.call_args.args[1]
+
+        event = SimpleNamespace(
+            data={
+                "action": "update",
+                "device_id": "hub-id",
+                "changes": {"name_by_user": "Wiser HeatHub"},
+            }
+        )
+        for override, expected in (
+            ("Wiser HeatHub (058A52)", "away_mode"),
+            ("Wiser HeatHub", "058a52_away_mode"),
+            (None, "away_mode"),
+            ("My boiler", "058a52_away_mode"),
+        ):
+            device.name_by_user = override
+            handler(event)
+            self.assertEqual(hub_entity.object_id_base, expected)
+            self.assertEqual(
+                disabled_entity.object_id_base, expected.replace("away_mode", "cloud")
+            )
+            self.assertEqual(
+                hub_entity.entity_id, "switch.office_wiser_heathub_058a52_away_mode"
+            )
+
+        entity_registry.async_entries_for_config_entry.assert_called_with(
+            registry, "entry-id"
+        )
+        registry.async_get_or_create.reset_mock()
+        handler(event)  # Repeating the same name requires no registry write.
+        event.data["device_id"] = "another-hub"
+        handler(event)
+        event.data.update(device_id="hub-id", changes={"area_id": "office"})
+        handler(event)
+        registry.async_get_or_create.assert_not_called()
 
     def test_legacy_identifier_remains_stable(self) -> None:
         self.assertEqual(
