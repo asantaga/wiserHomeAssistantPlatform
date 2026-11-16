@@ -1870,15 +1870,39 @@ class WiserDeviceReceptionSensorTest(unittest.TestCase):
         self.assertEqual([s.native_value for s in sensors], [-60, 200])
 
     def test_missing_reception_data_is_unknown(self):
-        self.device.signal.controller_reception_rssi = None
-        self.device.signal.controller_reception_lqi = None
+        # aioWiserHeatAPI falls back to 0 for both values when the hub has no
+        # ReceptionOfController block, and to None when a field is missing.
+        for rssi, lqi in ((0, 0), (None, None)):
+            self.device.signal.controller_reception_rssi = rssi
+            self.device.signal.controller_reception_lqi = lqi
+            for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES:
+                with self.subTest(rssi=rssi, key=key):
+                    sensor = self.sensor_module.WiserDeviceReceptionSensor(
+                        self.data, 7, key
+                    )
+                    self.assertIsNone(sensor.native_value)
+                    self.assertTrue(sensor.available)
 
-        for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES:
-            with self.subTest(key=key):
-                sensor = self.sensor_module.WiserDeviceReceptionSensor(
-                    self.data, 7, key
-                )
-                self.assertIsNone(sensor.native_value)
+    def test_zero_lqi_with_real_rssi_is_reported(self):
+        self.device.signal.controller_reception_lqi = 0
+
+        sensor = self.sensor_module.WiserDeviceReceptionSensor(
+            self.data, 7, "link_quality"
+        )
+
+        self.assertEqual(sensor.native_value, 0)
+
+    def test_removed_device_is_unavailable(self):
+        sensor = self.sensor_module.WiserDeviceReceptionSensor(
+            self.data, 7, "signal_strength"
+        )
+        sensor.async_write_ha_state = Mock()
+        self.data.wiserhub.devices.get_by_id = lambda _device_id: None
+
+        sensor._handle_coordinator_update()
+
+        self.assertIsNone(sensor.native_value)
+        self.assertFalse(sensor.available)
 
     def test_setup_creates_reception_sensors_per_device(self):
         source = SOURCE_PATH.read_text(encoding="utf-8")

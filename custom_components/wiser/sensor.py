@@ -1056,13 +1056,27 @@ class WiserDeviceReceptionSensor(WiserSensor):
         self._state = self._read_reception_value()
 
     def _read_reception_value(self) -> int | None:
-        """Return the current reception value reported by the hub."""
+        """Return the current reception value reported by the hub.
+
+        The API reports 0 for both RSSI and LQI when the hub has no
+        controller reception data for a device. A Zigbee RSSI of exactly
+        0 dBm is not physically plausible, so treat it as missing rather
+        than recording a perfect reading in long-term statistics.
+        """
         signal = getattr(self._device, "signal", None)
         if signal is None:
             return None
+        rssi = signal.controller_reception_rssi
+        if not rssi:
+            return None
         if self._sensor_type == "signal_strength":
-            return signal.controller_reception_rssi
+            return rssi
         return signal.controller_reception_lqi
+
+    @property
+    def available(self) -> bool:
+        """Return False once the hub no longer reports the device."""
+        return super().available and self._device is not None
 
     @callback
     def _handle_coordinator_update(self) -> None:
