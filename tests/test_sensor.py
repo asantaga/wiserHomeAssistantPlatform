@@ -285,6 +285,15 @@ def _load_sensor_module() -> ModuleType:
         ),
     )
 
+    # Load the real shared circuit-state logic so the sensor tests exercise it.
+    circuit_spec = importlib.util.spec_from_file_location(
+        "wiser.circuit_state", SOURCE_PATH.parent / "circuit_state.py"
+    )
+    assert circuit_spec and circuit_spec.loader
+    circuit_state = importlib.util.module_from_spec(circuit_spec)
+    sys.modules[circuit_spec.name] = circuit_state
+    circuit_spec.loader.exec_module(circuit_state)
+
     spec = importlib.util.spec_from_file_location("wiser.sensor", SOURCE_PATH)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)

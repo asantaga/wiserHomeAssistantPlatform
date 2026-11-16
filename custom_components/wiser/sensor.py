@@ -54,6 +54,7 @@ from .const import (
     SIGNAL_STRENGTH_ICONS,
     VERSION,
 )
+from .circuit_state import heating_channel_output_state, hot_water_output_state
 from .entity import WiserEntityMixin
 from .helpers import (
     active_wiser_rooms,
@@ -1090,14 +1091,10 @@ class WiserSystemCircuitState(WiserSensor):
             self._device = self._data.wiserhub.heating_channels.get_by_id(
                 self._device_id
             )
-            raw_state = (
-                self._device.heating_relay_status
-                if self._device.heating_relay_status != TEXT_UNKNOWN
-                else self._device.demand_on_off_output
-            )
+            raw_state = heating_channel_output_state(self._device)
         else:
             self._device = self._data.wiserhub.hotwater
-            raw_state = self._device.current_state
+            raw_state = hot_water_output_state(self._device)
         self._state = ON_OFF_STATES.get(raw_state)
         self.async_write_ha_state()
 
