@@ -49,7 +49,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SUMMER_DISCOMFORT_PREVENTION = "Summer Discomfort Prevention"
 SUMMER_COMFORT_AVAILABLE = "Summer Comfort Available"
-RMB_FOLLOW_SMART = "rmb_follow_smart"
+RMB_FOLLOW_SMART = "RMB Follow Smart"
 PCM_DEVICE_LIMIT_REACHED = "PCM Device Limit Reached"
 PCM_ONLINE = "PCM Online"
 CAN_ACTIVATE_PCM = "Can Activate PCM"

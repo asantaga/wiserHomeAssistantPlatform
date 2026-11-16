@@ -70,11 +70,11 @@ class SystemFeatureBinarySensorTest(unittest.TestCase):
     def test_rmb_detection_uses_api_property_casing(self) -> None:
         data = SimpleNamespace(
             hub_version=2,
-            wiserhub=SimpleNamespace(system=SimpleNamespace(RMB_follow_smart=False)),
+            wiserhub=SimpleNamespace(system=SimpleNamespace(rmb_follow_smart=False)),
         )
         self.assertTrue(self.supports_rmb(data))
 
-        data.wiserhub.system = SimpleNamespace(rmb_follow_smart=True)
+        data.wiserhub.system = SimpleNamespace(RMB_follow_smart=True)
         self.assertFalse(self.supports_rmb(data))
 
     def test_setup_registers_pcm_and_rmb_entities_behind_property_guards(self) -> None:
