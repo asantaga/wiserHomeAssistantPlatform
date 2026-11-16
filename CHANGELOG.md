@@ -4,6 +4,12 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## Unreleased
+
+### Added
+
+- Added disabled-by-default diagnostic Signal strength (dBm) and Link quality sensors for every Zigbee device, sourced from the hub's controller reception RSSI and LQI so they can be graphed in long-term statistics - PR_LINK_PLACEHOLDER.
+
 ## v4.1.0b2
 
 ### Upgrade notes

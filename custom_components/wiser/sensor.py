@@ -31,6 +31,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfPower,
     UnitOfEnergy,
     UnitOfPressure,
@@ -82,6 +83,9 @@ from .opentherm_detection import opentherm_is_detected
 from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
+
+# Numeric Zigbee reception sensors created for every physical device.
+DEVICE_RECEPTION_SENSOR_TYPES = ("signal_strength", "link_quality")
 
 ON_OFF_STATES = {
     TEXT_ON: STATE_ON,
@@ -186,6 +190,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 signal_sensor_device_ids.add(device.id)
                 wiser_sensors.append(
                     WiserDeviceSignalSensor(data, device.id, device.product_type)
+                )
+                wiser_sensors.extend(
+                    WiserDeviceReceptionSensor(data, device.id, reception_type)
+                    for reception_type in DEVICE_RECEPTION_SENSOR_TYPES
                 )
                 if device.product_type == "UnderFloorHeating":
                     wiser_sensors.append(
@@ -1021,6 +1029,71 @@ class WiserDeviceSignalSensor(WiserSensor):
             )
 
         return attrs
+
+
+class WiserDeviceReceptionSensor(WiserSensor):
+    """Numeric Zigbee reception measurement for a physical device.
+
+    Exposes the hub's view of a device's link (controller reception RSSI or
+    LQI) as a plottable value alongside the text Signal sensor.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, data, device_id: int, reception_type: str) -> None:
+        """Initialise the reception sensor."""
+        super().__init__(
+            data, device_id, reception_type, translation_key=reception_type
+        )
+        if reception_type == "signal_strength":
+            self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+            self._attr_native_unit_of_measurement = (
+                SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+            )
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._read_reception_value()
+
+    def _read_reception_value(self) -> int | None:
+        """Return the current reception value reported by the hub."""
+        signal = getattr(self._device, "signal", None)
+        if signal is None:
+            return None
+        if self._sensor_type == "signal_strength":
+            return signal.controller_reception_rssi
+        return signal.controller_reception_lqi
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh the reception value."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._read_reception_value()
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "sensor",
+            self._device_id,
+            self._sensor_type,
+        )
+
+    @property
+    def device_info(self):
+        """Attach the entity to its physical device."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            **get_device_area_info(self._data, self._device_id),
+            **get_hub_via_device_info(self._data),
+        }
 
 
 class WiserSystemHotWaterPreset(WiserSensor):

@@ -674,6 +674,8 @@
         "name": "Signal"
       },
       "report_count": { "name": "Rapportantal" },
+      "signal_strength": { "name": "Signalstyrka" },
+      "link_quality": { "name": "Länkkvalitet" },
       "cloud": {
         "name": "Moln"
       },

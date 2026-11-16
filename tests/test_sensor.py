@@ -48,6 +48,7 @@ def _load_sensor_module() -> ModuleType:
             POWER="power",
             VOLUME_FLOW_RATE="volume_flow_rate",
             DURATION="duration",
+            SIGNAL_STRENGTH="signal_strength",
         ),
         SensorStateClass=SimpleNamespace(MEASUREMENT="measurement"),
         SensorEntity=SensorEntity,
@@ -66,6 +67,7 @@ def _load_sensor_module() -> ModuleType:
         UnitOfElectricCurrent=SimpleNamespace(),
         UnitOfElectricPotential=SimpleNamespace(),
         PERCENTAGE="%",
+        SIGNAL_STRENGTH_DECIBELS_MILLIWATT="dBm",
         UnitOfPower=SimpleNamespace(KILO_WATT="kW", WATT="W"),
         UnitOfEnergy=SimpleNamespace(),
         UnitOfPressure=SimpleNamespace(BAR="bar"),
@@ -1796,6 +1798,109 @@ class WiserSmokeAlarmStatusSensorTest(unittest.TestCase):
 
         self.assertEqual(sensor.native_value, 43)
         sensor.async_write_ha_state.assert_called_once_with()
+
+
+class WiserDeviceReceptionSensorTest(unittest.TestCase):
+    """Tests for numeric Zigbee signal strength and link quality sensors."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    def setUp(self):
+        self.device = SimpleNamespace(
+            product_type="iTRV",
+            firmware_version="1.0",
+            signal=SimpleNamespace(
+                controller_reception_rssi=-72,
+                controller_reception_lqi=148,
+            ),
+        )
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(get_by_id=lambda _device_id: self.device),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+
+    def test_signal_strength_reports_rssi_in_dbm(self):
+        sensor = self.sensor_module.WiserDeviceReceptionSensor(
+            self.data, 7, "signal_strength"
+        )
+
+        self.assertEqual(sensor.native_value, -72)
+        self.assertEqual(sensor._attr_translation_key, "signal_strength")
+        self.assertEqual(sensor._attr_device_class, "signal_strength")
+        self.assertEqual(sensor._attr_native_unit_of_measurement, "dBm")
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertFalse(sensor._attr_entity_registry_enabled_default)
+        self.assertEqual(sensor.unique_id, "physical-sensor-7-signal_strength")
+
+    def test_link_quality_reports_lqi_without_unit(self):
+        sensor = self.sensor_module.WiserDeviceReceptionSensor(
+            self.data, 7, "link_quality"
+        )
+
+        self.assertEqual(sensor.native_value, 148)
+        self.assertEqual(sensor._attr_translation_key, "link_quality")
+        self.assertFalse(hasattr(sensor, "_attr_device_class"))
+        self.assertFalse(hasattr(sensor, "_attr_native_unit_of_measurement"))
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertFalse(sensor._attr_entity_registry_enabled_default)
+        self.assertEqual(sensor.unique_id, "physical-sensor-7-link_quality")
+
+    def test_values_refresh_on_coordinator_update(self):
+        sensors = [
+            self.sensor_module.WiserDeviceReceptionSensor(self.data, 7, key)
+            for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES
+        ]
+        for sensor in sensors:
+            sensor.async_write_ha_state = Mock()
+
+        self.device.signal.controller_reception_rssi = -60
+        self.device.signal.controller_reception_lqi = 200
+        for sensor in sensors:
+            sensor._handle_coordinator_update()
+            sensor.async_write_ha_state.assert_called_once_with()
+
+        self.assertEqual([s.native_value for s in sensors], [-60, 200])
+
+    def test_missing_reception_data_is_unknown(self):
+        self.device.signal.controller_reception_rssi = None
+        self.device.signal.controller_reception_lqi = None
+
+        for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES:
+            with self.subTest(key=key):
+                sensor = self.sensor_module.WiserDeviceReceptionSensor(
+                    self.data, 7, key
+                )
+                self.assertIsNone(sensor.native_value)
+
+    def test_setup_creates_reception_sensors_per_device(self):
+        source = SOURCE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "WiserDeviceReceptionSensor(data, device.id, reception_type)", source
+        )
+        self.assertIn(
+            "for reception_type in DEVICE_RECEPTION_SENSOR_TYPES", source
+        )
+
+    def test_reception_sensor_names_are_translated(self):
+        component = SOURCE_PATH.parent
+        for path in [component / "strings.json"] + sorted(
+            (component / "translations").glob("*.json")
+        ):
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "sensor"
+            ]
+            for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES:
+                with self.subTest(file=path.name, key=key):
+                    self.assertTrue(sensors[key]["name"])
 
 
 class WiserEquipmentBinarySensorTest(unittest.TestCase):
