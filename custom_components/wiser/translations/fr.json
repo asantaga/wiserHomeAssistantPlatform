@@ -509,6 +509,7 @@
       "signal": { "name": "Signal" },
       "report_count": { "name": "Nombre de rapports" },
       "signal_strength": { "name": "Force du signal" },
+      "wifi_signal_strength": { "name": "Force du signal Wi-Fi" },
       "link_quality": { "name": "Qualité de la liaison" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Mode de fonctionnement du chauffage" },

@@ -178,6 +178,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add hub wifi signal sensor
     wiser_sensors.append(WiserDeviceSignalSensor(data, 0, "Controller"))
+    wiser_sensors.append(WiserHubWifiSignalSensor(data))
     if data.wiserhub.devices:
         # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per channel
         # but share a single physical device id. Signal strength is a property of
@@ -1029,6 +1030,37 @@ class WiserDeviceSignalSensor(WiserSensor):
             )
 
         return attrs
+
+
+class WiserHubWifiSignalSensor(WiserSensor):
+    """Numeric Wi-Fi signal strength reported by the HeatHub."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, data) -> None:
+        """Initialise the hub's Wi-Fi measurement."""
+        super().__init__(
+            data,
+            sensor_type="wifi_signal_strength",
+            translation_key="wifi_signal_strength",
+        )
+        self._state = self._read_signal_strength()
+
+    def _read_signal_strength(self) -> int | None:
+        """Return Wi-Fi RSSI, treating the API's zero fallback as missing."""
+        signal = getattr(self._data.wiserhub.system, "signal", None)
+        return getattr(signal, "controller_reception_rssi", None) or None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh Wi-Fi RSSI from the current hub object."""
+        super()._handle_coordinator_update()
+        self._state = self._read_signal_strength()
+        self.async_write_ha_state()
 
 
 class WiserDeviceReceptionSensor(WiserSensor):

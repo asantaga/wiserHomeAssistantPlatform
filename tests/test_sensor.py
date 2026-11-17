@@ -1917,6 +1917,87 @@ class WiserDeviceReceptionSensorTest(unittest.TestCase):
                     self.assertTrue(sensors[key]["name"])
 
 
+class WiserHubWifiSignalSensorTest(unittest.TestCase):
+    """Tests for the hub's numeric Wi-Fi diagnostic sensor."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    def setUp(self):
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    name="WiserHeat123456",
+                    signal=SimpleNamespace(controller_reception_rssi=-55),
+                ),
+                rooms=SimpleNamespace(get_by_device_id=lambda _device_id: None),
+            ),
+        )
+
+    def test_reports_wifi_rssi_with_diagnostic_measurement_metadata(self):
+        sensor = self.sensor_module.WiserHubWifiSignalSensor(self.data)
+
+        self.assertEqual(sensor.native_value, -55)
+        self.assertEqual(sensor._attr_translation_key, "wifi_signal_strength")
+        self.assertEqual(sensor._attr_device_class, "signal_strength")
+        self.assertEqual(sensor._attr_native_unit_of_measurement, "dBm")
+        self.assertEqual(sensor._attr_state_class, "measurement")
+        self.assertEqual(sensor._attr_entity_category, "diagnostic")
+        self.assertFalse(sensor._attr_entity_registry_enabled_default)
+        self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+        with patch.object(self.sensor_module, "get_unique_id") as unique_id:
+            self.assertIs(sensor.unique_id, unique_id.return_value)
+            unique_id.assert_called_once_with(
+                self.data, "sensor", "wifi_signal_strength", 0
+            )
+
+    def test_missing_wifi_data_is_unknown(self):
+        for signal in (
+            None,
+            SimpleNamespace(),
+            SimpleNamespace(controller_reception_rssi=None),
+            SimpleNamespace(controller_reception_rssi=0),
+        ):
+            with self.subTest(signal=signal):
+                self.data.wiserhub.system.signal = signal
+                sensor = self.sensor_module.WiserHubWifiSignalSensor(self.data)
+                self.assertIsNone(sensor.native_value)
+                self.assertTrue(sensor.available)
+
+    def test_updates_from_replaced_hub_and_recovers_after_missing_reading(self):
+        sensor = self.sensor_module.WiserHubWifiSignalSensor(self.data)
+        sensor.async_write_ha_state = Mock()
+
+        for rssi, expected in ((-65, -65), (0, None), (-48, -48)):
+            with self.subTest(rssi=rssi):
+                self.data.wiserhub.system = SimpleNamespace(
+                    signal=SimpleNamespace(controller_reception_rssi=rssi)
+                )
+                sensor.async_write_ha_state.reset_mock()
+                sensor._handle_coordinator_update()
+                self.assertEqual(sensor.native_value, expected)
+                sensor.async_write_ha_state.assert_called_once_with()
+
+    def test_hub_connection_failure_makes_sensor_unavailable_until_recovery(self):
+        sensor = self.sensor_module.WiserHubWifiSignalSensor(self.data)
+
+        self.data.last_update_success = False
+        self.assertFalse(sensor.available)
+        self.data.last_update_success = True
+        self.assertTrue(sensor.available)
+
+    def test_wifi_sensor_name_is_translated(self):
+        component = SOURCE_PATH.parent
+        for path in [component / "strings.json"] + sorted(
+            (component / "translations").glob("*.json")
+        ):
+            with self.subTest(file=path.name):
+                sensors = json.loads(path.read_text(encoding="utf-8"))["entity"]["sensor"]
+                self.assertTrue(sensors["wifi_signal_strength"]["name"])
+
+
 class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
     """Exercise reception sensor creation through the platform setup entry point."""
 
@@ -1959,7 +2040,10 @@ class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
                 system=SimpleNamespace(
                     name="WiserHeat123456",
                     opentherm=None,
-                    signal=SimpleNamespace(displayed_signal_strength="Good"),
+                    signal=SimpleNamespace(
+                        displayed_signal_strength="Good",
+                        controller_reception_rssi=-55,
+                    ),
                 ),
                 heating_channels=None,
                 hotwater=None,
@@ -1996,6 +2080,12 @@ class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
              (8, "signal_strength"), (8, "link_quality")],
         )
         self.assertEqual(len({sensor.unique_id for sensor in reception_sensors}), 4)
+        wifi_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserHubWifiSignalSensor)
+        ]
+        self.assertEqual(len(wifi_sensors), 1)
+        self.assertEqual(wifi_sensors[0].native_value, -55)
 
     async def test_multi_gang_device_gets_one_pair_and_one_text_signal_sensor(self):
         entities = await self._setup_sensors(
@@ -2016,7 +2106,7 @@ class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertCountEqual([sensor._device_id for sensor in text_sensors], [0, 7])
 
-    async def test_hub_without_zigbee_devices_keeps_only_its_text_signal_sensor(self):
+    async def test_hub_without_zigbee_devices_gets_wifi_and_text_signal_sensors(self):
         entities = await self._setup_sensors([])
 
         self.assertFalse(any(
@@ -2028,6 +2118,12 @@ class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
             if isinstance(entity, self.sensor_module.WiserDeviceSignalSensor)
         ]
         self.assertEqual([sensor._device_id for sensor in text_sensors], [0])
+        wifi_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserHubWifiSignalSensor)
+        ]
+        self.assertEqual(len(wifi_sensors), 1)
+        self.assertEqual(wifi_sensors[0].native_value, -55)
 
 
 class WiserEquipmentBinarySensorTest(unittest.TestCase):

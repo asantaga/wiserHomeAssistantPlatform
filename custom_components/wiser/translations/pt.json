@@ -675,6 +675,7 @@
       },
       "report_count": { "name": "Contagem de relatórios" },
       "signal_strength": { "name": "Intensidade do sinal" },
+      "wifi_signal_strength": { "name": "Intensidade do sinal Wi-Fi" },
       "link_quality": { "name": "Qualidade da ligação" },
       "cloud": {
         "name": "Nuvem"

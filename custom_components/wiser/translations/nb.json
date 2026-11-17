@@ -675,6 +675,7 @@
       },
       "report_count": { "name": "Rapportantall" },
       "signal_strength": { "name": "Signalstyrke" },
+      "wifi_signal_strength": { "name": "Wi-Fi-signalstyrke" },
       "link_quality": { "name": "Koblingskvalitet" },
       "cloud": {
         "name": "Sky"
