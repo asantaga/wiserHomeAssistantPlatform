@@ -82,6 +82,69 @@ class CircuitStateTest(unittest.TestCase):
             with self.subTest(raw_state=raw_state):
                 self.assertIsNone(self.module.output_state_is_on(raw_state))
 
+    def test_opentherm_uses_boiler_activity_even_when_relay_disagrees(self):
+        for relay, demand in (("On", "On"), ("Off", "Off"), ("Unknown", "Off")):
+            for status, expected in ((0, "Off"), (2, "On"), (4, "Off"), (8, "Off"), (10, "On")):
+                with self.subTest(relay=relay, demand=demand, status=status):
+                    ot = SimpleNamespace(
+                        enabled=True, connection_status="Connected",
+                        operational_data=SimpleNamespace(slave_status=status),
+                    )
+                    self.assertEqual(
+                        self.module.heating_channel_output_state(
+                            self._channel(relay, demand), ot
+                        ),
+                        expected,
+                    )
+
+    def test_invalid_boiler_status_remains_unknown(self):
+        for status in (None, True, False, "2", 2.0):
+            with self.subTest(status=status):
+                ot = SimpleNamespace(
+                    enabled=True, connection_status="Connected",
+                    operational_data=SimpleNamespace(slave_status=status),
+                )
+                self.assertEqual(
+                    self.module.heating_channel_output_state(
+                        self._channel("On", "On"), ot
+                    ),
+                    "Unknown",
+                )
+
+    def test_known_opentherm_without_live_data_never_uses_relay(self):
+        for ot in (
+            None,
+            SimpleNamespace(enabled=True, connection_status="Disconnected"),
+            SimpleNamespace(enabled=False, connection_status="Connected"),
+        ):
+            with self.subTest(opentherm=ot):
+                channel = self._channel("On", "On")
+                context = {"opentherm": ot, "opentherm_detected": True}
+                self.assertFalse(
+                    self.module.heating_channel_is_available(channel, **context)
+                )
+                self.assertEqual(
+                    self.module.heating_channel_output_state(channel, **context),
+                    "Unknown",
+                )
+
+    def test_persisted_detection_is_used_even_without_boiler_object(self):
+        data = SimpleNamespace(
+            wiserhub=SimpleNamespace(system=SimpleNamespace(opentherm=None)),
+            config_entry=SimpleNamespace(data={"opentherm_ever_connected": True}),
+        )
+        context = self.module.heating_channel_context(data)
+        self.assertEqual(
+            self.module.heating_channel_output_state(
+                self._channel("On", "On"), **context
+            ),
+            "Unknown",
+        )
+
+    def test_missing_circuits_are_unknown(self):
+        self.assertEqual(self.module.heating_channel_output_state(None), "Unknown")
+        self.assertEqual(self.module.hot_water_output_state(None), "Unknown")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .circuit_state import (
+    heating_channel_context,
+    heating_channel_is_available,
     heating_channel_output_state,
     hot_water_output_state,
     output_state_is_on,
@@ -611,7 +613,7 @@ class WiserEquipment(BaseBinarySensor):
 class WiserCircuitActiveBinarySensor(
     WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
 ):
-    """Whether the hub is calling for heat on a heating channel or hot water.
+    """Whether a heating channel or hot water circuit is active.
 
     Shares its on/off logic with the circuit text sensors in sensor.py.
     """
@@ -640,7 +642,8 @@ class WiserCircuitActiveBinarySensor(
         """Return the current heating channel or hot water object, if any."""
         if self._circuit_type == CIRCUIT_HOT_WATER:
             return self._data.wiserhub.hotwater
-        return self._data.wiserhub.heating_channels.get_by_id(self._circuit_id)
+        channels = self._data.wiserhub.heating_channels
+        return channels.get_by_id(self._circuit_id) if channels else None
 
     def _read_state(self) -> bool | None:
         """Return whether the circuit is on, or None when unknown."""
@@ -649,7 +652,11 @@ class WiserCircuitActiveBinarySensor(
             return None
         if self._circuit_type == CIRCUIT_HOT_WATER:
             return output_state_is_on(hot_water_output_state(circuit))
-        return output_state_is_on(heating_channel_output_state(circuit))
+        return output_state_is_on(
+            heating_channel_output_state(
+                circuit, **heating_channel_context(self._data)
+            )
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -660,11 +667,18 @@ class WiserCircuitActiveBinarySensor(
     @property
     def available(self) -> bool:
         """Return False when the hub no longer reports the circuit."""
-        return super().available and self._circuit() is not None
+        if not super().available:
+            return False
+        circuit = self._circuit()
+        if self._circuit_type == CIRCUIT_HOT_WATER:
+            return circuit is not None
+        return heating_channel_is_available(
+            circuit, **heating_channel_context(self._data)
+        )
 
     @property
     def is_on(self) -> bool | None:
-        """Return whether the hub is calling for heat on the circuit."""
+        """Return whether the circuit is active."""
         return self._state
 
     @property

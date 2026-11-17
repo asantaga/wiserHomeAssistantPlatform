@@ -1906,6 +1906,103 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
         sensor.async_write_ha_state = Mock()
         return sensor
 
+    def _text_sensor(self, data, sensor_type="Heating"):
+        text = object.__new__(sys.modules["wiser.sensor"].WiserSystemCircuitState)
+        text.coordinator = data
+        text._data = data
+        text._device_id = 1
+        text._sensor_type = sensor_type
+        text.async_write_ha_state = Mock()
+        text._handle_coordinator_update()
+        return text
+
+    def test_opentherm_text_and_binary_follow_boiler_not_relay_or_demand(self):
+        for relay in ("On", "Off", "Unknown"):
+            for demand in ("On", "Off", "Unknown"):
+                for status, expected in (
+                    (0, False), (2, True), (4, False), (8, False), (10, True),
+                    (None, None), (True, None), ("2", None),
+                ):
+                    with self.subTest(relay=relay, demand=demand, status=status):
+                        data = self._data(relay=relay, demand=demand)
+                        data.wiserhub.system.opentherm = SimpleNamespace(
+                            enabled=True, connection_status="Connected",
+                            operational_data=SimpleNamespace(slave_status=status),
+                        )
+                        channel = data.wiserhub.heating_channels.get_by_id(1)
+                        channel.percentage_demand = 0
+                        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+                        text = self._text_sensor(data)
+                        self.assertIs(binary.is_on, expected)
+                        self.assertEqual(
+                            text.native_value,
+                            None if expected is None else "on" if expected else "off",
+                        )
+                        self.assertTrue(binary.available)
+                        self.assertTrue(text.available)
+
+    def test_opentherm_loss_and_recovery_refresh_both_sensors(self):
+        data = self._data(relay="On", demand="On")
+        data.config_entry = SimpleNamespace(
+            data={"opentherm_ever_connected": True}
+        )
+        ot = SimpleNamespace(
+            enabled=True, connection_status="Connected",
+            operational_data=SimpleNamespace(slave_status=2),
+        )
+        data.wiserhub.system.opentherm = ot
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        for boiler, expected, available in (
+            (ot, True, True), (None, None, False), (ot, True, True),
+        ):
+            data.wiserhub.system.opentherm = boiler
+            binary._handle_coordinator_update()
+            text._handle_coordinator_update()
+            self.assertIs(binary.is_on, expected)
+            self.assertEqual(text.native_value, "on" if expected else None)
+            self.assertIs(binary.available, available)
+            self.assertIs(text.available, available)
+
+    def test_disconnected_opentherm_never_falls_back_to_relay(self):
+        data = self._data(relay="On", demand="On")
+        data.wiserhub.system.opentherm = SimpleNamespace(
+            enabled=True, connection_status="Disconnected",
+            operational_data=SimpleNamespace(slave_status=2),
+        )
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+
+    def test_missing_channel_collection_is_safe_for_both_sensors(self):
+        data = self._data()
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        data.wiserhub.heating_channels = None
+        binary._handle_coordinator_update()
+        text._handle_coordinator_update()
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+        self.assertEqual(text.extra_state_attributes, {})
+
+    def test_missing_hot_water_is_safe_for_both_sensors(self):
+        data = self._data()
+        binary = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+        text = self._text_sensor(data, "Hot Water")
+        data.wiserhub.hotwater = None
+        binary._handle_coordinator_update()
+        text._handle_coordinator_update()
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+        self.assertEqual(text.extra_state_attributes, {})
+
     def test_single_channel_heating_name_and_class(self) -> None:
         data = self._data()
         sensor = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
@@ -2225,19 +2322,18 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
                 for key in ("heating_active", "hot_water_circuit_active"):
                     self.assertNotIn("{", sensors[key]["name"])
 
-    def test_icons_match_text_sensors_for_unknown_state(self) -> None:
-        # The text sensors show the "on" icon for every state except off,
-        # including unknown, so the binary sensors default to it too.
+    def test_icons_default_to_inactive_with_explicit_on_override(self) -> None:
+        # Unknown/unavailable states must not use the active icon.
         icons = json.loads(
             (SOURCE_PATH.parent / "icons.json").read_text(encoding="utf-8")
         )["entity"]["binary_sensor"]
         expected = {
-            "heating_active": ("mdi:radiator", "mdi:radiator-disabled"),
-            "heating_channel_active": ("mdi:radiator", "mdi:radiator-disabled"),
-            "hot_water_circuit_active": ("mdi:fire", "mdi:fire-off"),
+            "heating_active": ("mdi:radiator-disabled", "mdi:radiator"),
+            "heating_channel_active": ("mdi:radiator-disabled", "mdi:radiator"),
+            "hot_water_circuit_active": ("mdi:fire-off", "mdi:fire"),
         }
-        for key, (default, off) in expected.items():
+        for key, (default, on) in expected.items():
             with self.subTest(key=key):
                 self.assertEqual(
-                    icons[key], {"default": default, "state": {"off": off}}
+                    icons[key], {"default": default, "state": {"on": on}}
                 )

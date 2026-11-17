@@ -8,7 +8,12 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
-- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are unchanged - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are retained for compatibility - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+
+### Fixed
+
+- On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
 
 ## v4.1.0b2
 
