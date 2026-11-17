@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 SOURCE_PATH = Path(__file__).parents[1] / "custom_components/wiser/sensor.py"
@@ -1904,16 +1904,6 @@ class WiserDeviceReceptionSensorTest(unittest.TestCase):
         self.assertIsNone(sensor.native_value)
         self.assertFalse(sensor.available)
 
-    def test_setup_creates_reception_sensors_per_device(self):
-        source = SOURCE_PATH.read_text(encoding="utf-8")
-
-        self.assertIn(
-            "WiserDeviceReceptionSensor(data, device.id, reception_type)", source
-        )
-        self.assertIn(
-            "for reception_type in DEVICE_RECEPTION_SENSOR_TYPES", source
-        )
-
     def test_reception_sensor_names_are_translated(self):
         component = SOURCE_PATH.parent
         for path in [component / "strings.json"] + sorted(
@@ -1925,6 +1915,119 @@ class WiserDeviceReceptionSensorTest(unittest.TestCase):
             for key in self.sensor_module.DEVICE_RECEPTION_SENSOR_TYPES:
                 with self.subTest(file=path.name, key=key):
                     self.assertTrue(sensors[key]["name"])
+
+
+class WiserDeviceReceptionSensorSetupTest(unittest.IsolatedAsyncioTestCase):
+    """Exercise reception sensor creation through the platform setup entry point."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sensor_module = _load_sensor_module()
+
+    @staticmethod
+    def _device(device_id, product_type="iTRV"):
+        """Build a physical device or channel view with reception telemetry."""
+        return SimpleNamespace(
+            id=device_id,
+            product_type=product_type,
+            firmware_version="1.0",
+            signal=SimpleNamespace(
+                displayed_signal_strength="Good",
+                controller_reception_rssi=-72,
+                controller_reception_lqi=148,
+            ),
+        )
+
+    async def _setup_sensors(self, devices):
+        """Run platform setup and return the entities passed to Home Assistant."""
+        devices_by_id = {device.id: device for device in devices}
+        data = SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                devices=SimpleNamespace(
+                    all=devices,
+                    get_by_id=devices_by_id.get,
+                    smartplugs=None,
+                    power_tags=None,
+                    smokealarms=SimpleNamespace(all=[]),
+                    smartvalves=SimpleNamespace(all=[]),
+                    heating_actuators=None,
+                ),
+                rooms=SimpleNamespace(
+                    all=[], get_by_device_id=lambda _device_id: None
+                ),
+                system=SimpleNamespace(
+                    name="WiserHeat123456",
+                    opentherm=None,
+                    signal=SimpleNamespace(displayed_signal_strength="Good"),
+                ),
+                heating_channels=None,
+                hotwater=None,
+            ),
+        )
+        hass = SimpleNamespace(data={"wiser": {"entry-id": {"data": data}}})
+        config_entry = SimpleNamespace(entry_id="entry-id", options={})
+        add_entities = Mock()
+
+        with patch.object(
+            self.sensor_module, "opentherm_is_detected", return_value=False
+        ):
+            await self.sensor_module.async_setup_entry(
+                hass, config_entry, add_entities
+            )
+
+        add_entities.assert_called_once()
+        entities, update_before_add = add_entities.call_args.args
+        self.assertTrue(update_before_add)
+        return entities
+
+    async def test_creates_both_reception_sensors_for_each_physical_device(self):
+        entities = await self._setup_sensors(
+            [self._device(7), self._device(8, "RoomStat")]
+        )
+        reception_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserDeviceReceptionSensor)
+        ]
+
+        self.assertCountEqual(
+            [(sensor._device_id, sensor._sensor_type) for sensor in reception_sensors],
+            [(7, "signal_strength"), (7, "link_quality"),
+             (8, "signal_strength"), (8, "link_quality")],
+        )
+        self.assertEqual(len({sensor.unique_id for sensor in reception_sensors}), 4)
+
+    async def test_multi_gang_device_gets_one_pair_and_one_text_signal_sensor(self):
+        entities = await self._setup_sensors(
+            [self._device(7, "DimmableLight"), self._device(7, "DimmableLight")]
+        )
+        reception_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserDeviceReceptionSensor)
+        ]
+        text_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserDeviceSignalSensor)
+        ]
+
+        self.assertCountEqual(
+            [(sensor._device_id, sensor._sensor_type) for sensor in reception_sensors],
+            [(7, "signal_strength"), (7, "link_quality")],
+        )
+        self.assertCountEqual([sensor._device_id for sensor in text_sensors], [0, 7])
+
+    async def test_hub_without_zigbee_devices_keeps_only_its_text_signal_sensor(self):
+        entities = await self._setup_sensors([])
+
+        self.assertFalse(any(
+            isinstance(entity, self.sensor_module.WiserDeviceReceptionSensor)
+            for entity in entities
+        ))
+        text_sensors = [
+            entity for entity in entities
+            if isinstance(entity, self.sensor_module.WiserDeviceSignalSensor)
+        ]
+        self.assertEqual([sensor._device_id for sensor in text_sensors], [0])
 
 
 class WiserEquipmentBinarySensorTest(unittest.TestCase):
