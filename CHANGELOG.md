@@ -14,6 +14,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 - On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
 - Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
 
 ## v4.1.0b2
 
