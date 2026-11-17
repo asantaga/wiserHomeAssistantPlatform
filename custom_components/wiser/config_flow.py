@@ -42,10 +42,26 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
     Selector,
-    make_selector_config_schema,
     selector,
 )
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+
+try:
+    from homeassistant.helpers.selector import make_selector_config_schema
+except ImportError:
+    # Home Assistant 2025.5 predates the shared selector schema helper.
+    def make_selector_config_schema(schema_dict: dict | None = None) -> vol.Schema:
+        """Build a selector schema compatible with older Home Assistant."""
+        def none_to_empty_dict(value: Any) -> Any:
+            """Accept selectors constructed without configuration."""
+            return {} if value is None else value
+
+        return vol.Schema(
+            vol.All(
+                none_to_empty_dict,
+                {vol.Optional("read_only"): bool, **(schema_dict or {})},
+            )
+        )
 
 from .const import (
     CONF_ADDITIONAL_SENSORS,

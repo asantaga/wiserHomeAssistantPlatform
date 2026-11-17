@@ -4,6 +4,12 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## Unreleased
+
+### Fixed
+
+- Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
+
 ## v4.1.0b2
 
 ### Upgrade notes
