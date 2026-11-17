@@ -431,7 +431,10 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
     @property
     def hvac_action(self):
         """Return hvac action from data."""
-        return HVACAction.HEATING if self._room.is_heating else HVACAction.IDLE
+        heating = self._room.is_heating
+        if heating is None:
+            return None
+        return HVACAction.HEATING if heating else HVACAction.IDLE
 
     @property
     def hvac_mode(self):
@@ -568,7 +571,10 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
                 )
                 else "Modulation"
             )
-        attrs["control_output_state"] = "On" if self._room.is_heating else "Off"
+        heating = self._room.is_heating
+        attrs["control_output_state"] = (
+            None if heating is None else "On" if heating else "Off"
+        )
         attrs["heating_rate"] = self._room.heating_rate
         attrs["percentage_demand"] = self._room.percentage_demand
         if self._data.wiser_climate_controls:

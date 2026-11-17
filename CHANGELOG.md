@@ -4,6 +4,13 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## Unreleased
+
+### Fixed
+
+- Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.
+- Room climate entities preserve unknown heating readings instead of reporting idle or an off control output when the API cannot determine OpenTherm heating activity.
+
 ## v4.1.0b2
 
 ### Upgrade notes
