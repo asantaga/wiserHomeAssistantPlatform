@@ -41,6 +41,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
+from .circuit_state import heating_channel_output_state, hot_water_output_state
 from .const import (
     CONF_ADDITIONAL_SENSORS,
     CONF_SCHEDULE_SETPOINT_ROOMS,
@@ -54,7 +55,6 @@ from .const import (
     SIGNAL_STRENGTH_ICONS,
     VERSION,
 )
-from .circuit_state import heating_channel_output_state, hot_water_output_state
 from .entity import WiserEntityMixin
 from .helpers import (
     active_wiser_rooms,

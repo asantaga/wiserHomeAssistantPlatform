@@ -2,21 +2,21 @@
     "entity": {
         "binary_sensor": {
             "heating_active": {
-                "default": "mdi:radiator-disabled",
+                "default": "mdi:radiator",
                 "state": {
-                    "on": "mdi:radiator"
+                    "off": "mdi:radiator-disabled"
                 }
             },
             "heating_channel_active": {
-                "default": "mdi:radiator-disabled",
+                "default": "mdi:radiator",
                 "state": {
-                    "on": "mdi:radiator"
+                    "off": "mdi:radiator-disabled"
                 }
             },
             "hot_water_circuit_active": {
-                "default": "mdi:fire-off",
+                "default": "mdi:fire",
                 "state": {
-                    "on": "mdi:fire"
+                    "off": "mdi:fire-off"
                 }
             }
         },

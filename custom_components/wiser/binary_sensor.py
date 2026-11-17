@@ -13,6 +13,11 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .circuit_state import (
+    heating_channel_output_state,
+    hot_water_output_state,
+    output_state_is_on,
+)
 from .const import (
     CONF_OPENTHERM_SENSORS,
     DATA,
@@ -20,11 +25,6 @@ from .const import (
     HOT_WATER,
     MANUFACTURER,
     ROOM,
-)
-from .circuit_state import (
-    heating_channel_output_state,
-    hot_water_output_state,
-    output_state_is_on,
 )
 from .entity import WiserEntityMixin
 from .helpers import (
@@ -636,7 +636,7 @@ class WiserCircuitActiveBinarySensor(
                 self._attr_translation_key = "heating_active"
         self._state = self._read_state()
 
-    def _circuit(self):
+    def _circuit(self) -> object | None:
         """Return the current heating channel or hot water object, if any."""
         if self._circuit_type == CIRCUIT_HOT_WATER:
             return self._data.wiserhub.hotwater
@@ -668,7 +668,7 @@ class WiserCircuitActiveBinarySensor(
         return self._state
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         """Return a stable unique ID for the circuit."""
         entity_type = (
             "hot_water_active"
@@ -680,7 +680,7 @@ class WiserCircuitActiveBinarySensor(
         )
 
     @property
-    def device_info(self):
+    def device_info(self) -> dict:
         """Attach heating to the hub and hot water to its own device."""
         if self._circuit_type != CIRCUIT_HOT_WATER:
             return get_hub_device_info(self._data)

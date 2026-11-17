@@ -1925,17 +1925,18 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
     def test_multi_channel_heating_uses_channel_placeholder(self) -> None:
         for channel_ids in ((1, 2), (1, 2, 3)):
             data = self._data(channel_ids)
-            unique_id_calls = []
+            unique_id_inputs = set()
             for channel_id in channel_ids:
                 with self.subTest(channels=len(channel_ids), channel=channel_id):
                     sensor = self._sensor(
                         data, self.module.CIRCUIT_HEATING, channel_id
                     )
-                    get_unique_id = Mock(return_value=f"uid-{channel_id}")
+                    get_unique_id = Mock(return_value="unique-id")
                     with unittest.mock.patch.object(
                         self.module, "get_unique_id", get_unique_id
                     ):
-                        unique_id_calls.append(sensor.unique_id)
+                        sensor.unique_id
+                    unique_id_inputs.add(get_unique_id.call_args.args[1:])
                     self.assertEqual(
                         sensor._attr_translation_key, "heating_channel_active"
                     )
@@ -1946,7 +1947,9 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
                     get_unique_id.assert_called_once_with(
                         data, "binary_sensor", "heating_active", channel_id
                     )
-            self.assertEqual(len(set(unique_id_calls)), len(channel_ids))
+            # get_unique_id is deterministic, so distinct inputs give
+            # distinct unique IDs.
+            self.assertEqual(len(unique_id_inputs), len(channel_ids))
 
     def test_heating_state_follows_shared_logic(self) -> None:
         cases = (
@@ -2016,47 +2019,6 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
             self.assertFalse(sensor.available)
             self.assertIsNone(sensor.is_on)
 
-    def test_setup_creates_circuit_sensors(self) -> None:
-        tree = ast.parse(BINARY_SENSOR_SOURCE_PATH.read_text(encoding="utf-8"))
-        setup = next(
-            node
-            for node in tree.body
-            if isinstance(node, ast.AsyncFunctionDef)
-            and node.name == "async_setup_entry"
-        )
-
-        def guarded_calls(guard: str) -> list[str]:
-            calls = []
-            for node in ast.walk(setup):
-                if isinstance(node, ast.If) and ast.unparse(node.test) == guard:
-                    calls.extend(
-                        ast.unparse(call)
-                        for call in ast.walk(node)
-                        if isinstance(call, ast.Call)
-                        and ast.unparse(call.func)
-                        == "WiserCircuitActiveBinarySensor"
-                    )
-            return calls
-
-        heating_calls = guarded_calls("data.wiserhub.heating_channels")
-        hot_water_calls = guarded_calls("data.wiserhub.hotwater")
-
-        self.assertEqual(
-            heating_calls,
-            [
-                "WiserCircuitActiveBinarySensor(data, CIRCUIT_HEATING, "
-                "heating_channel.id)"
-            ],
-        )
-        self.assertIn(
-            "for heating_channel in data.wiserhub.heating_channels.all",
-            ast.unparse(setup),
-        )
-        self.assertEqual(
-            hot_water_calls,
-            ["WiserCircuitActiveBinarySensor(data, CIRCUIT_HOT_WATER)"],
-        )
-
     def test_circuit_binary_sensors_have_translations(self) -> None:
         files = [
             SOURCE_PATH.parent / "strings.json",
@@ -2076,3 +2038,70 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
                     self.assertTrue(sensors[key]["name"])
             with self.subTest(path=path.name, key="placeholder"):
                 self.assertIn("{channel}", sensors["heating_channel_active"]["name"])
+
+    def _run_setup(self, data):
+        """Run the real binary_sensor async_setup_entry for a bare hub."""
+        import asyncio
+
+        data.hub_version = 2
+        data.wiserhub.system.opentherm = None
+        data.wiserhub.devices = SimpleNamespace(
+            all=[],
+            smokealarms=SimpleNamespace(all=[]),
+            lights=SimpleNamespace(all=[]),
+            shutters=SimpleNamespace(all=[]),
+            binary_sensor=SimpleNamespace(all=[]),
+        )
+        hass = SimpleNamespace(data={"wiser": {"entry": {"data": data}}})
+        config_entry = SimpleNamespace(entry_id="entry", options={})
+        added = []
+        patches = {
+            "opentherm_is_detected": lambda *_args: False,
+            "_supports_summer_discomfort_prevention": lambda _data: False,
+            "_supports_summer_comfort_available": lambda _data: False,
+            "_supports_pcm_binary_sensor": lambda _data: False,
+            "_requires_v2_entity_cleanup": lambda _data: False,
+            "active_wiser_rooms": lambda _data: [],
+        }
+        with unittest.mock.patch.multiple(self.module, **patches):
+            asyncio.run(
+                self.module.async_setup_entry(
+                    hass, config_entry, lambda entities, _update: added.extend(entities)
+                )
+            )
+        return [
+            entity
+            for entity in added
+            if isinstance(entity, self.module.WiserCircuitActiveBinarySensor)
+        ]
+
+    def test_setup_without_circuits_creates_no_circuit_sensors(self) -> None:
+        data = self._data(has_hot_water=False)
+        data.wiserhub.heating_channels = None
+
+        self.assertEqual(self._run_setup(data), [])
+
+    def test_setup_creates_one_sensor_per_channel_and_hot_water(self) -> None:
+        sensors = self._run_setup(self._data((1, 2, 3)))
+
+        self.assertEqual(
+            [(sensor._circuit_type, sensor._circuit_id) for sensor in sensors],
+            [("heating", 1), ("heating", 2), ("heating", 3), ("hot_water", 2)],
+        )
+
+    def test_icons_match_text_sensors_for_unknown_state(self) -> None:
+        # The text sensors show the "on" icon for every state except off,
+        # including unknown, so the binary sensors default to it too.
+        icons = json.loads(
+            (SOURCE_PATH.parent / "icons.json").read_text(encoding="utf-8")
+        )["entity"]["binary_sensor"]
+        expected = {
+            "heating_active": ("mdi:radiator", "mdi:radiator-disabled"),
+            "heating_channel_active": ("mdi:radiator", "mdi:radiator-disabled"),
+            "hot_water_circuit_active": ("mdi:fire", "mdi:fire-off"),
+        }
+        for key, (default, off) in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(
+                    icons[key], {"default": default, "state": {"off": off}}
+                )
