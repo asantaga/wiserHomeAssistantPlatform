@@ -502,6 +502,9 @@
       "cooling_active": { "name": "Kühlung aktiv" },
       "diagnostic_event": { "name": "Diagnoseereignis" },
       "flame_active": { "name": "Flamme aktiv" },
+      "heating_active": { "name": "Heizung aktiv" },
+      "heating_channel_active": { "name": "Heizkanal {channel} aktiv" },
+      "hot_water_circuit_active": { "name": "Warmwasser aktiv" },
       "hot_water_active": { "name": "Warmwasser aktiv" },
       "hw_enabled": { "name": "Warmwasser aktiviert" }
     },

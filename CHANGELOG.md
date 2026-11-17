@@ -4,6 +4,12 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## Unreleased
+
+### Added
+
+- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are unchanged - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+
 ## v4.1.0b2
 
 ### Upgrade notes
