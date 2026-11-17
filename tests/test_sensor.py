@@ -2089,6 +2089,142 @@ class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
             [("heating", 1), ("heating", 2), ("heating", 3), ("hot_water", 2)],
         )
 
+    def test_binary_and_text_sensors_agree_for_every_raw_state(self) -> None:
+        # Both entities read the same circuit; they must never disagree,
+        # including for unknown and unexpected API values.
+        text_module = sys.modules["wiser.sensor"]
+        text_to_bool = {"on": True, "off": False, None: None}
+        raw_states = ("On", "Off", "Unknown", "", "Standby")
+
+        def text_state(data, sensor_type):
+            text = object.__new__(text_module.WiserSystemCircuitState)
+            text._sensor_type = sensor_type
+            text._device_id = 1
+            text._data = data
+            text.async_write_ha_state = Mock()
+            text._handle_coordinator_update()
+            return text_to_bool[text.native_value]
+
+        for relay in raw_states:
+            for demand in raw_states:
+                with self.subTest(relay=relay, demand=demand):
+                    data = self._data(relay=relay, demand=demand)
+                    binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+                    self.assertIs(binary.is_on, text_state(data, "Heating"))
+        for hot_water_state in raw_states:
+            with self.subTest(hot_water=hot_water_state):
+                data = self._data(hot_water_state=hot_water_state)
+                binary = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+                self.assertIs(binary.is_on, text_state(data, "Hot Water"))
+
+    def test_unavailable_when_hub_update_fails(self) -> None:
+        data = self._data()
+        sensors = (
+            self._sensor(data, self.module.CIRCUIT_HEATING, 1),
+            self._sensor(data, self.module.CIRCUIT_HOT_WATER),
+        )
+
+        data.last_update_success = False
+
+        for sensor in sensors:
+            with self.subTest(circuit=sensor._circuit_type):
+                self.assertFalse(sensor.available)
+
+    def test_unique_id_types_are_not_used_by_other_binary_sensors(self) -> None:
+        # The OpenTherm boiler sensors prefix their keys, so its own
+        # "hot_water_active" key cannot collide with the circuit sensor.
+        data = self._data((1, 2, 3))
+        circuit_inputs = set()
+        for circuit, channel_id in (
+            (self.module.CIRCUIT_HEATING, 1),
+            (self.module.CIRCUIT_HEATING, 2),
+            (self.module.CIRCUIT_HEATING, 3),
+            (self.module.CIRCUIT_HOT_WATER, 0),
+        ):
+            get_unique_id = Mock(return_value="unique-id")
+            with unittest.mock.patch.object(
+                self.module, "get_unique_id", get_unique_id
+            ):
+                self._sensor(data, circuit, channel_id).unique_id
+            circuit_inputs.add(get_unique_id.call_args.args[1:])
+
+        # Use the real key list; the test stub only carries a subset.
+        import ast
+
+        opentherm_source = ast.parse(
+            (SOURCE_PATH.parent / "opentherm.py").read_text(encoding="utf-8")
+        )
+        real_keys = next(
+            ast.literal_eval(node.value.args[0])
+            for node in opentherm_source.body
+            if isinstance(node, ast.Assign)
+            and getattr(node.targets[0], "id", None) == "OPENTHERM_BINARY_SENSOR_KEYS"
+        )
+        opentherm_inputs = set()
+        for key in real_keys:
+            sensor = object.__new__(self.module.WiserOpenThermAttributeBinarySensor)
+            sensor._data = data
+            sensor._sensor_key = key
+            get_unique_id = Mock(return_value="unique-id")
+            with unittest.mock.patch.object(
+                self.module, "get_unique_id", get_unique_id
+            ):
+                sensor.unique_id
+            opentherm_inputs.add(get_unique_id.call_args.args[1:])
+
+        self.assertEqual(len(circuit_inputs), 4)
+        self.assertIn(
+            ("binary_sensor", "opentherm_hot_water_active", 0), opentherm_inputs
+        )
+        self.assertFalse(circuit_inputs & opentherm_inputs)
+        # Stricter: the entity types alone never overlap, whatever the IDs.
+        self.assertFalse(
+            {args[1] for args in circuit_inputs}
+            & {args[1] for args in opentherm_inputs}
+        )
+
+    def test_english_names(self) -> None:
+        for path in (
+            SOURCE_PATH.parent / "strings.json",
+            SOURCE_PATH.parent / "translations/en.json",
+            SOURCE_PATH.parent / "translations/en-GB.json",
+        ):
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "binary_sensor"
+            ]
+            with self.subTest(path=path.name):
+                self.assertEqual(
+                    {
+                        key: sensors[key]["name"]
+                        for key in (
+                            "heating_active",
+                            "heating_channel_active",
+                            "hot_water_circuit_active",
+                        )
+                    },
+                    {
+                        "heating_active": "Heating active",
+                        "heating_channel_active": "Heating channel {channel} active",
+                        "hot_water_circuit_active": "Hot water active",
+                    },
+                )
+
+    def test_only_the_channel_name_uses_a_placeholder(self) -> None:
+        files = [
+            SOURCE_PATH.parent / "strings.json",
+            *(SOURCE_PATH.parent / "translations").glob("*.json"),
+        ]
+        for path in files:
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "binary_sensor"
+            ]
+            with self.subTest(path=path.name):
+                self.assertEqual(
+                    sensors["heating_channel_active"]["name"].count("{"), 1
+                )
+                for key in ("heating_active", "hot_water_circuit_active"):
+                    self.assertNotIn("{", sensors[key]["name"])
+
     def test_icons_match_text_sensors_for_unknown_state(self) -> None:
         # The text sensors show the "on" icon for every state except off,
         # including unknown, so the binary sensors default to it too.
