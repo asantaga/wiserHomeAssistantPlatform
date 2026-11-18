@@ -499,7 +499,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         try:
             api_preset_mode = WISER_PRESET_TO_API.get(preset_mode, preset_mode)
             if (
-                self._room.passive_mode_enabled
+                self._data.passive_mode_enabled
                 and api_preset_mode == WiserPresetOptionsEnum.advance_schedule.value
                 and api_preset_mode in self._room.available_presets
             ):
@@ -509,7 +509,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             else:
                 await self._room.set_preset(api_preset_mode)
             if (
-                self._room.passive_mode_enabled
+                self._data.passive_mode_enabled
                 and api_preset_mode == WiserPresetOptionsEnum.cancel_overrides.value
             ):
                 await self._data.external_room_control.async_cancel_passive_lower_override(

@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 COMPONENT = Path(__file__).parents[1] / "custom_components/wiser"
 
@@ -419,6 +419,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             data={
                 "host": "wiser.local",
                 "opentherm_ever_connected": True,
+                "opentherm_hot_water_capable": True,
             }
         )
         coordinator = SimpleNamespace(
@@ -427,6 +428,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                     opentherm=SimpleNamespace(
                         enabled=False,
                         connection_status="Disconnected",
+                        json_data={"Enabled": False},
                     )
                 )
             )
@@ -441,6 +443,40 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         sync_registry.assert_called_once_with(
             hass, entry, coordinator, detected=False
         )
+
+    def test_missing_opentherm_data_preserves_remembered_capabilities(self):
+        """An endpoint outage must not look like explicit disablement."""
+        sync_registry = Mock()
+        self.namespace["_sync_opentherm_entity_registry"] = sync_registry
+        functions = load_functions(
+            "__init__.py", {"_remember_opentherm_connection"}, self.namespace
+        )
+        for status in ("Connected", "Disconnected"):
+            for raw_data in ({}, None, {"Enabled": None}):
+                with self.subTest(status=status, raw_data=raw_data):
+                    update = Mock()
+                    entry = SimpleNamespace(data={
+                        "opentherm_ever_connected": True,
+                        "opentherm_hot_water_capable": True,
+                    })
+                    coordinator = SimpleNamespace(wiserhub=SimpleNamespace(
+                        system=SimpleNamespace(opentherm=SimpleNamespace(
+                            enabled=False,
+                            connection_status=status,
+                            json_data=raw_data,
+                        ))
+                    ))
+                    functions._remember_opentherm_connection(
+                        SimpleNamespace(config_entries=SimpleNamespace(
+                            async_update_entry=update
+                        )),
+                        entry,
+                        coordinator,
+                    )
+                    update.assert_not_called()
+                    sync_registry.assert_called_with(
+                        ANY, entry, coordinator, detected=True
+                    )
 
     def test_missing_system_preserves_remembered_connection(self):
         sync_registry = Mock()

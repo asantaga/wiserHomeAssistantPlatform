@@ -408,6 +408,7 @@ class ExternalRoomControlController:
         if (
             settings.get("passive_lower_override") is None
             and settings.get("passive_upper_override") is None
+            and settings.get("passive_control_override") is None
         ):
             settings["passive_override_schedule_transition"] = None
 
@@ -447,6 +448,7 @@ class ExternalRoomControlController:
         return bool(
             settings.get("passive_lower_override") is not None
             or settings.get("passive_upper_override") is not None
+            or settings.get("passive_control_override") is not None
         )
 
     def is_enabled(self, room_id) -> bool:
@@ -492,7 +494,12 @@ class ExternalRoomControlController:
         return float(room.configured_passive_mode_upper_temp)
 
     def passive_upper_temperature(self, room):
-        """Return the cutoff used only by an external temperature limiter."""
+        """Return an advanced upper bound or an external limiter's cutoff."""
+        advanced = self._advanced_passive_control(room)
+        if advanced is not None and advanced.get("enabled"):
+            # A modulating room also needs the advanced slot's upper bound,
+            # rather than the hub schedule's still-current upper setpoint.
+            return float(advanced["upper"])
         if not self.uses_temperature_limiter(room.id):
             return None
         override = self._settings(room.id).get("passive_upper_override")
@@ -1195,6 +1202,21 @@ class ExternalRoomControlController:
         )
         return float(value) if value is not None else None
 
+    def _advanced_passive_control(self, room) -> dict | None:
+        """Return advanced controls only until this schedule's next transition."""
+        settings = self._rooms.get(str(room.id), {})
+        override = settings.get("passive_control_override")
+        schedule = getattr(room, "schedule", None)
+        if (
+            isinstance(override, dict)
+            and schedule is not None
+            and override.get("schedule_id") == str(schedule.id)
+            and override.get("transition") is not None
+            and override["transition"] == self._schedule_transition_marker(room)
+        ):
+            return override.get("control")
+        return None
+
     def scheduled_passive_control(
         self, room_id, now: datetime | None = None, *, next_period: bool = False
     ) -> dict | None:
@@ -1204,12 +1226,18 @@ class ExternalRoomControlController:
         room = self._room(room_id)
         if room is None:
             return None
-        value = self._scheduled_value(
-            room,
-            self._passive_control_schedules,
-            now,
-            next_period=next_period,
+        value = (
+            self._advanced_passive_control(room)
+            if now is None and not next_period
+            else None
         )
+        if value is None:
+            value = self._scheduled_value(
+                room,
+                self._passive_control_schedules,
+                now,
+                next_period=next_period,
+            )
         return (
             value
             if isinstance(value, dict) and value.get("scheduled", True)
@@ -1269,10 +1297,14 @@ class ExternalRoomControlController:
         return lower
 
     async def async_cancel_passive_lower_override(self, room_id) -> None:
-        """Return a native Passive lower limit to its current schedule slot."""
+        """Cancel advanced controls and return the lower limit to its slot."""
         settings = self._settings(room_id)
-        if settings.get("passive_lower_override") is None:
+        if (
+            settings.get("passive_lower_override") is None
+            and settings.get("passive_control_override") is None
+        ):
             return
+        settings.pop("passive_control_override", None)
         settings["passive_lower_override"] = None
         settings.pop("passive_lower_override_target", None)
         self._pending_passive_lower_rooms.pop(str(room_id), None)
@@ -1398,15 +1430,33 @@ class ExternalRoomControlController:
             control = controls.get(WEEKDAYS[transition.weekday()], {}).get(
                 transition.strftime("%H:%M")
             )
+        if control is None and getattr(schedule, "ws_schedule_data", None):
+            # Sunrise/sunset metadata is keyed by its symbolic hub time.
+            control = self._scheduled_value(
+                room, self._passive_control_schedules, next_period=True
+            )
+
+        settings = self._settings(room.id)
+        settings.pop("passive_control_override", None)
+        if isinstance(control, dict):
+            settings["passive_control_override"] = {
+                "schedule_id": str(schedule.id),
+                "transition": self._schedule_transition_marker(room),
+                "control": deepcopy(control),
+            }
+            if control.get("scheduled", True):
+                if settings["passive_schedule_original_enabled"] is None:
+                    settings["passive_schedule_original_enabled"] = bool(
+                        room.passive_mode_enabled
+                    )
 
         limiter = self.uses_temperature_limiter(room.id)
-        if (
-            isinstance(control, dict)
-            and control.get("scheduled", True)
-            and control.get("enabled")
-        ):
-            lower = float(control["lower"])
-            upper = float(control["upper"]) if limiter else None
+        if isinstance(control, dict):
+            if control.get("scheduled", True) and control.get("enabled"):
+                lower = float(control["lower"])
+                upper = float(control["upper"]) if limiter else None
+            else:
+                lower = upper = None
         else:
             lower = None
             upper = (
@@ -1424,21 +1474,32 @@ class ExternalRoomControlController:
                     room, self._lower_schedules, next_period=True
                 )
 
-        if lower is None and upper is None:
+        if lower is None and upper is None and not isinstance(control, dict):
             return
-        settings = self._settings(room.id)
+        settings["passive_lower_override"] = lower
+        settings["passive_upper_override"] = upper
+        settings.pop("passive_lower_override_target", None)
         if lower is not None:
-            settings["passive_lower_override"] = lower
-            settings["passive_lower_override_target"] = getattr(
-                next_period, "setting", lower
-            )
+            settings["passive_lower_override_target"] = getattr(next_period, "setting", lower)
             self._pending_passive_lower_rooms[str(room.id)] = room
-        if upper is not None:
-            settings["passive_upper_override"] = upper
+        else:
+            self._pending_passive_lower_rooms.pop(str(room.id), None)
         self._set_schedule_override_marker(settings, room)
         await self._async_save()
+        if isinstance(control, dict):
+            enabled = (
+                bool(control["enabled"])
+                if control.get("scheduled", True)
+                else settings["passive_schedule_original_enabled"]
+            )
+            if enabled is not None:
+                await self._async_set_scheduled_passive_mode(
+                    room, bool(enabled), preserve_override=True
+                )
 
-    async def _async_set_scheduled_passive_mode(self, room, enabled: bool) -> bool:
+    async def _async_set_scheduled_passive_mode(
+        self, room, enabled: bool, *, preserve_override: bool = False
+    ) -> bool:
         """Apply a scheduled mode change and verify the room accepted it."""
         if bool(room.passive_mode_enabled) == enabled:
             return True
@@ -1448,7 +1509,7 @@ class ExternalRoomControlController:
         await room.set_passive_mode(enabled)
         if bool(room.passive_mode_enabled) != enabled:
             return False
-        if not enabled:
+        if not enabled and not preserve_override:
             await room.cancel_overrides()
         return True
 
@@ -1492,9 +1553,15 @@ class ExternalRoomControlController:
                         room.passive_mode_enabled
                     )
                     storage_changed = True
-                await self._async_set_scheduled_passive_mode(room, bool(control["enabled"]))
+                await self._async_set_scheduled_passive_mode(
+                    room, bool(control["enabled"]),
+                    preserve_override=self._advanced_passive_control(room) is not None,
+                )
             elif original is not None:
-                if not await self._async_set_scheduled_passive_mode(room, bool(original)):
+                if not await self._async_set_scheduled_passive_mode(
+                    room, bool(original),
+                    preserve_override=self._advanced_passive_control(room) is not None,
+                ):
                     continue
                 settings["passive_schedule_original_enabled"] = None
                 storage_changed = True
@@ -1505,6 +1572,7 @@ class ExternalRoomControlController:
             has_override = (
                 settings.get("passive_lower_override") is not None
                 or settings.get("passive_upper_override") is not None
+                or settings.get("passive_control_override") is not None
             )
             if not has_override:
                 continue
@@ -1514,8 +1582,14 @@ class ExternalRoomControlController:
                 if marker is not None:
                     settings["passive_override_schedule_transition"] = marker
                     storage_changed = True
-            elif marker is not None and marker != stored_marker:
+            elif (
+                marker is not None and marker != stored_marker
+            ) or (
+                settings.get("passive_control_override") is not None
+                and self._advanced_passive_control(room) is None
+            ):
                 settings["passive_lower_override"] = None
+                settings.pop("passive_control_override", None)
                 settings.pop("passive_lower_override_target", None)
                 self._pending_passive_lower_rooms.pop(str(room.id), None)
                 settings["passive_upper_override"] = None

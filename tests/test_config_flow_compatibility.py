@@ -58,7 +58,14 @@ class SelectorCompatibilityTest(unittest.TestCase):
                 }
             )
         ]
-        namespace = {"vol": vol, "Any": object}
+        namespace = {
+            "vol": vol,
+            "Any": object,
+            "MAX_OPENTHERM_HOT_WATER_PRESETS": 10,
+        }
+        load_functions(
+            "config_flow.py", {"_validate_opentherm_hot_water_presets"}, namespace
+        )
         with patch.dict(sys.modules, {selector_module.__name__: selector_module}):
             exec(compile(ast.Module(body=nodes, type_ignores=[]), "config_flow.py", "exec"), namespace)
         return SimpleNamespace(**namespace)
@@ -95,6 +102,32 @@ class SelectorCompatibilityTest(unittest.TestCase):
         flow = self._load(native)
         self.assertIs(flow.make_selector_config_schema, native)
         self.assertEqual(native.call_count, 2)
+
+    def test_expanded_presets_pass_the_form_schema(self):
+        """Keep automatic timed defaults editable through HA validation."""
+        flow = self._load()
+        presets = [
+            {"name": f"Preset {index}", "temperature": 45, "duration_minutes": 0}
+            for index in range(10)
+        ] + [
+            {"name": f"Boost {duration}", "temperature": 50, "duration_minutes": duration}
+            for duration in (15, 30, 45)
+        ]
+        schema = vol.Schema({"presets": flow.OpenThermPresetsSelector({
+            "minimum": 40, "maximum": 50, "max_presets": len(presets)
+        })})
+        self.assertEqual(schema({"presets": presets})["presets"], [
+            {**preset, "icon": ""} for preset in presets
+        ])
+        with self.assertRaises(vol.Invalid):
+            flow.OpenThermPresetsSelector()(presets)
+        for invalid in (
+            presets + [{"name": "Extra", "temperature": 45}],
+            [{**presets[0], "temperature": 55}, *presets[1:]],
+            [{**presets[0], "name": "Auto"}, *presets[1:]],
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(vol.Invalid):
+                schema({"presets": invalid})
 
 
 class HubRegistryCompatibilityTest(unittest.TestCase):
