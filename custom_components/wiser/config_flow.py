@@ -273,6 +273,7 @@ class OpenThermPresetsSelector(Selector):
         {
             vol.Optional("minimum", default=35.0): vol.Coerce(float),
             vol.Optional("maximum", default=55.0): vol.Coerce(float),
+            vol.Optional("max_presets"): vol.All(vol.Coerce(int), vol.Range(min=1)),
         }
     )
 
@@ -281,6 +282,7 @@ class OpenThermPresetsSelector(Selector):
             data,
             float(self.config.get("minimum", 35.0)),
             float(self.config.get("maximum", 55.0)),
+            max_presets=self.config.get("max_presets", MAX_OPENTHERM_HOT_WATER_PRESETS),
         )
 
 
@@ -1043,7 +1045,13 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_OPENTHERM_HOT_WATER_PRESETS,
                         default=preset_default,
                     ): OpenThermPresetsSelector(
-                        {"minimum": minimum, "maximum": maximum}
+                        {
+                            "minimum": minimum,
+                            "maximum": maximum,
+                            "max_presets": max(
+                                MAX_OPENTHERM_HOT_WATER_PRESETS, len(preset_default)
+                            ),
+                        }
                     ),
                 }
             ),

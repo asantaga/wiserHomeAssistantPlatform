@@ -12,6 +12,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Allow existing OpenTherm preset lists expanded by automatic timed defaults through options-form validation while retaining the normal ten-preset limit.
 - Preserve remembered OpenTherm connection and hot-water capabilities when the optional boiler endpoint returns no data; clear them only when the hub explicitly reports OpenTherm disabled.
 - On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
 - Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
