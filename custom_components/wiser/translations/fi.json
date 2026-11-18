@@ -683,6 +683,9 @@
         "name": "Signaali"
       },
       "report_count": { "name": "Raporttien määrä" },
+      "signal_strength": { "name": "Signaalin voimakkuus" },
+      "wifi_signal_strength": { "name": "Wi-Fi-signaalin voimakkuus" },
+      "link_quality": { "name": "Linkin laatu" },
       "cloud": {
         "name": "Pilvi"
       },
