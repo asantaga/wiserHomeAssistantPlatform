@@ -161,6 +161,14 @@ class WiserSelectEntity(WiserEntityMixin, CoordinatorEntity, SelectEntity):
     def current_option(self) -> str:
         return self._device.mode
 
+    async def async_handle_select_option(self, option: str) -> None:
+        """Normalize legacy API values before HA validates translated options."""
+        option_values = getattr(self, "_option_values", {})
+        option = next(
+            (key for key, raw in option_values.items() if raw == option), option
+        )
+        await super().async_handle_select_option(option)
+
     @hub_error_handler
     async def async_select_option(self, option: str) -> None:
         _LOGGER.debug(f"Setting {self.name} to {option}")
