@@ -679,7 +679,14 @@ def _remember_opentherm_connection(hass, config_entry, coordinator) -> None:
     )
     entry_data = dict(config_entry.data)
 
-    if getattr(opentherm, "enabled", None) is False:
+    # The API's enabled property defaults to False when the optional endpoint
+    # is unavailable. Only an explicit hub value confirms disablement.
+    opentherm_data = getattr(opentherm, "json_data", None)
+    explicitly_disabled = (
+        isinstance(opentherm_data, dict)
+        and opentherm_data.get("Enabled") is False
+    )
+    if explicitly_disabled:
         if remembered:
             entry_data.pop(CONF_OPENTHERM_EVER_CONNECTED, None)
         if hot_water_capable:
