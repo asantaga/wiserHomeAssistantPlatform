@@ -8,6 +8,8 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.
+- Room climate entities preserve unknown heating readings instead of reporting idle or an off control output when the API cannot determine OpenTherm heating activity.
 - Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
 
 ## v4.1.0b2
