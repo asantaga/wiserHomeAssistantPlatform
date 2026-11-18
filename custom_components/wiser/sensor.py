@@ -42,6 +42,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
+from .circuit_state import (
+    heating_channel_context,
+    heating_channel_is_available,
+    heating_channel_output_state,
+    hot_water_output_state,
+)
 from .const import (
     CONF_ADDITIONAL_SENSORS,
     CONF_SCHEDULE_SETPOINT_ROOMS,
@@ -1201,22 +1207,36 @@ class WiserSystemCircuitState(WiserSensor):
             self._attr_translation_key = "heating_channel"
             self._attr_translation_placeholders = {"channel": str(device_id)}
 
+    def _circuit(self):
+        """Return the current circuit without retaining removed API objects."""
+        if self._sensor_type == "Heating":
+            channels = self._data.wiserhub.heating_channels
+            return channels.get_by_id(self._device_id) if channels else None
+        return self._data.wiserhub.hotwater
+
+    @property
+    def available(self):
+        """Require a reported circuit and live OpenTherm data when used."""
+        if not super().available:
+            return False
+        circuit = self._circuit()
+        if self._sensor_type != "Heating":
+            return circuit is not None
+        return heating_channel_is_available(
+            circuit, **heating_channel_context(self._data)
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
+        self._device = self._circuit()
         if self._sensor_type == "Heating":
-            self._device = self._data.wiserhub.heating_channels.get_by_id(
-                self._device_id
-            )
-            raw_state = (
-                self._device.heating_relay_status
-                if self._device.heating_relay_status != TEXT_UNKNOWN
-                else self._device.demand_on_off_output
+            raw_state = heating_channel_output_state(
+                self._device, **heating_channel_context(self._data)
             )
         else:
-            self._device = self._data.wiserhub.hotwater
-            raw_state = self._device.current_state
+            raw_state = hot_water_output_state(self._device)
         self._state = ON_OFF_STATES.get(raw_state)
         self.async_write_ha_state()
 
@@ -1237,10 +1257,11 @@ class WiserSystemCircuitState(WiserSensor):
     def extra_state_attributes(self):
         """Return additional info."""
         attrs = {}
+        circuit = self._circuit()
+        if circuit is None:
+            return attrs
         if self._sensor_type == "Heating":
-            heating_channel = self._data.wiserhub.heating_channels.get_by_id(
-                self._device_id
-            )
+            heating_channel = circuit
             attrs[f"percentage_demand_{heating_channel.name}"] = (
                 heating_channel.percentage_demand
             )
@@ -1265,7 +1286,7 @@ class WiserSystemCircuitState(WiserSensor):
                 )
                 attrs["hw_temperature"] = operational_data.hw_temperature
         else:
-            hw = self._data.wiserhub.hotwater
+            hw = circuit
             # If boosted show boost end time
             if hw.is_boosted:
                 attrs["boost_end"] = hw.boost_end_time

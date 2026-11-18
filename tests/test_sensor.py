@@ -287,6 +287,15 @@ def _load_sensor_module() -> ModuleType:
         ),
     )
 
+    # Load the real shared circuit-state logic so the sensor tests exercise it.
+    circuit_spec = importlib.util.spec_from_file_location(
+        "wiser.circuit_state", SOURCE_PATH.parent / "circuit_state.py"
+    )
+    assert circuit_spec and circuit_spec.loader
+    circuit_state = importlib.util.module_from_spec(circuit_spec)
+    sys.modules[circuit_spec.name] = circuit_state
+    circuit_spec.loader.exec_module(circuit_state)
+
     spec = importlib.util.spec_from_file_location("wiser.sensor", SOURCE_PATH)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -2175,3 +2184,483 @@ class WiserEquipmentBinarySensorTest(unittest.TestCase):
 
         self.assertFalse(self.sensor.available)
         self.assertIsNone(self.sensor.is_on)
+
+
+class WiserCircuitActiveBinarySensorTest(unittest.TestCase):
+    """Tests for the running-class heating and hot water binary sensors."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.module = _load_binary_sensor_module()
+
+    def _data(
+        self,
+        channel_ids=(1,),
+        *,
+        relay="On",
+        demand="Off",
+        hot_water_state="On",
+        has_hot_water=True,
+    ):
+        channels = {
+            channel_id: SimpleNamespace(
+                id=channel_id,
+                heating_relay_status=relay,
+                demand_on_off_output=demand,
+            )
+            for channel_id in channel_ids
+        }
+        return SimpleNamespace(
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                heating_channels=SimpleNamespace(
+                    all=list(channels.values()),
+                    get_by_id=channels.get,
+                ),
+                hotwater=(
+                    SimpleNamespace(id=2, current_state=hot_water_state)
+                    if has_hot_water
+                    else None
+                ),
+                system=SimpleNamespace(name="WiserHeat123456"),
+            ),
+        )
+
+    def _sensor(self, data, circuit, channel_id=0):
+        sensor = self.module.WiserCircuitActiveBinarySensor(
+            data, circuit, channel_id
+        )
+        sensor.async_write_ha_state = Mock()
+        return sensor
+
+    def _text_sensor(self, data, sensor_type="Heating"):
+        text = object.__new__(sys.modules["wiser.sensor"].WiserSystemCircuitState)
+        text.coordinator = data
+        text._data = data
+        text._device_id = 1
+        text._sensor_type = sensor_type
+        text.async_write_ha_state = Mock()
+        text._handle_coordinator_update()
+        return text
+
+    def test_opentherm_text_and_binary_follow_boiler_not_relay_or_demand(self):
+        for relay in ("On", "Off", "Unknown"):
+            for demand in ("On", "Off", "Unknown"):
+                for status, expected in (
+                    (0, False), (2, True), (4, False), (8, False), (10, True),
+                    (None, None), (True, None), ("2", None),
+                ):
+                    with self.subTest(relay=relay, demand=demand, status=status):
+                        data = self._data(relay=relay, demand=demand)
+                        data.wiserhub.system.opentherm = SimpleNamespace(
+                            enabled=True, connection_status="Connected",
+                            operational_data=SimpleNamespace(slave_status=status),
+                        )
+                        channel = data.wiserhub.heating_channels.get_by_id(1)
+                        channel.percentage_demand = 0
+                        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+                        text = self._text_sensor(data)
+                        self.assertIs(binary.is_on, expected)
+                        self.assertEqual(
+                            text.native_value,
+                            None if expected is None else "on" if expected else "off",
+                        )
+                        self.assertTrue(binary.available)
+                        self.assertTrue(text.available)
+
+    def test_opentherm_loss_and_recovery_refresh_both_sensors(self):
+        data = self._data(relay="On", demand="On")
+        data.config_entry = SimpleNamespace(
+            data={"opentherm_ever_connected": True}
+        )
+        ot = SimpleNamespace(
+            enabled=True, connection_status="Connected",
+            operational_data=SimpleNamespace(slave_status=2),
+        )
+        data.wiserhub.system.opentherm = ot
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        for boiler, expected, available in (
+            (ot, True, True), (None, None, False), (ot, True, True),
+        ):
+            data.wiserhub.system.opentherm = boiler
+            binary._handle_coordinator_update()
+            text._handle_coordinator_update()
+            self.assertIs(binary.is_on, expected)
+            self.assertEqual(text.native_value, "on" if expected else None)
+            self.assertIs(binary.available, available)
+            self.assertIs(text.available, available)
+
+    def test_disconnected_opentherm_never_falls_back_to_relay(self):
+        data = self._data(relay="On", demand="On")
+        data.wiserhub.system.opentherm = SimpleNamespace(
+            enabled=True, connection_status="Disconnected",
+            operational_data=SimpleNamespace(slave_status=2),
+        )
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+
+    def test_missing_channel_collection_is_safe_for_both_sensors(self):
+        data = self._data()
+        binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        text = self._text_sensor(data)
+        data.wiserhub.heating_channels = None
+        binary._handle_coordinator_update()
+        text._handle_coordinator_update()
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+        self.assertEqual(text.extra_state_attributes, {})
+
+    def test_missing_hot_water_is_safe_for_both_sensors(self):
+        data = self._data()
+        binary = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+        text = self._text_sensor(data, "Hot Water")
+        data.wiserhub.hotwater = None
+        binary._handle_coordinator_update()
+        text._handle_coordinator_update()
+        self.assertIsNone(binary.is_on)
+        self.assertIsNone(text.native_value)
+        self.assertFalse(binary.available)
+        self.assertFalse(text.available)
+        self.assertEqual(text.extra_state_attributes, {})
+
+    def test_single_channel_heating_name_and_class(self) -> None:
+        data = self._data()
+        sensor = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        get_unique_id = Mock(return_value="unique-id")
+
+        with unittest.mock.patch.object(self.module, "get_unique_id", get_unique_id):
+            self.assertEqual(sensor.unique_id, "unique-id")
+
+        self.assertEqual(sensor._attr_translation_key, "heating_active")
+        self.assertFalse(hasattr(sensor, "_attr_translation_placeholders"))
+        self.assertEqual(sensor._attr_device_class, "running")
+        get_unique_id.assert_called_once_with(
+            data, "binary_sensor", "heating_active", 1
+        )
+        self.assertEqual(sensor.device_info, {"identifiers": {("wiser", "hub")}})
+
+    def test_multi_channel_heating_uses_channel_placeholder(self) -> None:
+        for channel_ids in ((1, 2), (1, 2, 3)):
+            data = self._data(channel_ids)
+            unique_id_inputs = set()
+            for channel_id in channel_ids:
+                with self.subTest(channels=len(channel_ids), channel=channel_id):
+                    sensor = self._sensor(
+                        data, self.module.CIRCUIT_HEATING, channel_id
+                    )
+                    get_unique_id = Mock(return_value="unique-id")
+                    with unittest.mock.patch.object(
+                        self.module, "get_unique_id", get_unique_id
+                    ):
+                        sensor.unique_id
+                    unique_id_inputs.add(get_unique_id.call_args.args[1:])
+                    self.assertEqual(
+                        sensor._attr_translation_key, "heating_channel_active"
+                    )
+                    self.assertEqual(
+                        sensor._attr_translation_placeholders,
+                        {"channel": str(channel_id)},
+                    )
+                    get_unique_id.assert_called_once_with(
+                        data, "binary_sensor", "heating_active", channel_id
+                    )
+            # get_unique_id is deterministic, so distinct inputs give
+            # distinct unique IDs.
+            self.assertEqual(len(unique_id_inputs), len(channel_ids))
+
+    def test_heating_state_follows_shared_logic(self) -> None:
+        cases = (
+            ("On", "Off", True),
+            ("Off", "On", False),
+            ("Unknown", "Off", False),
+            ("Unknown", "On", True),
+            ("Unknown", "Unknown", None),
+        )
+        for relay, demand, expected in cases:
+            with self.subTest(relay=relay, demand=demand):
+                data = self._data(relay="Off", demand="Off")
+                sensor = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+                channel = data.wiserhub.heating_channels.get_by_id(1)
+                channel.heating_relay_status = relay
+                channel.demand_on_off_output = demand
+
+                sensor._handle_coordinator_update()
+
+                self.assertIs(sensor.is_on, expected)
+                sensor.async_write_ha_state.assert_called_once_with()
+
+    def test_state_is_set_before_first_update(self) -> None:
+        heating = self._sensor(
+            self._data(relay="On"), self.module.CIRCUIT_HEATING, 1
+        )
+        hot_water = self._sensor(
+            self._data(hot_water_state="Off"), self.module.CIRCUIT_HOT_WATER
+        )
+
+        self.assertIs(heating.is_on, True)
+        self.assertIs(hot_water.is_on, False)
+
+    def test_hot_water_state_name_and_device(self) -> None:
+        data = self._data(hot_water_state="On")
+        sensor = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+        get_unique_id = Mock(return_value="unique-id")
+
+        with unittest.mock.patch.object(self.module, "get_unique_id", get_unique_id):
+            self.assertEqual(sensor.unique_id, "unique-id")
+
+        self.assertEqual(sensor._attr_translation_key, "hot_water_circuit_active")
+        self.assertEqual(sensor._attr_device_class, "running")
+        self.assertIs(sensor.is_on, True)
+        get_unique_id.assert_called_once_with(
+            data, "binary_sensor", "hot_water_active", 2
+        )
+        self.assertEqual(sensor.device_info["model"], self.module.HOT_WATER.title())
+
+        data.wiserhub.hotwater.current_state = "Unknown"
+        sensor._handle_coordinator_update()
+        self.assertIsNone(sensor.is_on)
+
+    def test_missing_circuit_is_unavailable(self) -> None:
+        data = self._data()
+        heating = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+        hot_water = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+        self.assertTrue(heating.available)
+        self.assertTrue(hot_water.available)
+
+        data.wiserhub.heating_channels.get_by_id = lambda _channel_id: None
+        data.wiserhub.hotwater = None
+        heating._handle_coordinator_update()
+        hot_water._handle_coordinator_update()
+
+        for sensor in (heating, hot_water):
+            self.assertFalse(sensor.available)
+            self.assertIsNone(sensor.is_on)
+
+    def test_circuit_binary_sensors_have_translations(self) -> None:
+        files = [
+            SOURCE_PATH.parent / "strings.json",
+            *(SOURCE_PATH.parent / "translations").glob("*.json"),
+        ]
+
+        for path in files:
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "binary_sensor"
+            ]
+            for key in (
+                "heating_active",
+                "heating_channel_active",
+                "hot_water_circuit_active",
+            ):
+                with self.subTest(path=path.name, key=key):
+                    self.assertTrue(sensors[key]["name"])
+            with self.subTest(path=path.name, key="placeholder"):
+                self.assertIn("{channel}", sensors["heating_channel_active"]["name"])
+
+    def _run_setup(self, data):
+        """Run the real binary_sensor async_setup_entry for a bare hub."""
+        import asyncio
+
+        data.hub_version = 2
+        data.wiserhub.system.opentherm = None
+        data.wiserhub.devices = SimpleNamespace(
+            all=[],
+            smokealarms=SimpleNamespace(all=[]),
+            lights=SimpleNamespace(all=[]),
+            shutters=SimpleNamespace(all=[]),
+            binary_sensor=SimpleNamespace(all=[]),
+        )
+        hass = SimpleNamespace(data={"wiser": {"entry": {"data": data}}})
+        config_entry = SimpleNamespace(entry_id="entry", options={})
+        added = []
+        patches = {
+            "opentherm_is_detected": lambda *_args: False,
+            "_supports_summer_discomfort_prevention": lambda _data: False,
+            "_supports_summer_comfort_available": lambda _data: False,
+            "_supports_pcm_binary_sensor": lambda _data: False,
+            "_requires_v2_entity_cleanup": lambda _data: False,
+            "active_wiser_rooms": lambda _data: [],
+        }
+        with unittest.mock.patch.multiple(self.module, **patches):
+            asyncio.run(
+                self.module.async_setup_entry(
+                    hass, config_entry, lambda entities, _update: added.extend(entities)
+                )
+            )
+        return [
+            entity
+            for entity in added
+            if isinstance(entity, self.module.WiserCircuitActiveBinarySensor)
+        ]
+
+    def test_setup_without_circuits_creates_no_circuit_sensors(self) -> None:
+        data = self._data(has_hot_water=False)
+        data.wiserhub.heating_channels = None
+
+        self.assertEqual(self._run_setup(data), [])
+
+    def test_setup_creates_one_sensor_per_channel_and_hot_water(self) -> None:
+        sensors = self._run_setup(self._data((1, 2, 3)))
+
+        self.assertEqual(
+            [(sensor._circuit_type, sensor._circuit_id) for sensor in sensors],
+            [("heating", 1), ("heating", 2), ("heating", 3), ("hot_water", 2)],
+        )
+
+    def test_binary_and_text_sensors_agree_for_every_raw_state(self) -> None:
+        # Both entities read the same circuit; they must never disagree,
+        # including for unknown and unexpected API values.
+        text_module = sys.modules["wiser.sensor"]
+        text_to_bool = {"on": True, "off": False, None: None}
+        raw_states = ("On", "Off", "Unknown", "", "Standby")
+
+        def text_state(data, sensor_type):
+            text = object.__new__(text_module.WiserSystemCircuitState)
+            text._sensor_type = sensor_type
+            text._device_id = 1
+            text._data = data
+            text.async_write_ha_state = Mock()
+            text._handle_coordinator_update()
+            return text_to_bool[text.native_value]
+
+        for relay in raw_states:
+            for demand in raw_states:
+                with self.subTest(relay=relay, demand=demand):
+                    data = self._data(relay=relay, demand=demand)
+                    binary = self._sensor(data, self.module.CIRCUIT_HEATING, 1)
+                    self.assertIs(binary.is_on, text_state(data, "Heating"))
+        for hot_water_state in raw_states:
+            with self.subTest(hot_water=hot_water_state):
+                data = self._data(hot_water_state=hot_water_state)
+                binary = self._sensor(data, self.module.CIRCUIT_HOT_WATER)
+                self.assertIs(binary.is_on, text_state(data, "Hot Water"))
+
+    def test_unavailable_when_hub_update_fails(self) -> None:
+        data = self._data()
+        sensors = (
+            self._sensor(data, self.module.CIRCUIT_HEATING, 1),
+            self._sensor(data, self.module.CIRCUIT_HOT_WATER),
+        )
+
+        data.last_update_success = False
+
+        for sensor in sensors:
+            with self.subTest(circuit=sensor._circuit_type):
+                self.assertFalse(sensor.available)
+
+    def test_unique_id_types_are_not_used_by_other_binary_sensors(self) -> None:
+        # The OpenTherm boiler sensors prefix their keys, so its own
+        # "hot_water_active" key cannot collide with the circuit sensor.
+        data = self._data((1, 2, 3))
+        circuit_inputs = set()
+        for circuit, channel_id in (
+            (self.module.CIRCUIT_HEATING, 1),
+            (self.module.CIRCUIT_HEATING, 2),
+            (self.module.CIRCUIT_HEATING, 3),
+            (self.module.CIRCUIT_HOT_WATER, 0),
+        ):
+            get_unique_id = Mock(return_value="unique-id")
+            with unittest.mock.patch.object(
+                self.module, "get_unique_id", get_unique_id
+            ):
+                self._sensor(data, circuit, channel_id).unique_id
+            circuit_inputs.add(get_unique_id.call_args.args[1:])
+
+        # Use the real key list; the test stub only carries a subset.
+        import ast
+
+        opentherm_source = ast.parse(
+            (SOURCE_PATH.parent / "opentherm.py").read_text(encoding="utf-8")
+        )
+        real_keys = next(
+            ast.literal_eval(node.value.args[0])
+            for node in opentherm_source.body
+            if isinstance(node, ast.Assign)
+            and getattr(node.targets[0], "id", None) == "OPENTHERM_BINARY_SENSOR_KEYS"
+        )
+        opentherm_inputs = set()
+        for key in real_keys:
+            sensor = object.__new__(self.module.WiserOpenThermAttributeBinarySensor)
+            sensor._data = data
+            sensor._sensor_key = key
+            get_unique_id = Mock(return_value="unique-id")
+            with unittest.mock.patch.object(
+                self.module, "get_unique_id", get_unique_id
+            ):
+                sensor.unique_id
+            opentherm_inputs.add(get_unique_id.call_args.args[1:])
+
+        self.assertEqual(len(circuit_inputs), 4)
+        self.assertIn(
+            ("binary_sensor", "opentherm_hot_water_active", 0), opentherm_inputs
+        )
+        self.assertFalse(circuit_inputs & opentherm_inputs)
+        # Stricter: the entity types alone never overlap, whatever the IDs.
+        self.assertFalse(
+            {args[1] for args in circuit_inputs}
+            & {args[1] for args in opentherm_inputs}
+        )
+
+    def test_english_names(self) -> None:
+        for path in (
+            SOURCE_PATH.parent / "strings.json",
+            SOURCE_PATH.parent / "translations/en.json",
+            SOURCE_PATH.parent / "translations/en-GB.json",
+        ):
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "binary_sensor"
+            ]
+            with self.subTest(path=path.name):
+                self.assertEqual(
+                    {
+                        key: sensors[key]["name"]
+                        for key in (
+                            "heating_active",
+                            "heating_channel_active",
+                            "hot_water_circuit_active",
+                        )
+                    },
+                    {
+                        "heating_active": "Heating active",
+                        "heating_channel_active": "Heating channel {channel} active",
+                        "hot_water_circuit_active": "Hot water active",
+                    },
+                )
+
+    def test_only_the_channel_name_uses_a_placeholder(self) -> None:
+        files = [
+            SOURCE_PATH.parent / "strings.json",
+            *(SOURCE_PATH.parent / "translations").glob("*.json"),
+        ]
+        for path in files:
+            sensors = json.loads(path.read_text(encoding="utf-8"))["entity"][
+                "binary_sensor"
+            ]
+            with self.subTest(path=path.name):
+                self.assertEqual(
+                    sensors["heating_channel_active"]["name"].count("{"), 1
+                )
+                for key in ("heating_active", "hot_water_circuit_active"):
+                    self.assertNotIn("{", sensors[key]["name"])
+
+    def test_icons_default_to_inactive_with_explicit_on_override(self) -> None:
+        # Unknown/unavailable states must not use the active icon.
+        icons = json.loads(
+            (SOURCE_PATH.parent / "icons.json").read_text(encoding="utf-8")
+        )["entity"]["binary_sensor"]
+        expected = {
+            "heating_active": ("mdi:radiator-disabled", "mdi:radiator"),
+            "heating_channel_active": ("mdi:radiator-disabled", "mdi:radiator"),
+            "hot_water_circuit_active": ("mdi:fire-off", "mdi:fire"),
+        }
+        for key, (default, on) in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(
+                    icons[key], {"default": default, "state": {"on": on}}
+                )

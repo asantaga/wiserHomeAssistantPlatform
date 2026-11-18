@@ -653,6 +653,15 @@
       "flame_active": {
         "name": "Láng aktív"
       },
+      "heating_active": {
+        "name": "Fűtés aktív"
+      },
+      "heating_channel_active": {
+        "name": "Fűtési csatorna {channel} aktív"
+      },
+      "hot_water_circuit_active": {
+        "name": "Melegvíz-készítés aktív"
+      },
       "hot_water_active": {
         "name": "Melegvíz-készítés aktív"
       },

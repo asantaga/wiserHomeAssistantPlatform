@@ -533,6 +533,9 @@
       "cooling_active": { "name": "Cooling active" },
       "diagnostic_event": { "name": "Diagnostic event" },
       "flame_active": { "name": "Flame active" },
+      "heating_active": { "name": "Heating active" },
+      "heating_channel_active": { "name": "Heating channel {channel} active" },
+      "hot_water_circuit_active": { "name": "Hot water active" },
       "hot_water_active": { "name": "Hot water active" },
       "hw_enabled": { "name": "Hot water enabled" }
     },

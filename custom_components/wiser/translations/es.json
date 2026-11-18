@@ -653,6 +653,15 @@
       "flame_active": {
         "name": "Llama activa"
       },
+      "heating_active": {
+        "name": "Calefacción activa"
+      },
+      "heating_channel_active": {
+        "name": "Canal de calefacción {channel} activo"
+      },
+      "hot_water_circuit_active": {
+        "name": "Agua caliente activa"
+      },
       "hot_water_active": {
         "name": "Agua caliente activa"
       },

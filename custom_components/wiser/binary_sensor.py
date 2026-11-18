@@ -13,10 +13,18 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .circuit_state import (
+    heating_channel_context,
+    heating_channel_is_available,
+    heating_channel_output_state,
+    hot_water_output_state,
+    output_state_is_on,
+)
 from .const import (
     CONF_OPENTHERM_SENSORS,
     DATA,
     DOMAIN,
+    HOT_WATER,
     MANUFACTURER,
     ROOM,
 )
@@ -55,6 +63,8 @@ SUMMER_COMFORT_BINARY_SENSOR_TYPES = (
     SUMMER_COMFORT_AVAILABLE,
 )
 PCM_BINARY_SENSOR_TYPES = (PCM_DEVICE_LIMIT_REACHED,)
+CIRCUIT_HEATING = "heating"
+CIRCUIT_HOT_WATER = "hot_water"
 
 
 def _entity_translation_key(name: str) -> str:
@@ -160,6 +170,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         binary_sensors.append(
             WiserPCMDeviceLimitReached(data, 0, PCM_DEVICE_LIMIT_REACHED)
         )
+    # Heating and hot water circuit running sensors
+    if data.wiserhub.heating_channels:
+        for heating_channel in data.wiserhub.heating_channels.all:
+            binary_sensors.append(
+                WiserCircuitActiveBinarySensor(
+                    data, CIRCUIT_HEATING, heating_channel.id
+                )
+            )
+    if data.wiserhub.hotwater:
+        binary_sensors.append(
+            WiserCircuitActiveBinarySensor(data, CIRCUIT_HOT_WATER)
+        )
+
     if _requires_v2_entity_cleanup(data):
         _remove_unsupported_v2_entities(
             hass,
@@ -585,6 +608,105 @@ class WiserEquipment(BaseBinarySensor):
             else None
         )
         self.async_write_ha_state()
+
+
+class WiserCircuitActiveBinarySensor(
+    WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
+):
+    """Whether a heating channel or hot water circuit is active.
+
+    Shares its on/off logic with the circuit text sensors in sensor.py.
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, coordinator, circuit: str, channel_id: int = 0) -> None:
+        """Initialise the circuit sensor."""
+        super().__init__(coordinator)
+        self._data = coordinator
+        self._circuit_type = circuit
+        if circuit == CIRCUIT_HOT_WATER:
+            self._circuit_id = self._data.wiserhub.hotwater.id
+            self._attr_translation_key = "hot_water_circuit_active"
+        else:
+            self._circuit_id = channel_id
+            if len(self._data.wiserhub.heating_channels.all) > 1:
+                self._attr_translation_key = "heating_channel_active"
+                self._attr_translation_placeholders = {"channel": str(channel_id)}
+            else:
+                self._attr_translation_key = "heating_active"
+        self._state = self._read_state()
+
+    def _circuit(self) -> object | None:
+        """Return the current heating channel or hot water object, if any."""
+        if self._circuit_type == CIRCUIT_HOT_WATER:
+            return self._data.wiserhub.hotwater
+        channels = self._data.wiserhub.heating_channels
+        return channels.get_by_id(self._circuit_id) if channels else None
+
+    def _read_state(self) -> bool | None:
+        """Return whether the circuit is on, or None when unknown."""
+        circuit = self._circuit()
+        if circuit is None:
+            return None
+        if self._circuit_type == CIRCUIT_HOT_WATER:
+            return output_state_is_on(hot_water_output_state(circuit))
+        return output_state_is_on(
+            heating_channel_output_state(
+                circuit, **heating_channel_context(self._data)
+            )
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh the circuit state."""
+        self._state = self._read_state()
+        self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        """Return False when the hub no longer reports the circuit."""
+        if not super().available:
+            return False
+        circuit = self._circuit()
+        if self._circuit_type == CIRCUIT_HOT_WATER:
+            return circuit is not None
+        return heating_channel_is_available(
+            circuit, **heating_channel_context(self._data)
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the circuit is active."""
+        return self._state
+
+    @property
+    def unique_id(self) -> str:
+        """Return a stable unique ID for the circuit."""
+        entity_type = (
+            "hot_water_active"
+            if self._circuit_type == CIRCUIT_HOT_WATER
+            else "heating_active"
+        )
+        return get_unique_id(
+            self._data, "binary_sensor", entity_type, self._circuit_id
+        )
+
+    @property
+    def device_info(self) -> dict:
+        """Attach heating to the hub and hot water to its own device."""
+        if self._circuit_type != CIRCUIT_HOT_WATER:
+            return get_hub_device_info(self._data)
+        return {
+            "name": get_device_name(self._data, self._circuit_id, "Hot Water"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._circuit_id, "hot_water"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": HOT_WATER.title(),
+            **get_hub_via_device_info(self._data),
+        }
 
 
 ## binary sensor of System

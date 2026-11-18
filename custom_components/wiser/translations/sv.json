@@ -653,6 +653,15 @@
       "flame_active": {
         "name": "Låga aktiv"
       },
+      "heating_active": {
+        "name": "Uppvärmning aktiv"
+      },
+      "heating_channel_active": {
+        "name": "Värmekanal {channel} aktiv"
+      },
+      "hot_water_circuit_active": {
+        "name": "Varmvatten aktivt"
+      },
       "hot_water_active": {
         "name": "Varmvatten aktivt"
       },
