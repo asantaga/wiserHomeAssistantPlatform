@@ -12,6 +12,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Fixed
 
+- Advance Schedule applies the next period's Passive Mode enablement, strategy and paired limits across refreshes, until the next schedule transition or Cancel Overrides.
 - Normalize legacy smart-plug, light and heating-actuator select service values before Home Assistant validates the translated options, retaining existing automation calls.
 - Allow existing OpenTherm preset lists expanded by automatic timed defaults through options-form validation while retaining the normal ten-preset limit.
 - Preserve remembered OpenTherm connection and hot-water capabilities when the optional boiler endpoint returns no data; clear them only when the hub explicitly reports OpenTherm disabled.
