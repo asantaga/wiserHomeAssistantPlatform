@@ -24,6 +24,12 @@ def heating_channel_context(data) -> dict:
 
 
 def _uses_opentherm(opentherm, detected) -> bool:
+    # This identifies OpenTherm at hub level, not the control source of each
+    # channel. If Wiser adds supported multi-channel OpenTherm or mixed
+    # OpenTherm/relay configurations, replace this assumption with explicit
+    # per-channel mapping for both availability and state, and add tests for
+    # independent channel activity and connection loss. Do not assume CH1 is
+    # OpenTherm or apply the same boiler CH flag to every channel in that setup.
     return bool(
         detected
         or (
