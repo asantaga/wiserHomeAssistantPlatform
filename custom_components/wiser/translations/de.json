@@ -508,6 +508,9 @@
     "sensor": {
       "signal": { "name": "Signal" },
       "report_count": { "name": "Berichtsanzahl" },
+      "signal_strength": { "name": "Signalstärke" },
+      "wifi_signal_strength": { "name": "WLAN-Signalstärke" },
+      "link_quality": { "name": "Verbindungsqualität" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heizungsbetriebsart" },
       "heating": {

@@ -544,6 +544,9 @@
     "sensor": {
       "signal": { "name": "Signal" },
       "report_count": { "name": "Report count" },
+      "signal_strength": { "name": "Signal strength" },
+      "wifi_signal_strength": { "name": "Wi-Fi signal strength" },
+      "link_quality": { "name": "Link quality" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Heating operation mode" },
       "heating": {

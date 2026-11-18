@@ -674,6 +674,9 @@
         "name": "Signaal"
       },
       "report_count": { "name": "Aantal rapporten" },
+      "signal_strength": { "name": "Signaalsterkte" },
+      "wifi_signal_strength": { "name": "Wifi-signaalsterkte" },
+      "link_quality": { "name": "Verbindingskwaliteit" },
       "cloud": {
         "name": "Cloud"
       },

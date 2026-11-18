@@ -6,6 +6,10 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ## Unreleased
 
+### Added
+
+- Added disabled-by-default diagnostic Signal strength (dBm) and Link quality sensors for every Zigbee device, sourced from the hub's controller reception RSSI and LQI, Wi-Fi signal strength sensor (dBm) for the HeatHub, supporting long-term statistics alongside the existing text Signal sensor - issue [#820](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/820).
+
 ### Fixed
 
 - Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.

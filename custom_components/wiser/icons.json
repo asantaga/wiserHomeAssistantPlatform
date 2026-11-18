@@ -38,6 +38,11 @@
             "output_mode_channel": {
                 "default": "mdi:tune-variant"
             }
+        },
+        "sensor": {
+            "link_quality": {
+                "default": "mdi:signal"
+            }
         }
     },
     "services": {
