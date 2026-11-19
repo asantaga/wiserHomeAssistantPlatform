@@ -258,6 +258,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     _LOGGER.debug("Setting up Cloud sensor")
     wiser_sensors.append(WiserSystemCloudSensor(data, sensor_type="Cloud"))
 
+    # Energy tariff data is optional and may not be available on every hub.
+    # Keep the entities present so they become populated when the API reports it.
+    wiser_sensors.extend(
+        WiserTariffSensor(data, tariff_key)
+        for tariff_key in (
+            "daily_average",
+            "daily_average_100_multiplier",
+            "current_price",
+            "current_price_100_multiplier",
+            "forecast",
+            "current_day",
+        )
+    )
+
     # Add operation sensor
     _LOGGER.debug("Setting up Heating Operation Mode sensor")
     wiser_sensors.append(
@@ -1566,6 +1580,69 @@ class WiserRoomScheduledSetpointSensor(WiserSensor):
             "suggested_area": room.name,
             **get_hub_via_device_info(self._data),
         }
+
+
+class WiserTariffSensor(WiserSensor):
+    """Expose energy tariff summaries and interval schedules."""
+
+    _TARIFF_KEYS = {
+        "daily_average": "daily_average",
+        "daily_average_100_multiplier": "daily_averagex100",
+        "current_price": "current_price",
+        "current_price_100_multiplier": "current_pricex100",
+        "forecast": "forecast",
+        "current_day": "current_day",
+    }
+
+    def __init__(self, data, tariff_key: str) -> None:
+        super().__init__(
+            data,
+            0,
+            f"Energy Tariff {tariff_key.replace('_', ' ').title()}",
+            translation_key=f"energy_tariff_{tariff_key}",
+        )
+        self._tariff_key = tariff_key
+        self._update_state()
+
+    @property
+    def unique_id(self):
+        return get_unique_id(
+            self._data, "sensor", f"energy_tariff_{self._tariff_key}", 0
+        )
+
+    def _update_state(self) -> None:
+        tariffs = getattr(self._data.wiserhub, "tariffs", None)
+        energy_tariff = getattr(tariffs, "energy_tariff", None) if tariffs else None
+        if energy_tariff is None:
+            self._state = None
+            self._attr_extra_state_attributes = {}
+            return
+
+        api_key = self._TARIFF_KEYS[self._tariff_key]
+        value = getattr(energy_tariff, api_key, None)
+        if self._tariff_key in ("forecast", "current_day"):
+            intervals = []
+            for interval in getattr(value, "all", value) or ():
+                item = {
+                    "id": getattr(interval, "id", None),
+                    "from": getattr(interval, "begin", None),
+                    "to": getattr(interval, "end", None),
+                    "price": getattr(interval, "price", None),
+                }
+                intervals.append(
+                    {key: val for key, val in item.items() if val is not None}
+                )
+            self._attr_extra_state_attributes = {"intervals": intervals}
+            self._state = intervals[0].get("price") if intervals else None
+        else:
+            self._state = value
+            self._attr_extra_state_attributes = {}
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        super()._handle_coordinator_update()
+        self._update_state()
+        self.async_write_ha_state()
 
 
 class WiserLTSTempSensor(WiserSensor):
