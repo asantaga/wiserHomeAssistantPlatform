@@ -538,6 +538,12 @@
         }
       },
       "hot_water_operation_mode": { "name": "Mode de fonctionnement de l’eau chaude" },
+      "energy_tariff_daily_average": { "name": "Prix moyen journalier de l’énergie" },
+      "energy_tariff_daily_average_100_multiplier": { "name": "Prix moyen journalier de l’énergie ×100" },
+      "energy_tariff_current_price": { "name": "Prix actuel de l’énergie" },
+      "energy_tariff_current_price_100_multiplier": { "name": "Prix actuel de l’énergie ×100" },
+      "energy_tariff_forecast": { "name": "Prévisions du tarif énergétique" },
+      "energy_tariff_current_day": { "name": "Tarifs de la journée" },
       "target_temperature": { "name": "Température cible" },
       "current_schedule_temperature": { "name": "Température programmée actuelle" },
       "floor_temperature": { "name": "Température du sol" },
