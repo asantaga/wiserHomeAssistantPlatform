@@ -559,7 +559,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
                 )
     # Weather sensors are supported on generation 2+ hubs with shutters.
-    if data.hub_version > 1 and data.wiserhub.devices.shutters.all:
+    # Some coordinator-compatible data objects (including older integrations)
+    # do not expose hub_version. Treat those as first-generation hubs, which
+    # do not support shutter weather sensors.
+    if getattr(data, "hub_version", 1) > 1 and data.wiserhub.devices.shutters.all:
         wiser_sensors.extend(
             [
                 WiserLTSWeatherSensor(data, 0, sensor_type="temperature"),
