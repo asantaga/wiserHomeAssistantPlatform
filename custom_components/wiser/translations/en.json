@@ -472,6 +472,7 @@
       "moment": { "name": "Moment: {name}" }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Respect Seasonal Comfort" },
       "valve_protection": { "name": "Valve protection" },
       "eco_mode": { "name": "Eco mode" },
       "away_mode_affects_hot_water": { "name": "Away mode affects hot water" },
@@ -479,6 +480,7 @@
       "away_mode": { "name": "Away mode" },
       "daylight_saving": { "name": "Daylight saving" },
       "summer_comfort_enabled": { "name": "Summer comfort enabled" },
+      "seasonal_comfort_enabled": { "name": "Seasonal comfort enabled" },
       "window_detection": { "name": "Window detection" },
       "include_in_summer_comfort": { "name": "Include in summer comfort" },
       "device_lock": { "name": "Device lock" },
@@ -540,6 +542,8 @@
       "hw_enabled": { "name": "Hot water enabled" }
     },
     "sensor": {
+      "weather_temperature": { "name": "Weather Temperature" },
+      "weather_next_day_2pm_temperature": { "name": "Weather Next Day 2PM Temperature" },
       "signal": { "name": "Signal" },
       "report_count": { "name": "Report count" },
       "signal_strength": { "name": "Signal strength" },

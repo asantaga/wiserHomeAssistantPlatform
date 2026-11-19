@@ -479,6 +479,7 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Huomioi kausimukavuus" },
       "valve_protection": {
         "name": "Venttiilin suojaus"
       },
@@ -500,6 +501,7 @@
       "summer_comfort_enabled": {
         "name": "Kesämukavuus käytössä"
       },
+      "seasonal_comfort_enabled": { "name": "Kausimukavuus käytössä" },
       "window_detection": {
         "name": "Ikkunantunnistus"
       },
@@ -679,6 +681,8 @@
       }
     },
     "sensor": {
+      "weather_temperature": { "name": "Sään lämpötila" },
+      "weather_next_day_2pm_temperature": { "name": "Seuraavan päivän lämpötila klo 14" },
       "signal": {
         "name": "Signaali"
       },

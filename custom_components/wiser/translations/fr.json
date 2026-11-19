@@ -441,6 +441,7 @@
       "moment": { "name": "Moment : {name}" }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Respect du confort saisonnier" },
       "valve_protection": { "name": "Protection des vannes" },
       "eco_mode": { "name": "Mode éco" },
       "away_mode_affects_hot_water": { "name": "Le mode absence affecte l’eau chaude" },
@@ -448,6 +449,7 @@
       "away_mode": { "name": "Mode absence" },
       "daylight_saving": { "name": "Heure d’été" },
       "summer_comfort_enabled": { "name": "Confort d’été activé" },
+      "seasonal_comfort_enabled": { "name": "Confort saisonnier activé" },
       "window_detection": { "name": "Détection de fenêtre" },
       "include_in_summer_comfort": { "name": "Inclure dans le confort d’été" },
       "device_lock": { "name": "Verrouillage de l’appareil" },
@@ -509,6 +511,8 @@
       "hw_enabled": { "name": "Eau chaude activée" }
     },
     "sensor": {
+      "weather_temperature": { "name": "Température météo" },
+      "weather_next_day_2pm_temperature": { "name": "Température météo du lendemain à 14 h" },
       "signal": { "name": "Signal" },
       "report_count": { "name": "Nombre de rapports" },
       "signal_strength": { "name": "Force du signal" },

@@ -441,6 +441,7 @@
       "moment": { "name": "Moment: {name}" }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Saisonkomfort berücksichtigen" },
       "valve_protection": { "name": "Ventilschutz" },
       "eco_mode": { "name": "Eco-Modus" },
       "away_mode_affects_hot_water": { "name": "Abwesenheitsmodus wirkt auf Warmwasser" },
@@ -448,6 +449,7 @@
       "away_mode": { "name": "Abwesenheitsmodus" },
       "daylight_saving": { "name": "Sommerzeit" },
       "summer_comfort_enabled": { "name": "Sommerkomfort aktiviert" },
+      "seasonal_comfort_enabled": { "name": "Saisonaler Komfort aktiviert" },
       "window_detection": { "name": "Fenstererkennung" },
       "include_in_summer_comfort": { "name": "In Sommerkomfort einbeziehen" },
       "device_lock": { "name": "Gerätesperre" },
@@ -509,6 +511,8 @@
       "hw_enabled": { "name": "Warmwasser aktiviert" }
     },
     "sensor": {
+      "weather_temperature": { "name": "Wettertemperatur" },
+      "weather_next_day_2pm_temperature": { "name": "Wettertemperatur am nächsten Tag um 14 Uhr" },
       "signal": { "name": "Signal" },
       "report_count": { "name": "Berichtsanzahl" },
       "signal_strength": { "name": "Signalstärke" },

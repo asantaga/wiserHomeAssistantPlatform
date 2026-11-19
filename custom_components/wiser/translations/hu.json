@@ -479,6 +479,7 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Szezonális komfort figyelembevétele" },
       "valve_protection": {
         "name": "Szelepvédelem"
       },
@@ -500,6 +501,7 @@
       "summer_comfort_enabled": {
         "name": "Nyári komfort engedélyezve"
       },
+      "seasonal_comfort_enabled": { "name": "Szezonális komfort engedélyezve" },
       "window_detection": {
         "name": "Ablaknyitás-érzékelés"
       },
@@ -679,6 +681,8 @@
       }
     },
     "sensor": {
+      "weather_temperature": { "name": "Időjárási hőmérséklet" },
+      "weather_next_day_2pm_temperature": { "name": "Másnapi hőmérséklet 14 órakor" },
       "signal": {
         "name": "Jel"
       },

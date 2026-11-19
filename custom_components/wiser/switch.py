@@ -118,6 +118,12 @@ WISER_SWITCHES = [
         "icon": "mdi:alarm-light",
         "type": "device",
     },
+    {
+        "name": "Seasonal Comfort Enabled",
+        "key": "seasonal_comfort_enabled",
+        "icon": "mdi:sofa",
+        "type": "system",
+    },
 ]
 
 
@@ -173,7 +179,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     )
         elif (
             switch["type"] == "system"
-            and getattr(data.wiserhub.system, switch["key"]) is not None
+            # System capabilities vary by hub/library version. Treat a missing
+            # property the same as an unsupported switch so one optional
+            # capability cannot abort platform setup.
+            and getattr(data.wiserhub.system, switch["key"], None) is not None
         ):
             wiser_switches.append(
                 WiserSystemSwitch(data, switch["name"], switch["key"], switch["icon"])
@@ -214,13 +223,26 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
         )
 
     # Add Shutters (if any)
-    for shutter in data.wiserhub.devices.shutters.all:
+    shutters = data.wiserhub.devices.shutters.all
+    for shutter in shutters:
         wiser_switches.extend(
             [WiserShutterAwayActionSwitch(data, shutter.id, f"Wiser {shutter.name}")]
         )
         if data.hub_version == 2:
             wiser_switches.append(
                 WiserShutterSummerComfortSwitch(
+                    data, shutter.id, f"Wiser {shutter.name}"
+                )
+            )
+        # Seasonal comfort is only available on generation 2 hubs with
+        # shutters whose API model supports the setting.
+        if data.hub_version == 2 and shutters and hasattr(
+            shutter, "respect_seasonal_comfort"
+        ) and callable(
+            getattr(shutter, "set_respect_seasonal_comfort", None)
+        ):
+            wiser_switches.append(
+                WiserShutterSeasonalComfortSwitch(
                     data, shutter.id, f"Wiser {shutter.name}"
                 )
             )
@@ -324,6 +346,7 @@ class WiserSwitch(WiserEntityMixin, CoordinatorEntity, SwitchEntity):
             "Away Mode": "away_mode",
             "Daylight Saving": "daylight_saving",
             "Summer Comfort Enabled": "summer_comfort_enabled",
+            "Seasonal Comfort Enabled": "seasonal_comfort_enabled",
             "Window Detection": "window_detection",
             "Include In Summer Comfort": "include_in_summer_comfort",
             "Device Lock": "device_lock",
@@ -1113,6 +1136,97 @@ class WiserShutterSummerComfortSwitch(WiserSwitch):
         await self.async_force_update()
         return True
 
+class WiserShutterSeasonalComfortSwitch(WiserSwitch):
+    """Shutter Respect Seasonal Comfort Class."""
+
+    def __init__(self, data, ShutterId, name) -> None:
+        """Initialize the sensor."""
+        self._name = name
+        self._shutter_id = ShutterId
+        super().__init__(data, name, "", "shutter", "mdi:sofa")
+        self._attr_translation_key = "respect_seasonal_comfort"
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = bool(self._shutter.respect_seasonal_comfort)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Async Update to HA."""
+        super()._handle_coordinator_update()
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        self._is_on = True if self._shutter.respect_seasonal_comfort == True else False
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data, "switch", self._shutter_id, "respect_seasonal_comfort"
+        )
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return {
+            "name": get_device_name(self._data, self._shutter_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._shutter_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._shutter.product_type,
+            "sw_version": self._shutter.firmware_version,
+            **get_hub_via_device_info(self._data),
+        }
+
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes for the attribute card."""
+        self._shutter = self._data.wiserhub.devices.get_by_id(self._shutter_id)
+        attrs = {}
+
+        for attribute in (
+            "summer_comfort_lift",
+            "summer_comfort_tilt",
+            "respect_seasonal_comfort",
+            "room_with_temperature_sensor",
+            "use_average_temperature",
+            "seasonal_target_lift",
+            "facade",
+            "seasonal_derogation_utc_timestamp",
+        ):
+            value = getattr(self._shutter, attribute, None)
+            if value is not None:
+                attrs[attribute] = value
+
+        attrs["covering_type"] = getattr(
+            self._shutter, "covering_type", "Unknown"
+        )
+
+        temperature_room_id = getattr(
+            self._shutter, "room_with_temperature_sensor", None
+        )
+        if temperature_room_id not in (None, 0, "", "0"):
+            try:
+                temperature_room = self._data.wiserhub.rooms.get_by_id(
+                    int(temperature_room_id)
+                )
+            except (TypeError, ValueError):
+                temperature_room = None
+            if temperature_room is not None:
+                attrs["room_temperature_name"] = temperature_room.name
+        return attrs
+
+    @hub_error_handler
+    async def async_turn_on(self, **kwargs):
+        """Turn the respect seasonal comfort on."""
+        await self._shutter.set_respect_seasonal_comfort(True)
+        await self.async_force_update()
+        return True
+
+    @hub_error_handler
+    async def async_turn_off(self, **kwargs):
+        """Turn the respect seasonal comfort off."""
+        await self._shutter.set_respect_seasonal_comfort(False)
+        await self.async_force_update()
+        return True
 
 class WiserInteractsRoomClimateSwitch(WiserSwitch):
     """Shutter Respect Summer Comfort Class."""
