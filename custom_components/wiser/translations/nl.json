@@ -479,6 +479,7 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Seizoenscomfort respecteren" },
       "valve_protection": {
         "name": "Klepbescherming"
       },
@@ -500,6 +501,7 @@
       "summer_comfort_enabled": {
         "name": "Zomercomfort ingeschakeld"
       },
+      "seasonal_comfort_enabled": { "name": "Seizoenscomfort ingeschakeld" },
       "window_detection": {
         "name": "Raamdetectie"
       },
@@ -670,6 +672,8 @@
       }
     },
     "sensor": {
+      "weather_temperature": { "name": "Weertemperatuur" },
+      "weather_next_day_2pm_temperature": { "name": "Weertemperatuur volgende dag om 14.00 uur" },
       "signal": {
         "name": "Signaal"
       },

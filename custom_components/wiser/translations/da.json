@@ -479,6 +479,7 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": { "name": "Respekt for sæsonkomfort" },
       "valve_protection": {
         "name": "Ventilbeskyttelse"
       },
@@ -500,6 +501,7 @@
       "summer_comfort_enabled": {
         "name": "Sommerkomfort aktiveret"
       },
+      "seasonal_comfort_enabled": { "name": "Sæsonkomfort aktiveret" },
       "window_detection": {
         "name": "Vinduesregistrering"
       },
@@ -670,6 +672,8 @@
       }
     },
     "sensor": {
+      "weather_temperature": { "name": "Vejrtemperatur" },
+      "weather_next_day_2pm_temperature": { "name": "Vejrtemperatur næste dag kl. 14" },
       "signal": {
         "name": "Signal"
       },
