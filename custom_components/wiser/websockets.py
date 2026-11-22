@@ -122,6 +122,34 @@ def build_power_notification_data(wiserhub):
     return output
 
 
+def smart_schedule_assignments(wiserhub, schedule_id):
+    """Build Smart schedule assignments from linked equipment overview IDs."""
+    equipment_collection = getattr(
+        getattr(wiserhub, "devices", None), "equipments", None
+    )
+    assignments = []
+    seen_device_ids = set()
+    for equipment in getattr(equipment_collection, "all", []):
+        if str(getattr(equipment, "device_type", "")).casefold() not in {
+            "smartplug",
+            "evse",
+        }:
+            continue
+        if str(getattr(equipment, "overview_schedule_id", "")) != str(schedule_id):
+            continue
+        device_id = getattr(equipment, "device_id", None)
+        if device_id is None or device_id in seen_device_ids:
+            continue
+        seen_device_ids.add(device_id)
+        assignments.append(
+            {
+                "id": device_id,
+                "name": getattr(equipment, "equipment_name", str(device_id)),
+            }
+        )
+    return assignments
+
+
 def build_native_notification_data(wiserhub):
     """Return all locally exposed native Wiser notification settings."""
     devices = wiserhub.devices
@@ -490,12 +518,17 @@ async def async_register_websockets(hass, data):
             schedules = d.wiserhub.schedules.all
             for schedule in schedules:
                 if schedule.schedule_type == schedule_type or not schedule_type:
+                    assignments = (
+                        smart_schedule_assignments(d.wiserhub, schedule.id)
+                        if str(schedule.schedule_type).casefold() == "smart"
+                        else schedule.assignment_ids
+                    )
                     output.append(
                         {
                             "Id": schedule.id,
                             "Type": schedule.schedule_type,
                             "Name": schedule.name,
-                            "Assignments": len(schedule.assignment_ids),
+                            "Assignments": len(assignments),
                         }
                     )
 
@@ -533,6 +566,13 @@ async def async_register_websockets(hass, data):
         output = ["Heating"]
         d = get_api_for_hub(msg.get("hub"))
         if d:
+            schedules = d.wiserhub.schedules.all
+            if any(
+                str(schedule.schedule_type).lower() == "smart"
+                for schedule in schedules
+            ):
+                output.append("Smart")
+
             for cap, value in d.wiserhub.system.capabilities.all.items():
                 if cap == "SmartPlug" and value == True:
                     output.append("OnOff")
@@ -577,6 +617,10 @@ async def async_register_websockets(hass, data):
             schedule = d.wiserhub.schedules.get_by_id(schedule_type_enum, schedule_id)
             if schedule:
                 schedule = d.external_room_control.schedule_data(schedule)
+                if schedule_type == "smart":
+                    schedule["Assignments"] = smart_schedule_assignments(
+                        d.wiserhub, schedule_id
+                    )
                 connection.send_result(msg["id"], schedule)
             else:
                 connection.send_error(
