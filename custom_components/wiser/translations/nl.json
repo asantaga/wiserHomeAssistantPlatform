@@ -662,6 +662,15 @@
       "flame_active": {
         "name": "Vlam actief"
       },
+      "heating_active": {
+        "name": "Verwarming actief"
+      },
+      "heating_channel_active": {
+        "name": "Verwarmingskanaal {channel} actief"
+      },
+      "hot_water_circuit_active": {
+        "name": "Warm water actief"
+      },
       "hot_water_active": {
         "name": "Warm water actief"
       },
@@ -683,6 +692,9 @@
         "name": "Signaal"
       },
       "report_count": { "name": "Aantal rapporten" },
+      "signal_strength": { "name": "Signaalsterkte" },
+      "wifi_signal_strength": { "name": "Wifi-signaalsterkte" },
+      "link_quality": { "name": "Verbindingskwaliteit" },
       "cloud": {
         "name": "Cloud"
       },

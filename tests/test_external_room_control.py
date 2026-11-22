@@ -11,7 +11,7 @@ import math
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from test_ui_options import load_functions
 
@@ -79,6 +79,53 @@ class ExternalRoomControlClimateContractTest(unittest.TestCase):
             climate_source,
         )
         self.assertIn('else "Modulation"', climate_source)
+
+
+class AdvanceScheduleClimateTest(unittest.IsolatedAsyncioTestCase):
+    """Route advanced controls even when the current slot disables Passive Mode."""
+
+    async def test_advance_and_cancel_route_while_passive_is_disabled(self):
+        values = SimpleNamespace(
+            advance_schedule=SimpleNamespace(value="Advance Schedule"),
+            cancel_overrides=SimpleNamespace(value="Cancel Overrides"),
+        )
+        namespace = {
+            "WISER_PRESET_TO_API": {},
+            "WiserPresetOptionsEnum": values,
+            "_LOGGER": logging.getLogger(__name__),
+        }
+        room_class = next(
+            node for node in ast.parse((COMPONENT / "climate.py").read_text()).body
+            if isinstance(node, ast.ClassDef) and node.name == "WiserRoom"
+        )
+        method = next(
+            node for node in room_class.body
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_set_preset_mode"
+        )
+        method.decorator_list = []
+        exec(compile(ast.Module(body=[method], type_ignores=[]), "climate.py", "exec"), namespace)
+        controller = SimpleNamespace(
+            async_advance_passive_schedule=AsyncMock(),
+            async_cancel_passive_lower_override=AsyncMock(),
+            async_cancel_upper_override=AsyncMock(),
+        )
+        room = SimpleNamespace(
+            name="Office", passive_mode_enabled=False,
+            available_presets=["Advance Schedule", "Cancel Overrides"],
+            set_preset=AsyncMock(),
+        )
+        entity = SimpleNamespace(
+            _room=room, _room_id=1,
+            _data=SimpleNamespace(passive_mode_enabled=True, external_room_control=controller),
+            async_force_update=AsyncMock(),
+        )
+        await namespace["async_set_preset_mode"](entity, "Advance Schedule")
+        controller.async_advance_passive_schedule.assert_awaited_once_with(room)
+        room.set_preset.assert_not_awaited()
+        await namespace["async_set_preset_mode"](entity, "Cancel Overrides")
+        room.set_preset.assert_awaited_once_with("Cancel Overrides")
+        controller.async_cancel_passive_lower_override.assert_awaited_once_with(1)
+        controller.async_cancel_upper_override.assert_awaited_once_with(1)
 
 
 class FakeStore:
@@ -1571,6 +1618,134 @@ class ExternalRoomControlControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.controller.passive_lower_temperature(refreshed), 18.0)
         refreshed.current_target_temperature = 19.0
         self.assertEqual(self.controller.passive_lower_temperature(refreshed), 19.0)
+
+    def _configure_advance_controls(
+        self, current_strategy="modulating", next_strategy="temperature_limiter",
+        current_enabled=True, next_enabled=True,
+    ):
+        """Use the real coordinator strategy lookup and two scheduled periods."""
+        self.room.is_passive_mode = self.room.passive_mode_enabled = current_enabled
+        self.room.schedule = SimpleNamespace(
+            id=7, schedule_type="Heating", assignment_ids=[1],
+            current_setting=20.0,
+            next=SimpleNamespace(
+                datetime=datetime(2026, 10, 19, 18),
+                setting=18.0 if next_strategy == "temperature_limiter" else 25.0,
+            ),
+            ws_schedule_data={"ScheduleData": [{"day": "Monday", "slots": [
+                {"Time": "06:00", "Setpoint": 20.0},
+                {"Time": "18:00", "Setpoint": 25.0},
+            ]}]},
+        )
+        self.controller._passive_control_schedules["7"] = {"Monday": {
+            "06:00": {
+                "scheduled": True, "enabled": current_enabled,
+                "strategy": current_strategy, "lower": 15.0, "upper": 20.0,
+            },
+            "18:00": {
+                "scheduled": True, "enabled": next_enabled,
+                "strategy": next_strategy, "lower": 18.0, "upper": 25.0,
+            },
+        }}
+        coordinator = self.controller.coordinator
+        coordinator.external_room_control = self.controller
+        strategy = load_functions("coordinator.py", {"passive_room_strategy"}, {
+            "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
+        }).passive_room_strategy
+        coordinator.passive_room_strategy = lambda room_id: strategy(coordinator, room_id)
+
+        def set_mode(enabled):
+            self.room.passive_mode_enabled = self.room.is_passive_mode = enabled
+
+        def advance():
+            self.room.is_override = True
+            self.room.current_target_temperature = self.room.schedule.next.setting
+            return True
+
+        self.room.set_passive_mode.side_effect = set_mode
+        self.room.schedule_advance.side_effect = advance
+
+    async def test_advance_switches_to_limiter_across_refresh_and_restore(self):
+        self._configure_advance_controls()
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+            await self.controller.async_advance_passive_schedule(self.room)
+            self.assertTrue(self.controller.uses_temperature_limiter(1))
+            self.assertEqual(self.controller.upper_temperature(1), 25.0)
+            self.assertEqual(self.controller.passive_lower_temperature(self.room), 18.0)
+            await self.controller.async_update()
+            self.assertTrue(self.controller.uses_temperature_limiter(1))
+            self.controller._store.async_load.return_value = deepcopy(
+                self.controller._store.async_save.call_args.args[0]
+            )
+            self.controller._rooms = {}
+            await self.controller.async_load()
+            self.assertTrue(self.controller.uses_temperature_limiter(1))
+            self.assertEqual(self.controller.upper_temperature(1), 25.0)
+
+    async def test_advance_switches_to_modulating_with_next_upper_bound(self):
+        self._configure_advance_controls("temperature_limiter", "modulating")
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+            await self.controller.async_advance_passive_schedule(self.room)
+            self.assertFalse(self.controller.uses_temperature_limiter(1))
+            self.assertEqual(self.controller.passive_upper_temperature(self.room), 25.0)
+            self.assertEqual(self.controller.passive_lower_temperature(self.room), 18.0)
+            await self.controller.async_update()
+            self.assertFalse(self.controller.uses_temperature_limiter(1))
+
+    async def test_advance_applies_next_enablement_without_cancelling_target(self):
+        for current, following in ((True, False), (False, True)):
+            with self.subTest(current=current, following=following):
+                self.setUp()
+                self._configure_advance_controls(
+                    current_enabled=current, next_enabled=following
+                )
+                with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+                    await self.controller.async_advance_passive_schedule(self.room)
+                    self.assertIs(self.room.passive_mode_enabled, following)
+                    await self.controller.async_update()
+                    self.room.set_passive_mode.assert_awaited_once_with(following)
+                    self.room.cancel_overrides.assert_not_awaited()
+
+    async def test_advanced_controls_expire_at_next_transition(self):
+        self._configure_advance_controls()
+        await self.controller.async_advance_passive_schedule(self.room)
+        self.room.schedule.next.datetime = datetime(2026, 10, 20, 6)
+        self.controller._passive_control_schedules["7"]["Monday"]["18:00"]["upper"] = 24.0
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 18, 1)):
+            self.assertEqual(self.controller.scheduled_passive_control(1)["upper"], 24.0)
+            await self.controller.async_update()
+        self.assertNotIn("passive_control_override", self.controller._rooms["1"])
+        self.assertIsNone(self.controller._rooms["1"]["passive_upper_override"])
+
+    async def test_cancel_overrides_restores_current_passive_controls(self):
+        self._configure_advance_controls(next_enabled=False)
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+            await self.controller.async_advance_passive_schedule(self.room)
+            await self.controller.async_cancel_passive_lower_override(1)
+            await self.controller.async_cancel_upper_override(1)
+            self.assertEqual(self.controller.scheduled_passive_control(1)["strategy"], "modulating")
+            await self.controller.async_update()
+            self.assertTrue(self.room.passive_mode_enabled)
+
+    async def test_advanced_controls_do_not_follow_schedule_reassignment(self):
+        self._configure_advance_controls()
+        await self.controller.async_advance_passive_schedule(self.room)
+        self.room.schedule.id = 8
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+            self.assertIsNone(self.controller.scheduled_passive_control(1))
+            await self.controller.async_update()
+        self.assertFalse(self.controller.has_passive_override(1))
+
+    async def test_advance_resolves_symbolic_next_slot_controls(self):
+        self._configure_advance_controls()
+        self.controller.coordinator.wiserhub.system.sunset_times = {"Monday": "18:00"}
+        day = self.controller._passive_control_schedules["7"]["Monday"]
+        day["Sunset"] = day.pop("18:00")
+        self.room.schedule.ws_schedule_data["ScheduleData"][0]["slots"][1]["Time"] = "Sunset"
+        with patch.object(FakeDateTimeUtil, "now", return_value=datetime(2026, 10, 19, 12)):
+            await self.controller.async_advance_passive_schedule(self.room)
+            self.assertTrue(self.controller.uses_temperature_limiter(1))
+            self.assertEqual(self.controller.upper_temperature(1), 25.0)
 
     def test_validated_passive_controls_select_the_hub_setpoint(self):
         schedule = {

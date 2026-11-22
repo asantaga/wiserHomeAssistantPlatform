@@ -662,6 +662,15 @@
       "flame_active": {
         "name": "Chama ativa"
       },
+      "heating_active": {
+        "name": "Aquecimento ativo"
+      },
+      "heating_channel_active": {
+        "name": "Canal de aquecimento {channel} ativo"
+      },
+      "hot_water_circuit_active": {
+        "name": "Água quente ativa"
+      },
       "hot_water_active": {
         "name": "Água quente ativa"
       },
@@ -683,6 +692,9 @@
         "name": "Sinal"
       },
       "report_count": { "name": "Contagem de relatórios" },
+      "signal_strength": { "name": "Intensidade do sinal" },
+      "wifi_signal_strength": { "name": "Intensidade do sinal Wi-Fi" },
+      "link_quality": { "name": "Qualidade da ligação" },
       "cloud": {
         "name": "Nuvem"
       },

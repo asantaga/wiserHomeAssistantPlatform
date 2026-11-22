@@ -31,6 +31,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfPower,
     UnitOfEnergy,
     UnitOfPressure,
@@ -41,6 +42,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from aioWiserHeatAPI.wiserhub import TEMP_MINIMUM, TEMP_OFF
 
+from .circuit_state import (
+    heating_channel_context,
+    heating_channel_is_available,
+    heating_channel_output_state,
+    hot_water_output_state,
+)
 from .const import (
     CONF_ADDITIONAL_SENSORS,
     CONF_SCHEDULE_SETPOINT_ROOMS,
@@ -82,6 +89,9 @@ from .opentherm_detection import opentherm_is_detected
 from .temperature import room_target_temperature
 
 _LOGGER = logging.getLogger(__name__)
+
+# Numeric Zigbee reception sensors created for every physical device.
+DEVICE_RECEPTION_SENSOR_TYPES = ("signal_strength", "link_quality")
 
 ON_OFF_STATES = {
     TEXT_ON: STATE_ON,
@@ -174,6 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # Add hub wifi signal sensor
     wiser_sensors.append(WiserDeviceSignalSensor(data, 0, "Controller"))
+    wiser_sensors.append(WiserHubWifiSignalSensor(data))
     if data.wiserhub.devices:
         # Multi-gang dimmers (2GANG/DIMMER/2) expose one _WiserLight per channel
         # but share a single physical device id. Signal strength is a property of
@@ -186,6 +197,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                 signal_sensor_device_ids.add(device.id)
                 wiser_sensors.append(
                     WiserDeviceSignalSensor(data, device.id, device.product_type)
+                )
+                wiser_sensors.extend(
+                    WiserDeviceReceptionSensor(data, device.id, reception_type)
+                    for reception_type in DEVICE_RECEPTION_SENSOR_TYPES
                 )
                 if device.product_type == "UnderFloorHeating":
                     wiser_sensors.append(
@@ -1027,6 +1042,116 @@ class WiserDeviceSignalSensor(WiserSensor):
         return attrs
 
 
+class WiserHubWifiSignalSensor(WiserSensor):
+    """Numeric Wi-Fi signal strength reported by the HeatHub."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, data) -> None:
+        """Initialise the hub's Wi-Fi measurement."""
+        super().__init__(
+            data,
+            sensor_type="wifi_signal_strength",
+            translation_key="wifi_signal_strength",
+        )
+        self._state = self._read_signal_strength()
+
+    def _read_signal_strength(self) -> int | None:
+        """Return Wi-Fi RSSI, treating the API's zero fallback as missing."""
+        signal = getattr(self._data.wiserhub.system, "signal", None)
+        return getattr(signal, "controller_reception_rssi", None) or None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh Wi-Fi RSSI from the current hub object."""
+        super()._handle_coordinator_update()
+        self._state = self._read_signal_strength()
+        self.async_write_ha_state()
+
+
+class WiserDeviceReceptionSensor(WiserSensor):
+    """Numeric Zigbee reception measurement for a physical device.
+
+    Exposes the hub's view of a device's link (controller reception RSSI or
+    LQI) as a plottable value alongside the text Signal sensor.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, data, device_id: int, reception_type: str) -> None:
+        """Initialise the reception sensor."""
+        super().__init__(
+            data, device_id, reception_type, translation_key=reception_type
+        )
+        if reception_type == "signal_strength":
+            self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+            self._attr_native_unit_of_measurement = (
+                SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+            )
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._read_reception_value()
+
+    def _read_reception_value(self) -> int | None:
+        """Return the current reception value reported by the hub.
+
+        The API reports 0 for both RSSI and LQI when the hub has no
+        controller reception data for a device. A Zigbee RSSI of exactly
+        0 dBm is not physically plausible, so treat it as missing rather
+        than recording a perfect reading in long-term statistics.
+        """
+        signal = getattr(self._device, "signal", None)
+        if signal is None:
+            return None
+        rssi = signal.controller_reception_rssi
+        if not rssi:
+            return None
+        if self._sensor_type == "signal_strength":
+            return rssi
+        return signal.controller_reception_lqi
+
+    @property
+    def available(self) -> bool:
+        """Return False once the hub no longer reports the device."""
+        return super().available and self._device is not None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Refresh the reception value."""
+        super()._handle_coordinator_update()
+        self._device = self._data.wiserhub.devices.get_by_id(self._device_id)
+        self._state = self._read_reception_value()
+        self.async_write_ha_state()
+
+    @property
+    def unique_id(self):
+        """Return a name-independent unique ID."""
+        return get_physical_entity_unique_id(
+            self._data,
+            "sensor",
+            self._device_id,
+            self._sensor_type,
+        )
+
+    @property
+    def device_info(self):
+        """Attach the entity to its physical device."""
+        return {
+            "name": get_device_name(self._data, self._device_id),
+            "identifiers": {(DOMAIN, get_identifier(self._data, self._device_id))},
+            "manufacturer": MANUFACTURER,
+            "model": self._device.product_type,
+            "sw_version": self._device.firmware_version,
+            **get_device_area_info(self._data, self._device_id),
+            **get_hub_via_device_info(self._data),
+        }
+
+
 class WiserSystemHotWaterPreset(WiserSensor):
     """Hotwater preset sensor"""
 
@@ -1086,22 +1211,36 @@ class WiserSystemCircuitState(WiserSensor):
             self._attr_translation_key = "heating_channel"
             self._attr_translation_placeholders = {"channel": str(device_id)}
 
+    def _circuit(self):
+        """Return the current circuit without retaining removed API objects."""
+        if self._sensor_type == "Heating":
+            channels = self._data.wiserhub.heating_channels
+            return channels.get_by_id(self._device_id) if channels else None
+        return self._data.wiserhub.hotwater
+
+    @property
+    def available(self):
+        """Require a reported circuit and live OpenTherm data when used."""
+        if not super().available:
+            return False
+        circuit = self._circuit()
+        if self._sensor_type != "Heating":
+            return circuit is not None
+        return heating_channel_is_available(
+            circuit, **heating_channel_context(self._data)
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fetch new state data for the sensor."""
         super()._handle_coordinator_update()
+        self._device = self._circuit()
         if self._sensor_type == "Heating":
-            self._device = self._data.wiserhub.heating_channels.get_by_id(
-                self._device_id
-            )
-            raw_state = (
-                self._device.heating_relay_status
-                if self._device.heating_relay_status != TEXT_UNKNOWN
-                else self._device.demand_on_off_output
+            raw_state = heating_channel_output_state(
+                self._device, **heating_channel_context(self._data)
             )
         else:
-            self._device = self._data.wiserhub.hotwater
-            raw_state = self._device.current_state
+            raw_state = hot_water_output_state(self._device)
         self._state = ON_OFF_STATES.get(raw_state)
         self.async_write_ha_state()
 
@@ -1122,10 +1261,11 @@ class WiserSystemCircuitState(WiserSensor):
     def extra_state_attributes(self):
         """Return additional info."""
         attrs = {}
+        circuit = self._circuit()
+        if circuit is None:
+            return attrs
         if self._sensor_type == "Heating":
-            heating_channel = self._data.wiserhub.heating_channels.get_by_id(
-                self._device_id
-            )
+            heating_channel = circuit
             attrs[f"percentage_demand_{heating_channel.name}"] = (
                 heating_channel.percentage_demand
             )
@@ -1150,7 +1290,7 @@ class WiserSystemCircuitState(WiserSensor):
                 )
                 attrs["hw_temperature"] = operational_data.hw_temperature
         else:
-            hw = self._data.wiserhub.hotwater
+            hw = circuit
             # If boosted show boost end time
             if hw.is_boosted:
                 attrs["boost_end"] = hw.boost_end_time

@@ -4,6 +4,25 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## v4.1.0b3
+
+### Added
+
+- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are retained for compatibility - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+
+### Fixed
+
+- Advance Schedule applies the next period's Passive Mode enablement, strategy and paired limits across refreshes, until the next schedule transition or Cancel Overrides.
+- Normalize legacy smart-plug, light and heating-actuator select service values before Home Assistant validates the translated options, retaining existing automation calls.
+- Allow existing OpenTherm preset lists expanded by automatic timed defaults through options-form validation while retaining the normal ten-preset limit.
+- Preserve remembered OpenTherm connection and hot-water capabilities when the optional boiler endpoint returns no data; clear them only when the hub explicitly reports OpenTherm disabled.
+- On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Added disabled-by-default diagnostic Signal strength (dBm) and Link quality sensors for every Zigbee device, sourced from the hub's controller reception RSSI and LQI, Wi-Fi signal strength sensor (dBm) for the HeatHub, supporting long-term statistics alongside the existing text Signal sensor - issue [#820](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/820).
+- Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.
+- Room climate entities preserve unknown heating readings instead of reporting idle or an off control output when the API cannot determine OpenTherm heating activity.
+- Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
+
 ## v4.1.0b2
 
 ### Upgrade notes

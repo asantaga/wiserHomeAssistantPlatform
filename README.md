@@ -23,12 +23,15 @@ For more information checkout the AMAZING community thread available on
 This release expands room control, improves the Wiser interface and adds more controls for supported devices.
 
 - **External Room Control and Passive Mode:** Compatible Home Assistant heating devices can follow Wiser rooms, with external temperature sensor feedback, modulating or temperature-limiter strategies, and scheduled lower and upper limits.
-- **Improved heating and hot water controls:** Optional Wiser controls bring room demand, Passive Mode colours and boost countdowns to native thermostat cards. OpenTherm hot water gains editable timed presets and clearer boost information.
+- **Improved heating and hot water controls:** On Home Assistant 2026.7 and later, enable **Wiser climate controls** under **UI options** to show room demand, Passive Mode colours and boost countdowns in native Thermostat cards and More Info. OpenTherm hot water gains editable timed presets and clearer boost information.
 - **More panel features:** Export and restore Wiser panel settings, and use the new Notifications tab to manage supported Wiser notifications and automations.
 - **Expanded device controls:** More light configuration options, smart-plug LED controls, heating-actuator output types and equipment information, with translated option labels.
-- **Reliability and diagnostics:** Improved Passive limiter overrides, entity ID regeneration after hub renaming, and downloaded diagnostics to help investigate naming and upgrade issues. Updated to `aioWiserHeatAPI` 1.7.9.
+- **Circuit activity and signal sensors:** New **Heating active** and **Hot water active** binary sensors provide on/off history alongside the existing circuit text sensors. Heating activity follows the boiler's central-heating status on OpenTherm systems. Optional Zigbee signal strength (dBm), link quality and hub Wi-Fi signal strength (dBm) diagnostic sensors are disabled by default and can be enabled in Home Assistant.
+- **Reliability and diagnostics:** Improved Passive limiter overrides, entity ID regeneration after hub renaming, and downloaded diagnostics to help investigate naming and upgrade issues. Updated to `aioWiserHeatAPI` 1.7.10.
 
 **Upgrade notes:** Existing native Passive Mode settings migrate automatically; legacy experimental External Passive Mode needs setting up again. Light and smart-plug selectors now report translation keys such as `auto` and `manual`, so update automations that compare their states. Service calls using the previous API option values remain supported.
+
+In **Temperature limiter** mode, the lower bound sets Wiser's target for calling for heat. The upper bound closes the assigned external valves; they reopen below the upper bound minus the configured temperature increment. **Advance Schedule** applies the next period's Passive Mode enablement, strategy and paired limits until the next scheduled transition or **Cancel Overrides**.
 
 See the [change log](CHANGELOG.md) for full release details.
 

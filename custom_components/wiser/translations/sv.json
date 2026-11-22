@@ -662,6 +662,15 @@
       "flame_active": {
         "name": "Låga aktiv"
       },
+      "heating_active": {
+        "name": "Uppvärmning aktiv"
+      },
+      "heating_channel_active": {
+        "name": "Värmekanal {channel} aktiv"
+      },
+      "hot_water_circuit_active": {
+        "name": "Varmvatten aktivt"
+      },
       "hot_water_active": {
         "name": "Varmvatten aktivt"
       },
@@ -683,6 +692,9 @@
         "name": "Signal"
       },
       "report_count": { "name": "Rapportantal" },
+      "signal_strength": { "name": "Signalstyrka" },
+      "wifi_signal_strength": { "name": "Wi-Fi-signalstyrka" },
+      "link_quality": { "name": "Länkkvalitet" },
       "cloud": {
         "name": "Moln"
       },
