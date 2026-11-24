@@ -487,13 +487,14 @@ class SystemBinarySensor(WiserEntityMixin, CoordinatorEntity, BinarySensorEntity
     @property
     def unique_id(self):
         """Return uniqueid."""
-        # Preserve the historical unique ID when changing the friendly name.
+        # Keep the historical "sensor" ID component for registry continuity
+        # and compatibility with _remove_unsupported_v2_entities.
         legacy_hub_name = self._data.wiserhub.system.name.replace(
             "WiserHeat", "HeatHub"
         )
         legacy_name = f"{legacy_hub_name} {self._sensor_type}"
         return get_unique_id(
-            self._data, "binary_sensor", self._sensor_type, legacy_name
+            self._data, "sensor", self._sensor_type, legacy_name
         )
 
     @property
