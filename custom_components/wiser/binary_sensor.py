@@ -788,12 +788,9 @@ class WiserPCMOnline(SystemBinarySensor):
 class WiserCanActivatePCM(SystemBinarySensor):
     """Whether PCM can be activated."""
 
-    _attr_device_class = BinarySensorDeviceClass.POWER
-
 
 class WiserRMBFollowSmart(SystemBinarySensor):
     """RMB Reduce My Bill follow smart sensor."""
-    _attr_device_class = BinarySensorDeviceClass.POWER
     _state_attribute = "rmb_follow_smart"
 
 

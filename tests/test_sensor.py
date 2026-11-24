@@ -708,6 +708,104 @@ class WiserSystemBinarySensorIdentityTest(unittest.TestCase):
         )
 
 
+class WiserEnergyManagementEntityTest(unittest.IsolatedAsyncioTestCase):
+    """Exercise setup and state updates for the energy management entities."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.module = _load_binary_sensor_module()
+
+    def setUp(self):
+        self.data = SimpleNamespace(
+            hub_version=2,
+            last_update_success=True,
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(
+                    name="WiserHeat123456", opentherm=None,
+                    pcm_online=False, can_activate_pcm=False,
+                    rmb_follow_smart=False,
+                ),
+                heating_channels=None, hotwater=None,
+                rooms=SimpleNamespace(all=[]),
+                devices=SimpleNamespace(
+                    all=[], smokealarms=SimpleNamespace(all=[]),
+                    lights=SimpleNamespace(all=[]), shutters=SimpleNamespace(all=[]),
+                    binary_sensor=SimpleNamespace(all=[]),
+                ),
+            ),
+        )
+
+    async def test_setup_adds_false_values_on_v2_and_future_hubs(self):
+        for generation in (2, 3):
+            with self.subTest(generation=generation):
+                self.data.hub_version = generation
+                hass = SimpleNamespace(data={"wiser": {"entry": {"data": self.data}}})
+                entry = SimpleNamespace(entry_id="entry", options={}, data={})
+                add_entities = Mock()
+                await self.module.async_setup_entry(hass, entry, add_entities)
+                entities, update = add_entities.call_args.args
+                self.assertTrue(update)
+                self.assertEqual(
+                    {entity._attr_translation_key for entity in entities},
+                    {"pcm_online", "can_activate_pcm", "rmb_follow_smart"},
+                )
+                self.assertTrue(all(entity.is_on is False for entity in entities))
+
+    async def test_setup_skips_properties_absent_from_api(self):
+        self.data.wiserhub.system = SimpleNamespace(name="WiserHeat123456")
+        hass = SimpleNamespace(data={"wiser": {"entry": {"data": self.data}}})
+        entry = SimpleNamespace(entry_id="entry", options={}, data={})
+        add_entities = Mock()
+        await self.module.async_setup_entry(hass, entry, add_entities)
+        self.assertEqual(add_entities.call_args.args[0], [])
+
+    async def test_v1_setup_skips_v2_sensors_and_checks_owned_registry_entries(self):
+        self.data.hub_version = 1
+        hass = SimpleNamespace(data={"wiser": {"entry": {"data": self.data}}})
+        entry = SimpleNamespace(entry_id="entry", options={}, data={})
+        add_entities = Mock()
+        registry = Mock()
+        registry.async_get_entity_id.return_value = None
+        with patch.object(self.module.er, "async_get", return_value=registry, create=True):
+            await self.module.async_setup_entry(hass, entry, add_entities)
+        self.assertEqual(add_entities.call_args.args[0], [])
+        self.assertEqual(registry.async_get_entity_id.call_count, 6)
+        registry.async_remove.assert_not_called()
+
+    async def test_new_entities_follow_replaced_system_and_missing_values(self):
+        cases = (
+            (self.module.WiserPCMOnline, "PCM Online", "pcm_online"),
+            (self.module.WiserCanActivatePCM, "Can Activate PCM", "can_activate_pcm"),
+            (self.module.WiserRMBFollowSmart, "RMB Follow Smart", "rmb_follow_smart"),
+        )
+        for entity_type, label, attribute in cases:
+            with self.subTest(label=label):
+                self.data.wiserhub.system = SimpleNamespace(
+                    name="WiserHeat123456", **{attribute: False}
+                )
+                entity = entity_type(self.data, 0, label)
+                self.assertFalse(entity.is_on)
+                entity.async_write_ha_state = Mock()
+                for value in (True, False, None):
+                    self.data.wiserhub.system = SimpleNamespace(
+                        name="WiserHeat123456", **{attribute: value}
+                    )
+                    entity._handle_coordinator_update()
+                    self.assertIs(entity.is_on, value)
+                self.data.wiserhub.system = SimpleNamespace(name="WiserHeat123456")
+                entity._handle_coordinator_update()
+                self.assertIsNone(entity.is_on)
+                self.assertEqual(entity.async_write_ha_state.call_count, 4)
+
+    async def test_capability_flags_do_not_advertise_power_detection(self):
+        for entity_type in (self.module.WiserCanActivatePCM, self.module.WiserRMBFollowSmart):
+            self.assertIsNone(getattr(entity_type, "_attr_device_class", None))
+        self.assertEqual(self.module.WiserPCMOnline._attr_device_class, "connectivity")
+        icons = json.loads((SOURCE_PATH.parent / "icons.json").read_text())
+        for key in ("can_activate_pcm", "rmb_follow_smart"):
+            self.assertTrue(icons["entity"]["binary_sensor"][key]["default"])
+
+
 class WiserRoomScheduledSetpointSensorTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
