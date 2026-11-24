@@ -564,13 +564,13 @@
         "name": "PCM-laiteraja saavutettu"
       },
       "pcm_online": {
-        "name": "PCM online"
+        "name": "PCM verkossa"
       },
       "can_activate_pcm": {
-        "name": "Can activate PCM"
+        "name": "PCM voidaan aktivoida"
       },
       "rmb_follow_smart": {
-        "name": "RMB follow smart"
+        "name": "RMB seuraa älytilaa"
       },
       "smoke_alarm": {
         "name": "Palovaroitin"

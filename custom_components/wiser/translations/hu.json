@@ -564,13 +564,13 @@
         "name": "Elérte a PCM-eszközök maximális számát"
       },
       "pcm_online": {
-        "name": "PCM online"
+        "name": "PCM online állapotban"
       },
       "can_activate_pcm": {
-        "name": "Can activate PCM"
+        "name": "A PCM aktiválható"
       },
       "rmb_follow_smart": {
-        "name": "RMB follow smart"
+        "name": "Az RMB követi az intelligens módot"
       },
       "smoke_alarm": {
         "name": "Füstjelzés"

@@ -567,10 +567,10 @@
         "name": "PCM online"
       },
       "can_activate_pcm": {
-        "name": "Can activate PCM"
+        "name": "PCM kan aktiveras"
       },
       "rmb_follow_smart": {
-        "name": "RMB follow smart"
+        "name": "RMB följer smartläget"
       },
       "smoke_alarm": {
         "name": "Röklarm"

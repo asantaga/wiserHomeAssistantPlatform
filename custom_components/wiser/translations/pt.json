@@ -567,10 +567,10 @@
         "name": "PCM online"
       },
       "can_activate_pcm": {
-        "name": "Can activate PCM"
+        "name": "É possível ativar o PCM"
       },
       "rmb_follow_smart": {
-        "name": "RMB follow smart"
+        "name": "RMB segue o modo inteligente"
       },
       "smoke_alarm": {
         "name": "Alarme de fumaça"

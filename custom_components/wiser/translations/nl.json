@@ -567,10 +567,10 @@
         "name": "PCM online"
       },
       "can_activate_pcm": {
-        "name": "Can activate PCM"
+        "name": "PCM kan worden geactiveerd"
       },
       "rmb_follow_smart": {
-        "name": "RMB follow smart"
+        "name": "RMB volgt de slimme modus"
       },
       "smoke_alarm": {
         "name": "Rookmelder"

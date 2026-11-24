@@ -126,8 +126,13 @@ class SystemFeatureBinarySensorTest(unittest.TestCase):
 
     def test_entity_translations_exist(self) -> None:
         strings_path = BINARY_SENSOR_SOURCE.parents[0] / "strings.json"
-        french_path = BINARY_SENSOR_SOURCE.parents[0] / "translations/fr.json"
-        for path in (strings_path, french_path):
+        translation_paths = sorted(
+            (BINARY_SENSOR_SOURCE.parent / "translations").glob("*.json")
+        )
+        english = json.loads(strings_path.read_text(encoding="utf-8"))[
+            "entity"
+        ]["binary_sensor"]
+        for path in (strings_path, *translation_paths):
             with self.subTest(path=path.name):
                 translations = json.loads(path.read_text(encoding="utf-8"))[
                     "entity"
@@ -135,6 +140,13 @@ class SystemFeatureBinarySensorTest(unittest.TestCase):
                 self.assertIn("pcm_online", translations)
                 self.assertIn("can_activate_pcm", translations)
                 self.assertIn("rmb_follow_smart", translations)
+                for key in ("pcm_online", "can_activate_pcm", "rmb_follow_smart"):
+                    self.assertTrue(translations[key]["name"].strip())
+                if path.stem not in ("strings", "en", "en-GB"):
+                    for key in ("can_activate_pcm", "rmb_follow_smart"):
+                        self.assertNotEqual(
+                            translations[key]["name"], english[key]["name"]
+                        )
 
 
 if __name__ == "__main__":
