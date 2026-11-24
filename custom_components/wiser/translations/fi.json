@@ -338,9 +338,6 @@
         "name": "Lattialämpötila"
       }
     },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "OpenTherm-käyttövesi" }
-    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Poissa-tilan tavoitelämpötila"
@@ -515,7 +512,6 @@
       "outlet": {
         "name": "Pistorasia"
       },
-      "ev_charger": { "name": "Sähköauton latauslaite" },
       "away_mode_turns_off": {
         "name": "Poissa-tila sammuttaa"
       },
@@ -590,9 +586,6 @@
       "battery_defect": {
         "name": "Akkuvika"
       },
-      "ac_mains": { "name": "Verkkovirta" },
-      "test_mode": { "name": "Testitila" },
-      "hush_mode": { "name": "Hiljainen tila" },
       "controllable": {
         "name": "Ohjattavissa"
       },
@@ -691,7 +684,6 @@
       "signal": {
         "name": "Signaali"
       },
-      "report_count": { "name": "Raporttien määrä" },
       "signal_strength": { "name": "Signaalin voimakkuus" },
       "wifi_signal_strength": { "name": "Wi-Fi-signaalin voimakkuus" },
       "link_quality": { "name": "Linkin laatu" },
@@ -728,7 +720,6 @@
       "target_temperature": {
         "name": "Tavoitelämpötila"
       },
-      "current_schedule_temperature": { "name": "Nykyinen ajastettu lämpötila" },
       "floor_temperature": {
         "name": "Lattialämpötila"
       },

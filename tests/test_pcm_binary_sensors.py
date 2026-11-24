@@ -124,6 +124,21 @@ class SystemFeatureBinarySensorTest(unittest.TestCase):
         }
         self.assertIn("WiserRMBFollowSmart", rmb_calls)
 
+    def test_translation_catalogues_have_no_duplicate_keys(self) -> None:
+        def unique_object(pairs):
+            result = {}
+            for key, value in pairs:
+                self.assertNotIn(key, result, f"Duplicate translation key: {key}")
+                result[key] = value
+            return result
+
+        root = BINARY_SENSOR_SOURCE.parent
+        paths = [root / "strings.json", root / "icons.json"]
+        paths.extend(sorted((root / "translations").glob("*.json")))
+        for path in paths:
+            with self.subTest(path=path.name):
+                json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+
     def test_entity_translations_exist(self) -> None:
         strings_path = BINARY_SENSOR_SOURCE.parents[0] / "strings.json"
         translation_paths = sorted(
