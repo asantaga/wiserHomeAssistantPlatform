@@ -4,6 +4,17 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
+## v4.1.1b0
+
+### Upgrade notes
+
+### Added
+
+### Fixed
+
+### Changed
+
+
 ## v4.1.0
 
 ### Upgrade notes

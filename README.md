@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v4.1.0
+# Wiser Home Assistant Integration v4.1.1
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -18,6 +18,8 @@ Detailed information about this integration has now been moved to our [Wiki page
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
+## What's New in 4.1.1?
+
 ## What's New in 4.1.0?
 
 This release expands room control, improves the Wiser interface and adds more controls for supported devices.
@@ -34,53 +36,6 @@ This release expands room control, improves the Wiser interface and adds more co
 In **Temperature limiter** mode, the lower bound sets Wiser's target for calling for heat. The upper bound closes the assigned external valves; they reopen below the upper bound minus the configured temperature increment. **Advance Schedule** applies the next period's Passive Mode enablement, strategy and paired limits until the next scheduled transition or **Cancel Overrides**.
 
 See the [change log](CHANGELOG.md) for full release details.
-
-## What's New in 4.0.2?
-
-This release focuses on upgrade fixes, device reliability and compatibility with Home Assistant 2026.11.
-
-- Battery sensors for Wiser wireless button panels, including combined dimmer/button-panel devices, when the hub provides usable battery data
-- Repairs for room and shared frontend update entities affected by the 4.0 migration, preserving existing entity IDs and history
-- Corrected room device metadata and exclusion of inactive rooms and rooms without heating capability from climate entity setup
-- Fixes for already-configured hubs being rediscovered and duplicate Zigbee nodes preventing the network view from loading
-- Restored climate preset icons, corrected Away Mode off temperatures and fixed **Advance Schedule** when the next heating period is off
-- Improved handling of temporarily missing battery devices, dependency installation and cleanup when hubs are unloaded
-- Updated temperature properties for Home Assistant 2026.11 while retaining compatibility with older supported releases
-- Updated `aioWiserHeatAPI` from 1.7.3 to 1.7.7
-
-**Compatibility note:** Climate `preset_modes` now exposes translation keys such as `boost_1h` and `advance_schedule`. Templates or custom cards that match the previous labels in this list need updating. Existing service calls using labels such as `Boost 1h` remain supported.
-
-See the [change log](CHANGELOG.md) for more details of the changes since 4.0.1.
-
-## What's New in 4.0?
-
-This is a **major** and **big** release with a lot of new features, bug fixes and changes.
-
-- Entity and device naming now follows Home Assistant conventions, with devices associated with areas. Existing installations keep their current names automatically through the **Legacy naming** option - turn it off to adopt the new names. New installations on Home Assistant 2026.8 and later use the new names by default
-- Wiser devices are assigned to Home Assistant areas matching your Wiser rooms, and room renames in the Wiser app no longer create duplicate devices
-- Configurable OpenTherm monitoring and controls, plus optional OpenTherm hot water control with its own schedule. The hot water schedule is run by Home Assistant rather than the hub, so it does not change the boiler while Home Assistant is offline
-- New device support, including the Schneider Mureva EV Link charger, smoke alarm operating states and scheduled setpoint sensors for rooms without heating control
-- Brand new **UI**: a single **Wiser** sidebar panel with tabs for Schedules, Zigbee, Controls and Hub. It is shown by default and can be hidden with **Show Wiser in sidebar** in the integration's UI options
-- New **Wiser Controls card** for dashboards, covering heating, hot water, shutters, lights and smart plugs, alongside the updated Wiser Schedule and Wiser Zigbee cards
-- New **Wiser Hub panel** with an overview, live controls, diagnostics and recent history for each hub
-- Cards and panels now update independently of the integration, through Home Assistant update entities
-- Translations for Danish, Spanish, Finnish, Hungarian, Norwegian, Dutch, Portuguese and Swedish
-- Many bug fixes see change log
-
-See the [change log](CHANGELOG.md) for the full list of changes in this release.
-
-Huge thanks to [@andyblac](https://github.com/andyblac) and [@lgo44](https://github.com/LGO44) for this release
-
-### Breaking changes in 4.0
-
-**Please take a backup before upgrading.**
-
-- **The device registry is restructured.** The separate virtual controller device is merged into the physical hub device, and Wiser room devices move to stable identifiers. Entity IDs and history are preserved, but anything that targets a Wiser *device* rather than an entity - device-based automations and scripts, or dashboard cards pointing at a device - needs repointing. Check these after upgrading.
-- **Entity unique IDs move to a new format.** This migration runs automatically and keeps your entity IDs and history. It is all-or-nothing: if it finds a conflict it stops without changing anything, and the integration will not load until it is resolved.
-- **Downgrading is not supported.** To go back to 3.x, restore the backup you took before upgrading - reinstalling the older version on its own will not work.
-- **The detailed Equipment diagnostic sensor is now off by default** for compatible Gen 2 devices, including existing installations. The normal power, energy, current and voltage entities remain enabled. To restore the additional **Equipment** entity and its telemetry attributes, enable **Equipment sensors** in the integration options. This option is shown only when the hub reports compatible equipment.
-- **Room climate entities only report `demand_type` when OpenTherm is enabled.** On systems without OpenTherm this attribute is no longer present, so update any templates or automations that use it. `percentage_demand` is still reported on all systems.
-- **The Heating and Hot Water circuit state sensors now report `on`/`off` instead of `On`/`Off`.** The dashboard still shows On and Off, but templates and automations that compare against `On` or `Off` need updating to the lowercase values.
 
 ## Installing
 
