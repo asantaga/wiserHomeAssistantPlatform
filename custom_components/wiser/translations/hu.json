@@ -42,25 +42,51 @@
         "menu_options": {
           "main_params": "Fő paraméterek",
           "automation_params": "Automatizálási paraméterek",
-          "external_room_control": "External Room Control",
+          "external_room_control": "Külső helyiségszabályozás",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Berendezésérzékelők",
           "ui_options": "Felhasználói felület beállításai"
         }
       },
-      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
-      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
-      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
+      "external_room_control": {
+        "title": "Külső helyiségszabályozás",
+        "menu_options": {
+          "external_climate_devices": "Külső klímaszabályozó eszközök",
+          "external_temperature_sensors": "Hőmérséklet-érzékelő visszacsatolása"
+        }
+      },
+      "external_climate_devices": {
+        "title": "Külső klímaszabályozó eszközök",
+        "description": "Rendeljen minden helyiséghez egy vagy több külső klímaszabályozó eszközt a megfelelő Home Assistant-területről."
+      },
+      "external_temperature_sensors": {
+        "title": "Hőmérséklet-érzékelő visszacsatolása",
+        "description": "Rendeljen minden megfelelő helyiséghez egy hőmérséklet-érzékelőt a megfelelő Home Assistant-területről, és állítsa be az ideiglenes hőmérséklet-emelést.",
+        "data": {
+          "external_temperature_tolerance": "Hőmérsékleti tűrés",
+          "external_temperature_boost_duration": "Hőmérséklet-emelés időtartama",
+          "external_temperature_boost_mode": "Hőmérséklet-emelés számítása",
+          "external_temperature_fixed_boost": "Rögzített hőmérséklet-emelés",
+          "external_temperature_proportional_multiplier": "Arányos szorzó",
+          "external_temperature_max_boost": "Maximális hőmérséklet-emelés",
+          "external_temperature_stale_minutes": "Érzékelőadatok elévülési ideje"
+        },
+        "data_description": {
+          "external_temperature_tolerance": "Csak akkor induljon hőmérséklet-emelés, ha a mért hőmérséklet ennél az értéknél nagyobb mértékben marad el az ütemezett célértéktől.",
+          "external_temperature_boost_duration": "Az érzékelő visszacsatolása által indított egyes hőmérséklet-emelések időtartama.",
+          "external_temperature_stale_minutes": "Hagyja figyelmen kívül az érzékelőt, és állítsa le a visszacsatolt szabályozást, ha az érzékelő ezen időn belül nem frissült."
+        }
+      },
       "ui_options": {
         "title": "Felhasználói felület beállításai",
         "data": {
           "legacy_naming": "Korábbi elnevezési mód",
           "show_wiser_sidebar": "Wiser megjelenítése az oldalsávon",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "wiser_climate_controls": "Wiser klímavezérlők használata"
         },
         "data_description": {
           "legacy_naming": "A helyiségek neveinek hozzáadása a Wiser-eszközök nevéhez. Ha engedélyezve van, az entitásazonosítók Home Assistant általi újragenerálása az alapértelmezett formátummal a Beállítások → Rendszer → Entitásazonosító-formátum menüben (Home Assistant 2026.8-tól) megkettőzi a területneveket, ha a terület és a Wiser-helyiség neve megegyezik. A beállítás módosítása nem nevezi át a meglévő entitásazonosítókat.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "wiser_climate_controls": "Alkalmazza a Wiser hőigény- és passzív módú megjelenítését a Wiser-helyiségek termosztátkártyáira és a További információk ablak klímavezérlőjére, ugyanazokkal a témaváltozókkal. A Home Assistant saját hőmérséklet-kezelése, párbeszédablaka, előzményei és beállításai megmaradnak."
         }
       },
       "main_params": {
@@ -94,13 +120,13 @@
             "description": "Rendelje hozzá a külső klímaeszközöket a Wiser-helyiségükhöz, hogy kövessék a helyiség aktuális célhőmérsékletét passzív móddal vagy anélkül.",
             "data": {
               "automations_external_room_control": "Külső helyiségvezérlés",
-              "external_temperature_tolerance": "Temperature tolerance",
-              "external_temperature_boost_duration": "Boost duration",
-              "external_temperature_boost_mode": "Boost calculation",
-              "external_temperature_fixed_boost": "Fixed boost amount",
-              "external_temperature_proportional_multiplier": "Proportional multiplier",
-              "external_temperature_max_boost": "Maximum boost amount",
-              "external_temperature_stale_minutes": "Sensor stale timeout"
+              "external_temperature_tolerance": "Hőmérsékleti tűrés",
+              "external_temperature_boost_duration": "Hőmérséklet-emelés időtartama",
+              "external_temperature_boost_mode": "Hőmérséklet-emelés számítása",
+              "external_temperature_fixed_boost": "Rögzített hőmérséklet-emelés",
+              "external_temperature_proportional_multiplier": "Arányos szorzó",
+              "external_temperature_max_boost": "Maximális hőmérséklet-emelés",
+              "external_temperature_stale_minutes": "Érzékelőadatok elévülési ideje"
             }
           },
           "hotwater_climate": {
@@ -242,15 +268,16 @@
     "abort": {
       "opentherm_not_available": "Ehhez a Wiser központhoz nem érhetők el OpenTherm-adatok.",
       "equipment_not_available": "Ehhez a Wiser központhoz nem érhetők el berendezésadatok.",
-      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
+      "no_external_temperature_rooms": "Nem található kompatibilis helyiség. A hőmérséklet-érzékelő visszacsatolása csak olyan Wiser radiátortermosztáttal szabályozott helyiségekhez érhető el, amelyekben még nincs Wiser termosztát vagy hőmérséklet- és páratartalom-érzékelő."
     },
     "error": {
+      "invalid_hot_water_presets": "Egy vagy több melegvíz-előbeállítás érvénytelen.",
       "external_climate_must_not_be_wiser": "Válasszon külső klímaentitást. A Wiser klímaentitás nem vezérelhető külső eszközként.",
       "external_climate_duplicate_assignment": "Egy külső klímaentitás csak egy Wiser-helyiséghez rendelhető.",
-      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
-      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
-      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
-      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+      "external_sensor_must_not_be_wiser": "Válasszon külső hőmérséklet-érzékelőt. Wiser-entitás nem használható külső visszacsatolásként.",
+      "external_sensor_duplicate_assignment": "Egy külső hőmérséklet-érzékelő csak egy Wiser-helyiséghez rendelhető.",
+      "external_sensor_requires_no_wiser_thermostat": "Külső hőmérséklet-érzékelő csak Wiser szobatermosztát nélküli helyiséghez választható.",
+      "external_room_control_conflicting_assignment": "Minden Wiser-helyiséghez külső klímaszabályozó eszközöket vagy külső hőmérséklet-érzékelőt válasszon, ne mindkettőt."
     }
   },
   "services": {
@@ -274,7 +301,12 @@
     }
   },
   "selector": {
-    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "A hőmérséklet-eltéréssel arányos",
+        "fixed": "Rögzített érték"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Központi fűtés aktív alsó célhőmérséklete",
@@ -476,7 +508,9 @@
       }
     },
     "switch": {
-      "respect_seasonal_comfort": { "name": "Szezonális komfort figyelembevétele" },
+      "respect_seasonal_comfort": {
+        "name": "Szezonális komfort figyelembevétele"
+      },
       "valve_protection": {
         "name": "Szelepvédelem"
       },
@@ -498,7 +532,9 @@
       "summer_comfort_enabled": {
         "name": "Nyári komfort engedélyezve"
       },
-      "seasonal_comfort_enabled": { "name": "Szezonális komfort engedélyezve" },
+      "seasonal_comfort_enabled": {
+        "name": "Szezonális komfort engedélyezve"
+      },
       "window_detection": {
         "name": "Ablaknyitás-érzékelés"
       },
@@ -674,14 +710,24 @@
       }
     },
     "sensor": {
-      "weather_temperature": { "name": "Időjárási hőmérséklet" },
-      "weather_next_day_2pm_temperature": { "name": "Másnapi hőmérséklet 14 órakor" },
+      "weather_temperature": {
+        "name": "Időjárási hőmérséklet"
+      },
+      "weather_next_day_2pm_temperature": {
+        "name": "Másnapi hőmérséklet 14 órakor"
+      },
       "signal": {
         "name": "Jel"
       },
-      "signal_strength": { "name": "Jelerősség" },
-      "wifi_signal_strength": { "name": "Wi-Fi-jelerősség" },
-      "link_quality": { "name": "Kapcsolat minősége" },
+      "signal_strength": {
+        "name": "Jelerősség"
+      },
+      "wifi_signal_strength": {
+        "name": "Wi-Fi-jelerősség"
+      },
+      "link_quality": {
+        "name": "Kapcsolat minősége"
+      },
       "cloud": {
         "name": "Felhő"
       },
