@@ -338,9 +338,6 @@
         "name": "Golvtemperatur"
       }
     },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "OpenTherm-varmvatten" }
-    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Måltemperatur för bortaläge"
@@ -517,7 +514,6 @@
       "outlet": {
         "name": "Eluttag"
       },
-      "ev_charger": { "name": "Elbilsladdare" },
       "away_mode_turns_off": {
         "name": "Bortaläge stänger av"
       },
@@ -583,9 +579,6 @@
       "battery_defect": {
         "name": "Batterifel"
       },
-      "ac_mains": { "name": "Nätspänning" },
-      "test_mode": { "name": "Testläge" },
-      "hush_mode": { "name": "Tyst läge" },
       "controllable": {
         "name": "Styrbar"
       },
@@ -677,7 +670,6 @@
       "signal": {
         "name": "Signal"
       },
-      "report_count": { "name": "Rapportantal" },
       "cloud": {
         "name": "Moln"
       },
@@ -711,7 +703,6 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
-      "current_schedule_temperature": { "name": "Aktuell schematemperatur" },
       "floor_temperature": {
         "name": "Golvtemperatur"
       },

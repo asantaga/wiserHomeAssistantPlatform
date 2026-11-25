@@ -338,9 +338,6 @@
         "name": "Gulvtemperatur"
       }
     },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "OpenTherm-varmtvann" }
-    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Måltemperatur for bortemodus"
@@ -517,7 +514,6 @@
       "outlet": {
         "name": "Stikkontakt"
       },
-      "ev_charger": { "name": "Elbillader" },
       "away_mode_turns_off": {
         "name": "Bortemodus slår av"
       },
@@ -583,9 +579,6 @@
       "battery_defect": {
         "name": "Batterifeil"
       },
-      "ac_mains": { "name": "Nettstrøm" },
-      "test_mode": { "name": "Testmodus" },
-      "hush_mode": { "name": "Stillemodus" },
       "controllable": {
         "name": "Styrbar"
       },
@@ -677,7 +670,6 @@
       "signal": {
         "name": "Signal"
       },
-      "report_count": { "name": "Rapportantall" },
       "cloud": {
         "name": "Sky"
       },
@@ -711,7 +703,6 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
-      "current_schedule_temperature": { "name": "Gjeldende planlagte temperatur" },
       "floor_temperature": {
         "name": "Gulvtemperatur"
       },

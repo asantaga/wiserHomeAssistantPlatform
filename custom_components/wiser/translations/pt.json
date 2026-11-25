@@ -338,9 +338,6 @@
         "name": "Temperatura do piso"
       }
     },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "Água quente OpenTherm" }
-    },
     "number": {
       "away_mode_target_temperature": {
         "name": "Temperatura alvo do modo ausente"
@@ -517,7 +514,6 @@
       "outlet": {
         "name": "Tomada"
       },
-      "ev_charger": { "name": "Carregador de veículo elétrico" },
       "away_mode_turns_off": {
         "name": "Desliga no modo ausente"
       },
@@ -583,9 +579,6 @@
       "battery_defect": {
         "name": "Defeito na bateria"
       },
-      "ac_mains": { "name": "Alimentação CA" },
-      "test_mode": { "name": "Modo de teste" },
-      "hush_mode": { "name": "Modo silencioso" },
       "controllable": {
         "name": "Controlável"
       },
@@ -677,7 +670,6 @@
       "signal": {
         "name": "Sinal"
       },
-      "report_count": { "name": "Contagem de relatórios" },
       "cloud": {
         "name": "Nuvem"
       },
@@ -711,7 +703,6 @@
       "target_temperature": {
         "name": "Temperatura alvo"
       },
-      "current_schedule_temperature": { "name": "Temperatura atual da programação" },
       "floor_temperature": {
         "name": "Temperatura do piso"
       },
