@@ -2,9 +2,10 @@
 
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from test_sensor import _load_sensor_module
+from test_switch_hot_water import _load_switch_module
 
 
 class WiserWeatherSensorTest(unittest.TestCase):
@@ -50,3 +51,80 @@ class WiserWeatherSensorTest(unittest.TestCase):
                 sensor._handle_coordinator_update()
                 self.assertIsNone(sensor.native_value)
                 self.data.wiserhub.system.weather = weather
+
+
+class WiserSeasonalShutterTest(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = _load_switch_module()
+
+    def setUp(self):
+        self.shutter = SimpleNamespace(
+            id=12, name="Bedroom", product_type="Shutter",
+            firmware_version="test", respect_seasonal_comfort=True,
+            room_with_temperature_sensor="7", covering_type="Window",
+            set_respect_seasonal_comfort=AsyncMock(),
+        )
+        self.current_shutter = self.shutter
+        self.data = SimpleNamespace(
+            last_update_success=True,
+            async_refresh=AsyncMock(),
+            wiserhub=SimpleNamespace(
+                system=SimpleNamespace(name="WiserHeat123456"),
+                devices=SimpleNamespace(get_by_id=lambda _: self.current_shutter),
+                rooms=SimpleNamespace(get_by_id=lambda _: SimpleNamespace(name="Lounge")),
+            ),
+        )
+        self.name_patch = patch.object(
+            self.module, "get_device_name",
+            side_effect=lambda data, device_id: data.wiserhub.devices.get_by_id(device_id).name,
+        )
+        self.name_patch.start()
+        self.addCleanup(self.name_patch.stop)
+        self.entity = self.module.WiserShutterSeasonalComfortSwitch(
+            self.data, 12, "Wiser Bedroom"
+        )
+        self.entity.async_write_ha_state = Mock()
+
+    async def test_removed_shutter_becomes_unavailable_and_preserves_metadata(self):
+        original_info = self.entity.device_info
+        self.current_shutter = None
+        self.entity._handle_coordinator_update()
+        self.assertFalse(self.entity.available)
+        self.assertFalse(self.entity.is_on)
+        self.assertEqual(self.entity.device_info, original_info)
+        self.assertEqual(self.entity.extra_state_attributes, {})
+        self.entity.async_write_ha_state.assert_called_once_with()
+
+    async def test_commands_ignore_shutter_removed_before_coordinator_callback(self):
+        self.current_shutter = None
+        await self.entity.async_turn_on()
+        await self.entity.async_turn_off()
+        self.shutter.set_respect_seasonal_comfort.assert_not_awaited()
+        self.data.async_refresh.assert_not_awaited()
+
+    async def test_reappearing_shutter_refreshes_state_metadata_and_commands(self):
+        self.current_shutter = None
+        self.entity._handle_coordinator_update()
+        replacement = SimpleNamespace(
+            **{**vars(self.shutter), "name": "Renamed", "firmware_version": "new",
+               "respect_seasonal_comfort": False,
+               "set_respect_seasonal_comfort": AsyncMock()}
+        )
+        self.current_shutter = replacement
+        self.entity._handle_coordinator_update()
+        self.assertTrue(self.entity.available)
+        self.assertFalse(self.entity.is_on)
+        self.assertEqual(self.entity.device_info["name"], "Renamed")
+        self.assertEqual(self.entity.device_info["sw_version"], "new")
+        self.assertEqual(self.entity.extra_state_attributes["room_temperature_name"], "Lounge")
+        await self.entity.async_turn_on()
+        replacement.set_respect_seasonal_comfort.assert_awaited_with(True)
+        await self.entity.async_turn_off()
+        replacement.set_respect_seasonal_comfort.assert_awaited_with(False)
+        self.shutter.set_respect_seasonal_comfort.assert_not_awaited()
+        self.assertEqual(self.data.async_refresh.await_count, 2)
+
+    async def test_hub_failure_makes_present_shutter_unavailable(self):
+        self.data.last_update_success = False
+        self.assertFalse(self.entity.available)
