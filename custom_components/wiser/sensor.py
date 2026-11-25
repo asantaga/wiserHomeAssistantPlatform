@@ -2686,6 +2686,13 @@ class WiserLTSWeatherSensor(WiserSensor):
         return SensorDeviceClass.TEMPERATURE
 
     @property
+    def state_class(self):
+        """Keep measurement statistics for current weather, not forecasts."""
+        if self._lts_sensor_type == "temperature":
+            return SensorStateClass.MEASUREMENT
+        return None
+
+    @property
     def native_value(self):
         """Return the state of the entity."""
         return self._state
