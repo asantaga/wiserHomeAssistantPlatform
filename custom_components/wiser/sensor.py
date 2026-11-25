@@ -989,6 +989,10 @@ class WiserDeviceSignalSensor(WiserSensor):
                     self._device.pcm_device_limit_reached
                 )
                 attrs["can_activate_pcm"] = self._device.can_activate_pcm
+                attrs["pcm_online"] = self._device.pcm_online
+                attrs["wec_version"] = self._device.wec_version
+                attrs["wes_status_available"] = self._device.wes_status_available
+                attrs["rmb_follow_smart"] = self._device.rmb_follow_smart
 
         # Other
         device = self._data.wiserhub.devices.get_by_id(self._device_id)

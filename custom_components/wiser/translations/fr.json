@@ -605,6 +605,15 @@
       "pcm_device_limit_reached": {
         "name": "Limite d’appareils PCM atteinte"
       },
+      "pcm_online": {
+        "name": "PCM en ligne"
+      },
+      "can_activate_pcm": {
+        "name": "Activation PCM possible"
+      },
+      "rmb_follow_smart": {
+        "name": "RMB suit le mode intelligent"
+      },
       "smoke_alarm": {
         "name": "Alarme de fumée"
       },

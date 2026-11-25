@@ -591,6 +591,15 @@
       "pcm_device_limit_reached": {
         "name": "PCM-apparaatlimiet bereikt"
       },
+      "pcm_online": {
+        "name": "PCM online"
+      },
+      "can_activate_pcm": {
+        "name": "PCM kan worden geactiveerd"
+      },
+      "rmb_follow_smart": {
+        "name": "RMB volgt de slimme modus"
+      },
       "smoke_alarm": {
         "name": "Rookmelder"
       },

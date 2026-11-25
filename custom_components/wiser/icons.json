@@ -1,6 +1,12 @@
 {
     "entity": {
         "binary_sensor": {
+            "can_activate_pcm": {
+                "default": "mdi:check-circle-outline"
+            },
+            "rmb_follow_smart": {
+                "default": "mdi:cash-sync"
+            },
             "heating_active": {
                 "default": "mdi:radiator-disabled",
                 "state": {
