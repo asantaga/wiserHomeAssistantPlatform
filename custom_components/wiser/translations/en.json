@@ -266,6 +266,7 @@
       }
     },
     "error": {
+      "invalid_hot_water_presets": "One or more hot-water presets are invalid.",
       "external_climate_must_not_be_wiser": "Select an external climate entity. A Wiser climate entity cannot be controlled as an external device.",
       "external_climate_duplicate_assignment": "An external climate entity can only be assigned to one Wiser room.",
       "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
@@ -317,16 +318,36 @@
     }
   },
   "exceptions": {
-    "opentherm_temperature_required": { "message": "Please provide an OpenTherm temperature." },
-    "opentherm_hub_not_found": { "message": "The specified Wiser hub was not found." },
-    "opentherm_hub_not_loaded": { "message": "The specified Wiser hub is not loaded." },
-    "opentherm_hub_required": { "message": "Please select a Wiser hub when more than one hub is configured." },
-    "opentherm_not_supported": { "message": "This hub does not have OpenTherm functionality." },
-    "opentherm_invalid_parameter": { "message": "The OpenTherm parameter or value is invalid: {error}" },
-    "opentherm_write_failed": { "message": "Unable to set OpenTherm parameter {parameter}: {error}" },
-    "opentherm_confirmation_failed": { "message": "OpenTherm parameter {parameter} did not remain at {requested} °C after one retry and the {window}-second confirmation window. Wiser reports {reported} °C. No further retry will be sent." },
-    "opentherm_retry_failed": { "message": "OpenTherm parameter {parameter} did not remain at {requested} °C, and its retry could not be sent: {error}. Wiser reports {reported} °C. No further retry will be sent." },
-    "opentherm_notification_title": { "message": "Wiser OpenTherm command" }
+    "opentherm_temperature_required": {
+      "message": "Please provide an OpenTherm temperature."
+    },
+    "opentherm_hub_not_found": {
+      "message": "The specified Wiser hub was not found."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "The specified Wiser hub is not loaded."
+    },
+    "opentherm_hub_required": {
+      "message": "Please select a Wiser hub when more than one hub is configured."
+    },
+    "opentherm_not_supported": {
+      "message": "This hub does not have OpenTherm functionality."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "The OpenTherm parameter or value is invalid: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "Unable to set OpenTherm parameter {parameter}: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "OpenTherm parameter {parameter} did not remain at {requested} °C after one retry and the {window}-second confirmation window. Wiser reports {reported} °C. No further retry will be sent."
+    },
+    "opentherm_retry_failed": {
+      "message": "OpenTherm parameter {parameter} did not remain at {requested} °C, and its retry could not be sent: {error}. Wiser reports {reported} °C. No further retry will be sent."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser OpenTherm command"
+    }
   },
   "entity": {
     "climate": {
@@ -345,7 +366,9 @@
           }
         }
       },
-      "floor_temperature": { "name": "Floor temperature" }
+      "floor_temperature": {
+        "name": "Floor temperature"
+      }
     },
     "water_heater": {
       "opentherm_hot_water": {
@@ -353,20 +376,33 @@
         "state_attributes": {
           "current_action": {
             "name": "Current action",
-            "state": { "idle": "Idle", "heating": "Heating" }
+            "state": {
+              "idle": "Idle",
+              "heating": "Heating"
+            }
           }
         }
       }
     },
     "number": {
-      "away_mode_target_temperature": { "name": "Away mode target temperature" },
-      "floor_temperature_offset": { "name": "Floor temperature offset" },
-      "indoor_discomfort_temperature": { "name": "Indoor discomfort temperature" },
-      "outdoor_discomfort_temperature": { "name": "Outdoor discomfort temperature" },
+      "away_mode_target_temperature": {
+        "name": "Away mode target temperature"
+      },
+      "floor_temperature_offset": {
+        "name": "Floor temperature offset"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Indoor discomfort temperature"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Outdoor discomfort temperature"
+      },
       "power_on_level_channel": {
         "name": "{channel} Power-on level"
       },
-      "power_on_level": { "name": "Power-on level" }
+      "power_on_level": {
+        "name": "Power-on level"
+      }
     },
     "select": {
       "heating_actuator_output_type": {
@@ -420,7 +456,9 @@
           "rl_led": "RL LED mode"
         }
       },
-      "mode": { "name": "Mode" },
+      "mode": {
+        "name": "Mode"
+      },
       "power_on_behavior_channel": {
         "name": "{channel} Power-on behavior",
         "state": {
@@ -464,89 +502,243 @@
       }
     },
     "button": {
-      "boost_all_heating": { "name": "Boost all heating" },
-      "cancel_all_heating_overrides": { "name": "Cancel all heating overrides" },
-      "boost_hot_water": { "name": "Boost hot water" },
-      "cancel_hot_water_overrides": { "name": "Cancel hot water overrides" },
-      "toggle_hot_water": { "name": "Toggle hot water" },
-      "moment": { "name": "Moment: {name}" }
+      "boost_all_heating": {
+        "name": "Boost all heating"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Cancel all heating overrides"
+      },
+      "boost_hot_water": {
+        "name": "Boost hot water"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Cancel hot water overrides"
+      },
+      "toggle_hot_water": {
+        "name": "Toggle hot water"
+      },
+      "moment": {
+        "name": "Moment: {name}"
+      }
     },
     "switch": {
-      "valve_protection": { "name": "Valve protection" },
-      "eco_mode": { "name": "Eco mode" },
-      "away_mode_affects_hot_water": { "name": "Away mode affects hot water" },
-      "comfort_mode": { "name": "Comfort mode" },
-      "away_mode": { "name": "Away mode" },
-      "daylight_saving": { "name": "Daylight saving" },
-      "summer_comfort_enabled": { "name": "Summer comfort enabled" },
-      "window_detection": { "name": "Window detection" },
-      "include_in_summer_comfort": { "name": "Include in summer comfort" },
-      "device_lock": { "name": "Device lock" },
-      "identify": { "name": "Identify" },
-      "outlet": { "name": "Outlet" },
-      "ev_charger": { "name": "EV charger" },
-      "away_mode_turns_off": { "name": "Away mode turns off" },
-      "away_mode_closes": { "name": "Away mode closes" },
-      "passive_mode": { "name": "Passive mode" },
-      "respect_summer_comfort": { "name": "Respect summer comfort" },
-      "interacts_with_room_climate": { "name": "Interacts with room climate" },
-      "humidity_interacts_with_room_climate": { "name": "Humidity interacts with room climate" },
-      "temperature_interacts_with_room_climate": { "name": "Temperature interacts with room climate" },
-      "illuminance_interacts_with_room_climate": { "name": "Illuminance interacts with room climate" },
-      "sensor_interacts_with_room_climate": { "name": "{sensor} interacts with room climate" },
-      "manual_heat": { "name": "Manual heat" },
-      "hot_water": { "name": "Hot water" }
+      "valve_protection": {
+        "name": "Valve protection"
+      },
+      "eco_mode": {
+        "name": "Eco mode"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "Away mode affects hot water"
+      },
+      "comfort_mode": {
+        "name": "Comfort mode"
+      },
+      "away_mode": {
+        "name": "Away mode"
+      },
+      "daylight_saving": {
+        "name": "Daylight saving"
+      },
+      "summer_comfort_enabled": {
+        "name": "Summer comfort enabled"
+      },
+      "window_detection": {
+        "name": "Window detection"
+      },
+      "include_in_summer_comfort": {
+        "name": "Include in summer comfort"
+      },
+      "device_lock": {
+        "name": "Device lock"
+      },
+      "identify": {
+        "name": "Identify"
+      },
+      "outlet": {
+        "name": "Outlet"
+      },
+      "ev_charger": {
+        "name": "EV charger"
+      },
+      "away_mode_turns_off": {
+        "name": "Away mode turns off"
+      },
+      "away_mode_closes": {
+        "name": "Away mode closes"
+      },
+      "passive_mode": {
+        "name": "Passive mode"
+      },
+      "respect_summer_comfort": {
+        "name": "Respect summer comfort"
+      },
+      "interacts_with_room_climate": {
+        "name": "Interacts with room climate"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "Humidity interacts with room climate"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "Temperature interacts with room climate"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "Illuminance interacts with room climate"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} interacts with room climate"
+      },
+      "manual_heat": {
+        "name": "Manual heat"
+      },
+      "hot_water": {
+        "name": "Hot water"
+      }
     },
     "binary_sensor": {
-      "summer_discomfort_prevention": { "name": "Summer discomfort prevention" },
-      "summer_comfort_available": { "name": "Summer comfort available" },
-      "pcm_device_limit_reached": { "name": "PCM device limit reached" },
-      "smoke_alarm": { "name": "Smoke alarm" },
-      "heat_alarm": { "name": "Heat alarm" },
-      "tamper_alarm": { "name": "Tamper alarm" },
-      "fault_warning": { "name": "Fault warning" },
-      "remote_alarm": { "name": "Remote alarm" },
-      "battery_defect": { "name": "Battery defect" },
-      "ac_mains": { "name": "AC mains" },
-      "test_mode": { "name": "Test mode" },
-      "hush_mode": { "name": "Hush mode" },
-      "controllable": { "name": "Controllable" },
-      "pcm_mode": { "name": "PCM mode" },
-      "window_detection_active": { "name": "Window detection active" },
-      "is_dimmable": { "name": "Dimmable" },
-      "is_led_indicator_supported": { "name": "LED indicator supported" },
-      "is_output_mode_supported": { "name": "Output mode supported" },
-      "is_power_on_behaviour_supported": { "name": "Power-on behavior supported" },
-      "is_tilt_supported": { "name": "Tilt supported" },
-      "is_open": { "name": "Open" },
-      "is_closed": { "name": "Closed" },
-      "active": { "name": "Active" },
-      "boiler_ch_max_setpoint_read_write": { "name": "Boiler CH maximum setpoint read/write" },
-      "boiler_ch_max_setpoint_transfer_enable": { "name": "Boiler CH maximum setpoint transfer enabled" },
-      "boiler_fault": { "name": "Boiler fault" },
-      "boiler_hw_setpoint_read_write": { "name": "Boiler hot water setpoint read/write" },
-      "boiler_hw_setpoint_transfer_enable": { "name": "Boiler hot water setpoint transfer enabled" },
-      "central_heating_2_active": { "name": "Central heating 2 active" },
-      "central_heating_active": { "name": "Central heating active" },
-      "ch1_flow_enabled": { "name": "CH1 flow enabled" },
-      "ch2_flow_enabled": { "name": "CH2 flow enabled" },
-      "cooling_active": { "name": "Cooling active" },
-      "diagnostic_event": { "name": "Diagnostic event" },
-      "flame_active": { "name": "Flame active" },
-      "heating_active": { "name": "Heating active" },
-      "heating_channel_active": { "name": "Heating channel {channel} active" },
-      "hot_water_circuit_active": { "name": "Hot water active" },
-      "hot_water_active": { "name": "Hot water active" },
-      "hw_enabled": { "name": "Hot water enabled" }
+      "summer_discomfort_prevention": {
+        "name": "Summer discomfort prevention"
+      },
+      "summer_comfort_available": {
+        "name": "Summer comfort available"
+      },
+      "pcm_device_limit_reached": {
+        "name": "PCM device limit reached"
+      },
+      "smoke_alarm": {
+        "name": "Smoke alarm"
+      },
+      "heat_alarm": {
+        "name": "Heat alarm"
+      },
+      "tamper_alarm": {
+        "name": "Tamper alarm"
+      },
+      "fault_warning": {
+        "name": "Fault warning"
+      },
+      "remote_alarm": {
+        "name": "Remote alarm"
+      },
+      "battery_defect": {
+        "name": "Battery defect"
+      },
+      "ac_mains": {
+        "name": "AC mains"
+      },
+      "test_mode": {
+        "name": "Test mode"
+      },
+      "hush_mode": {
+        "name": "Hush mode"
+      },
+      "controllable": {
+        "name": "Controllable"
+      },
+      "pcm_mode": {
+        "name": "PCM mode"
+      },
+      "window_detection_active": {
+        "name": "Window detection active"
+      },
+      "is_dimmable": {
+        "name": "Dimmable"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED indicator supported"
+      },
+      "is_output_mode_supported": {
+        "name": "Output mode supported"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Power-on behavior supported"
+      },
+      "is_tilt_supported": {
+        "name": "Tilt supported"
+      },
+      "is_open": {
+        "name": "Open"
+      },
+      "is_closed": {
+        "name": "Closed"
+      },
+      "active": {
+        "name": "Active"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Boiler CH maximum setpoint read/write"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Boiler CH maximum setpoint transfer enabled"
+      },
+      "boiler_fault": {
+        "name": "Boiler fault"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Boiler hot water setpoint read/write"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Boiler hot water setpoint transfer enabled"
+      },
+      "central_heating_2_active": {
+        "name": "Central heating 2 active"
+      },
+      "central_heating_active": {
+        "name": "Central heating active"
+      },
+      "ch1_flow_enabled": {
+        "name": "CH1 flow enabled"
+      },
+      "ch2_flow_enabled": {
+        "name": "CH2 flow enabled"
+      },
+      "cooling_active": {
+        "name": "Cooling active"
+      },
+      "diagnostic_event": {
+        "name": "Diagnostic event"
+      },
+      "flame_active": {
+        "name": "Flame active"
+      },
+      "heating_active": {
+        "name": "Heating active"
+      },
+      "heating_channel_active": {
+        "name": "Heating channel {channel} active"
+      },
+      "hot_water_circuit_active": {
+        "name": "Hot water active"
+      },
+      "hot_water_active": {
+        "name": "Hot water active"
+      },
+      "hw_enabled": {
+        "name": "Hot water enabled"
+      }
     },
     "sensor": {
-      "signal": { "name": "Signal" },
-      "report_count": { "name": "Report count" },
-      "signal_strength": { "name": "Signal strength" },
-      "wifi_signal_strength": { "name": "Wi-Fi signal strength" },
-      "link_quality": { "name": "Link quality" },
-      "cloud": { "name": "Cloud" },
-      "heating_operation_mode": { "name": "Heating operation mode" },
+      "signal": {
+        "name": "Signal"
+      },
+      "report_count": {
+        "name": "Report count"
+      },
+      "signal_strength": {
+        "name": "Signal strength"
+      },
+      "wifi_signal_strength": {
+        "name": "Wi-Fi signal strength"
+      },
+      "link_quality": {
+        "name": "Link quality"
+      },
+      "cloud": {
+        "name": "Cloud"
+      },
+      "heating_operation_mode": {
+        "name": "Heating operation mode"
+      },
       "heating": {
         "name": "Heating",
         "state": {
@@ -568,54 +760,150 @@
           "on": "On"
         }
       },
-      "hot_water_operation_mode": { "name": "Hot water operation mode" },
-      "energy_tariff_daily_average": { "name": "Energy tariff daily average" },
-      "energy_tariff_daily_average_100_multiplier": { "name": "Energy tariff daily average ×100" },
-      "energy_tariff_current_price": { "name": "Energy tariff current price" },
-      "energy_tariff_current_price_100_multiplier": { "name": "Energy tariff current price ×100" },
-      "energy_tariff_forecast": { "name": "Energy tariff forecast" },
-      "energy_tariff_current_day": { "name": "Energy tariff current day" },
-      "target_temperature": { "name": "Target temperature" },
-      "current_schedule_temperature": { "name": "Current schedule temperature" },
-      "floor_temperature": { "name": "Floor temperature" },
-      "boiler_flow_temperature": { "name": "Boiler flow temperature" },
-      "boiler_return_temperature": { "name": "Boiler return temperature" },
-      "flame_statistics": { "name": "Flame statistics" },
-      "boiler_ch_setpoint": { "name": "Boiler CH setpoint" },
-      "boiler_ch_setpoint_lower_bound": { "name": "Boiler CH setpoint lower bound" },
-      "boiler_ch_setpoint_upper_bound": { "name": "Boiler CH setpoint upper bound" },
-      "boiler_exhaust_temperature": { "name": "Boiler exhaust temperature" },
-      "boiler_hw_setpoint": { "name": "Boiler hot water setpoint" },
-      "boiler_hw_setpoint_lower_bound": { "name": "Boiler hot water setpoint lower bound" },
-      "boiler_hw_setpoint_upper_bound": { "name": "Boiler hot water setpoint upper bound" },
-      "ch1_flow_setpoint": { "name": "CH1 flow setpoint" },
-      "ch2_flow_setpoint": { "name": "CH2 flow setpoint" },
-      "ch_flow_active_lower_setpoint": { "name": "CH flow active lower setpoint" },
-      "ch_flow_active_upper_setpoint": { "name": "CH flow active upper setpoint" },
-      "ch_pressure_bar": { "name": "CH pressure" },
-      "connection_status": { "name": "Connection status" },
-      "coprocessor_update_status": { "name": "OpenTherm coprocessor update status" },
-      "coprocessor_version": { "name": "OpenTherm coprocessor version" },
-      "delta_t": { "name": "Delta-T" },
-      "estimated_boiler_output": { "name": "Estimated boiler output" },
-      "hw_flow_rate": { "name": "Hot water flow rate" },
-      "hw_flow_setpoint": { "name": "Hot water flow setpoint" },
-      "hw_temperature": { "name": "Hot water temperature" },
-      "maximum_capacity_kw": { "name": "Maximum boiler capacity" },
-      "minimum_modulation_level": { "name": "Minimum modulation level" },
-      "operating_mode": { "name": "Operating mode" },
-      "relative_modulation_level": { "name": "Relative modulation level" },
-      "room_setpoint": { "name": "Room setpoint" },
-      "room_temperature": { "name": "Room temperature" },
-      "slave_status": { "name": "OpenTherm slave status" },
-      "tracked_room_id": { "name": "Tracked room ID" },
-      "heating_demand": { "name": "Heating demand" },
-      "heating_demand_channel": { "name": "Heating demand channel {channel}" },
-      "hot_water_demand": { "name": "Hot water demand" },
-      "total_energy": { "name": "Total energy" },
-      "energy_delivered": { "name": "Energy delivered" },
-      "energy_received": { "name": "Energy received" },
-      "equipment_power": { "name": "Equipment" }
+      "hot_water_operation_mode": {
+        "name": "Hot water operation mode"
+      },
+      "energy_tariff_daily_average": {
+        "name": "Energy tariff daily average"
+      },
+      "energy_tariff_daily_average_100_multiplier": {
+        "name": "Energy tariff daily average ×100"
+      },
+      "energy_tariff_current_price": {
+        "name": "Energy tariff current price"
+      },
+      "energy_tariff_current_price_100_multiplier": {
+        "name": "Energy tariff current price ×100"
+      },
+      "energy_tariff_forecast": {
+        "name": "Energy tariff forecast"
+      },
+      "energy_tariff_current_day": {
+        "name": "Energy tariff current day"
+      },
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "current_schedule_temperature": {
+        "name": "Current schedule temperature"
+      },
+      "floor_temperature": {
+        "name": "Floor temperature"
+      },
+      "boiler_flow_temperature": {
+        "name": "Boiler flow temperature"
+      },
+      "boiler_return_temperature": {
+        "name": "Boiler return temperature"
+      },
+      "flame_statistics": {
+        "name": "Flame statistics"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Boiler CH setpoint"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Boiler CH setpoint lower bound"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Boiler CH setpoint upper bound"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Boiler exhaust temperature"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Boiler hot water setpoint"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Boiler hot water setpoint lower bound"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Boiler hot water setpoint upper bound"
+      },
+      "ch1_flow_setpoint": {
+        "name": "CH1 flow setpoint"
+      },
+      "ch2_flow_setpoint": {
+        "name": "CH2 flow setpoint"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "CH flow active lower setpoint"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "CH flow active upper setpoint"
+      },
+      "ch_pressure_bar": {
+        "name": "CH pressure"
+      },
+      "connection_status": {
+        "name": "Connection status"
+      },
+      "coprocessor_update_status": {
+        "name": "OpenTherm coprocessor update status"
+      },
+      "coprocessor_version": {
+        "name": "OpenTherm coprocessor version"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Estimated boiler output"
+      },
+      "hw_flow_rate": {
+        "name": "Hot water flow rate"
+      },
+      "hw_flow_setpoint": {
+        "name": "Hot water flow setpoint"
+      },
+      "hw_temperature": {
+        "name": "Hot water temperature"
+      },
+      "maximum_capacity_kw": {
+        "name": "Maximum boiler capacity"
+      },
+      "minimum_modulation_level": {
+        "name": "Minimum modulation level"
+      },
+      "operating_mode": {
+        "name": "Operating mode"
+      },
+      "relative_modulation_level": {
+        "name": "Relative modulation level"
+      },
+      "room_setpoint": {
+        "name": "Room setpoint"
+      },
+      "room_temperature": {
+        "name": "Room temperature"
+      },
+      "slave_status": {
+        "name": "OpenTherm slave status"
+      },
+      "tracked_room_id": {
+        "name": "Tracked room ID"
+      },
+      "heating_demand": {
+        "name": "Heating demand"
+      },
+      "heating_demand_channel": {
+        "name": "Heating demand channel {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Hot water demand"
+      },
+      "total_energy": {
+        "name": "Total energy"
+      },
+      "energy_delivered": {
+        "name": "Energy delivered"
+      },
+      "energy_received": {
+        "name": "Energy received"
+      },
+      "equipment_power": {
+        "name": "Equipment"
+      }
     }
   },
   "device_automation": {

@@ -136,6 +136,8 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
             id=0,
             current_state=current_state,
             is_boosted=False,
+            schedule_id=0,
+            schedule=None,
             override_state=self._record_override_state,
         )
         self._override_calls = []
@@ -166,7 +168,9 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
 
     def test_boost_attributes_follow_the_hub(self) -> None:
         switch = self._switch(current_state="On")
-        self.assertEqual(switch.extra_state_attributes, {"is_boosted": False})
+        self.assertEqual(
+            switch.extra_state_attributes, {"is_boosted": False, "schedule_id": 0}
+        )
 
         switch._hotwater.is_boosted = True
         switch._hotwater.boost_end_time = datetime(
@@ -176,9 +180,76 @@ class WiserHotWaterSwitchTest(unittest.TestCase):
             switch.extra_state_attributes,
             {
                 "is_boosted": True,
+                "schedule_id": 0,
                 "boost_end": datetime(2026, 11, 10, 16, tzinfo=UTC),
             },
         )
+
+    def test_schedule_details_are_exposed_while_hot_water_is_off(self) -> None:
+        switch = self._switch(current_state="Off")
+        switch._hotwater.schedule_id = 7
+        switch._hotwater.schedule = SimpleNamespace(
+            name="Hot Water",
+            next=SimpleNamespace(
+                day="Tuesday", time="18:00:00",
+                datetime="2026-11-24 18:00:00", setting="On",
+            ),
+        )
+
+        self.assertEqual(switch.extra_state_attributes, {
+            "is_boosted": False,
+            "schedule_id": 7,
+            "schedule_name": "Hot Water",
+            "next_day_change": "Tuesday",
+            "next_schedule_change": "18:00:00",
+            "next_schedule_datetime": "2026-11-24 18:00:00",
+            "next_schedule_state": "On",
+        })
+
+    def test_assigned_schedule_without_next_entry_keeps_its_name(self) -> None:
+        switch = self._switch(current_state="On")
+        switch._hotwater.schedule_id = 7
+        switch._hotwater.schedule = SimpleNamespace(name="Hot Water", next=None)
+
+        self.assertEqual(switch.extra_state_attributes, {
+            "is_boosted": False, "schedule_id": 7, "schedule_name": "Hot Water",
+        })
+
+    def test_unresolved_schedule_preserves_assignment(self) -> None:
+        switch = self._switch(current_state="Off")
+        switch._hotwater.schedule_id = 7
+
+        self.assertEqual(switch.extra_state_attributes, {
+            "is_boosted": False, "schedule_id": 7,
+        })
+
+    def test_refresh_replaces_schedule_and_removes_stale_details(self) -> None:
+        switch = self._switch(current_state="Off")
+        switch._hotwater.schedule_id = 7
+        switch._hotwater.schedule = SimpleNamespace(
+            name="Original", next=SimpleNamespace(
+                day="Tuesday", time="18:00:00",
+                datetime="2026-11-24 18:00:00", setting="On",
+            ),
+        )
+        self.assertEqual(switch.extra_state_attributes["next_schedule_state"], "On")
+        replacement = SimpleNamespace(
+            current_state="Off", is_boosted=False, schedule_id=8,
+            schedule=SimpleNamespace(name="Replacement", next=None),
+        )
+        switch._data.wiserhub.hotwater = replacement
+        published = []
+        switch.async_write_ha_state = lambda: published.append(switch.extra_state_attributes)
+        switch._handle_coordinator_update()
+
+        self.assertEqual(published[-1], {
+            "is_boosted": False, "schedule_id": 8, "schedule_name": "Replacement",
+        })
+
+        replacement.schedule_id = 0
+        replacement.schedule = None
+        switch._handle_coordinator_update()
+        self.assertEqual(published[-1], {"is_boosted": False, "schedule_id": 0})
 
     def test_turn_on_overrides_hot_water_state_to_on(self) -> None:
         switch = self._switch(current_state="Off")

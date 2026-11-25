@@ -1305,11 +1305,21 @@ class WiserHotWaterSwitch(WiserSwitch):
 
     @property
     def extra_state_attributes(self):
-        """Expose the hub's active hot-water boost and its expiry."""
+        """Expose hot-water boost and assigned schedule details."""
         is_boosted = self._hotwater.is_boosted
-        attrs = {"is_boosted": is_boosted}
+        attrs = {
+            "is_boosted": is_boosted,
+            "schedule_id": self._hotwater.schedule_id,
+        }
         if is_boosted and (boost_end := self._hotwater.boost_end_time) is not None:
             attrs["boost_end"] = boost_end.astimezone(dt.UTC)
+        if schedule := self._hotwater.schedule:
+            attrs["schedule_name"] = schedule.name
+            if next_entry := schedule.next:
+                attrs["next_day_change"] = str(next_entry.day)
+                attrs["next_schedule_change"] = str(next_entry.time)
+                attrs["next_schedule_datetime"] = str(next_entry.datetime)
+                attrs["next_schedule_state"] = next_entry.setting
         return attrs
 
     @property

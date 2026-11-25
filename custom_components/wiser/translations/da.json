@@ -42,25 +42,51 @@
         "menu_options": {
           "main_params": "Hovedparametre",
           "automation_params": "Automatiseringsparametre",
-          "external_room_control": "External Room Control",
+          "external_room_control": "Ekstern rumstyring",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Udstyrssensorer",
           "ui_options": "Brugerfladeindstillinger"
         }
       },
-      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
-      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
-      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
+      "external_room_control": {
+        "title": "Ekstern rumstyring",
+        "menu_options": {
+          "external_climate_devices": "Eksterne klimaenheder",
+          "external_temperature_sensors": "Tilbagemelding fra temperatursensor"
+        }
+      },
+      "external_climate_devices": {
+        "title": "Eksterne klimaenheder",
+        "description": "Tildel en eller flere eksterne klimaenheder fra hvert rums tilsvarende område i Home Assistant."
+      },
+      "external_temperature_sensors": {
+        "title": "Tilbagemelding fra temperatursensor",
+        "description": "Tildel en temperatursensor fra hvert egnet rums tilsvarende område i Home Assistant, og konfigurer dens midlertidige temperaturforøgelse.",
+        "data": {
+          "external_temperature_tolerance": "Temperaturtolerance",
+          "external_temperature_boost_duration": "Varighed af temperaturforøgelse",
+          "external_temperature_boost_mode": "Beregning af temperaturforøgelse",
+          "external_temperature_fixed_boost": "Fast temperaturforøgelse",
+          "external_temperature_proportional_multiplier": "Proportional multiplikator",
+          "external_temperature_max_boost": "Maksimal temperaturforøgelse",
+          "external_temperature_stale_minutes": "Tidsgrænse for forældede sensorværdier"
+        },
+        "data_description": {
+          "external_temperature_tolerance": "Start kun en temperaturforøgelse, når den målte temperatur ligger mere end denne værdi under den planlagte måltemperatur.",
+          "external_temperature_boost_duration": "Hvor længe hver temperaturforøgelse udløst af sensortilbagemelding skal vare.",
+          "external_temperature_stale_minutes": "Ignorer sensoren, og stop tilbagemeldingsstyringen, hvis den ikke er blevet opdateret inden for dette tidsrum."
+        }
+      },
       "ui_options": {
         "title": "Brugerfladeindstillinger",
         "data": {
           "legacy_naming": "Ældre navngivning",
           "show_wiser_sidebar": "Vis Wiser i sidepanelet",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "wiser_climate_controls": "Brug Wisers klimastyring"
         },
         "data_description": {
           "legacy_naming": "Medtag rumnavne i Wiser-enhedsnavne. Hvis dette er aktiveret, vil regenerering af entitets-id'er i Home Assistant med standardformatet under Indstillinger → System → Entitets-id-format (Home Assistant 2026.8 og nyere) duplikere områdenavne, når området og Wiser-rummet har samme navn. Ændring af denne indstilling omdøber ikke eksisterende entitets-id'er.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "wiser_climate_controls": "Anvend Wisers visning af varmebehov og passiv tilstand på termostatkort for Wiser-rum og klimastyringen i Mere info med de samme temavariabler. Home Assistants normale temperaturhåndtering, dialog, historik og indstillinger bevares."
         }
       },
       "main_params": {
@@ -94,13 +120,13 @@
             "description": "Tildel eksterne klimaenheder til deres Wiser-rum, så de følger rummets aktuelle måltemperatur, med eller uden passiv tilstand.",
             "data": {
               "automations_external_room_control": "Ekstern rumstyring",
-              "external_temperature_tolerance": "Temperature tolerance",
-              "external_temperature_boost_duration": "Boost duration",
-              "external_temperature_boost_mode": "Boost calculation",
-              "external_temperature_fixed_boost": "Fixed boost amount",
-              "external_temperature_proportional_multiplier": "Proportional multiplier",
-              "external_temperature_max_boost": "Maximum boost amount",
-              "external_temperature_stale_minutes": "Sensor stale timeout"
+              "external_temperature_tolerance": "Temperaturtolerance",
+              "external_temperature_boost_duration": "Varighed af temperaturforøgelse",
+              "external_temperature_boost_mode": "Beregning af temperaturforøgelse",
+              "external_temperature_fixed_boost": "Fast temperaturforøgelse",
+              "external_temperature_proportional_multiplier": "Proportional multiplikator",
+              "external_temperature_max_boost": "Maksimal temperaturforøgelse",
+              "external_temperature_stale_minutes": "Tidsgrænse for forældede sensorværdier"
             }
           },
           "hotwater_climate": {
@@ -242,15 +268,16 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-data er ikke tilgængelige for denne Wiser-hub.",
       "equipment_not_available": "Udstyrsdata er ikke tilgængelige for denne Wiser-hub.",
-      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
+      "no_external_temperature_rooms": "Ingen kompatible rum fundet. Tilbagemelding fra en temperatursensor er kun tilgængelig for rum styret af en Wiser-radiatortermostat, som ikke allerede har en Wiser-termostat eller temperatur-/fugtighedssensor."
     },
     "error": {
+      "invalid_hot_water_presets": "En eller flere varmtvandsforudindstillinger er ugyldige.",
       "external_climate_must_not_be_wiser": "Vælg en ekstern klimaenhed. En Wiser-klimaenhed kan ikke styres som en ekstern enhed.",
       "external_climate_duplicate_assignment": "En ekstern klimaenhed kan kun tildeles ét Wiser-rum.",
-      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
-      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
-      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
-      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+      "external_sensor_must_not_be_wiser": "Vælg en ekstern temperatursensor. En Wiser-entitet kan ikke bruges som ekstern tilbagemelding.",
+      "external_sensor_duplicate_assignment": "En ekstern temperatursensor kan kun tildeles ét Wiser-rum.",
+      "external_sensor_requires_no_wiser_thermostat": "En ekstern temperatursensor kan kun vælges til et rum uden en Wiser-rumtermostat.",
+      "external_room_control_conflicting_assignment": "Vælg enten eksterne klimaenheder eller en ekstern temperatursensor til hvert Wiser-rum, ikke begge dele."
     }
   },
   "services": {
@@ -274,7 +301,12 @@
     }
   },
   "selector": {
-    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "Proportional med temperaturunderskuddet",
+        "fixed": "Fast værdi"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Aktivt nedre centralvarmeindstillingspunkt",
@@ -337,9 +369,6 @@
       "floor_temperature": {
         "name": "Gulvtemperatur"
       }
-    },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "OpenTherm-varmt vand" }
     },
     "number": {
       "away_mode_target_temperature": {
@@ -515,7 +544,6 @@
       "outlet": {
         "name": "Stikkontakt"
       },
-      "ev_charger": { "name": "EV-oplader" },
       "away_mode_turns_off": {
         "name": "Fraværstilstand slukker"
       },
@@ -581,9 +609,6 @@
       "battery_defect": {
         "name": "Batterifejl"
       },
-      "ac_mains": { "name": "Netspænding" },
-      "test_mode": { "name": "Testtilstand" },
-      "hush_mode": { "name": "Lydløs tilstand" },
       "controllable": {
         "name": "Kan styres"
       },
@@ -682,10 +707,15 @@
       "signal": {
         "name": "Signal"
       },
-      "report_count": { "name": "Rapportantal" },
-      "signal_strength": { "name": "Signalstyrke" },
-      "wifi_signal_strength": { "name": "Wi-Fi-signalstyrke" },
-      "link_quality": { "name": "Linkkvalitet" },
+      "signal_strength": {
+        "name": "Signalstyrke"
+      },
+      "wifi_signal_strength": {
+        "name": "Wi-Fi-signalstyrke"
+      },
+      "link_quality": {
+        "name": "Linkkvalitet"
+      },
       "cloud": {
         "name": "Sky"
       },
@@ -719,7 +749,6 @@
       "target_temperature": {
         "name": "Måltemperatur"
       },
-      "current_schedule_temperature": { "name": "Aktuel skematemperatur" },
       "floor_temperature": {
         "name": "Gulvtemperatur"
       },
@@ -842,6 +871,24 @@
       },
       "report_count": {
         "name": "Antal rapporter"
+      },
+      "energy_tariff_daily_average": {
+        "name": "Gennemsnitlig daglig energipris"
+      },
+      "energy_tariff_daily_average_100_multiplier": {
+        "name": "Gennemsnitlig daglig energipris ×100"
+      },
+      "energy_tariff_current_price": {
+        "name": "Aktuel energipris"
+      },
+      "energy_tariff_current_price_100_multiplier": {
+        "name": "Aktuel energipris ×100"
+      },
+      "energy_tariff_forecast": {
+        "name": "Prognose for energipriser"
+      },
+      "energy_tariff_current_day": {
+        "name": "Dagens energipriser"
       }
     },
     "water_heater": {
