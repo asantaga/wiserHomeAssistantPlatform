@@ -522,6 +522,9 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": {
+        "name": "Respect du confort saisonnier"
+      },
       "valve_protection": {
         "name": "Protection des vannes"
       },
@@ -542,6 +545,9 @@
       },
       "summer_comfort_enabled": {
         "name": "Confort d’été activé"
+      },
+      "seasonal_comfort_enabled": {
+        "name": "Confort saisonnier activé"
       },
       "window_detection": {
         "name": "Détection de fenêtre"
@@ -718,6 +724,12 @@
       }
     },
     "sensor": {
+      "weather_temperature": {
+        "name": "Température météo"
+      },
+      "weather_next_day_2pm_temperature": {
+        "name": "Température météo du lendemain à 14 h"
+      },
       "signal": {
         "name": "Signal"
       },

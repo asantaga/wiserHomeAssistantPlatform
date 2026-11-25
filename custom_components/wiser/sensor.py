@@ -573,9 +573,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                         data, heating_actuator.id, sensor_type="floor_current_temp"
                     )
                 )
-
-
-
+    # Weather sensors are supported on generation 2+ hubs with shutters.
+    # Some coordinator-compatible data objects (including older integrations)
+    # do not expose hub_version. Treat those as first-generation hubs, which
+    # do not support shutter weather sensors.
+    if getattr(data, "hub_version", 1) > 1 and data.wiserhub.devices.shutters.all:
+        wiser_sensors.extend(
+            [
+                WiserLTSWeatherSensor(data, 0, sensor_type="temperature"),
+                WiserLTSWeatherSensor(
+                    data, 0, sensor_type="next_day_2pm_temperature"
+                ),
+            ]
+        )
     async_add_entities(wiser_sensors, True)
 
 
@@ -2756,3 +2766,79 @@ class WiserEquipmentSensor(WiserSensor):
             )
 
         return attrs
+
+class WiserLTSWeatherSensor(WiserSensor):
+    """Sensor for long term stats for weather temperature and Next days 2PM temperature"""
+
+    def __init__(self, data, device_id, sensor_type="") -> None:
+        """Initialise the operation mode sensor."""
+        self._lts_sensor_type = sensor_type
+        if sensor_type == "temperature":
+            super().__init__(
+                data,
+                device_id,
+                "LTS Weather Temperature",
+                translation_key="weather_temperature",
+            )
+        elif sensor_type == "next_day_2pm_temperature":
+            super().__init__(
+                data,
+                device_id,
+                "LTS Weather Next Day 2PM Temperature",
+                translation_key="weather_next_day_2pm_temperature",
+            )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Fetch new state data for the sensor."""
+        super()._handle_coordinator_update()
+        weather = getattr(self._data.wiserhub.system, "weather", None)
+        if self._lts_sensor_type == "temperature":
+            self._state = getattr(weather, "temperature", None)
+        elif self._lts_sensor_type == "next_day_2pm_temperature":
+            self._state = getattr(weather, "next_day_2pm_temperature", None)
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self):
+        """Return device specific attributes."""
+        return get_hub_device_info(self._data)
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional info."""
+        attrs = {}
+        if self._lts_sensor_type == "weather":
+            weather = self._data.wiserhub.system.weather
+            attrs["next_day_2PM_temperature"] = (
+                self._data.wiserhub.system.weather.next_day_2pm_temperature
+            )
+
+        return attrs
+
+    @property
+    def icon(self):
+        """Return icon for sensor"""
+        return "mdi:thermometer-water"
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self):
+        """Keep measurement statistics for current weather, not forecasts."""
+        if self._lts_sensor_type == "temperature":
+            return SensorStateClass.MEASUREMENT
+        return None
+
+    @property
+    def native_value(self):
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self):
+        if self._state == "Off":
+            return None
+        return UnitOfTemperature.CELSIUS

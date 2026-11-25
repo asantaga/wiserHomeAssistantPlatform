@@ -522,6 +522,9 @@
       }
     },
     "switch": {
+      "respect_seasonal_comfort": {
+        "name": "Respect Seasonal Comfort"
+      },
       "valve_protection": {
         "name": "Valve protection"
       },
@@ -542,6 +545,9 @@
       },
       "summer_comfort_enabled": {
         "name": "Summer comfort enabled"
+      },
+      "seasonal_comfort_enabled": {
+        "name": "Seasonal comfort enabled"
       },
       "window_detection": {
         "name": "Window detection"
@@ -885,6 +891,12 @@
       },
       "equipment_power": {
         "name": "Equipment"
+      },
+      "weather_temperature": {
+        "name": "Weather Temperature"
+      },
+      "weather_next_day_2pm_temperature": {
+        "name": "Weather Next Day 2PM Temperature"
       }
     }
   },
