@@ -128,3 +128,59 @@ class WiserSeasonalShutterTest(unittest.IsolatedAsyncioTestCase):
     async def test_hub_failure_makes_present_shutter_unavailable(self):
         self.data.last_update_success = False
         self.assertFalse(self.entity.available)
+
+
+class WiserSeasonalSetupTest(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = _load_switch_module()
+
+    async def _setup(self, generation, *, has_shutters=True, supports_seasonal=True):
+        shutter = SimpleNamespace(
+            id=12, name="Bedroom", product_type="Shutter", firmware_version="test",
+            away_mode_action="Close", respect_summer_comfort=False,
+        )
+        if supports_seasonal:
+            shutter.respect_seasonal_comfort = False
+            shutter.set_respect_seasonal_comfort = AsyncMock()
+        system = SimpleNamespace(name="WiserHeat123456")
+        if generation >= 2:
+            system.seasonal_comfort_enabled = False
+        shutters = [shutter] if has_shutters else []
+        data = SimpleNamespace(
+            hub_version=generation, last_update_success=True,
+            passive_mode_enabled=True, enable_hw_climate=False,
+            hw_climate_experimental_mode=False,
+            wiserhub=SimpleNamespace(
+                system=system, hotwater=None,
+                rooms=SimpleNamespace(all=[]),
+                devices=SimpleNamespace(
+                    all=shutters, get_by_id=lambda _: shutter,
+                    shutters=SimpleNamespace(all=shutters),
+                    lights=SimpleNamespace(all=[]), smartplugs=SimpleNamespace(all=[]),
+                    power_tags_c=SimpleNamespace(all=[]), evse=None,
+                ),
+            ),
+        )
+        hass = SimpleNamespace(data={"wiser": {"entry": {"data": data}}})
+        add_entities = Mock()
+        await self.module.async_setup_entry(
+            hass, SimpleNamespace(entry_id="entry"), add_entities
+        )
+        return [entity for entity in add_entities.call_args.args[0]
+                if isinstance(entity, self.module.WiserShutterSeasonalComfortSwitch)]
+
+    async def test_supported_shutters_on_generation_two_and_later(self):
+        for generation in (1, 2, 3):
+            with self.subTest(generation=generation):
+                entities = await self._setup(generation)
+                self.assertEqual(len(entities), 1 if generation >= 2 else 0)
+                if entities:
+                    self.assertFalse(entities[0].is_on)
+                    self.assertEqual(
+                        entities[0]._attr_translation_key, "respect_seasonal_comfort"
+                    )
+
+    async def test_absent_or_unsupported_shutters_do_not_create_switches(self):
+        self.assertEqual(await self._setup(2, has_shutters=False), [])
+        self.assertEqual(await self._setup(2, supports_seasonal=False), [])

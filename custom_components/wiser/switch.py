@@ -234,9 +234,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
                     data, shutter.id, f"Wiser {shutter.name}"
                 )
             )
-        # Seasonal comfort is only available on generation 2 hubs with
+        # Seasonal comfort is only available on generation 2+ hubs with
         # shutters whose API model supports the setting.
-        if data.hub_version == 2 and shutters and hasattr(
+        if data.hub_version >= 2 and shutters and hasattr(
             shutter, "respect_seasonal_comfort"
         ) and callable(
             getattr(shutter, "set_respect_seasonal_comfort", None)
