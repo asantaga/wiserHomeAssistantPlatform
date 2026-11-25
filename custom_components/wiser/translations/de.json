@@ -22,8 +22,8 @@
       }
     },
     "abort": {
-      "already_in_progress": "Der Konfigurationsablauf f\u00fcr Wiser Heat Hub wird bereits ausgef\u00fchrt.",
-      "already_configured": "Dieses Ger\u00E4t ist bereits konfiguriert.",
+      "already_in_progress": "Der Konfigurationsablauf für Wiser Heat Hub wird bereits ausgeführt.",
+      "already_configured": "Dieses Gerät ist bereits konfiguriert.",
       "not_wiser_hub": "Das erkannte Gerät ist kein Wiser Heat Hub."
     },
     "error": {
@@ -42,25 +42,51 @@
         "menu_options": {
           "main_params": "Hauptparameter",
           "automation_params": "Automatisierungsparameter",
-          "external_room_control": "External Room Control",
+          "external_room_control": "Externe Raumregelung",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Gerätesensoren",
           "ui_options": "UI-Optionen"
         }
       },
-      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
-      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
-      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
+      "external_room_control": {
+        "title": "Externe Raumregelung",
+        "menu_options": {
+          "external_climate_devices": "Externe Klimageräte",
+          "external_temperature_sensors": "Rückkopplung über Temperatursensor"
+        }
+      },
+      "external_climate_devices": {
+        "title": "Externe Klimageräte",
+        "description": "Weisen Sie jedem Raum ein oder mehrere externe Klimageräte aus dem entsprechenden Home-Assistant-Bereich zu."
+      },
+      "external_temperature_sensors": {
+        "title": "Rückkopplung über Temperatursensor",
+        "description": "Weisen Sie jedem geeigneten Raum einen Temperatursensor aus dem entsprechenden Home-Assistant-Bereich zu und konfigurieren Sie die temporäre Temperaturanhebung.",
+        "data": {
+          "external_temperature_tolerance": "Temperaturtoleranz",
+          "external_temperature_boost_duration": "Dauer der Temperaturanhebung",
+          "external_temperature_boost_mode": "Berechnung der Temperaturanhebung",
+          "external_temperature_fixed_boost": "Feste Temperaturanhebung",
+          "external_temperature_proportional_multiplier": "Proportionaler Faktor",
+          "external_temperature_max_boost": "Maximale Temperaturanhebung",
+          "external_temperature_stale_minutes": "Zeitlimit für veraltete Sensorwerte"
+        },
+        "data_description": {
+          "external_temperature_tolerance": "Starten Sie eine Temperaturanhebung nur, wenn die gemessene Temperatur um mehr als diesen Wert unter dem geplanten Sollwert liegt.",
+          "external_temperature_boost_duration": "Dauer jeder durch die Temperaturrückkopplung ausgelösten Anhebung.",
+          "external_temperature_stale_minutes": "Ignorieren Sie den Sensor und beenden Sie die Rückkopplungsregelung, wenn er innerhalb dieser Zeit nicht aktualisiert wurde."
+        }
+      },
       "ui_options": {
         "title": "UI-Optionen",
         "data": {
           "legacy_naming": "Bisherige Namensgebung",
           "show_wiser_sidebar": "Wiser in der Seitenleiste anzeigen",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "wiser_climate_controls": "Wiser-Klimasteuerung verwenden"
         },
         "data_description": {
           "legacy_naming": "Raumnamen in Wiser-Gerätenamen aufnehmen. Wenn diese Option aktiviert ist, werden Bereichsnamen beim Neuerstellen der Entitäts-IDs mit dem Standardformat unter Einstellungen → System → Entitäts-ID-Format (Home Assistant 2026.8 und neuer) doppelt verwendet, wenn Bereichs- und Wiser-Raumname übereinstimmen. Diese Option ändert keine bestehenden Entitäts-IDs.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "wiser_climate_controls": "Wenden Sie die Wiser-Darstellung für Wärmebedarf und passiven Modus mit denselben Theme-Variablen auf die Thermostatkarten der Wiser-Räume und die Klimasteuerung unter Mehr Informationen an. Die normale Temperaturverarbeitung, der Dialog, der Verlauf und die Einstellungen von Home Assistant bleiben erhalten."
         }
       },
       "main_params": {
@@ -94,13 +120,13 @@
             "description": "Weisen Sie externe Klima-Geräte ihrem Wiser-Raum zu, damit sie dem aktuellen Raum-Sollwert mit oder ohne Passivmodus folgen.",
             "data": {
               "automations_external_room_control": "Externe Raumregelung",
-              "external_temperature_tolerance": "Temperature tolerance",
-              "external_temperature_boost_duration": "Boost duration",
-              "external_temperature_boost_mode": "Boost calculation",
-              "external_temperature_fixed_boost": "Fixed boost amount",
-              "external_temperature_proportional_multiplier": "Proportional multiplier",
-              "external_temperature_max_boost": "Maximum boost amount",
-              "external_temperature_stale_minutes": "Sensor stale timeout"
+              "external_temperature_tolerance": "Temperaturtoleranz",
+              "external_temperature_boost_duration": "Dauer der Temperaturanhebung",
+              "external_temperature_boost_mode": "Berechnung der Temperaturanhebung",
+              "external_temperature_fixed_boost": "Feste Temperaturanhebung",
+              "external_temperature_proportional_multiplier": "Proportionaler Faktor",
+              "external_temperature_max_boost": "Maximale Temperaturanhebung",
+              "external_temperature_stale_minutes": "Zeitlimit für veraltete Sensorwerte"
             }
           },
           "hotwater_climate": {
@@ -240,17 +266,18 @@
       }
     },
     "error": {
+      "invalid_hot_water_presets": "Eine oder mehrere Warmwasservoreinstellungen sind ungültig.",
       "external_climate_must_not_be_wiser": "Wählen Sie eine externe Klimaentität. Eine Wiser-Klimaentität kann nicht als externes Gerät gesteuert werden.",
       "external_climate_duplicate_assignment": "Eine externe Klimaentität kann nur einem Wiser-Raum zugewiesen werden.",
-      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
-      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
-      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
-      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+      "external_sensor_must_not_be_wiser": "Wählen Sie einen externen Temperatursensor. Eine Wiser-Entität kann nicht als externe Rückkopplung verwendet werden.",
+      "external_sensor_duplicate_assignment": "Ein externer Temperatursensor kann nur einem Wiser-Raum zugewiesen werden.",
+      "external_sensor_requires_no_wiser_thermostat": "Ein externer Temperatursensor kann nur für einen Raum ohne Wiser-Raumthermostat ausgewählt werden.",
+      "external_room_control_conflicting_assignment": "Wählen Sie für jeden Wiser-Raum entweder externe Klimageräte oder einen externen Temperatursensor, nicht beides."
     },
     "abort": {
       "opentherm_not_available": "Für diesen Wiser Heat Hub sind keine OpenTherm-Daten verfügbar.",
       "equipment_not_available": "Für diesen Wiser Heat Hub sind keine Gerätedaten verfügbar.",
-      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
+      "no_external_temperature_rooms": "Keine kompatiblen Räume gefunden. Die Rückkopplung über Temperatursensor ist nur für Räume verfügbar, die von einem Wiser-Heizkörperthermostat geregelt werden und noch keinen Wiser-Raumthermostat oder Temperatur-/Feuchtigkeitssensor haben."
     }
   },
   "services": {
@@ -274,7 +301,12 @@
     }
   },
   "selector": {
-    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "Proportional zum Temperaturdefizit",
+        "fixed": "Fester Wert"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Untere aktive Zentralheizungs-Solltemperatur",
@@ -286,16 +318,36 @@
     }
   },
   "exceptions": {
-    "opentherm_temperature_required": { "message": "Bitte geben Sie eine OpenTherm-Temperatur an." },
-    "opentherm_hub_not_found": { "message": "Der angegebene Wiser Heat Hub wurde nicht gefunden." },
-    "opentherm_hub_not_loaded": { "message": "Der angegebene Wiser Heat Hub ist nicht geladen." },
-    "opentherm_hub_required": { "message": "Bitte wählen Sie einen Wiser Heat Hub aus, wenn mehrere Hubs konfiguriert sind." },
-    "opentherm_not_supported": { "message": "Dieser Hub unterstützt OpenTherm nicht." },
-    "opentherm_invalid_parameter": { "message": "Der OpenTherm-Parameter oder -Wert ist ungültig: {error}" },
-    "opentherm_write_failed": { "message": "OpenTherm-Parameter {parameter} konnte nicht festgelegt werden: {error}" },
-    "opentherm_confirmation_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nach einem Wiederholungsversuch und dem Bestätigungszeitraum von {window} Sekunden nicht bei {requested} °C. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
-    "opentherm_retry_failed": { "message": "Der OpenTherm-Parameter {parameter} blieb nicht bei {requested} °C und der Wiederholungsversuch konnte nicht gesendet werden: {error}. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet." },
-    "opentherm_notification_title": { "message": "Wiser-OpenTherm-Befehl" }
+    "opentherm_temperature_required": {
+      "message": "Bitte geben Sie eine OpenTherm-Temperatur an."
+    },
+    "opentherm_hub_not_found": {
+      "message": "Der angegebene Wiser Heat Hub wurde nicht gefunden."
+    },
+    "opentherm_hub_not_loaded": {
+      "message": "Der angegebene Wiser Heat Hub ist nicht geladen."
+    },
+    "opentherm_hub_required": {
+      "message": "Bitte wählen Sie einen Wiser Heat Hub aus, wenn mehrere Hubs konfiguriert sind."
+    },
+    "opentherm_not_supported": {
+      "message": "Dieser Hub unterstützt OpenTherm nicht."
+    },
+    "opentherm_invalid_parameter": {
+      "message": "Der OpenTherm-Parameter oder -Wert ist ungültig: {error}"
+    },
+    "opentherm_write_failed": {
+      "message": "OpenTherm-Parameter {parameter} konnte nicht festgelegt werden: {error}"
+    },
+    "opentherm_confirmation_failed": {
+      "message": "Der OpenTherm-Parameter {parameter} blieb nach einem Wiederholungsversuch und dem Bestätigungszeitraum von {window} Sekunden nicht bei {requested} °C. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet."
+    },
+    "opentherm_retry_failed": {
+      "message": "Der OpenTherm-Parameter {parameter} blieb nicht bei {requested} °C und der Wiederholungsversuch konnte nicht gesendet werden: {error}. Wiser meldet {reported} °C. Es wird kein weiterer Versuch gesendet."
+    },
+    "opentherm_notification_title": {
+      "message": "Wiser-OpenTherm-Befehl"
+    }
   },
   "entity": {
     "climate": {
@@ -314,7 +366,9 @@
           }
         }
       },
-      "floor_temperature": { "name": "Fußbodentemperatur" }
+      "floor_temperature": {
+        "name": "Fußbodentemperatur"
+      }
     },
     "water_heater": {
       "opentherm_hot_water": {
@@ -322,20 +376,33 @@
         "state_attributes": {
           "current_action": {
             "name": "Aktuelle Aktion",
-            "state": { "idle": "Inaktiv", "heating": "Heizen" }
+            "state": {
+              "idle": "Inaktiv",
+              "heating": "Heizen"
+            }
           }
         }
       }
     },
     "number": {
-      "away_mode_target_temperature": { "name": "Zieltemperatur im Abwesenheitsmodus" },
-      "floor_temperature_offset": { "name": "Korrektur der Fußbodentemperatur" },
-      "indoor_discomfort_temperature": { "name": "Unbehaglichkeitstemperatur innen" },
-      "outdoor_discomfort_temperature": { "name": "Unbehaglichkeitstemperatur außen" },
+      "away_mode_target_temperature": {
+        "name": "Zieltemperatur im Abwesenheitsmodus"
+      },
+      "floor_temperature_offset": {
+        "name": "Korrektur der Fußbodentemperatur"
+      },
+      "indoor_discomfort_temperature": {
+        "name": "Unbehaglichkeitstemperatur innen"
+      },
+      "outdoor_discomfort_temperature": {
+        "name": "Unbehaglichkeitstemperatur außen"
+      },
       "power_on_level_channel": {
         "name": "{channel} Einschaltniveau"
       },
-      "power_on_level": { "name": "Einschaltniveau" }
+      "power_on_level": {
+        "name": "Einschaltniveau"
+      }
     },
     "select": {
       "heating_actuator_output_type": {
@@ -389,7 +456,9 @@
           "rl_led": "RL-LED-Modus"
         }
       },
-      "mode": { "name": "Modus" },
+      "mode": {
+        "name": "Modus"
+      },
       "power_on_behavior_channel": {
         "name": "{channel} Einschaltverhalten",
         "state": {
@@ -433,92 +502,252 @@
       }
     },
     "button": {
-      "boost_all_heating": { "name": "Alle Heizungen verstärken" },
-      "cancel_all_heating_overrides": { "name": "Alle Heizungsübersteuerungen abbrechen" },
-      "boost_hot_water": { "name": "Warmwasser verstärken" },
-      "cancel_hot_water_overrides": { "name": "Warmwasserübersteuerungen abbrechen" },
-      "toggle_hot_water": { "name": "Warmwasser umschalten" },
-      "moment": { "name": "Moment: {name}" }
+      "boost_all_heating": {
+        "name": "Alle Heizungen verstärken"
+      },
+      "cancel_all_heating_overrides": {
+        "name": "Alle Heizungsübersteuerungen abbrechen"
+      },
+      "boost_hot_water": {
+        "name": "Warmwasser verstärken"
+      },
+      "cancel_hot_water_overrides": {
+        "name": "Warmwasserübersteuerungen abbrechen"
+      },
+      "toggle_hot_water": {
+        "name": "Warmwasser umschalten"
+      },
+      "moment": {
+        "name": "Moment: {name}"
+      }
     },
     "switch": {
-      "valve_protection": { "name": "Ventilschutz" },
-      "eco_mode": { "name": "Eco-Modus" },
-      "away_mode_affects_hot_water": { "name": "Abwesenheitsmodus wirkt auf Warmwasser" },
-      "comfort_mode": { "name": "Komfortmodus" },
-      "away_mode": { "name": "Abwesenheitsmodus" },
-      "daylight_saving": { "name": "Sommerzeit" },
-      "summer_comfort_enabled": { "name": "Sommerkomfort aktiviert" },
-      "window_detection": { "name": "Fenstererkennung" },
-      "include_in_summer_comfort": { "name": "In Sommerkomfort einbeziehen" },
-      "device_lock": { "name": "Gerätesperre" },
-      "identify": { "name": "Identifizieren" },
-      "outlet": { "name": "Steckdose" },
-      "ev_charger": { "name": "EV-Ladegerät" },
-      "away_mode_turns_off": { "name": "Abwesenheitsmodus schaltet aus" },
-      "away_mode_closes": { "name": "Abwesenheitsmodus schließt" },
-      "passive_mode": { "name": "Passivmodus" },
-      "respect_summer_comfort": { "name": "Sommerkomfort berücksichtigen" },
-      "interacts_with_room_climate": { "name": "Beeinflusst die Raumklimaregelung" },
-      "humidity_interacts_with_room_climate": { "name": "Luftfeuchtigkeit beeinflusst die Raumklimaregelung" },
-      "temperature_interacts_with_room_climate": { "name": "Temperatur beeinflusst die Raumklimaregelung" },
-      "illuminance_interacts_with_room_climate": { "name": "Beleuchtungsstärke beeinflusst die Raumklimaregelung" },
-      "sensor_interacts_with_room_climate": { "name": "{sensor} beeinflusst die Raumklimaregelung" },
-      "manual_heat": { "name": "Manuelles Heizen" },
-      "hot_water": { "name": "Warmwasser" }
+      "valve_protection": {
+        "name": "Ventilschutz"
+      },
+      "eco_mode": {
+        "name": "Eco-Modus"
+      },
+      "away_mode_affects_hot_water": {
+        "name": "Abwesenheitsmodus wirkt auf Warmwasser"
+      },
+      "comfort_mode": {
+        "name": "Komfortmodus"
+      },
+      "away_mode": {
+        "name": "Abwesenheitsmodus"
+      },
+      "daylight_saving": {
+        "name": "Sommerzeit"
+      },
+      "summer_comfort_enabled": {
+        "name": "Sommerkomfort aktiviert"
+      },
+      "window_detection": {
+        "name": "Fenstererkennung"
+      },
+      "include_in_summer_comfort": {
+        "name": "In Sommerkomfort einbeziehen"
+      },
+      "device_lock": {
+        "name": "Gerätesperre"
+      },
+      "identify": {
+        "name": "Identifizieren"
+      },
+      "outlet": {
+        "name": "Steckdose"
+      },
+      "ev_charger": {
+        "name": "EV-Ladegerät"
+      },
+      "away_mode_turns_off": {
+        "name": "Abwesenheitsmodus schaltet aus"
+      },
+      "away_mode_closes": {
+        "name": "Abwesenheitsmodus schließt"
+      },
+      "passive_mode": {
+        "name": "Passivmodus"
+      },
+      "respect_summer_comfort": {
+        "name": "Sommerkomfort berücksichtigen"
+      },
+      "interacts_with_room_climate": {
+        "name": "Beeinflusst die Raumklimaregelung"
+      },
+      "humidity_interacts_with_room_climate": {
+        "name": "Luftfeuchtigkeit beeinflusst die Raumklimaregelung"
+      },
+      "temperature_interacts_with_room_climate": {
+        "name": "Temperatur beeinflusst die Raumklimaregelung"
+      },
+      "illuminance_interacts_with_room_climate": {
+        "name": "Beleuchtungsstärke beeinflusst die Raumklimaregelung"
+      },
+      "sensor_interacts_with_room_climate": {
+        "name": "{sensor} beeinflusst die Raumklimaregelung"
+      },
+      "manual_heat": {
+        "name": "Manuelles Heizen"
+      },
+      "hot_water": {
+        "name": "Warmwasser"
+      }
     },
     "binary_sensor": {
-      "summer_discomfort_prevention": { "name": "Sommerliche Unbehaglichkeitsvermeidung" },
-      "summer_comfort_available": { "name": "Sommerkomfort verfügbar" },
-      "pcm_device_limit_reached": { "name": "PCM-Gerätelimit erreicht" },
-      "pcm_online": { "name": "PCM online" },
-      "can_activate_pcm": { "name": "PCM kann aktiviert werden" },
-      "rmb_follow_smart": { "name": "RMB folgt dem Smart-Modus" },
-      "smoke_alarm": { "name": "Rauchalarm" },
-      "heat_alarm": { "name": "Hitzealarm" },
-      "tamper_alarm": { "name": "Manipulationsalarm" },
-      "fault_warning": { "name": "Fehlerwarnung" },
-      "remote_alarm": { "name": "Fernalarm" },
-      "battery_defect": { "name": "Batteriedefekt" },
-      "ac_mains": { "name": "Netzstrom" },
-      "test_mode": { "name": "Testmodus" },
-      "hush_mode": { "name": "Stummschaltungsmodus" },
-      "controllable": { "name": "Steuerbar" },
-      "pcm_mode": { "name": "PCM-Modus" },
-      "window_detection_active": { "name": "Fenstererkennung aktiv" },
-      "is_dimmable": { "name": "Dimmbar" },
-      "is_led_indicator_supported": { "name": "LED-Anzeige unterstützt" },
-      "is_output_mode_supported": { "name": "Ausgangsmodus unterstützt" },
-      "is_power_on_behaviour_supported": { "name": "Einschaltverhalten unterstützt" },
-      "is_tilt_supported": { "name": "Neigung unterstützt" },
-      "is_open": { "name": "Geöffnet" },
-      "is_closed": { "name": "Geschlossen" },
-      "active": { "name": "Aktiv" },
-      "boiler_ch_max_setpoint_read_write": { "name": "Maximaler Kessel-Heizsollwert Lesen/Schreiben" },
-      "boiler_ch_max_setpoint_transfer_enable": { "name": "Übertragung des maximalen Kessel-Heizsollwerts aktiviert" },
-      "boiler_fault": { "name": "Kesselstörung" },
-      "boiler_hw_setpoint_read_write": { "name": "Kessel-Warmwassersollwert Lesen/Schreiben" },
-      "boiler_hw_setpoint_transfer_enable": { "name": "Übertragung des Kessel-Warmwassersollwerts aktiviert" },
-      "central_heating_2_active": { "name": "Zentralheizung 2 aktiv" },
-      "central_heating_active": { "name": "Zentralheizung aktiv" },
-      "ch1_flow_enabled": { "name": "Heizungsvorlauf 1 aktiviert" },
-      "ch2_flow_enabled": { "name": "Heizungsvorlauf 2 aktiviert" },
-      "cooling_active": { "name": "Kühlung aktiv" },
-      "diagnostic_event": { "name": "Diagnoseereignis" },
-      "flame_active": { "name": "Flamme aktiv" },
-      "heating_active": { "name": "Heizung aktiv" },
-      "heating_channel_active": { "name": "Heizkanal {channel} aktiv" },
-      "hot_water_circuit_active": { "name": "Warmwasser aktiv" },
-      "hot_water_active": { "name": "Warmwasser aktiv" },
-      "hw_enabled": { "name": "Warmwasser aktiviert" }
+      "summer_discomfort_prevention": {
+        "name": "Sommerliche Unbehaglichkeitsvermeidung"
+      },
+      "summer_comfort_available": {
+        "name": "Sommerkomfort verfügbar"
+      },
+      "pcm_device_limit_reached": {
+        "name": "PCM-Gerätelimit erreicht"
+      },
+      "pcm_online": {
+        "name": "PCM online"
+      },
+      "can_activate_pcm": {
+        "name": "PCM kann aktiviert werden"
+      },
+      "rmb_follow_smart": {
+        "name": "RMB folgt dem Smart-Modus"
+      },
+      "smoke_alarm": {
+        "name": "Rauchalarm"
+      },
+      "heat_alarm": {
+        "name": "Hitzealarm"
+      },
+      "tamper_alarm": {
+        "name": "Manipulationsalarm"
+      },
+      "fault_warning": {
+        "name": "Fehlerwarnung"
+      },
+      "remote_alarm": {
+        "name": "Fernalarm"
+      },
+      "battery_defect": {
+        "name": "Batteriedefekt"
+      },
+      "ac_mains": {
+        "name": "Netzstrom"
+      },
+      "test_mode": {
+        "name": "Testmodus"
+      },
+      "hush_mode": {
+        "name": "Stummschaltungsmodus"
+      },
+      "controllable": {
+        "name": "Steuerbar"
+      },
+      "pcm_mode": {
+        "name": "PCM-Modus"
+      },
+      "window_detection_active": {
+        "name": "Fenstererkennung aktiv"
+      },
+      "is_dimmable": {
+        "name": "Dimmbar"
+      },
+      "is_led_indicator_supported": {
+        "name": "LED-Anzeige unterstützt"
+      },
+      "is_output_mode_supported": {
+        "name": "Ausgangsmodus unterstützt"
+      },
+      "is_power_on_behaviour_supported": {
+        "name": "Einschaltverhalten unterstützt"
+      },
+      "is_tilt_supported": {
+        "name": "Neigung unterstützt"
+      },
+      "is_open": {
+        "name": "Geöffnet"
+      },
+      "is_closed": {
+        "name": "Geschlossen"
+      },
+      "active": {
+        "name": "Aktiv"
+      },
+      "boiler_ch_max_setpoint_read_write": {
+        "name": "Maximaler Kessel-Heizsollwert Lesen/Schreiben"
+      },
+      "boiler_ch_max_setpoint_transfer_enable": {
+        "name": "Übertragung des maximalen Kessel-Heizsollwerts aktiviert"
+      },
+      "boiler_fault": {
+        "name": "Kesselstörung"
+      },
+      "boiler_hw_setpoint_read_write": {
+        "name": "Kessel-Warmwassersollwert Lesen/Schreiben"
+      },
+      "boiler_hw_setpoint_transfer_enable": {
+        "name": "Übertragung des Kessel-Warmwassersollwerts aktiviert"
+      },
+      "central_heating_2_active": {
+        "name": "Zentralheizung 2 aktiv"
+      },
+      "central_heating_active": {
+        "name": "Zentralheizung aktiv"
+      },
+      "ch1_flow_enabled": {
+        "name": "Heizungsvorlauf 1 aktiviert"
+      },
+      "ch2_flow_enabled": {
+        "name": "Heizungsvorlauf 2 aktiviert"
+      },
+      "cooling_active": {
+        "name": "Kühlung aktiv"
+      },
+      "diagnostic_event": {
+        "name": "Diagnoseereignis"
+      },
+      "flame_active": {
+        "name": "Flamme aktiv"
+      },
+      "heating_active": {
+        "name": "Heizung aktiv"
+      },
+      "heating_channel_active": {
+        "name": "Heizkanal {channel} aktiv"
+      },
+      "hot_water_circuit_active": {
+        "name": "Warmwasser aktiv"
+      },
+      "hot_water_active": {
+        "name": "Warmwasser aktiv"
+      },
+      "hw_enabled": {
+        "name": "Warmwasser aktiviert"
+      }
     },
     "sensor": {
-      "signal": { "name": "Signal" },
-      "report_count": { "name": "Berichtsanzahl" },
-      "signal_strength": { "name": "Signalstärke" },
-      "wifi_signal_strength": { "name": "WLAN-Signalstärke" },
-      "link_quality": { "name": "Verbindungsqualität" },
-      "cloud": { "name": "Cloud" },
-      "heating_operation_mode": { "name": "Heizungsbetriebsart" },
+      "signal": {
+        "name": "Signal"
+      },
+      "report_count": {
+        "name": "Berichtsanzahl"
+      },
+      "signal_strength": {
+        "name": "Signalstärke"
+      },
+      "wifi_signal_strength": {
+        "name": "WLAN-Signalstärke"
+      },
+      "link_quality": {
+        "name": "Verbindungsqualität"
+      },
+      "cloud": {
+        "name": "Cloud"
+      },
+      "heating_operation_mode": {
+        "name": "Heizungsbetriebsart"
+      },
       "heating": {
         "name": "Heizung",
         "state": {
@@ -540,48 +769,132 @@
           "on": "Ein"
         }
       },
-      "hot_water_operation_mode": { "name": "Warmwasserbetriebsart" },
-      "target_temperature": { "name": "Zieltemperatur" },
-      "current_schedule_temperature": { "name": "Aktuelle Zeitplantemperatur" },
-      "floor_temperature": { "name": "Fußbodentemperatur" },
-      "boiler_flow_temperature": { "name": "Kesselvorlauftemperatur" },
-      "boiler_return_temperature": { "name": "Kesselrücklauftemperatur" },
-      "flame_statistics": { "name": "Flammenstatistik" },
-      "boiler_ch_setpoint": { "name": "Kessel-Heizsollwert" },
-      "boiler_ch_setpoint_lower_bound": { "name": "Untere Grenze des Kessel-Heizsollwerts" },
-      "boiler_ch_setpoint_upper_bound": { "name": "Obere Grenze des Kessel-Heizsollwerts" },
-      "boiler_exhaust_temperature": { "name": "Kessel-Abgastemperatur" },
-      "boiler_hw_setpoint": { "name": "Kessel-Warmwassersollwert" },
-      "boiler_hw_setpoint_lower_bound": { "name": "Untere Grenze des Kessel-Warmwassersollwerts" },
-      "boiler_hw_setpoint_upper_bound": { "name": "Obere Grenze des Kessel-Warmwassersollwerts" },
-      "ch1_flow_setpoint": { "name": "Sollwert Heizungsvorlauf 1" },
-      "ch2_flow_setpoint": { "name": "Sollwert Heizungsvorlauf 2" },
-      "ch_flow_active_lower_setpoint": { "name": "Aktive untere Grenze des Heizungsvorlaufs" },
-      "ch_flow_active_upper_setpoint": { "name": "Aktive obere Grenze des Heizungsvorlaufs" },
-      "ch_pressure_bar": { "name": "Heizungsdruck" },
-      "connection_status": { "name": "Verbindungsstatus" },
-      "coprocessor_update_status": { "name": "OpenTherm-Coprozessor-Aktualisierungsstatus" },
-      "coprocessor_version": { "name": "OpenTherm-Coprozessor-Version" },
-      "delta_t": { "name": "Delta-T" },
-      "estimated_boiler_output": { "name": "Geschätzte Kesselleistung" },
-      "hw_flow_rate": { "name": "Warmwasser-Durchfluss" },
-      "hw_flow_setpoint": { "name": "Warmwasser-Vorlaufsolltemperatur" },
-      "hw_temperature": { "name": "Warmwassertemperatur" },
-      "maximum_capacity_kw": { "name": "Maximale Kesselleistung" },
-      "minimum_modulation_level": { "name": "Minimale Modulationsstufe" },
-      "operating_mode": { "name": "Betriebsmodus" },
-      "relative_modulation_level": { "name": "Relativer Modulationsgrad" },
-      "room_setpoint": { "name": "Raumsollwert" },
-      "room_temperature": { "name": "Raumtemperatur" },
-      "slave_status": { "name": "OpenTherm-Slave-Status" },
-      "tracked_room_id": { "name": "ID des überwachten Raums" },
-      "heating_demand": { "name": "Heizbedarf" },
-      "heating_demand_channel": { "name": "Heizbedarf Kanal {channel}" },
-      "hot_water_demand": { "name": "Warmwasserbedarf" },
-      "total_energy": { "name": "Gesamtenergie" },
-      "energy_delivered": { "name": "Gelieferte Energie" },
-      "energy_received": { "name": "Empfangene Energie" },
-      "equipment_power": { "name": "Gerät" }
+      "hot_water_operation_mode": {
+        "name": "Warmwasserbetriebsart"
+      },
+      "target_temperature": {
+        "name": "Zieltemperatur"
+      },
+      "current_schedule_temperature": {
+        "name": "Aktuelle Zeitplantemperatur"
+      },
+      "floor_temperature": {
+        "name": "Fußbodentemperatur"
+      },
+      "boiler_flow_temperature": {
+        "name": "Kesselvorlauftemperatur"
+      },
+      "boiler_return_temperature": {
+        "name": "Kesselrücklauftemperatur"
+      },
+      "flame_statistics": {
+        "name": "Flammenstatistik"
+      },
+      "boiler_ch_setpoint": {
+        "name": "Kessel-Heizsollwert"
+      },
+      "boiler_ch_setpoint_lower_bound": {
+        "name": "Untere Grenze des Kessel-Heizsollwerts"
+      },
+      "boiler_ch_setpoint_upper_bound": {
+        "name": "Obere Grenze des Kessel-Heizsollwerts"
+      },
+      "boiler_exhaust_temperature": {
+        "name": "Kessel-Abgastemperatur"
+      },
+      "boiler_hw_setpoint": {
+        "name": "Kessel-Warmwassersollwert"
+      },
+      "boiler_hw_setpoint_lower_bound": {
+        "name": "Untere Grenze des Kessel-Warmwassersollwerts"
+      },
+      "boiler_hw_setpoint_upper_bound": {
+        "name": "Obere Grenze des Kessel-Warmwassersollwerts"
+      },
+      "ch1_flow_setpoint": {
+        "name": "Sollwert Heizungsvorlauf 1"
+      },
+      "ch2_flow_setpoint": {
+        "name": "Sollwert Heizungsvorlauf 2"
+      },
+      "ch_flow_active_lower_setpoint": {
+        "name": "Aktive untere Grenze des Heizungsvorlaufs"
+      },
+      "ch_flow_active_upper_setpoint": {
+        "name": "Aktive obere Grenze des Heizungsvorlaufs"
+      },
+      "ch_pressure_bar": {
+        "name": "Heizungsdruck"
+      },
+      "connection_status": {
+        "name": "Verbindungsstatus"
+      },
+      "coprocessor_update_status": {
+        "name": "OpenTherm-Coprozessor-Aktualisierungsstatus"
+      },
+      "coprocessor_version": {
+        "name": "OpenTherm-Coprozessor-Version"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "estimated_boiler_output": {
+        "name": "Geschätzte Kesselleistung"
+      },
+      "hw_flow_rate": {
+        "name": "Warmwasser-Durchfluss"
+      },
+      "hw_flow_setpoint": {
+        "name": "Warmwasser-Vorlaufsolltemperatur"
+      },
+      "hw_temperature": {
+        "name": "Warmwassertemperatur"
+      },
+      "maximum_capacity_kw": {
+        "name": "Maximale Kesselleistung"
+      },
+      "minimum_modulation_level": {
+        "name": "Minimale Modulationsstufe"
+      },
+      "operating_mode": {
+        "name": "Betriebsmodus"
+      },
+      "relative_modulation_level": {
+        "name": "Relativer Modulationsgrad"
+      },
+      "room_setpoint": {
+        "name": "Raumsollwert"
+      },
+      "room_temperature": {
+        "name": "Raumtemperatur"
+      },
+      "slave_status": {
+        "name": "OpenTherm-Slave-Status"
+      },
+      "tracked_room_id": {
+        "name": "ID des überwachten Raums"
+      },
+      "heating_demand": {
+        "name": "Heizbedarf"
+      },
+      "heating_demand_channel": {
+        "name": "Heizbedarf Kanal {channel}"
+      },
+      "hot_water_demand": {
+        "name": "Warmwasserbedarf"
+      },
+      "total_energy": {
+        "name": "Gesamtenergie"
+      },
+      "energy_delivered": {
+        "name": "Gelieferte Energie"
+      },
+      "energy_received": {
+        "name": "Empfangene Energie"
+      },
+      "equipment_power": {
+        "name": "Gerät"
+      }
     }
   },
   "device_automation": {

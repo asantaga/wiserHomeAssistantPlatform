@@ -42,25 +42,51 @@
         "menu_options": {
           "main_params": "Hoofdparameters",
           "automation_params": "Automatiseringsparameters",
-          "external_room_control": "External Room Control",
+          "external_room_control": "Externe ruimteregeling",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Apparatuursensoren",
           "ui_options": "Opties voor de gebruikersinterface"
         }
       },
-      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
-      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
-      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
+      "external_room_control": {
+        "title": "Externe ruimteregeling",
+        "menu_options": {
+          "external_climate_devices": "Externe klimaatapparaten",
+          "external_temperature_sensors": "Terugkoppeling via temperatuursensor"
+        }
+      },
+      "external_climate_devices": {
+        "title": "Externe klimaatapparaten",
+        "description": "Wijs aan elke ruimte een of meer externe klimaatapparaten toe uit het bijbehorende Home Assistant-gebied."
+      },
+      "external_temperature_sensors": {
+        "title": "Terugkoppeling via temperatuursensor",
+        "description": "Wijs aan elke geschikte ruimte één temperatuursensor toe uit het bijbehorende Home Assistant-gebied en configureer de tijdelijke temperatuurverhoging.",
+        "data": {
+          "external_temperature_tolerance": "Temperatuurtolerantie",
+          "external_temperature_boost_duration": "Duur van temperatuurverhoging",
+          "external_temperature_boost_mode": "Berekening van temperatuurverhoging",
+          "external_temperature_fixed_boost": "Vaste temperatuurverhoging",
+          "external_temperature_proportional_multiplier": "Proportionele vermenigvuldigingsfactor",
+          "external_temperature_max_boost": "Maximale temperatuurverhoging",
+          "external_temperature_stale_minutes": "Tijdslimiet voor verouderde sensorgegevens"
+        },
+        "data_description": {
+          "external_temperature_tolerance": "Start alleen een temperatuurverhoging als de gemeten temperatuur meer dan deze waarde onder de geplande doeltemperatuur ligt.",
+          "external_temperature_boost_duration": "Hoelang elke door sensorterugkoppeling gestarte temperatuurverhoging moet duren.",
+          "external_temperature_stale_minutes": "Negeer de sensor en stop de terugkoppelingsregeling als deze niet binnen deze tijd is bijgewerkt."
+        }
+      },
       "ui_options": {
         "title": "Opties voor de gebruikersinterface",
         "data": {
           "legacy_naming": "Oude naamgeving",
           "show_wiser_sidebar": "Toon Wiser in zijbalk",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "wiser_climate_controls": "Wiser-klimaatbediening gebruiken"
         },
         "data_description": {
           "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "wiser_climate_controls": "Pas de Wiser-opmaak voor warmtevraag en passieve modus toe op de thermostaatkaarten van Wiser-ruimtes en de klimaatbediening in Meer informatie, met dezelfde themavariabelen. De standaard temperatuurverwerking, het dialoogvenster, de geschiedenis en de instellingen van Home Assistant blijven behouden."
         }
       },
       "main_params": {
@@ -94,13 +120,13 @@
             "description": "Wijs externe klimaatapparaten toe aan hun Wiser-kamer, zodat ze de huidige doeltemperatuur van de kamer volgen, met of zonder passieve modus.",
             "data": {
               "automations_external_room_control": "Externe kamerregeling",
-              "external_temperature_tolerance": "Temperature tolerance",
-              "external_temperature_boost_duration": "Boost duration",
-              "external_temperature_boost_mode": "Boost calculation",
-              "external_temperature_fixed_boost": "Fixed boost amount",
-              "external_temperature_proportional_multiplier": "Proportional multiplier",
-              "external_temperature_max_boost": "Maximum boost amount",
-              "external_temperature_stale_minutes": "Sensor stale timeout"
+              "external_temperature_tolerance": "Temperatuurtolerantie",
+              "external_temperature_boost_duration": "Duur van temperatuurverhoging",
+              "external_temperature_boost_mode": "Berekening van temperatuurverhoging",
+              "external_temperature_fixed_boost": "Vaste temperatuurverhoging",
+              "external_temperature_proportional_multiplier": "Proportionele vermenigvuldigingsfactor",
+              "external_temperature_max_boost": "Maximale temperatuurverhoging",
+              "external_temperature_stale_minutes": "Tijdslimiet voor verouderde sensorgegevens"
             }
           },
           "hotwater_climate": {
@@ -242,15 +268,16 @@
     "abort": {
       "opentherm_not_available": "OpenTherm-gegevens zijn niet beschikbaar voor deze Wiser-hub.",
       "equipment_not_available": "Apparatuurgegevens zijn niet beschikbaar voor deze Wiser-hub.",
-      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
+      "no_external_temperature_rooms": "Geen compatibele ruimtes gevonden. Terugkoppeling via een temperatuursensor is alleen beschikbaar voor ruimtes die worden geregeld door een Wiser-radiatorthermostaat en nog geen Wiser-thermostaat of temperatuur-/vochtigheidssensor hebben."
     },
     "error": {
+      "invalid_hot_water_presets": "Een of meer warmwatervoorinstellingen zijn ongeldig.",
       "external_climate_must_not_be_wiser": "Selecteer een externe klimaatentiteit. Een Wiser-klimaatentiteit kan niet als extern apparaat worden aangestuurd.",
       "external_climate_duplicate_assignment": "Een externe klimaatentiteit kan slechts aan één Wiser-kamer worden toegewezen.",
-      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
-      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
-      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
-      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+      "external_sensor_must_not_be_wiser": "Selecteer een externe temperatuursensor. Een Wiser-entiteit kan niet als externe terugkoppeling worden gebruikt.",
+      "external_sensor_duplicate_assignment": "Een externe temperatuursensor kan slechts aan één Wiser-ruimte worden toegewezen.",
+      "external_sensor_requires_no_wiser_thermostat": "Een externe temperatuursensor kan alleen worden geselecteerd voor een ruimte zonder Wiser-kamerthermostaat.",
+      "external_room_control_conflicting_assignment": "Kies voor elke Wiser-ruimte externe klimaatapparaten of een externe temperatuursensor, niet beide."
     }
   },
   "services": {
@@ -274,7 +301,12 @@
     }
   },
   "selector": {
-    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "Evenredig met het temperatuurtekort",
+        "fixed": "Vaste waarde"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Actieve CV-onderinstelling",
@@ -684,9 +716,15 @@
       "signal": {
         "name": "Signaal"
       },
-      "signal_strength": { "name": "Signaalsterkte" },
-      "wifi_signal_strength": { "name": "Wifi-signaalsterkte" },
-      "link_quality": { "name": "Verbindingskwaliteit" },
+      "signal_strength": {
+        "name": "Signaalsterkte"
+      },
+      "wifi_signal_strength": {
+        "name": "Wifi-signaalsterkte"
+      },
+      "link_quality": {
+        "name": "Verbindingskwaliteit"
+      },
       "cloud": {
         "name": "Cloud"
       },

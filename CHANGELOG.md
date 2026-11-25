@@ -4,58 +4,33 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.1.0b3
+## v4.1.1b0
+
+### Upgrade notes
 
 ### Added
 
-- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are retained for compatibility - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
-
 ### Fixed
 
-- Advance Schedule applies the next period's Passive Mode enablement, strategy and paired limits across refreshes, until the next schedule transition or Cancel Overrides.
-- Normalize legacy smart-plug, light and heating-actuator select service values before Home Assistant validates the translated options, retaining existing automation calls.
-- Allow existing OpenTherm preset lists expanded by automatic timed defaults through options-form validation while retaining the normal ten-preset limit.
-- Preserve remembered OpenTherm connection and hot-water capabilities when the optional boiler endpoint returns no data; clear them only when the hub explicitly reports OpenTherm disabled.
-- On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
-- Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
-- Added disabled-by-default diagnostic Signal strength (dBm) and Link quality sensors for every Zigbee device, sourced from the hub's controller reception RSSI and LQI, Wi-Fi signal strength sensor (dBm) for the HeatHub, supporting long-term statistics alongside the existing text Signal sensor - issue [#820](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/820).
-- Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.
-- Room climate entities preserve unknown heating readings instead of reporting idle or an off control output when the API cannot determine OpenTherm heating activity.
-- Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
+### Changed
 
-## v4.1.0b2
+
+## v4.1.0
 
 ### Upgrade notes
 
 - Light configuration selectors now report translation keys such as `auto`, `manual`, `last_brightness` and `specified_brightness`. Update automations that compare their states; service calls using the previous API option values remain accepted - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
 - Smart-plug Mode selectors now report `auto` and `manual` states. Update automations that compare their states; service calls using `Auto` and `Manual` remain accepted - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
+- Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
+- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
 
 ### Added
 
+- Added Heating active (one per heating channel) and Hot water active binary sensors with the running device class, so circuit state shows as an on/off timeline in history. They share their logic with the existing Heating and Hot water text sensors, which are retained for compatibility - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
 - Downloaded diagnostics now include entity naming inputs and device names to help investigate entity ID regeneration - [PR #817](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/817).
 - Added per-channel dimmable-light output-mode and power-on brightness controls where supported, and exposed target, manual and scheduled brightness attributes on all lights with API support - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
 - Added translated smart-plug LED indicator controls on compatible hubs and APIs, plus next scheduled start and end dates on plug switches where available - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
 - Added a translated output-type selector for compatible heating actuators, supporting Relay and Pilot wire where the hub and API provide control - issue [#797](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/797).
-
-### Changed
-
-- Updated the `aioWiserHeatAPI` dependency from v1.7.8 to v1.7.9.
-- Light mode, power-on behaviour, LED indicator and output-mode selectors show translated option descriptions instead of raw API values - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
-- Smart-plug Mode options now use translated descriptions while preserving their API command values - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
-
-### Fixed
-- Entity ID regeneration now uses the updated hub name after renaming a Wiser hub - [PR #817](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/817).
-- Fixed Passive Mode Temperature limiter control overwriting temperature changes made on the Wiser hub or app. These changes now update the lower-limit override until the next scheduled period.
-- Preserved channel labels in translated light configuration controls so multi-gang devices remain distinguishable - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
-
-## v4.1.0b1
-
-### Upgrade notes
-
-- Existing native Passive Mode enablement, temperature increment, lower schedules and active lower overrides migrate automatically. Set up legacy experimental External Passive Mode again after upgrading. Obsolete external control switches are removed automatically. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
-
-### Added
-
 - Added optional **Wiser climate controls** under **UI options** on Home Assistant 2026.7 and later. Native Thermostat cards and More Info show Wiser room demand, Passive Mode colours, and boost countdowns.
 - Added **Bottom** and responsive **Inline** control layouts to the native Thermostat card editor for Wiser rooms.
 - OpenTherm hot water reports localized heating activity and the next scheduled temperature in Home Assistant’s display units.
@@ -69,6 +44,26 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Added optional temperature sensor feedback for rooms with a Wiser TRV and no native Wiser temperature sensor. A fresh reading below the scheduled target can trigger a configurable fixed or proportional timed boost in Auto. [#619](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/619)
 - Added per-room Modulating and Temperature limiter strategies, plus per-period Passive Mode settings and paired schedule limits. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 
+### Fixed
+
+- Advance Schedule applies the next period's Passive Mode enablement, strategy and paired limits across refreshes, until the next schedule transition or Cancel Overrides.
+- Normalize legacy smart-plug, light and heating-actuator select service values before Home Assistant validates the translated options, retaining existing automation calls.
+- Allow existing OpenTherm preset lists expanded by automatic timed defaults through options-form validation while retaining the normal ten-preset limit.
+- Preserve remembered OpenTherm connection and hot-water capabilities when the optional boiler endpoint returns no data; clear them only when the hub explicitly reports OpenTherm disabled.
+- On OpenTherm hubs, the Heating text sensor and Heating active binary sensor now follow the boiler's central-heating-active status instead of relay/demand output. Missing status stays unknown, and disconnected OpenTherm circuits become unavailable. Relay hubs retain their channel output logic - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Circuit text and binary sensors handle missing heating channels and hot water without reading stale states or raising missing-object errors - issue [#822](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/822).
+- Added disabled-by-default diagnostic Signal strength (dBm) and Link quality sensors for every Zigbee device, sourced from the hub's controller reception RSSI and LQI, Wi-Fi signal strength sensor (dBm) for the HeatHub, supporting long-term statistics alongside the existing text Signal sensor - issue [#820](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/820).
+- Failed hub refreshes now mark entities unavailable and propagate cancellation correctly.
+- Room climate entities preserve unknown heating readings instead of reporting idle or an off control output when the API cannot determine OpenTherm heating activity.
+- Restored compatibility with Home Assistant 2025.5 for custom selector schemas and hub device naming while preserving newer Home Assistant APIs.
+- Entity ID regeneration now uses the updated hub name after renaming a Wiser hub - [PR #817](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/817).
+- Fixed Passive Mode Temperature limiter control overwriting temperature changes made on the Wiser hub or app. These changes now update the lower-limit override until the next scheduled period.
+- Preserved channel labels in translated light configuration controls so multi-gang devices remain distinguishable - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
+- Preserved Temperature limiter hysteresis across reloads and restarts, and removed cooling-mode restrictions on target updates and restoration for assigned heating-capable TRVs.
+- The OpenTherm preset editor blocks saving temperatures outside the boiler's reported minimum and maximum while keeping numeric input.
+- If the hub is unreachable when an OpenTherm boost expires, the integration retries the return to Manual after the hub recovers. A delayed boiler rejection also triggers one more attempt without restoring the expired preset.
+- Stored hot water boost actions refresh the selected hub and reject a hub that is no longer loaded.
+
 ### Changed
 
 - Passive Mode demand now shows **Modulation** or **Limiter**. OpenTherm and relay-controlled rooms continue to show a demand percentage.
@@ -76,22 +71,9 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 - Updated hot water More Info controls and added a heating glow when hot water is active.
 - Schedule copies carry Passive Mode metadata, and panel and service calls share limiter assignment validation. Advance Schedule applies both limiter thresholds from the next slot, and scheduled mode changes preserve manual boosts. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
 - Local builds produce an unpacked integration alongside the ZIP. A build replaces an existing unpacked directory only when it matches the previous ZIP. [PR #766](https://github.com/asantaga/wiserHomeAssistantPlatform/pull/766)
-
-### Fixed
-
-- Preserved Temperature limiter hysteresis across reloads and restarts, and removed cooling-mode restrictions on target updates and restoration for assigned heating-capable TRVs.
-- The OpenTherm preset editor blocks saving temperatures outside the boiler's reported minimum and maximum while keeping numeric input.
-- If the hub is unreachable when an OpenTherm boost expires, the integration retries the return to Manual after the hub recovers. A delayed boiler rejection also triggers one more attempt without restoring the expired preset.
-- Stored hot water boost actions refresh the selected hub and reject a hub that is no longer loaded.
-
-## v4.1.0b0
-
-### Upgrade notes
-
-- This diagnostic beta does not modify the entity registry. It adds read-only information needed to investigate duplicate and unavailable entities after upgrading to v4.
-
-### Changed
-
+- Updated the `aioWiserHeatAPI` dependency from v1.7.8 to v1.7.9.
+- Light mode, power-on behaviour, LED indicator and output-mode selectors show translated option descriptions instead of raw API values - issue [#790](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/790).
+- Smart-plug Mode options now use translated descriptions while preserving their API command values - issue [#795](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/795).
 - Expanded downloaded Wiser diagnostics with entity-registry metadata, including entity IDs, unique IDs, associated device records and creation times - issue [#792](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/792).
 
 
