@@ -42,25 +42,51 @@
         "menu_options": {
           "main_params": "Parâmetros principais",
           "automation_params": "Parâmetros de automação",
-          "external_room_control": "External Room Control",
+          "external_room_control": "Controlo externo de divisões",
           "opentherm": "OpenTherm",
           "equipment_sensors": "Sensores de equipamento",
           "ui_options": "Opções da interface do utilizador"
         }
       },
-      "external_room_control": {"title": "External Room Control", "menu_options": {"external_climate_devices": "External climate devices", "external_temperature_sensors": "Temperature sensor feedback"}},
-      "external_climate_devices": {"title": "External climate devices", "description": "Assign one or more external climate devices from each room's matching Home Assistant area."},
-      "external_temperature_sensors": {"title": "Temperature sensor feedback", "description": "Assign one temperature sensor from each eligible room's matching Home Assistant area and configure its boost behaviour.", "data": {"external_temperature_tolerance": "Temperature tolerance", "external_temperature_boost_duration": "Boost duration", "external_temperature_boost_mode": "Boost calculation", "external_temperature_fixed_boost": "Fixed boost amount", "external_temperature_proportional_multiplier": "Proportional multiplier", "external_temperature_max_boost": "Maximum boost amount", "external_temperature_stale_minutes": "Sensor stale timeout"}, "data_description": {"external_temperature_tolerance": "Start a boost only when the measured temperature is more than this far below the scheduled target.", "external_temperature_boost_duration": "How long each boost created by temperature feedback should run.", "external_temperature_stale_minutes": "Ignore the sensor and stop feedback control when it has not updated within this time."}},
+      "external_room_control": {
+        "title": "Controlo externo de divisões",
+        "menu_options": {
+          "external_climate_devices": "Dispositivos de climatização externos",
+          "external_temperature_sensors": "Realimentação do sensor de temperatura"
+        }
+      },
+      "external_climate_devices": {
+        "title": "Dispositivos de climatização externos",
+        "description": "Atribua a cada divisão um ou mais dispositivos de climatização externos da área correspondente no Home Assistant."
+      },
+      "external_temperature_sensors": {
+        "title": "Realimentação do sensor de temperatura",
+        "description": "Atribua a cada divisão elegível um sensor de temperatura da área correspondente no Home Assistant e configure o aumento temporário de temperatura.",
+        "data": {
+          "external_temperature_tolerance": "Tolerância de temperatura",
+          "external_temperature_boost_duration": "Duração do aumento de temperatura",
+          "external_temperature_boost_mode": "Cálculo do aumento de temperatura",
+          "external_temperature_fixed_boost": "Aumento de temperatura fixo",
+          "external_temperature_proportional_multiplier": "Multiplicador proporcional",
+          "external_temperature_max_boost": "Aumento de temperatura máximo",
+          "external_temperature_stale_minutes": "Tempo limite para dados desatualizados do sensor"
+        },
+        "data_description": {
+          "external_temperature_tolerance": "Inicie um aumento de temperatura apenas quando a temperatura medida estiver mais do que este valor abaixo do objetivo programado.",
+          "external_temperature_boost_duration": "Duração de cada aumento de temperatura gerado pela realimentação do sensor.",
+          "external_temperature_stale_minutes": "Ignore o sensor e pare o controlo por realimentação se não tiver sido atualizado durante este período."
+        }
+      },
       "ui_options": {
         "title": "Opções da interface do utilizador",
         "data": {
           "legacy_naming": "Nomenclatura legada",
           "show_wiser_sidebar": "Mostrar Wiser na barra lateral",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "wiser_climate_controls": "Usar os controlos de climatização Wiser"
         },
         "data_description": {
           "legacy_naming": "Inclui os nomes das divisões nos nomes dos dispositivos Wiser. Se estiver ativado, ao utilizar o Home Assistant para regenerar os ID de entidade com o formato predefinido em Definições → Sistema → Formato do ID de entidade (Home Assistant 2026.8 e posterior), os nomes das áreas serão duplicados quando coincidirem com os nomes das divisões Wiser. Alterar esta opção não muda o nome dos ID de entidade existentes.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "wiser_climate_controls": "Aplique o estilo de pedido de calor e modo passivo da Wiser aos cartões Termóstato das divisões Wiser e ao controlo de climatização em Mais informações, usando as mesmas variáveis do tema. A gestão da temperatura, a caixa de diálogo, o histórico e as definições nativas do Home Assistant são mantidos."
         }
       },
       "main_params": {
@@ -94,13 +120,13 @@
             "description": "Atribua dispositivos de climatização externos à respetiva divisão Wiser para que sigam a temperatura-alvo atual da divisão, com ou sem modo passivo.",
             "data": {
               "automations_external_room_control": "Controlo externo da divisão",
-              "external_temperature_tolerance": "Temperature tolerance",
-              "external_temperature_boost_duration": "Boost duration",
-              "external_temperature_boost_mode": "Boost calculation",
-              "external_temperature_fixed_boost": "Fixed boost amount",
-              "external_temperature_proportional_multiplier": "Proportional multiplier",
-              "external_temperature_max_boost": "Maximum boost amount",
-              "external_temperature_stale_minutes": "Sensor stale timeout"
+              "external_temperature_tolerance": "Tolerância de temperatura",
+              "external_temperature_boost_duration": "Duração do aumento de temperatura",
+              "external_temperature_boost_mode": "Cálculo do aumento de temperatura",
+              "external_temperature_fixed_boost": "Aumento de temperatura fixo",
+              "external_temperature_proportional_multiplier": "Multiplicador proporcional",
+              "external_temperature_max_boost": "Aumento de temperatura máximo",
+              "external_temperature_stale_minutes": "Tempo limite para dados desatualizados do sensor"
             }
           },
           "hotwater_climate": {
@@ -242,15 +268,16 @@
     "abort": {
       "opentherm_not_available": "Os dados OpenTherm não estão disponíveis para este hub Wiser.",
       "equipment_not_available": "Os dados do equipamento não estão disponíveis para este hub Wiser.",
-      "no_external_temperature_rooms": "No compatible rooms found. Temperature sensor feedback is only available for rooms controlled by a Wiser TRV that do not already have a Wiser thermostat or temperature/humidity sensor."
+      "no_external_temperature_rooms": "Não foram encontradas divisões compatíveis. A realimentação do sensor de temperatura só está disponível para divisões controladas por uma válvula termostática Wiser que ainda não tenham um termóstato Wiser ou um sensor de temperatura e humidade."
     },
     "error": {
+      "invalid_hot_water_presets": "Uma ou mais predefinições de água quente são inválidas.",
       "external_climate_must_not_be_wiser": "Selecione uma entidade de climatização externa. Uma entidade de climatização Wiser não pode ser controlada como dispositivo externo.",
       "external_climate_duplicate_assignment": "Uma entidade de climatização externa só pode ser atribuída a uma divisão Wiser.",
-      "external_sensor_must_not_be_wiser": "Select an external temperature sensor. A Wiser entity cannot be used as external feedback.",
-      "external_sensor_duplicate_assignment": "An external temperature sensor can only be assigned to one Wiser room.",
-      "external_sensor_requires_no_wiser_thermostat": "An external temperature sensor can only be selected for a room without a Wiser Room Thermostat.",
-      "external_room_control_conflicting_assignment": "Choose either external climate devices or an external temperature sensor for each Wiser room, not both."
+      "external_sensor_must_not_be_wiser": "Selecione um sensor de temperatura externo. Uma entidade Wiser não pode ser usada como realimentação externa.",
+      "external_sensor_duplicate_assignment": "Um sensor de temperatura externo só pode ser atribuído a uma divisão Wiser.",
+      "external_sensor_requires_no_wiser_thermostat": "Um sensor de temperatura externo só pode ser selecionado para uma divisão sem termóstato de divisão Wiser.",
+      "external_room_control_conflicting_assignment": "Escolha dispositivos de climatização externos ou um sensor de temperatura externo para cada divisão Wiser, não ambos."
     }
   },
   "services": {
@@ -274,7 +301,12 @@
     }
   },
   "selector": {
-    "external_temperature_boost_mode": {"options": {"proportional": "Proportional to temperature shortfall", "fixed": "Fixed amount"}},
+    "external_temperature_boost_mode": {
+      "options": {
+        "proportional": "Proporcional ao défice de temperatura",
+        "fixed": "Valor fixo"
+      }
+    },
     "opentherm_parameter": {
       "options": {
         "ch_flow_active_lower_setpoint": "Ponto de ajuste inferior de aquecimento central ativo",
@@ -337,9 +369,6 @@
       "floor_temperature": {
         "name": "Temperatura do piso"
       }
-    },
-    "water_heater": {
-      "opentherm_hot_water": { "name": "Água quente OpenTherm" }
     },
     "number": {
       "away_mode_target_temperature": {
@@ -515,7 +544,6 @@
       "outlet": {
         "name": "Tomada"
       },
-      "ev_charger": { "name": "Carregador de veículo elétrico" },
       "away_mode_turns_off": {
         "name": "Desliga no modo ausente"
       },
@@ -581,9 +609,6 @@
       "battery_defect": {
         "name": "Defeito na bateria"
       },
-      "ac_mains": { "name": "Alimentação CA" },
-      "test_mode": { "name": "Modo de teste" },
-      "hush_mode": { "name": "Modo silencioso" },
       "controllable": {
         "name": "Controlável"
       },
@@ -682,10 +707,15 @@
       "signal": {
         "name": "Sinal"
       },
-      "report_count": { "name": "Contagem de relatórios" },
-      "signal_strength": { "name": "Intensidade do sinal" },
-      "wifi_signal_strength": { "name": "Intensidade do sinal Wi-Fi" },
-      "link_quality": { "name": "Qualidade da ligação" },
+      "signal_strength": {
+        "name": "Intensidade do sinal"
+      },
+      "wifi_signal_strength": {
+        "name": "Intensidade do sinal Wi-Fi"
+      },
+      "link_quality": {
+        "name": "Qualidade da ligação"
+      },
       "cloud": {
         "name": "Nuvem"
       },
@@ -719,7 +749,6 @@
       "target_temperature": {
         "name": "Temperatura alvo"
       },
-      "current_schedule_temperature": { "name": "Temperatura atual da programação" },
       "floor_temperature": {
         "name": "Temperatura do piso"
       },
