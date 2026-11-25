@@ -6,6 +6,7 @@ Angelosantagata@gmail.com
 """
 
 import asyncio
+from copy import deepcopy
 import datetime as dt
 import logging
 import voluptuous as vol
@@ -40,6 +41,53 @@ from .helpers import (
 from custom_components.wiser.schedules import WiserScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _overview_schedule_id(device):
+    """Return an equipment's overview schedule ID across API versions."""
+    equipment = getattr(device, "equipment", None)
+    for attribute in (
+        "overview_schedule_id",
+        "overviewschedule_id",
+        "overviewScheduleId",
+    ):
+        value = getattr(equipment, attribute, None)
+        if value is not None:
+            return value
+    return None
+
+
+def _overview_schedule_data(data, device):
+    """Return the raw Smart overview for a device's linked schedule ID."""
+    overview_id = _overview_schedule_id(device)
+    if overview_id is None:
+        return None
+
+    raw_hub_data = getattr(getattr(data, "wiserhub", None), "raw_hub_data", {})
+    schedule_data = (
+        raw_hub_data.get("Schedule", {})
+        if isinstance(raw_hub_data, dict)
+        else {}
+    )
+    smart_data = (
+        schedule_data.get("Smart", {})
+        if isinstance(schedule_data, dict)
+        else {}
+    )
+    overviews = (
+        smart_data.get("Overview", []) if isinstance(smart_data, dict) else []
+    )
+    if not isinstance(overviews, list):
+        return None
+
+    for overview in overviews:
+        if (
+            isinstance(overview, dict)
+            and str(overview.get("id")) == str(overview_id)
+        ):
+            return deepcopy(overview)
+    return None
+
 
 ATTR_PLUG_MODE = "plug_mode"
 ATTR_HOTWATER_MODE = "hotwater_mode"
@@ -675,6 +723,7 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
     @property
     def extra_state_attributes(self):
         """Return set of device state attributes."""
+        overview_schedule = _overview_schedule_data(self._data, self._device)
         attrs = {}
         attrs["control_source"] = self._device.control_source
         attrs["manual_state"] = self._device.manual_state
@@ -691,6 +740,10 @@ class WiserSmartPlugSwitch(WiserSwitch, WiserScheduleEntity):
         attrs["away_mode_action"] = self._device.away_mode_action
         attrs["scheduled_state"] = self._device.scheduled_state
         attrs["schedule_id"] = self._device.schedule_id
+        attrs["overview_schedule_id"] = _overview_schedule_id(self._device)
+        # Keep the original mixed-case key for compatibility with existing users.
+        attrs["overview_scheduleId"] = _overview_schedule_id(self._device)
+        attrs["overview_schedule"] = overview_schedule
         if self._device.schedule:
             attrs["schedule_name"] = self._device.schedule.name
             attrs["next_day_change"] = str(self._device.schedule.next.day)
@@ -782,7 +835,14 @@ class WiserEVSESwitch(WiserSwitch):
     @property
     def extra_state_attributes(self):
         """Return the hub's current EVSE control state."""
-        return {"control_state": self._device.control_state}
+        overview_schedule = _overview_schedule_data(self._data, self._device)
+        attrs = {
+            "control_state": self._device.control_state,
+            "overview_schedule_id": _overview_schedule_id(self._device),
+            "overview_scheduleId": _overview_schedule_id(self._device),
+            "overview_schedule": overview_schedule,
+        }
+        return attrs
 
     @hub_error_handler
     async def async_turn_on(self, **kwargs):

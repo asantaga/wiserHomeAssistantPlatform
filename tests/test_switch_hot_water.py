@@ -621,6 +621,36 @@ class WiserSmartPlugImmediateStateTest(unittest.TestCase):
         self.assertEqual(attrs["next_schedule_state"], "On")
         self.assertEqual(attrs["next_schedule_datetime"], plug.next_scheduled_date)
 
+    def test_exposes_equipment_overview_schedule_id(self) -> None:
+        switch, plug, _events, _scheduled = self._switch(is_on=False)
+        plug.equipment = SimpleNamespace(overview_schedule_id=42)
+        overview = {
+            "id": 42,
+            "Rolling24HView": {
+                "expirationDate": "2026-11-15T01:30",
+                "currentState": "consumptionForceOff",
+                "commands": [
+                    {
+                        "timestamp": "2026-11-14T01:30",
+                        "state": "selfManagement",
+                    }
+                ],
+            },
+        }
+        switch._data.wiserhub.raw_hub_data = {
+            "Schedule": {"Smart": {"Overview": [overview]}}
+        }
+
+        self.assertEqual(
+            switch.extra_state_attributes["overview_schedule_id"], 42
+        )
+        self.assertEqual(
+            switch.extra_state_attributes["overview_scheduleId"], 42
+        )
+        self.assertEqual(
+            switch.extra_state_attributes["overview_schedule"], overview
+        )
+
 
 class _FakeEVSE:
     def __init__(self, *, is_on: bool) -> None:
@@ -628,6 +658,7 @@ class _FakeEVSE:
         self.control_state = "selfManagement" if is_on else "consumptionForceOff"
         self.model = "EVSCKT/OUTLET/1"
         self.firmware_version = "2.10.0"
+        self.equipment = SimpleNamespace(overview_schedule_id=84)
         self.commands = []
 
     async def turn_on(self) -> None:
@@ -680,6 +711,31 @@ class WiserEVSESwitchTest(unittest.TestCase):
         self.assertEqual(switch.unique_id, "physical-entity-id")
         self.assertEqual(switch.device_info["model"], "EVSCKT/OUTLET/1")
 
+    def test_exposes_equipment_overview_schedule_id(self) -> None:
+        switch, _device = self._switch(is_on=True)
+        commands = [
+            {"timestamp": "2026-11-14T06:30", "state": "consumptionForceOff"}
+        ]
+        overview = {
+            "id": 84,
+            "Rolling24HView": {
+                "expirationDate": "2026-11-15T06:30",
+                "currentState": "selfManagement",
+                "commands": commands,
+            },
+        }
+        switch._data.wiserhub.raw_hub_data = {
+            "Schedule": {"Smart": {"Overview": [overview]}}
+        }
 
+        self.assertEqual(
+            switch.extra_state_attributes["overview_schedule_id"], 84
+        )
+        self.assertEqual(
+            switch.extra_state_attributes["overview_scheduleId"], 84
+        )
+        self.assertEqual(
+            switch.extra_state_attributes["overview_schedule"], overview
+        )
 if __name__ == "__main__":
     unittest.main()
