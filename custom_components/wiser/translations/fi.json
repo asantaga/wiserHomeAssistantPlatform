@@ -648,6 +648,15 @@
       "flame_active": {
         "name": "Liekki aktiivinen"
       },
+      "heating_active": {
+        "name": "Lämmitys aktiivinen"
+      },
+      "heating_channel_active": {
+        "name": "Lämmityskanava {channel} aktiivinen"
+      },
+      "hot_water_circuit_active": {
+        "name": "Käyttövesi aktiivinen"
+      },
       "hot_water_active": {
         "name": "Käyttövesi aktiivinen"
       },
@@ -670,6 +679,9 @@
       "signal": {
         "name": "Signaali"
       },
+      "signal_strength": { "name": "Signaalin voimakkuus" },
+      "wifi_signal_strength": { "name": "Wi-Fi-signaalin voimakkuus" },
+      "link_quality": { "name": "Linkin laatu" },
       "cloud": {
         "name": "Pilvi"
       },

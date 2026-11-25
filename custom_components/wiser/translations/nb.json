@@ -648,6 +648,15 @@
       "flame_active": {
         "name": "Flamme aktiv"
       },
+      "heating_active": {
+        "name": "Oppvarming aktiv"
+      },
+      "heating_channel_active": {
+        "name": "Varmekanal {channel} aktiv"
+      },
+      "hot_water_circuit_active": {
+        "name": "Varmtvann aktivt"
+      },
       "hot_water_active": {
         "name": "Varmtvann aktivt"
       },
@@ -670,6 +679,9 @@
       "signal": {
         "name": "Signal"
       },
+      "signal_strength": { "name": "Signalstyrke" },
+      "wifi_signal_strength": { "name": "Wi-Fi-signalstyrke" },
+      "link_quality": { "name": "Koblingskvalitet" },
       "cloud": {
         "name": "Sky"
       },

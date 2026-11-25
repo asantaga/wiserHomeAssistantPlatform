@@ -504,6 +504,9 @@
       "cooling_active": { "name": "Refroidissement actif" },
       "diagnostic_event": { "name": "Événement de diagnostic" },
       "flame_active": { "name": "Flamme active" },
+      "heating_active": { "name": "Chauffage actif" },
+      "heating_channel_active": { "name": "Canal de chauffage {channel} actif" },
+      "hot_water_circuit_active": { "name": "Eau chaude active" },
       "hot_water_active": { "name": "Eau chaude active" },
       "hw_enabled": { "name": "Eau chaude activée" }
     },
@@ -512,6 +515,9 @@
       "weather_next_day_2pm_temperature": { "name": "Température météo du lendemain à 14 h" },
       "signal": { "name": "Signal" },
       "report_count": { "name": "Nombre de rapports" },
+      "signal_strength": { "name": "Force du signal" },
+      "wifi_signal_strength": { "name": "Force du signal Wi-Fi" },
+      "link_quality": { "name": "Qualité de la liaison" },
       "cloud": { "name": "Cloud" },
       "heating_operation_mode": { "name": "Mode de fonctionnement du chauffage" },
       "heating": {

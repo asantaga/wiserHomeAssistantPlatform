@@ -648,6 +648,15 @@
       "flame_active": {
         "name": "Láng aktív"
       },
+      "heating_active": {
+        "name": "Fűtés aktív"
+      },
+      "heating_channel_active": {
+        "name": "Fűtési csatorna {channel} aktív"
+      },
+      "hot_water_circuit_active": {
+        "name": "Melegvíz-készítés aktív"
+      },
       "hot_water_active": {
         "name": "Melegvíz-készítés aktív"
       },
@@ -670,6 +679,9 @@
       "signal": {
         "name": "Jel"
       },
+      "signal_strength": { "name": "Jelerősség" },
+      "wifi_signal_strength": { "name": "Wi-Fi-jelerősség" },
+      "link_quality": { "name": "Kapcsolat minősége" },
       "cloud": {
         "name": "Felhő"
       },

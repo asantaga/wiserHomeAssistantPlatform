@@ -26,7 +26,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_AUTOMATIONS_HW_AUTO_MODE,
@@ -42,6 +42,7 @@ from .const import (
     CONF_HEATING_BOOST_TIME,
     CONF_HW_BOOST_TIME,
     CONF_LEGACY_NAMING,
+    CONF_OPENTHERM_EVER_CONNECTED,
     CONF_RESTORE_MANUAL_TEMP_OPTION,
     CONF_SETPOINT_MODE,
     CONF_WISER_CLIMATE_CONTROLS,
@@ -199,6 +200,9 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
         )
 
         # Initialise api parameters
+        self.wiserhub.api_parameters.opentherm_ever_connected = config_entry.data.get(
+            CONF_OPENTHERM_EVER_CONNECTED, False
+        )
         self.wiserhub.api_parameters.stored_manual_target_temperature_alt_source = (
             self.previous_target_temp_option
         )
@@ -261,13 +265,15 @@ class WiserUpdateCoordinator(DataUpdateCoordinator):
                 f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
                 ex,
             )
+            raise UpdateFailed(str(ex)) from ex
         except asyncio.CancelledError:
-            _LOGGER.warning("Asyncio task cancelled during hub update!")
+            raise
         except Exception as ex:  # pylint: disable=broad-except  # noqa: BLE001
             _LOGGER.error(
                 "Unknown error fetching wiser (%s) data. %s.  Please report this error to the integration owner",
                 f"{DOMAIN}-{self.config_entry.data.get(CONF_NAME)}",
                 ex,
             )
+            raise UpdateFailed(str(ex)) from ex
         else:
             return True
