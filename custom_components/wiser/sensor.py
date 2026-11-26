@@ -165,13 +165,13 @@ def _selected_room_scheduled_setpoint_sensors(data, selected_room_ids):
 
 
 def _external_temperature_delta_sensors(hass, config_entry, data):
-    """Keep one diagnostic per room with actual external feedback configured."""
+    """Keep configured diagnostics even while a room cannot use feedback."""
     from homeassistant.helpers import entity_registry as er
 
     sensors = []
     for room in active_wiser_rooms(data):
         controller = data.external_room_control
-        if controller.has_temperature_sensor(room.id):
+        if controller.temperature_sensor_entity_id(room.id):
             sensors.append(WiserExternalTemperatureDeltaSensor(data, room.id))
             continue
         registry = er.async_get(hass)

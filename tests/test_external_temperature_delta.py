@@ -159,6 +159,24 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
             self.hass, SimpleNamespace(entry_id="entry-a"), self.data)
         self.registry.async_remove.assert_not_called()
 
+    def test_ineligible_room_keeps_sensor_until_assignment_is_removed(self):
+        entry = SimpleNamespace(entry_id="entry-a")
+        self.room.roomstat_id = 3
+        sensors = self.module._external_temperature_delta_sensors(
+            self.hass, entry, self.data
+        )
+        self.assertEqual([sensor.unique_id for sensor in sensors], [self.sensor.unique_id])
+        self.assertFalse(sensors[0].available)
+        self.registry.async_remove.assert_not_called()
+
+        self.room.roomstat_id = None
+        self.assertTrue(sensors[0].available)
+        self.controller.temperature_sensors.clear()
+        self.assertEqual(self.module._external_temperature_delta_sensors(
+            self.hass, entry, self.data
+        ), [])
+        self.registry.async_remove.assert_called_once_with("sensor.office_difference")
+
     def _climate_attributes(self):
         source = Path(self.module.__file__).with_name("climate.py")
         room_class = next(node for node in ast.parse(source.read_text()).body
