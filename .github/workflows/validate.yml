@@ -30,6 +30,23 @@ jobs:
       - name: Run complete test suite
         run: python -m unittest discover -s tests
 
+  ha-runtime-tests:
+    name: Home Assistant temperature conversion
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: tests/ha_runtime/requirements.txt
+      - name: Install Home Assistant runtime
+        run: python -m pip install -r tests/ha_runtime/requirements.txt
+      - name: Test real sensor state conversion
+        run: python -m unittest discover -s tests/ha_runtime
+
   integration-validation:
     name: HACS and hassfest
     runs-on: ubuntu-24.04
