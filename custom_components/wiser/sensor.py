@@ -171,19 +171,25 @@ def _external_temperature_delta_sensors(hass, config_entry, data):
     sensors = []
     for room in active_wiser_rooms(data):
         controller = data.external_room_control
-        if controller.temperature_sensor_entity_id(room.id):
-            sensors.append(WiserExternalTemperatureDeltaSensor(data, room.id))
-            continue
         registry = er.async_get(hass)
         entity_id = registry.async_get_entity_id(
             "sensor",
             DOMAIN,
             get_room_entity_unique_id(data, room.id, "external_temperature_delta"),
         )
-        if entity_id is not None:
-            entry = registry.async_get(entity_id)
-            if entry is not None and entry.config_entry_id == config_entry.entry_id:
-                registry.async_remove(entity_id)
+        entry = registry.async_get(entity_id) if entity_id else None
+        owned_entry = entry is not None and entry.config_entry_id == config_entry.entry_id
+        if controller.temperature_sensor_entity_id(room.id):
+            if owned_entry and entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                registry.async_update_entity(entity_id, disabled_by=None)
+            sensors.append(WiserExternalTemperatureDeltaSensor(data, room.id))
+        elif owned_entry and entry.disabled_by is None:
+            # Keep the registry entry across option reloads. Deleting it while
+            # its restored state exists can expose a registry-less Sensor row.
+            # Only reverse our own disablement when the source is reassigned.
+            registry.async_update_entity(
+                entity_id, disabled_by=er.RegistryEntryDisabler.INTEGRATION
+            )
     return sensors
 
 

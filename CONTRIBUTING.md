@@ -92,7 +92,7 @@ deliberately.
 The lightweight unit suite uses Home Assistant stubs. The separate temperature
 conversion suite runs the production delta sensor through Home Assistant's real
 `SensorEntity.state`, checking positive, negative and zero differences in °F,
-native °C values and unavailable readings. CI runs this suite in its own Python
+native °C values and unavailable readings. It also checks removal/reassignment against the real entity registry, preserving one entry without delete/create events. CI runs this suite in its own Python
 3.14 environment so the stubs cannot replace Home Assistant's converters.
 
 ```sh

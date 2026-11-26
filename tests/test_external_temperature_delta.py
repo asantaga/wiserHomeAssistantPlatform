@@ -49,8 +49,17 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
         self.sensor = self.module.WiserExternalTemperatureDeltaSensor(self.data, 1)
         self.registry = SimpleNamespace(
             async_get_entity_id=Mock(return_value="sensor.office_difference"),
-            async_get=Mock(return_value=SimpleNamespace(config_entry_id="entry-a")),
+            async_get=Mock(return_value=SimpleNamespace(
+                config_entry_id="entry-a", disabled_by=None,
+            )),
             async_remove=Mock(),
+            async_update_entity=Mock(),
+        )
+        self.registry.async_update_entity.side_effect = lambda _entity_id, **changes: (
+            vars(self.registry.async_get.return_value).update(changes)
+        )
+        sys.modules["homeassistant.helpers.entity_registry"].RegistryEntryDisabler = (
+            SimpleNamespace(INTEGRATION="integration", USER="user")
         )
         sys.modules["homeassistant.helpers.entity_registry"].async_get = (
             lambda _hass: self.registry
@@ -142,7 +151,7 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
         other = self.module.WiserExternalTemperatureDeltaSensor(other_data, 1)
         self.assertNotEqual(other.unique_id, original_id)
 
-    def test_setup_creates_only_feedback_and_removes_unassigned_registry_entry(self):
+    def test_setup_disables_unassigned_entry_and_reuses_it_when_reassigned(self):
         entry = SimpleNamespace(entry_id="entry-a")
         sensors = self.module._external_temperature_delta_sensors(self.hass, entry, self.data)
         self.assertEqual([sensor.unique_id for sensor in sensors], [self.sensor.unique_id])
@@ -150,13 +159,30 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
         self.controller.temperature_sensors = {}
         self.assertEqual(self.module._external_temperature_delta_sensors(
             self.hass, entry, self.data), [])
-        self.registry.async_remove.assert_called_once_with("sensor.office_difference")
+        self.registry.async_update_entity.assert_called_once_with(
+            "sensor.office_difference", disabled_by="integration"
+        )
+        self.controller.temperature_sensors = {"1": "sensor.office"}
+        sensors = self.module._external_temperature_delta_sensors(self.hass, entry, self.data)
+        self.assertEqual([sensor.unique_id for sensor in sensors], [self.sensor.unique_id])
+        self.assertEqual(self.registry.async_update_entity.call_args.kwargs, {"disabled_by": None})
+        self.registry.async_remove.assert_not_called()
 
     def test_cleanup_does_not_remove_another_config_entry(self):
         self.controller.temperature_sensors = {}
         self.registry.async_get.return_value.config_entry_id = "entry-b"
         self.module._external_temperature_delta_sensors(
             self.hass, SimpleNamespace(entry_id="entry-a"), self.data)
+        self.registry.async_remove.assert_not_called()
+        self.registry.async_update_entity.assert_not_called()
+
+    def test_user_disabled_sensor_is_not_enabled_or_overwritten(self):
+        entry = SimpleNamespace(entry_id="entry-a")
+        self.registry.async_get.return_value.disabled_by = "user"
+        self.module._external_temperature_delta_sensors(self.hass, entry, self.data)
+        self.controller.temperature_sensors.clear()
+        self.module._external_temperature_delta_sensors(self.hass, entry, self.data)
+        self.registry.async_update_entity.assert_not_called()
         self.registry.async_remove.assert_not_called()
 
     def test_ineligible_room_keeps_sensor_until_assignment_is_removed(self):
@@ -175,7 +201,10 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
         self.assertEqual(self.module._external_temperature_delta_sensors(
             self.hass, entry, self.data
         ), [])
-        self.registry.async_remove.assert_called_once_with("sensor.office_difference")
+        self.registry.async_update_entity.assert_called_once_with(
+            "sensor.office_difference", disabled_by="integration"
+        )
+        self.registry.async_remove.assert_not_called()
 
     def _climate_attributes(self):
         source = Path(self.module.__file__).with_name("climate.py")
