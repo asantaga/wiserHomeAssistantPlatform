@@ -214,6 +214,57 @@ class ExternalTemperatureDeltaTest(unittest.TestCase):
         self.assertIsNone(attrs["external_temperature_delta_entity_id"])
         self.assertTrue(attrs["is_external_temperature_feedback"])
 
+    def test_climate_metadata_updates_on_source_change_and_expiry(self):
+        callbacks = {}
+        removers = []
+        def track(_hass, entities, callback):
+            self.assertEqual(entities, ["sensor.office"])
+            callbacks["change"] = callback
+            return Mock()
+        def interval(_hass, callback, duration):
+            self.assertEqual(duration, timedelta(seconds=30))
+            callbacks["expiry"] = callback
+            return Mock()
+        class Base:
+            async def async_added_to_hass(self):
+                pass
+        source = Path(self.module.__file__).with_name("climate.py")
+        room_class = next(node for node in ast.parse(source.read_text()).body
+                          if isinstance(node, ast.ClassDef) and node.name == "WiserRoom")
+        methods = {"async_added_to_hass", "_async_external_temperature_changed",
+                   "_external_temperature_attributes"}
+        room_class.body = [node for node in room_class.body
+                           if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                           and node.name in methods]
+        room_class.bases = [ast.Name(id="Base", ctx=ast.Load())]
+        namespace = {
+            "Base": Base, "callback": lambda func: func, "timedelta": timedelta,
+            "async_track_state_change_event": track, "DOMAIN": "wiser",
+            "get_room_entity_unique_id": self.unique_id,
+        }
+        tree = ast.fix_missing_locations(ast.Module(body=[room_class], type_ignores=[]))
+        exec(compile(tree, "climate.py", "exec"), namespace)
+        entity = namespace[room_class.name]()
+        entity._data, entity._room_id, entity.hass = self.data, 1, self.hass
+        entity.async_on_remove = removers.append
+        published = []
+        entity.async_write_ha_state = lambda: published.append(
+            entity._external_temperature_attributes()
+        )
+        event = SimpleNamespace(async_track_time_interval=interval)
+        with patch.dict(sys.modules, {"homeassistant.helpers.event": event}):
+            asyncio.run(entity.async_added_to_hass())
+        self.source.state = "unavailable"
+        callbacks["change"](None)
+        self.assertFalse(published[-1]["external_temperature_available"])
+        self.source.state = "21.5"
+        callbacks["change"](None)
+        self.assertTrue(published[-1]["external_temperature_available"])
+        self.source.last_reported -= timedelta(minutes=31)
+        callbacks["expiry"](None)
+        self.assertFalse(published[-1]["external_temperature_available"])
+        self.assertEqual(len(removers), 2)
+
     def test_source_changes_expiry_and_hub_updates_publish_and_unsubscribe(self):
         callbacks = {}
         unsubscribers = []
