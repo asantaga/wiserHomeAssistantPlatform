@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Laitteisto"
       },
+      "external_temperature_delta": {
+        "name": "Ulkoisen lämpötilan erotus"
+      },
       "current_schedule_temperature": {
         "name": "Nykyinen aikataulutettu lämpötila"
       },

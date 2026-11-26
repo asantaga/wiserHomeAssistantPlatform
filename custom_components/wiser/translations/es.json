@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Equipo"
       },
+      "external_temperature_delta": {
+        "name": "Diferencia de temperatura externa"
+      },
       "current_schedule_temperature": {
         "name": "Temperatura actual programada"
       },

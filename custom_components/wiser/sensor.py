@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
+import math
 
 from aioWiserHeatAPI.const import TEXT_OFF, TEXT_ON, TEXT_UNKNOWN
 
@@ -161,6 +162,29 @@ def _selected_room_scheduled_setpoint_sensors(data, selected_room_ids):
         for room in active_wiser_rooms(data)
         if str(room.id) in selected_room_ids and not room_has_climate(room)
     ]
+
+
+def _external_temperature_delta_sensors(hass, config_entry, data):
+    """Keep one diagnostic per room with actual external feedback configured."""
+    from homeassistant.helpers import entity_registry as er
+
+    sensors = []
+    for room in active_wiser_rooms(data):
+        controller = data.external_room_control
+        if controller.has_temperature_sensor(room.id):
+            sensors.append(WiserExternalTemperatureDeltaSensor(data, room.id))
+            continue
+        registry = er.async_get(hass)
+        entity_id = registry.async_get_entity_id(
+            "sensor",
+            DOMAIN,
+            get_room_entity_unique_id(data, room.id, "external_temperature_delta"),
+        )
+        if entity_id is not None:
+            entry = registry.async_get(entity_id)
+            if entry is not None and entry.config_entry_id == config_entry.entry_id:
+                registry.async_remove(entity_id)
+    return sensors
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
@@ -496,6 +520,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     wiser_sensors.extend(
         _selected_room_scheduled_setpoint_sensors(data, schedule_setpoint_rooms)
     )
+    wiser_sensors.extend(_external_temperature_delta_sensors(hass, config_entry, data))
 
     # Add smoke-alarm sensors
     for device in data.wiserhub.devices.smokealarms.all:
@@ -1513,6 +1538,116 @@ class WiserSmartplugPower(WiserSensor):
         if self._sensor_type == "Power":
             return UnitOfPower.WATT
         return UnitOfEnergy.KILO_WATT_HOUR
+
+
+class WiserExternalTemperatureDeltaSensor(
+    WiserEntityMixin, CoordinatorEntity, SensorEntity
+):
+    """External feedback minus the hub's original measured room temperature."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "external_temperature_delta"
+    _attr_icon = "mdi:delta"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # Older HA versions have no delta class: keep Celsius without applying an
+    # absolute-temperature conversion (which would incorrectly add 32 in °F).
+    _attr_device_class = getattr(SensorDeviceClass, "TEMPERATURE_DELTA", None)
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+
+    def __init__(self, data, room_id: int) -> None:
+        """Keep the room identity independent of its assigned source."""
+        super().__init__(data)
+        self._data = data
+        self._room_id = room_id
+
+    @property
+    def unique_id(self):
+        """Retain history when the room or source is renamed or reassigned."""
+        return get_room_entity_unique_id(
+            self._data, self._room_id, "external_temperature_delta"
+        )
+
+    @property
+    def native_value(self):
+        """Subtract Celsius measurements, leaving delta conversion to HA."""
+        controller = self._data.external_room_control
+        external = controller.external_temperature(self._room_id)
+        room = self._data.wiserhub.rooms.get_by_id(self._room_id)
+        wiser = getattr(room, "current_temperature", None)
+        if external is None or isinstance(wiser, bool):
+            return None
+        try:
+            wiser = float(wiser)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(wiser):
+            return None
+        return round(external - wiser, 2)
+
+    @property
+    def available(self):
+        """Require a successful hub refresh and both usable measurements."""
+        return super().available and self.native_value is not None
+
+    @property
+    def extra_state_attributes(self):
+        """Identify the measurement source and the difference direction."""
+        return {
+            "external_temperature_sensor": (
+                self._data.external_room_control.temperature_sensor_entity_id(
+                    self._room_id
+                )
+            ),
+            "difference_direction": "external_minus_wiser",
+        }
+
+    @property
+    def device_info(self):
+        """Attach the diagnostic to the existing logical room device."""
+        return {
+            "name": get_device_name(self._data, self._room_id, "room"),
+            "identifiers": {
+                (DOMAIN, get_identifier(self._data, self._room_id, "room"))
+            },
+            "manufacturer": MANUFACTURER,
+            "model": "Room",
+            **get_hub_via_device_info(self._data),
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Update on source changes as well as hub refreshes and source expiry."""
+        from homeassistant.helpers.event import (
+            async_track_state_change_event,
+            async_track_time_interval,
+        )
+
+        await super().async_added_to_hass()
+        source = self._data.external_room_control.temperature_sensor_entity_id(
+            self._room_id
+        )
+        if source:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, [source], self._async_source_updated
+                )
+            )
+        self.async_on_remove(
+            async_track_time_interval(
+                self.hass, self._async_source_updated, timedelta(seconds=30)
+            )
+        )
+
+    @callback
+    def _async_source_updated(self, _event=None):
+        """Publish source changes and expire stale values without a hub event."""
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self):
+        """Publish the latest Wiser measurement and hub availability."""
+        self.async_write_ha_state()
 
 
 class WiserRoomScheduledSetpointSensor(WiserSensor):

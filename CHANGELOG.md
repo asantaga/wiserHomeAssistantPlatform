@@ -4,11 +4,13 @@ All notable changes to the Wiser Home Assistant integration, newest release firs
 
 For releases before v3.3.5, see the [Full Change Log](https://github.com/asantaga/wiserHomeAssistantPlatform/wiki/Full-Change-Log) on our wiki.
 
-## v4.1.1b0
+## v4.2.0b0
 
 ### Upgrade notes
 
 ### Added
+
+- Room climates now identify their assigned external temperature feedback source and its availability. Eligible rooms also get an External temperature delta diagnostic sensor (external measurement minus Wiser room measurement), with history, stale-reading handling and stable identity across source reassignment - issue [#839](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/839).
 
 ### Fixed
 

@@ -131,6 +131,7 @@ class RoomHeatingActionTest(unittest.TestCase):
                     ),
                 )
                 entity.data = entity._data
+                entity._external_temperature_attributes = lambda: {}
                 attributes = entity.extra_state_attributes
                 self.assertIs(attributes["is_heating"], heating)
                 self.assertEqual(attributes["control_output_state"], output)

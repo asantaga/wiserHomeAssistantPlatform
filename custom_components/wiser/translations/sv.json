@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Utrustning"
       },
+      "external_temperature_delta": {
+        "name": "Extern temperaturskillnad"
+      },
       "current_schedule_temperature": {
         "name": "Aktuell schematemperatur"
       },

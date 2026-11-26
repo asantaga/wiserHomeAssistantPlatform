@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Apparatuur"
       },
+      "external_temperature_delta": {
+        "name": "Extern temperatuurverschil"
+      },
       "current_schedule_temperature": {
         "name": "Huidige schematemperatuur"
       },
