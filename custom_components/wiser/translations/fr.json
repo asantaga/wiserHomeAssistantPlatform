@@ -767,7 +767,7 @@
         "name": "Température cible"
       },
       "external_temperature_delta": {
-        "name": "Écart de température externe"
+        "name": "Delta du capteur secondaire"
       },
       "current_schedule_temperature": {
         "name": "Température programmée actuelle"

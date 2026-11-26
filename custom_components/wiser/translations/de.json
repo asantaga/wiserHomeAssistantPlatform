@@ -767,7 +767,7 @@
         "name": "Zieltemperatur"
       },
       "external_temperature_delta": {
-        "name": "Externe Temperaturdifferenz"
+        "name": "Delta des Sekundärsensors"
       },
       "current_schedule_temperature": {
         "name": "Aktuelle Zeitplantemperatur"

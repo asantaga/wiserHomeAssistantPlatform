@@ -867,7 +867,7 @@
         "name": "Apparatuur"
       },
       "external_temperature_delta": {
-        "name": "Extern temperatuurverschil"
+        "name": "Delta secundaire sensor"
       },
       "current_schedule_temperature": {
         "name": "Huidige schematemperatuur"

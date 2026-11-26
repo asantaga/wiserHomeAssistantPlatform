@@ -867,7 +867,7 @@
         "name": "Utrustning"
       },
       "external_temperature_delta": {
-        "name": "Extern temperaturskillnad"
+        "name": "Sekundärsensorns differens"
       },
       "current_schedule_temperature": {
         "name": "Aktuell schematemperatur"

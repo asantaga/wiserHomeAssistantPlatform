@@ -867,7 +867,7 @@
         "name": "Udstyr"
       },
       "external_temperature_delta": {
-        "name": "Ekstern temperaturforskel"
+        "name": "Difference for sekundær sensor"
       },
       "current_schedule_temperature": {
         "name": "Aktuel plantemperatur"

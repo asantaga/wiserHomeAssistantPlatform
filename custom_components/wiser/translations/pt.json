@@ -867,7 +867,7 @@
         "name": "Equipamento"
       },
       "external_temperature_delta": {
-        "name": "Diferença de temperatura externa"
+        "name": "Delta do sensor secundário"
       },
       "current_schedule_temperature": {
         "name": "Temperatura atual da programação"

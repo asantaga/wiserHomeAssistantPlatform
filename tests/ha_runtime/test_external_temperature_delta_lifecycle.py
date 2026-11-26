@@ -26,7 +26,7 @@ class ExternalTemperatureDeltaLifecycleTest(unittest.IsolatedAsyncioTestCase):
         self.entry = self.registry.async_get_or_create(
             "sensor", "wiser", self.unique_id,
             suggested_object_id="test_external_temperature_delta",
-            original_name="External temperature delta",
+            original_name="Secondary sensor delta",
         )
         self.registry.async_update_entity(
             self.entry.entity_id, name="My delta", icon="mdi:delta"
