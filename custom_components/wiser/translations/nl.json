@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Oude naamgeving",
           "show_wiser_sidebar": "Toon Wiser in zijbalk",
-          "wiser_climate_controls": "Wiser-klimaatbediening gebruiken"
+          "load_dashboard_cards": "Dashboardkaarten laden",
+          "wiser_climate_controls": "Wiser-klimaatbediening gebruiken",
+          "pre_cache_resource_images": "Bronafbeeldingen vooraf laden"
         },
         "data_description": {
           "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd.",
-          "wiser_climate_controls": "Pas de Wiser-opmaak voor warmtevraag en passieve modus toe op de thermostaatkaarten van Wiser-ruimtes en de klimaatbediening in Meer informatie, met dezelfde themavariabelen. De standaard temperatuurverwerking, het dialoogvenster, de geschiedenis en de instellingen van Home Assistant blijven behouden."
+          "show_wiser_sidebar": "Toon Wiser in de zijbalk van Home Assistant om de panelen te openen.",
+          "load_dashboard_cards": "Laad Wiser-kaarten automatisch op dashboards. Schakel uit om hun dashboardbronnen te verwijderen. Zijbalkpanelen blijven beschikbaar. Herlaad de browser na een wijziging.",
+          "wiser_climate_controls": "Pas de Wiser-opmaak voor warmtevraag en passieve modus toe op de thermostaatkaarten van Wiser-ruimtes en de klimaatbediening in Meer informatie, met dezelfde themavariabelen. De standaard temperatuurverwerking, het dialoogvenster, de geschiedenis en de instellingen van Home Assistant blijven behouden.",
+          "pre_cache_resource_images": "Download gedeelde Wiser-apparaatafbeeldingen vooraf. Schakel uit om afbeeldingen alleen te laden wanneer nodig. Herlaad de browser na een wijziging."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Bedrijfsmodus",
           "slave_status": "OpenTherm slave-status",
           "tracked_room_id": "ID van gevolgde kamer"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Opties voor de gebruikersinterface",
+        "data": {
+          "legacy_naming": "Oude naamgeving",
+          "show_wiser_sidebar": "Toon Wiser in zijbalk",
+          "load_dashboard_cards": "Dashboardkaarten laden",
+          "wiser_climate_controls": "Wiser-klimaatbediening gebruiken",
+          "pre_cache_resource_images": "Bronafbeeldingen vooraf laden"
+        },
+        "data_description": {
+          "legacy_naming": "Neem kamernamen op in de namen van Wiser-apparaten. Indien ingeschakeld, worden gebiedsnamen gedupliceerd wanneer Home Assistant entiteits-ID's opnieuw genereert met de standaardindeling via Instellingen → Systeem → Indeling entiteits-ID (Home Assistant 2026.8 en later) en de namen van het gebied en de Wiser-kamer overeenkomen. Als u deze optie wijzigt, worden bestaande entiteits-ID's niet hernoemd.",
+          "show_wiser_sidebar": "Neem deze hub op in de Wiser-zijbalkpanelen. Het zijbalkitem blijft zichtbaar zolang een hub deze optie inschakelt.",
+          "load_dashboard_cards": "Laad Wiser-kaarten automatisch op dashboards. Schakel dit op elke Wiser-hub uit om hun dashboardbronnen te verwijderen. Zijbalkpanelen blijven beschikbaar. Herlaad de browser na een wijziging.",
+          "wiser_climate_controls": "Pas de Wiser-opmaak voor warmtevraag en passieve modus toe op de thermostaatkaarten van Wiser-ruimtes en de klimaatbediening in Meer informatie, met dezelfde themavariabelen. De standaard temperatuurverwerking, het dialoogvenster, de geschiedenis en de instellingen van Home Assistant blijven behouden.",
+          "pre_cache_resource_images": "Download gedeelde Wiser-apparaatafbeeldingen vooraf. Schakel uit om afbeeldingen alleen te laden wanneer nodig. Bij meerdere hubs is inschakelen op één hub voldoende. Herlaad de browser na een wijziging."
         }
       }
     },

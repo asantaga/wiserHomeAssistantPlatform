@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Bisherige Namensgebung",
           "show_wiser_sidebar": "Wiser in der Seitenleiste anzeigen",
-          "wiser_climate_controls": "Wiser-Klimasteuerung verwenden"
+          "load_dashboard_cards": "Dashboard-Karten laden",
+          "wiser_climate_controls": "Wiser-Klimasteuerung verwenden",
+          "pre_cache_resource_images": "Ressourcenbilder vorab laden"
         },
         "data_description": {
           "legacy_naming": "Raumnamen in Wiser-Gerätenamen aufnehmen. Wenn diese Option aktiviert ist, werden Bereichsnamen beim Neuerstellen der Entitäts-IDs mit dem Standardformat unter Einstellungen → System → Entitäts-ID-Format (Home Assistant 2026.8 und neuer) doppelt verwendet, wenn Bereichs- und Wiser-Raumname übereinstimmen. Diese Option ändert keine bestehenden Entitäts-IDs.",
-          "wiser_climate_controls": "Wenden Sie die Wiser-Darstellung für Wärmebedarf und passiven Modus mit denselben Theme-Variablen auf die Thermostatkarten der Wiser-Räume und die Klimasteuerung unter Mehr Informationen an. Die normale Temperaturverarbeitung, der Dialog, der Verlauf und die Einstellungen von Home Assistant bleiben erhalten."
+          "show_wiser_sidebar": "Wiser in der Home-Assistant-Seitenleiste anzeigen, um auf die Panels zuzugreifen.",
+          "load_dashboard_cards": "Wiser-Karten automatisch auf Dashboards laden. Deaktivieren, um deren Dashboard-Ressourcen zu entfernen. Seitenleisten-Panels bleiben verfügbar. Nach Änderungen den Browser neu laden.",
+          "wiser_climate_controls": "Wenden Sie die Wiser-Darstellung für Wärmebedarf und passiven Modus mit denselben Theme-Variablen auf die Thermostatkarten der Wiser-Räume und die Klimasteuerung unter Mehr Informationen an. Die normale Temperaturverarbeitung, der Dialog, der Verlauf und die Einstellungen von Home Assistant bleiben erhalten.",
+          "pre_cache_resource_images": "Gemeinsame Wiser-Gerätebilder im Voraus laden. Deaktivieren, um Bilder nur bei Bedarf zu laden. Nach Änderungen den Browser neu laden."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Betriebsmodus",
           "slave_status": "OpenTherm-Slave-Status",
           "tracked_room_id": "ID des überwachten Raums"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "UI-Optionen",
+        "data": {
+          "legacy_naming": "Bisherige Namensgebung",
+          "show_wiser_sidebar": "Wiser in der Seitenleiste anzeigen",
+          "load_dashboard_cards": "Dashboard-Karten laden",
+          "wiser_climate_controls": "Wiser-Klimasteuerung verwenden",
+          "pre_cache_resource_images": "Ressourcenbilder vorab laden"
+        },
+        "data_description": {
+          "legacy_naming": "Raumnamen in Wiser-Gerätenamen aufnehmen. Wenn diese Option aktiviert ist, werden Bereichsnamen beim Neuerstellen der Entitäts-IDs mit dem Standardformat unter Einstellungen → System → Entitäts-ID-Format (Home Assistant 2026.8 und neuer) doppelt verwendet, wenn Bereichs- und Wiser-Raumname übereinstimmen. Diese Option ändert keine bestehenden Entitäts-IDs.",
+          "show_wiser_sidebar": "Diesen Hub in die Wiser-Seitenleisten-Panels aufnehmen. Der Seitenleisteneintrag bleibt sichtbar, solange mindestens ein Hub diese Option aktiviert.",
+          "load_dashboard_cards": "Wiser-Karten automatisch auf Dashboards laden. Auf allen Wiser-Hubs deaktivieren, um deren Dashboard-Ressourcen zu entfernen. Seitenleisten-Panels bleiben verfügbar. Nach Änderungen den Browser neu laden.",
+          "wiser_climate_controls": "Wenden Sie die Wiser-Darstellung für Wärmebedarf und passiven Modus mit denselben Theme-Variablen auf die Thermostatkarten der Wiser-Räume und die Klimasteuerung unter Mehr Informationen an. Die normale Temperaturverarbeitung, der Dialog, der Verlauf und die Einstellungen von Home Assistant bleiben erhalten.",
+          "pre_cache_resource_images": "Gemeinsame Wiser-Gerätebilder im Voraus laden. Deaktivieren, um Bilder nur bei Bedarf zu laden. Bei mehreren Hubs genügt die Aktivierung auf einem Hub. Nach Änderungen den Browser neu laden."
         }
       }
     },

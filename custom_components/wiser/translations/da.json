@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Ældre navngivning",
           "show_wiser_sidebar": "Vis Wiser i sidepanelet",
-          "wiser_climate_controls": "Brug Wisers klimastyring"
+          "load_dashboard_cards": "Indlæs dashboardkort",
+          "wiser_climate_controls": "Brug Wisers klimastyring",
+          "pre_cache_resource_images": "Forudindlæs ressourcebilleder"
         },
         "data_description": {
           "legacy_naming": "Medtag rumnavne i Wiser-enhedsnavne. Hvis dette er aktiveret, vil regenerering af entitets-id'er i Home Assistant med standardformatet under Indstillinger → System → Entitets-id-format (Home Assistant 2026.8 og nyere) duplikere områdenavne, når området og Wiser-rummet har samme navn. Ændring af denne indstilling omdøber ikke eksisterende entitets-id'er.",
-          "wiser_climate_controls": "Anvend Wisers visning af varmebehov og passiv tilstand på termostatkort for Wiser-rum og klimastyringen i Mere info med de samme temavariabler. Home Assistants normale temperaturhåndtering, dialog, historik og indstillinger bevares."
+          "show_wiser_sidebar": "Vis Wiser i Home Assistants sidebjælke for at få adgang til panelerne.",
+          "load_dashboard_cards": "Indlæs automatisk Wiser-kort på dashboards. Slå fra for at fjerne deres dashboardressourcer. Sidepaneler er stadig tilgængelige. Genindlæs browseren efter ændringen.",
+          "wiser_climate_controls": "Anvend Wisers visning af varmebehov og passiv tilstand på termostatkort for Wiser-rum og klimastyringen i Mere info med de samme temavariabler. Home Assistants normale temperaturhåndtering, dialog, historik og indstillinger bevares.",
+          "pre_cache_resource_images": "Hent fælles Wiser-enhedsbilleder på forhånd. Slå fra for kun at hente billeder efter behov. Genindlæs browseren efter ændringen."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Driftstilstand",
           "slave_status": "OpenTherm-slavestatus",
           "tracked_room_id": "Id for overvåget rum"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Brugerfladeindstillinger",
+        "data": {
+          "legacy_naming": "Ældre navngivning",
+          "show_wiser_sidebar": "Vis Wiser i sidepanelet",
+          "load_dashboard_cards": "Indlæs dashboardkort",
+          "wiser_climate_controls": "Brug Wisers klimastyring",
+          "pre_cache_resource_images": "Forudindlæs ressourcebilleder"
+        },
+        "data_description": {
+          "legacy_naming": "Medtag rumnavne i Wiser-enhedsnavne. Hvis dette er aktiveret, vil regenerering af entitets-id'er i Home Assistant med standardformatet under Indstillinger → System → Entitets-id-format (Home Assistant 2026.8 og nyere) duplikere områdenavne, når området og Wiser-rummet har samme navn. Ændring af denne indstilling omdøber ikke eksisterende entitets-id'er.",
+          "show_wiser_sidebar": "Medtag denne hub i Wiser-sidepanelerne. Sidebjælkens menupunkt forbliver synligt, så længe mindst én hub aktiverer dette valg.",
+          "load_dashboard_cards": "Indlæs automatisk Wiser-kort på dashboards. Slå fra på alle Wiser-hubs for at fjerne deres dashboardressourcer. Sidepaneler er stadig tilgængelige. Genindlæs browseren efter ændringen.",
+          "wiser_climate_controls": "Anvend Wisers visning af varmebehov og passiv tilstand på termostatkort for Wiser-rum og klimastyringen i Mere info med de samme temavariabler. Home Assistants normale temperaturhåndtering, dialog, historik og indstillinger bevares.",
+          "pre_cache_resource_images": "Hent fælles Wiser-enhedsbilleder på forhånd. Slå fra for kun at hente billeder efter behov. Med flere hubs er forudindlæsning aktiv, hvis mindst én hub aktiverer den. Genindlæs browseren efter ændringen."
         }
       }
     },

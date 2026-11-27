@@ -25,6 +25,7 @@ class SidebarIconsTest(unittest.IsolatedAsyncioTestCase):
             "__file__": str(ROOT / "__init__.py"), "Path": Path,
             "card_version": version, "add_extra_js_url": register,
             "async_load_registry": AsyncMock(),
+            "async_update_image_precache": AsyncMock(),
             "URL_BASE": "/wiser", "MODE_STORAGE": "storage",
             "MAJOR_VERSION": 2026, "MINOR_VERSION": 7,
             "WISER_CLIMATE_CONTROLS_MIN_HA_VERSION": (2026, 7),

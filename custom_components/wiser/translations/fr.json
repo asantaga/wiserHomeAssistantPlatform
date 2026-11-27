@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Nommage historique",
           "show_wiser_sidebar": "Afficher Wiser dans la barre latérale",
-          "wiser_climate_controls": "Utiliser les commandes de chauffage Wiser"
+          "load_dashboard_cards": "Charger les cartes de tableau de bord",
+          "wiser_climate_controls": "Utiliser les commandes de chauffage Wiser",
+          "pre_cache_resource_images": "Précharger les images des ressources"
         },
         "data_description": {
           "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants.",
-          "wiser_climate_controls": "Appliquez les styles Wiser de demande de chauffage et de mode passif aux cartes Thermostat des pièces Wiser et à la commande de chauffage dans Plus d’informations, avec les mêmes variables de thème. La gestion de la température, la boîte de dialogue, l’historique et les paramètres natifs de Home Assistant sont conservés."
+          "show_wiser_sidebar": "Afficher Wiser dans la barre latérale de Home Assistant pour accéder à ses panneaux.",
+          "load_dashboard_cards": "Charger automatiquement les cartes Wiser sur les tableaux de bord. Désactiver pour retirer leurs ressources de tableau de bord. Les panneaux de la barre latérale restent disponibles. Recharger le navigateur après modification.",
+          "wiser_climate_controls": "Appliquez les styles Wiser de demande de chauffage et de mode passif aux cartes Thermostat des pièces Wiser et à la commande de chauffage dans Plus d’informations, avec les mêmes variables de thème. La gestion de la température, la boîte de dialogue, l’historique et les paramètres natifs de Home Assistant sont conservés.",
+          "pre_cache_resource_images": "Télécharger à l’avance les images partagées des appareils Wiser. Désactiver pour charger les images uniquement si nécessaire. Recharger le navigateur après modification."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Mode de fonctionnement",
           "slave_status": "État de l’esclave OpenTherm",
           "tracked_room_id": "Identifiant de la pièce suivie"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Options de l’interface",
+        "data": {
+          "legacy_naming": "Nommage historique",
+          "show_wiser_sidebar": "Afficher Wiser dans la barre latérale",
+          "load_dashboard_cards": "Charger les cartes de tableau de bord",
+          "wiser_climate_controls": "Utiliser les commandes de chauffage Wiser",
+          "pre_cache_resource_images": "Précharger les images des ressources"
+        },
+        "data_description": {
+          "legacy_naming": "Inclure le nom des pièces dans le nom des appareils Wiser. Si cette option est activée, la régénération des identifiants d’entité avec le format par défaut dans Paramètres → Système → Format des identifiants d’entité (Home Assistant 2026.8 et versions ultérieures) répétera le nom de la zone si celui-ci correspond au nom de la pièce Wiser. Cette option ne renomme pas les identifiants d’entité existants.",
+          "show_wiser_sidebar": "Inclure ce hub dans les panneaux Wiser de la barre latérale. L’entrée reste visible tant qu’au moins un hub active cette option.",
+          "load_dashboard_cards": "Charger automatiquement les cartes Wiser sur les tableaux de bord. Désactiver sur tous les hubs Wiser pour retirer leurs ressources de tableau de bord. Les panneaux de la barre latérale restent disponibles. Recharger le navigateur après modification.",
+          "wiser_climate_controls": "Appliquez les styles Wiser de demande de chauffage et de mode passif aux cartes Thermostat des pièces Wiser et à la commande de chauffage dans Plus d’informations, avec les mêmes variables de thème. La gestion de la température, la boîte de dialogue, l’historique et les paramètres natifs de Home Assistant sont conservés.",
+          "pre_cache_resource_images": "Télécharger à l’avance les images partagées des appareils Wiser. Désactiver pour charger les images uniquement si nécessaire. Avec plusieurs hubs, un seul hub activant cette option suffit. Recharger le navigateur après modification."
         }
       }
     },

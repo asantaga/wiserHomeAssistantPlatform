@@ -10,9 +10,13 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
+- Added **Load dashboard cards** under **UI options** (enabled by default). Disable it on all Wiser hubs to remove automatic dashboard resources while retaining sidebar panels - issue [#841](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/841).
+
 ### Fixed
 
 ### Changed
+
+- Serve shared card device artwork from `wiser/frontend/images` and add **Pre-cache resource images** under **UI options** (enabled by default); disabling it loads artwork only when needed - issue [#841](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/841).
 
 
 ## v4.1.0

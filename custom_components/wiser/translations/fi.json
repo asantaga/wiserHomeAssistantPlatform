@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Vanha nimeämistapa",
           "show_wiser_sidebar": "Näytä Wiser sivupalkissa",
-          "wiser_climate_controls": "Käytä Wiserin ilmastointiohjaimia"
+          "load_dashboard_cards": "Lataa kojelaudan kortit",
+          "wiser_climate_controls": "Käytä Wiserin ilmastointiohjaimia",
+          "pre_cache_resource_images": "Esilataa resurssikuvat"
         },
         "data_description": {
           "legacy_naming": "Sisällytä huoneiden nimet Wiser-laitteiden nimiin. Jos tämä on käytössä, entiteettitunnusten luominen uudelleen Home Assistantin oletusmuodolla kohdassa Asetukset → Järjestelmä → Entiteettitunnuksen muoto (Home Assistant 2026.8 ja uudemmat) kahdentaa alueiden nimet, kun alueen ja Wiser-huoneen nimet ovat samat. Tämän asetuksen muuttaminen ei nimeä nykyisiä entiteettitunnuksia uudelleen.",
-          "wiser_climate_controls": "Käytä samoilla teemamuuttujilla Wiserin lämmöntarpeen ja passiivisen tilan tyylejä Wiser-huoneiden termostaattikorteissa ja Lisätiedot-ikkunan ilmastointiohjaimessa. Home Assistantin oma lämpötilankäsittely, valintaikkuna, historia ja asetukset säilyvät."
+          "show_wiser_sidebar": "Näytä Wiser Home Assistantin sivupalkissa, jotta pääset sen paneeleihin.",
+          "load_dashboard_cards": "Lataa Wiser-kortit automaattisesti kojelaudoille. Poista käytöstä poistaaksesi niiden kojelautaresurssit. Sivupalkin paneelit pysyvät käytettävissä. Päivitä selain muutoksen jälkeen.",
+          "wiser_climate_controls": "Käytä samoilla teemamuuttujilla Wiserin lämmöntarpeen ja passiivisen tilan tyylejä Wiser-huoneiden termostaattikorteissa ja Lisätiedot-ikkunan ilmastointiohjaimessa. Home Assistantin oma lämpötilankäsittely, valintaikkuna, historia ja asetukset säilyvät.",
+          "pre_cache_resource_images": "Lataa jaetut Wiser-laitekuvat etukäteen. Poista käytöstä ladataksesi kuvat vain tarvittaessa. Päivitä selain muutoksen jälkeen."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Toimintatila",
           "slave_status": "OpenTherm-orjalaitteen tila",
           "tracked_room_id": "Seurattavan huoneen tunnus"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Käyttöliittymän asetukset",
+        "data": {
+          "legacy_naming": "Vanha nimeämistapa",
+          "show_wiser_sidebar": "Näytä Wiser sivupalkissa",
+          "load_dashboard_cards": "Lataa kojelaudan kortit",
+          "wiser_climate_controls": "Käytä Wiserin ilmastointiohjaimia",
+          "pre_cache_resource_images": "Esilataa resurssikuvat"
+        },
+        "data_description": {
+          "legacy_naming": "Sisällytä huoneiden nimet Wiser-laitteiden nimiin. Jos tämä on käytössä, entiteettitunnusten luominen uudelleen Home Assistantin oletusmuodolla kohdassa Asetukset → Järjestelmä → Entiteettitunnuksen muoto (Home Assistant 2026.8 ja uudemmat) kahdentaa alueiden nimet, kun alueen ja Wiser-huoneen nimet ovat samat. Tämän asetuksen muuttaminen ei nimeä nykyisiä entiteettitunnuksia uudelleen.",
+          "show_wiser_sidebar": "Sisällytä tämä keskitin Wiserin sivupalkin paneeleihin. Sivupalkin valinta pysyy näkyvissä, kun vähintään yksi keskitin ottaa tämän asetuksen käyttöön.",
+          "load_dashboard_cards": "Lataa Wiser-kortit automaattisesti kojelaudoille. Poista käytöstä kaikissa Wiser-keskittimissä poistaaksesi niiden kojelautaresurssit. Sivupalkin paneelit pysyvät käytettävissä. Päivitä selain muutoksen jälkeen.",
+          "wiser_climate_controls": "Käytä samoilla teemamuuttujilla Wiserin lämmöntarpeen ja passiivisen tilan tyylejä Wiser-huoneiden termostaattikorteissa ja Lisätiedot-ikkunan ilmastointiohjaimessa. Home Assistantin oma lämpötilankäsittely, valintaikkuna, historia ja asetukset säilyvät.",
+          "pre_cache_resource_images": "Lataa jaetut Wiser-laitekuvat etukäteen. Poista käytöstä ladataksesi kuvat vain tarvittaessa. Usean keskittimen tapauksessa yhden keskittimen valinta riittää. Päivitä selain muutoksen jälkeen."
         }
       }
     },

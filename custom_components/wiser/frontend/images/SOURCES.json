@@ -1,0 +1,78 @@
+{
+  "Controller": {
+    "file": "controller.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/1_Channel_2nd_Gen_Hub_Website_1500x1500_1.png?v=1786630936"
+  },
+  "RoomStat": {
+    "file": "room-thermostat.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Shopify_-_room_stat_-_front.png?v=1763458880"
+  },
+  "SmartPlug": {
+    "file": "smart-plug.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Shopify_-_plug_-_front.png?v=1774279157"
+  },
+  "TemperatureHumiditySensor": {
+    "file": "temperature-humidity.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Temp_Humidity_Sensor_Website_1500x1500_1.png?v=1786630816"
+  },
+  "iTRV": {
+    "file": "radiator-thermostat.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/1_fedc2366-16a9-48ba-955b-a5dc07c0d1b4.png?v=1787155841"
+  },
+  "UnderFloorHeating": {
+    "file": "underfloor-heating.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Shopify_-_UFH_-_front.png?v=1751492020"
+  },
+  "HeatingActuator": {
+    "file": "heating-actuator.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Shopify_-_EHS_-_front.png?v=1774279265"
+  },
+  "DimmableLight": {
+    "file": "dimmer.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/MicroModuleDimmer-CCT5010-0003-renderresized.png?v=1754186022"
+  },
+  "OnOffLight": {
+    "file": "power.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Power_Micro_Module_CCTFR6730_Front_1500_3e71a20f-6381-4ef1-99c3-d0897cd7be48.png?v=1756844975"
+  },
+  "LoadControl": {
+    "file": "power.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Power_Micro_Module_CCTFR6730_Front_1500_3e71a20f-6381-4ef1-99c3-d0897cd7be48.png?v=1756844975"
+  },
+  "Shutter": {
+    "file": "shutter.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Micro_Module_Shades_Control_CCT5015_0002W_Front.png?v=1751491921"
+  },
+  "SmokeAlarmDevice": {
+    "file": "smoke.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Smoke_Alarm_Website_1500x1500_1.png?v=1786630328"
+  },
+  "WaterLeakageSensor": {
+    "file": "leak.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Water_Leakage_Sensor_Website_1500x1500_1.png?v=1786630752"
+  },
+  "MotionLightSensor": {
+    "file": "motion.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Motion_Sensor_Website_1500x1500_1.png?v=1786630513"
+  },
+  "WindowDoorSensor": {
+    "file": "window.png",
+    "source": "https://cdn.shopify.com/s/files/1/0653/8366/1754/files/Window_Door_Sensor_Website_1500x1500_1.png?v=1786630601"
+  },
+  "CFMT": {
+    "file": "cfmt.png",
+    "source": "https://download.schneider-electric.com/files?p_Doc_Ref=CFMT02ZB_IOP-Default&p_File_Type=rendition_369_jpg"
+  },
+  "PowerTagE": {
+    "file": "powertag.png",
+    "source": "https://download.schneider-electric.com/files?p_Doc_Ref=R9M60_Image&p_File_Type=rendition_369_jpg"
+  },
+  "ButtonPanel": {
+    "file": "button.png",
+    "source": "https://download.schneider-electric.com/files?p_Doc_Ref=S520531_IOP-def_CL_SE&p_File_Type=rendition_369_jpg"
+  },
+  "BoilerInterface": {
+    "file": "boiler.png",
+    "source": "https://download.schneider-electric.com/files?p_Doc_Ref=CCTFR6001_IOP-def_CL&p_File_Type=rendition_369_jpg"
+  }
+}
