@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Legacy naming",
           "show_wiser_sidebar": "Show Wiser in sidebar",
-          "wiser_climate_controls": "Use Wiser climate controls"
+          "load_dashboard_cards": "Load dashboard cards",
+          "wiser_climate_controls": "Use Wiser climate controls",
+          "pre_cache_resource_images": "Pre-cache resource images"
         },
         "data_description": {
           "legacy_naming": "Include room names in Wiser device names. If enabled, using Home Assistant to regenerate entity IDs with the default format in Settings → System → Entity ID format (Home Assistant 2026.8 and later) will duplicate area names when the area and Wiser room names match. Changing this option does not rename existing entity IDs.",
-          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained."
+          "show_wiser_sidebar": "Show Wiser in the Home Assistant sidebar to access its panels.",
+          "load_dashboard_cards": "Automatically load Wiser cards on dashboards. Turn off to remove their dashboard resources. Sidebar panels remain available. Reload the browser after changing this option.",
+          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained.",
+          "pre_cache_resource_images": "Download shared Wiser device images in advance. Turn off to load images only when needed. Reload the browser after changing this option."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Operating mode",
           "slave_status": "OpenTherm slave status",
           "tracked_room_id": "Tracked room ID"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "UI options",
+        "data": {
+          "legacy_naming": "Legacy naming",
+          "show_wiser_sidebar": "Show Wiser in sidebar",
+          "load_dashboard_cards": "Load dashboard cards",
+          "wiser_climate_controls": "Use Wiser climate controls",
+          "pre_cache_resource_images": "Pre-cache resource images"
+        },
+        "data_description": {
+          "legacy_naming": "Include room names in Wiser device names. If enabled, using Home Assistant to regenerate entity IDs with the default format in Settings → System → Entity ID format (Home Assistant 2026.8 and later) will duplicate area names when the area and Wiser room names match. Changing this option does not rename existing entity IDs.",
+          "show_wiser_sidebar": "Include this hub in the Wiser sidebar panels. The sidebar entry remains visible while any hub enables this option.",
+          "load_dashboard_cards": "Automatically load Wiser cards on dashboards. Disable on every Wiser hub to remove their dashboard resources. Sidebar panels remain available. Reload the browser after changing this option.",
+          "wiser_climate_controls": "Apply Wiser demand and passive-mode styling to Wiser room Thermostat cards and the climate control inside More Info, using the same theme variables. Home Assistant's native temperature handling, dialog, history and settings are retained.",
+          "pre_cache_resource_images": "Download shared Wiser device images in advance. Turn off to load images only when needed. With multiple hubs, pre-caching is enabled if any hub enables this option. Reload the browser after changing this option."
         }
       }
     },

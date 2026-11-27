@@ -16,11 +16,25 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
 from .card_files import CARD_CACHE, CARD_CACHE_URL, resolve_card
+from .image_resources import async_update_image_precache
 from .registry import async_load_registry, get_manifest
 
-from ..const import URL_BASE, WISER_CLIMATE_CONTROLS_MIN_HA_VERSION  # noqa: TID252
+from ..const import (  # noqa: TID252
+    CONF_LOAD_DASHBOARD_CARDS,
+    URL_BASE,
+    WISER_CLIMATE_CONTROLS_MIN_HA_VERSION,
+)
+from ..helpers import loaded_wiser_entries  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def dashboard_cards_enabled(hass: HomeAssistant) -> bool:
+    """Load shared dashboard resources if any active Wiser hub requests them."""
+    return any(
+        entry.options.get(CONF_LOAD_DASHBOARD_CARDS, True)
+        for entry in loaded_wiser_entries(hass)
+    )
 
 
 def card_version(path: Path) -> str:
@@ -71,6 +85,7 @@ class JSModuleRegistration:
         """Register Wiser static paths, icons, and card resources."""
         await async_load_registry(self.hass)
         await self._async_register_path()
+        await async_update_image_precache(self.hass)
         icon_version = await self.hass.async_add_executor_job(
             card_version, Path(__file__).parent / "wiser-icons.js"
         )
@@ -110,7 +125,12 @@ class JSModuleRegistration:
             self.hass.data["wiser_card_cache_registered"] = True
         try:
             await self.hass.http.async_register_static_paths(
-                [StaticPathConfig(URL_BASE, Path(__file__).parent, False)]
+                [
+                    StaticPathConfig(
+                        f"{URL_BASE}/images", Path(__file__).parent / "images", True
+                    ),
+                    StaticPathConfig(URL_BASE, Path(__file__).parent, False),
+                ]
             )
             _LOGGER.debug("Registered resource path from %s", Path(__file__).parent)
         except RuntimeError:
@@ -139,6 +159,9 @@ class JSModuleRegistration:
 
     async def _async_register_modules_locked(self):
         """Register modules while holding the shared resource lock."""
+        if not dashboard_cards_enabled(self.hass):
+            await self.async_unregister()
+            return
         _LOGGER.debug("Installing javascript modules")
 
         # Get resources already registered
@@ -151,7 +174,6 @@ class JSModuleRegistration:
         for module in get_manifest(self.hass):
             if not module.get("card", True):
                 continue
-            url = f"{URL_BASE}/{module.get('filename')}"
             filenames = [module["filename"], *module.get("legacy_filenames", [])]
 
             _, active_url, version = await async_card_resource(self.hass, module["filename"])

@@ -1,0 +1,21 @@
+{
+  "Controller": "/wiser/images/devices/controller-1f2289b1e069.png",
+  "RoomStat": "/wiser/images/devices/room-thermostat-96a0282302ff.png",
+  "SmartPlug": "/wiser/images/devices/smart-plug-d70ea0a5c8fa.png",
+  "TemperatureHumiditySensor": "/wiser/images/devices/temperature-humidity-e0a65cbbbe69.png",
+  "iTRV": "/wiser/images/devices/radiator-thermostat-8b46c87057f5.png",
+  "UnderFloorHeating": "/wiser/images/devices/underfloor-heating-294496f73e30.png",
+  "HeatingActuator": "/wiser/images/devices/heating-actuator-76cee27af6b3.png",
+  "DimmableLight": "/wiser/images/devices/dimmer-158e00808b07.png",
+  "OnOffLight": "/wiser/images/devices/power-ad92e028d8ca.png",
+  "LoadControl": "/wiser/images/devices/power-ad92e028d8ca.png",
+  "Shutter": "/wiser/images/devices/shutter-d6e8c363b825.png",
+  "SmokeAlarmDevice": "/wiser/images/devices/smoke-22b35580503d.png",
+  "WaterLeakageSensor": "/wiser/images/devices/leak-50a4b1483b20.png",
+  "MotionLightSensor": "/wiser/images/devices/motion-97f49730b2a3.png",
+  "WindowDoorSensor": "/wiser/images/devices/window-ca6e66633d95.png",
+  "CFMT": "/wiser/images/devices/cfmt-6e3d9891e456.png",
+  "PowerTagE": "/wiser/images/devices/powertag-07b451795175.png",
+  "ButtonPanel": "/wiser/images/devices/button-abf82a54f634.png",
+  "BoilerInterface": "/wiser/images/devices/boiler-258054e2342d.png"
+}

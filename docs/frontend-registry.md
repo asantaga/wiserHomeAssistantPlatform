@@ -142,6 +142,13 @@ After the definition has shipped, normal frontend releases require no further in
 
 ## Sidebar panel contract
 
+The shared shell imports and creates only the selected panel. Other panels load
+when their tabs are first opened, and visited panel instances are retained when
+switching tabs. Only the visible panel receives ongoing `hass` updates. Settings
+for unopened panels remain available for export and import. Dashboard resource
+registration is independent: disable **Load dashboard cards** on all hubs to
+avoid those bundles being loaded globally by Lovelace.
+
 Each registered panel receives `hass` and `panel.config`. The configuration includes `panel_id`, `hubs`, `hub_ids`, per-hub `card_configs`, and `card_url`. Use the supplied `panel_id` when saving settings.
 
 Panel preferences use the administrator-only shared WebSocket command:
@@ -168,3 +175,74 @@ any config entry; settings for panels that are not currently installed remain
 visible in the import preview but cannot be selected.
 
 The shared panel shell and backend APIs ship with the integration. A panel that needs new backend commands, hub data or shared-shell behavior must include those changes in its integration pull request.
+
+## Shared device artwork
+
+Device artwork ships with the integration in `frontend/images/`, served at
+`/wiser/images/`. The model-to-URL contract is in `images/manifest.json`.
+Cards should use those exact URLs so all cards and panels share the browser's
+HTTP cache. PNG filenames include a content hash; changed artwork gets a new
+filename so existing browser caches cannot serve an older image. Preserve old
+filenames for independently released cards that still reference them.
+`images/SOURCES.json` records the original product catalogue sources.
+
+Do not embed product PNGs in JavaScript bundles. Keep the small URL mapping in
+the card source, and load artwork only when the card needs it. For SVG filters
+that wrap product artwork, fetch the PNG and convert it to a data URI at runtime;
+browsers cannot load an external image nested inside an SVG image. Cache that
+conversion across card instances.
+
+**UI options → Pre-cache resource images** downloads the shared artwork in
+advance when enabled and defaults to disabled. With multiple active hubs, any
+hub enabling it enables the shared pre-cache loader. Disable it on every active
+hub to load images only when needed, then reload the browser. This setting
+controls image downloads independently of dashboard card loading.
+
+Publish an integration release containing new artwork before publishing cards
+that depend on its URLs. The image catalogue is part of the integration package,
+including builds made with `--without-frontend`.
+
+
+## Optional dashboard resource loading
+
+**UI options → Load dashboard cards** defaults to enabled and controls automatic
+Lovelace resource registration. The dashboard-loading and image-pre-cache
+descriptions show multi-hub guidance only when more than one Wiser hub is active.
+Ignored discoveries, disabled entries and hubs without runtime data do not count.
+Disable it on every active Wiser hub to remove existing Wiser card resources,
+including legacy names and independently updated cached
+bundles. They remain disabled after restarts and card updates. Re-enable it on
+any hub to restore the shared resources. Reload the browser after changing it.
+
+Sidebar panels and their bundles remain available independently. Static image
+serving and image pre-caching are also independent settings. When Lovelace uses
+YAML resources, manage those resource entries in YAML; this option changes only
+automatically managed storage resources.
+
+
+## Preparing shared artwork
+
+The integration owns the artwork preparation tool in
+`scripts/prepare-device-images.py`. It preserves existing transparency and
+removes only border-connected near-white backgrounds from opaque catalogue
+images. White areas enclosed inside the product are preserved. Output uses a
+transparent 640px canvas with a maximum 560px product area.
+
+Use a Python environment with Pillow installed, and supply downloaded catalogue
+originals named as listed in the script's `SOURCE_FILES` mapping:
+
+```sh
+python scripts/prepare-device-images.py /path/to/catalogue-originals
+```
+
+The tool writes content-addressed PNG filenames and updates both the model URL
+catalogue and source metadata under `custom_components/wiser/frontend/images`.
+Previously published PNGs are retained for cards still using their URLs. To
+inspect output before changing the integration assets, add
+`--output /tmp/wiser-artwork-preview`.
+
+Original source URLs and product references are recorded in `images/SOURCES.json`.
+Artwork belongs to Schneider Electric and Drayton Wiser; no redistribution
+licence is asserted. Images represent product categories and may depict a newer
+hardware generation. Cards keep only the URL mappings they use; update those
+mappings when adopting new artwork, and publish the integration assets first.

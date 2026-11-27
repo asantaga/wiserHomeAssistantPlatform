@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Korábbi elnevezési mód",
           "show_wiser_sidebar": "Wiser megjelenítése az oldalsávon",
-          "wiser_climate_controls": "Wiser klímavezérlők használata"
+          "load_dashboard_cards": "Irányítópult-kártyák betöltése",
+          "wiser_climate_controls": "Wiser klímavezérlők használata",
+          "pre_cache_resource_images": "Erőforrásképek előtöltése"
         },
         "data_description": {
           "legacy_naming": "A helyiségek neveinek hozzáadása a Wiser-eszközök nevéhez. Ha engedélyezve van, az entitásazonosítók Home Assistant általi újragenerálása az alapértelmezett formátummal a Beállítások → Rendszer → Entitásazonosító-formátum menüben (Home Assistant 2026.8-tól) megkettőzi a területneveket, ha a terület és a Wiser-helyiség neve megegyezik. A beállítás módosítása nem nevezi át a meglévő entitásazonosítókat.",
-          "wiser_climate_controls": "Alkalmazza a Wiser hőigény- és passzív módú megjelenítését a Wiser-helyiségek termosztátkártyáira és a További információk ablak klímavezérlőjére, ugyanazokkal a témaváltozókkal. A Home Assistant saját hőmérséklet-kezelése, párbeszédablaka, előzményei és beállításai megmaradnak."
+          "show_wiser_sidebar": "A Wiser megjelenítése a Home Assistant oldalsávjában a panelek eléréséhez.",
+          "load_dashboard_cards": "A Wiser-kártyák automatikus betöltése az irányítópultokon. Kikapcsolva eltávolítja az irányítópult erőforrásait. Az oldalsáv paneljei továbbra is elérhetők. Módosítás után töltse újra a böngészőt.",
+          "wiser_climate_controls": "Alkalmazza a Wiser hőigény- és passzív módú megjelenítését a Wiser-helyiségek termosztátkártyáira és a További információk ablak klímavezérlőjére, ugyanazokkal a témaváltozókkal. A Home Assistant saját hőmérséklet-kezelése, párbeszédablaka, előzményei és beállításai megmaradnak.",
+          "pre_cache_resource_images": "A megosztott Wiser-eszközképek előzetes letöltése. Kikapcsolva a képek csak szükség esetén töltődnek le. Módosítás után töltse újra a böngészőt."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Üzemmód",
           "slave_status": "OpenTherm alárendelt eszköz állapota",
           "tracked_room_id": "Követett helyiség azonosítója"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Felhasználói felület beállításai",
+        "data": {
+          "legacy_naming": "Korábbi elnevezési mód",
+          "show_wiser_sidebar": "Wiser megjelenítése az oldalsávon",
+          "load_dashboard_cards": "Irányítópult-kártyák betöltése",
+          "wiser_climate_controls": "Wiser klímavezérlők használata",
+          "pre_cache_resource_images": "Erőforrásképek előtöltése"
+        },
+        "data_description": {
+          "legacy_naming": "A helyiségek neveinek hozzáadása a Wiser-eszközök nevéhez. Ha engedélyezve van, az entitásazonosítók Home Assistant általi újragenerálása az alapértelmezett formátummal a Beállítások → Rendszer → Entitásazonosító-formátum menüben (Home Assistant 2026.8-tól) megkettőzi a területneveket, ha a terület és a Wiser-helyiség neve megegyezik. A beállítás módosítása nem nevezi át a meglévő entitásazonosítókat.",
+          "show_wiser_sidebar": "A központ felvétele a Wiser oldalsáv paneljeibe. Az oldalsáv bejegyzése látható marad, amíg legalább egy központnál engedélyezett ez a beállítás.",
+          "load_dashboard_cards": "A Wiser-kártyák automatikus betöltése az irányítópultokon. Az erőforrásaik eltávolításához kapcsolja ki minden Wiser-központnál. Az oldalsáv paneljei továbbra is elérhetők. Módosítás után töltse újra a böngészőt.",
+          "wiser_climate_controls": "Alkalmazza a Wiser hőigény- és passzív módú megjelenítését a Wiser-helyiségek termosztátkártyáira és a További információk ablak klímavezérlőjére, ugyanazokkal a témaváltozókkal. A Home Assistant saját hőmérséklet-kezelése, párbeszédablaka, előzményei és beállításai megmaradnak.",
+          "pre_cache_resource_images": "A megosztott Wiser-eszközképek előzetes letöltése. Kikapcsolva a képek csak szükség esetén töltődnek le. Több központ esetén elegendő egy központnál engedélyezni. Módosítás után töltse újra a böngészőt."
         }
       }
     },

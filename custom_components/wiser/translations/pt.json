@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Nomenclatura legada",
           "show_wiser_sidebar": "Mostrar Wiser na barra lateral",
-          "wiser_climate_controls": "Usar os controlos de climatização Wiser"
+          "load_dashboard_cards": "Carregar cartões do painel de controlo",
+          "wiser_climate_controls": "Usar os controlos de climatização Wiser",
+          "pre_cache_resource_images": "Pré-carregar imagens dos recursos"
         },
         "data_description": {
           "legacy_naming": "Inclui os nomes das divisões nos nomes dos dispositivos Wiser. Se estiver ativado, ao utilizar o Home Assistant para regenerar os ID de entidade com o formato predefinido em Definições → Sistema → Formato do ID de entidade (Home Assistant 2026.8 e posterior), os nomes das áreas serão duplicados quando coincidirem com os nomes das divisões Wiser. Alterar esta opção não muda o nome dos ID de entidade existentes.",
-          "wiser_climate_controls": "Aplique o estilo de pedido de calor e modo passivo da Wiser aos cartões Termóstato das divisões Wiser e ao controlo de climatização em Mais informações, usando as mesmas variáveis do tema. A gestão da temperatura, a caixa de diálogo, o histórico e as definições nativas do Home Assistant são mantidos."
+          "show_wiser_sidebar": "Mostra o Wiser na barra lateral do Home Assistant para aceder aos respetivos painéis.",
+          "load_dashboard_cards": "Carrega automaticamente os cartões Wiser nos painéis de controlo. Desative para remover os respetivos recursos do painel. Os painéis da barra lateral continuam disponíveis. Recarregue o navegador após a alteração.",
+          "wiser_climate_controls": "Aplique o estilo de pedido de calor e modo passivo da Wiser aos cartões Termóstato das divisões Wiser e ao controlo de climatização em Mais informações, usando as mesmas variáveis do tema. A gestão da temperatura, a caixa de diálogo, o histórico e as definições nativas do Home Assistant são mantidos.",
+          "pre_cache_resource_images": "Transfere antecipadamente as imagens partilhadas dos dispositivos Wiser. Desative para carregar imagens apenas quando necessário. Recarregue o navegador após a alteração."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Modo de operação",
           "slave_status": "Estado do dispositivo secundário OpenTherm",
           "tracked_room_id": "ID da divisão monitorizada"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Opções da interface do utilizador",
+        "data": {
+          "legacy_naming": "Nomenclatura legada",
+          "show_wiser_sidebar": "Mostrar Wiser na barra lateral",
+          "load_dashboard_cards": "Carregar cartões do painel de controlo",
+          "wiser_climate_controls": "Usar os controlos de climatização Wiser",
+          "pre_cache_resource_images": "Pré-carregar imagens dos recursos"
+        },
+        "data_description": {
+          "legacy_naming": "Inclui os nomes das divisões nos nomes dos dispositivos Wiser. Se estiver ativado, ao utilizar o Home Assistant para regenerar os ID de entidade com o formato predefinido em Definições → Sistema → Formato do ID de entidade (Home Assistant 2026.8 e posterior), os nomes das áreas serão duplicados quando coincidirem com os nomes das divisões Wiser. Alterar esta opção não muda o nome dos ID de entidade existentes.",
+          "show_wiser_sidebar": "Inclui este hub nos painéis Wiser da barra lateral. A entrada permanece visível enquanto pelo menos um hub tiver esta opção ativada.",
+          "load_dashboard_cards": "Carrega automaticamente os cartões Wiser nos painéis de controlo. Desative em todos os hubs Wiser para remover os respetivos recursos do painel. Os painéis da barra lateral continuam disponíveis. Recarregue o navegador após a alteração.",
+          "wiser_climate_controls": "Aplique o estilo de pedido de calor e modo passivo da Wiser aos cartões Termóstato das divisões Wiser e ao controlo de climatização em Mais informações, usando as mesmas variáveis do tema. A gestão da temperatura, a caixa de diálogo, o histórico e as definições nativas do Home Assistant são mantidos.",
+          "pre_cache_resource_images": "Transfere antecipadamente as imagens partilhadas dos dispositivos Wiser. Desative para carregar imagens apenas quando necessário. Com vários hubs, basta ativar esta opção num deles. Recarregue o navegador após a alteração."
         }
       }
     },

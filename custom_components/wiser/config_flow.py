@@ -101,6 +101,8 @@ from .const import (
     CONF_SCHEDULE_SETPOINT_ROOMS,
     CONF_SETPOINT_MODE,
     CONF_SHOW_WISER_SIDEBAR,
+    CONF_PRE_CACHE_RESOURCE_IMAGES,
+    CONF_LOAD_DASHBOARD_CARDS,
     CONF_WISER_CLIMATE_CONTROLS,
     CUSTOM_DATA_STORE,
     DEFAULT_BOOST_TEMP,
@@ -141,6 +143,7 @@ from .opentherm_detection import (
 from .helpers import (
     active_wiser_rooms,
     external_climates_assigned_to_other_hubs,
+    loaded_wiser_entries,
     room_has_climate,
     room_supports_external_temperature_feedback,
     room_supports_temperature_control,
@@ -1102,6 +1105,10 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_SHOW_WISER_SIDEBAR,
                 default=self.config_entry.options.get(CONF_SHOW_WISER_SIDEBAR, True),
             ): BooleanSelector(),
+            vol.Optional(
+                CONF_LOAD_DASHBOARD_CARDS,
+                default=self.config_entry.options.get(CONF_LOAD_DASHBOARD_CARDS, True),
+            ): BooleanSelector(),
         }
         if supports_climate_controls:
             schema[
@@ -1112,10 +1119,23 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                 )
             ] = BooleanSelector()
+        schema[
+            vol.Optional(
+                CONF_PRE_CACHE_RESOURCE_IMAGES,
+                default=self.config_entry.options.get(
+                    CONF_PRE_CACHE_RESOURCE_IMAGES, False
+                ),
+            )
+        ] = BooleanSelector()
+        multiple_hubs = len(loaded_wiser_entries(self.hass)) > 1
         return self.async_show_form(
-            step_id="ui_options",
+            step_id="ui_options_multi_hub" if multiple_hubs else "ui_options",
             data_schema=vol.Schema(schema),
         )
+
+    async def async_step_ui_options_multi_hub(self, user_input=None):
+        """Handle the same UI preferences with multi-hub-specific descriptions."""
+        return await self.async_step_ui_options(user_input)
 
     async def async_step_opentherm_sensors(self, user_input=None):
         """Choose an OpenTherm sensor category."""

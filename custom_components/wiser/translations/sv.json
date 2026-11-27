@@ -82,11 +82,16 @@
         "data": {
           "legacy_naming": "Äldre namngivning",
           "show_wiser_sidebar": "Visa Wiser i sidopanelen",
-          "wiser_climate_controls": "Använd Wisers klimatreglage"
+          "load_dashboard_cards": "Ladda instrumentpanelskort",
+          "wiser_climate_controls": "Använd Wisers klimatreglage",
+          "pre_cache_resource_images": "Förladda resursbilder"
         },
         "data_description": {
           "legacy_naming": "Inkludera rumsnamn i namn på Wiser-enheter. Om detta är aktiverat kommer återskapande av entitets-ID:n i Home Assistant med standardformatet under Inställningar → System → Format för entitets-ID (Home Assistant 2026.8 och senare) att duplicera områdesnamn när området och Wiser-rummet har samma namn. Ändring av detta alternativ byter inte namn på befintliga entitets-ID:n.",
-          "wiser_climate_controls": "Använd Wisers visning av värmebehov och passivt läge på termostatkort för Wiser-rum och klimatreglaget i Mer information, med samma temavariabler. Home Assistants vanliga temperaturhantering, dialogruta, historik och inställningar behålls."
+          "show_wiser_sidebar": "Visa Wiser i Home Assistants sidofält för att öppna dess paneler.",
+          "load_dashboard_cards": "Ladda Wiser-kort automatiskt på instrumentpaneler. Stäng av för att ta bort deras instrumentpanelsresurser. Sidopaneler förblir tillgängliga. Ladda om webbläsaren efter ändringen.",
+          "wiser_climate_controls": "Använd Wisers visning av värmebehov och passivt läge på termostatkort för Wiser-rum och klimatreglaget i Mer information, med samma temavariabler. Home Assistants vanliga temperaturhantering, dialogruta, historik och inställningar behålls.",
+          "pre_cache_resource_images": "Hämta delade Wiser-enhetsbilder i förväg. Stäng av för att bara ladda bilder vid behov. Ladda om webbläsaren efter ändringen."
         }
       },
       "main_params": {
@@ -262,6 +267,23 @@
           "operating_mode": "Driftläge",
           "slave_status": "OpenTherm-slavstatus",
           "tracked_room_id": "ID för övervakat rum"
+        }
+      },
+      "ui_options_multi_hub": {
+        "title": "Gränssnittsalternativ",
+        "data": {
+          "legacy_naming": "Äldre namngivning",
+          "show_wiser_sidebar": "Visa Wiser i sidopanelen",
+          "load_dashboard_cards": "Ladda instrumentpanelskort",
+          "wiser_climate_controls": "Använd Wisers klimatreglage",
+          "pre_cache_resource_images": "Förladda resursbilder"
+        },
+        "data_description": {
+          "legacy_naming": "Inkludera rumsnamn i namn på Wiser-enheter. Om detta är aktiverat kommer återskapande av entitets-ID:n i Home Assistant med standardformatet under Inställningar → System → Format för entitets-ID (Home Assistant 2026.8 och senare) att duplicera områdesnamn när området och Wiser-rummet har samma namn. Ändring av detta alternativ byter inte namn på befintliga entitets-ID:n.",
+          "show_wiser_sidebar": "Inkludera denna hubb i Wisers sidopaneler. Sidofältsvalet förblir synligt så länge minst en hubb aktiverar alternativet.",
+          "load_dashboard_cards": "Ladda Wiser-kort automatiskt på instrumentpaneler. Stäng av på alla Wiser-hubbar för att ta bort deras instrumentpanelsresurser. Sidopaneler förblir tillgängliga. Ladda om webbläsaren efter ändringen.",
+          "wiser_climate_controls": "Använd Wisers visning av värmebehov och passivt läge på termostatkort för Wiser-rum och klimatreglaget i Mer information, med samma temavariabler. Home Assistants vanliga temperaturhantering, dialogruta, historik och inställningar behålls.",
+          "pre_cache_resource_images": "Hämta delade Wiser-enhetsbilder i förväg. Stäng av för att bara ladda bilder vid behov. Med flera hubbar räcker det att en hubb aktiverar alternativet. Ladda om webbläsaren efter ändringen."
         }
       }
     },

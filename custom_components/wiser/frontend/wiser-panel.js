@@ -1,4 +1,4 @@
-/*! WISER-CARD-VERSION wiser-panel 1.1.1 */
+/*! WISER-CARD-VERSION wiser-panel 1.2.0 */
 
 const WISER_ACTIVE_PANEL_KEY = "wiser-active-panel";
 const WISER_PANEL_CONFIG_MAX_BYTES = 2 * 1024 * 1024;
@@ -112,7 +112,7 @@ class WiserPanel extends HTMLElement {
       this.dispatchEvent(new CustomEvent("hass-toggle-menu", { bubbles:true, composed:true }));
     });
     this.shadowRoot.getElementById("settings").addEventListener("click", () => {
-      const view = this._views.find((candidate) => !candidate.hidden);
+      const view = this._views.find((candidate) => candidate && !candidate.hidden);
       if (typeof view?._openEditor === "function") void view._openEditor();
     });
     this.shadowRoot.getElementById("export-config").addEventListener("click", () => {
@@ -139,6 +139,8 @@ class WiserPanel extends HTMLElement {
       void this._importConfiguration();
     });
     this._views = [];
+    this._viewDefinitions = new WeakMap();
+    this._panelLoads = new Map();
     this._tabs = [];
     this._generation = 0;
     this._draggedPanelId = undefined;
@@ -149,12 +151,20 @@ class WiserPanel extends HTMLElement {
     }
   }
 
+  connectedCallback() {
+    if (this._config) this._renderTabs();
+  }
+
+  disconnectedCallback() {
+    ++this._generation;
+  }
+
   set hass(hass) {
     this._hass = hass;
     this._syncSettings();
     this._syncTabEditing();
     for (const view of this._views) {
-      if (!view.hidden) view.hass = hass;
+      if (view && !view.hidden) view.hass = hass;
     }
   }
 
@@ -167,7 +177,7 @@ class WiserPanel extends HTMLElement {
     const config = this._mergeTabPreferences(panel.config);
     if (JSON.stringify(config) === JSON.stringify(this._config)) return;
     this._config = config;
-    void this._loadPanels();
+    this._loadPanels();
   }
 
   _mergeTabPreferences(config) {
@@ -194,6 +204,8 @@ class WiserPanel extends HTMLElement {
   }
 
   _selectPanel(id) {
+    if (!this._config.panels.some((panel) => panel.id === id)) return;
+    const generation = ++this._generation;
     this._activePanel = id;
     try {
       window.sessionStorage.setItem(WISER_ACTIVE_PANEL_KEY, id);
@@ -202,16 +214,16 @@ class WiserPanel extends HTMLElement {
     }
     this._views.forEach((view, index) => {
       const selected = this._config.panels[index].id === id;
-      view.hidden = !selected;
-      if (selected) view.hass = this._hass;
+      if (view) view.hidden = !selected;
       this._tabs[index].setAttribute("aria-selected", String(selected));
       this._tabs[index].tabIndex = selected ? 0 : -1;
     });
     this._syncSettings();
+    void this._loadPanel(id, generation);
   }
 
   _syncSettings() {
-    const view = this._views.find((candidate) => !candidate.hidden);
+    const view = this._views.find((candidate) => candidate && !candidate.hidden);
     this.shadowRoot.getElementById("panel-actions").hidden = !this._hass?.user?.is_admin;
     this.shadowRoot.getElementById("settings").hidden = !(
       this._hass?.user?.is_admin && typeof view?._openEditor === "function"
@@ -444,7 +456,7 @@ class WiserPanel extends HTMLElement {
     this._tabPreferences = panels.map(({ id, title }) => ({ id, title }));
     this._config = { ...this._config, panels };
     this._views = panels.map((panel) => viewsById.get(panel.id));
-    this.shadowRoot.querySelector("main").replaceChildren(...this._views);
+    this.shadowRoot.querySelector("main").replaceChildren(...this._views.filter(Boolean));
     this._renderTabs();
   }
 
@@ -595,9 +607,11 @@ class WiserPanel extends HTMLElement {
         this._tabs[next].focus();
       });
       const view = this._views[index];
-      view.id = `wiser-panel-view-${index}`;
-      view.setAttribute("role", "tabpanel");
-      view.setAttribute("aria-labelledby", tab.id);
+      if (view) {
+        view.id = `wiser-panel-view-${index}`;
+        view.setAttribute("role", "tabpanel");
+        view.setAttribute("aria-labelledby", tab.id);
+      }
       return tab;
     });
     container.replaceChildren(...this._tabs);
@@ -607,35 +621,104 @@ class WiserPanel extends HTMLElement {
     if (selected) this._selectPanel(selected);
   }
 
-  async _loadPanels() {
-    const generation = ++this._generation;
+  _loadPanels() {
+    const previous = new Map(
+      this._views.filter(Boolean).map((view) => [this._viewDefinitions.get(view).id, view])
+    );
+    this._views = this._config.panels.map((panel) => {
+      const view = previous.get(panel.id);
+      const definition = view && this._viewDefinitions.get(view);
+      return definition?.component === panel.component && definition.module_url === panel.module_url
+        ? view : null;
+    });
     const main = this.shadowRoot.querySelector("main");
+    main.replaceChildren(...this._views.filter(Boolean));
+    this._renderTabs();
+    if (!this._config.panels.length) {
+      ++this._generation;
+      main.removeAttribute("aria-busy");
+      this._showPanelMessage("No Wiser panels are available.");
+      this._syncSettings();
+    }
+  }
+
+  _importPanel(url) {
+    return import(url);
+  }
+
+  _showPanelMessage(text, retryId) {
+    const main = this.shadowRoot.querySelector("main");
+    main.querySelector(".message")?.remove();
+    const message = document.createElement("div");
+    message.className = "message";
+    message.setAttribute("role", retryId ? "alert" : "status");
+    const label = document.createElement("p");
+    label.textContent = text;
+    message.append(label);
+    if (retryId) {
+      const retry = document.createElement("ha-button");
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => this._selectPanel(retryId));
+      message.append(retry);
+    }
+    main.append(message);
+  }
+
+  _configureView(view, panel) {
+    view.hass = this._hass;
+    const previous = this._viewDefinitions.get(view);
+    if (!previous || JSON.stringify(previous.config) !== JSON.stringify(panel.config)) {
+      view.panel = { config: panel.config };
+    }
+    this._viewDefinitions.set(view, panel);
+  }
+
+  async _loadPanel(id, generation) {
+    const index = this._config.panels.findIndex((panel) => panel.id === id);
+    const panel = this._config.panels[index];
+    const main = this.shadowRoot.querySelector("main");
+    const key = JSON.stringify([panel.component, panel.module_url]);
+    let pending;
     try {
-      for (const panel of this._config.panels) {
-        if (!customElements.get(panel.component)) await import(panel.module_url);
-        await customElements.whenDefined(panel.component);
-      }
-      if (generation !== this._generation) return;
-      this._views = this._config.panels.map((panel) => {
+      if (!this._views[index]) {
+        main.setAttribute("aria-busy", "true");
+        this._showPanelMessage(`Loading ${panel.title}…`);
+        pending = this._panelLoads.get(key);
+        if (!pending) {
+          pending = (async () => {
+            if (!customElements.get(panel.component)) await this._importPanel(panel.module_url);
+            await customElements.whenDefined(panel.component);
+          })();
+          this._panelLoads.set(key, pending);
+        }
+        await pending;
+        // Imports cannot be cancelled. A superseded selection must not create
+        // a hidden panel or replace the current tab's loading/error state.
+        if (generation !== this._generation) return;
         const view = document.createElement(panel.component);
         view.className = "panel-view";
         view.setAttribute("nested", "");
-        view.hass = this._hass;
-        view.panel = { config: panel.config };
-        return view;
-      });
-      main.replaceChildren(...this._views);
-      this._renderTabs();
+        view.id = `wiser-panel-view-${index}`;
+        view.setAttribute("role", "tabpanel");
+        view.setAttribute("aria-labelledby", this._tabs[index].id);
+        this._configureView(view, panel);
+        this._views[index] = view;
+        main.append(view);
+      } else {
+        this._configureView(this._views[index], panel);
+      }
+      main.querySelector(".message")?.remove();
+      main.removeAttribute("aria-busy");
+      this._syncSettings();
     } catch (error) {
       if (generation !== this._generation) return;
-      this._views = [];
-      this.shadowRoot.getElementById("panel-tabs").hidden = true;
-      const message = document.createElement("p");
-      message.className = "message";
-      message.setAttribute("role", "alert");
-      message.textContent = error?.message || "Unable to load Wiser panels.";
-      main.replaceChildren(message);
-      console.error("Unable to load Wiser panels", error);
+      main.removeAttribute("aria-busy");
+      if (this._views[index]) this._views[index].hidden = true;
+      this._syncSettings();
+      this._showPanelMessage(`Unable to load ${panel.title}.`, id);
+      console.error("Unable to load Wiser panel", id, error);
+    } finally {
+      if (pending && this._panelLoads.get(key) === pending) this._panelLoads.delete(key);
     }
   }
 }

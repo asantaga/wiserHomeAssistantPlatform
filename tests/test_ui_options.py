@@ -112,12 +112,15 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_OPENTHERM_HOT_WATER_CAPABLE": "opentherm_hot_water_capable",
             "CONF_OPENTHERM_HOT_WATER_CONTROL": "opentherm_hot_water_control",
             "CONF_OPENTHERM_HOT_WATER_SENSOR_ENTITY_ID": "opentherm_hot_water_sensor_entity_id",
+            "CONF_LOAD_DASHBOARD_CARDS": "load_dashboard_cards",
+            "CONF_PRE_CACHE_RESOURCE_IMAGES": "pre_cache_resource_images",
             "CONF_SHOW_WISER_SIDEBAR": "show_wiser_sidebar",
             "CONF_WISER_CLIMATE_CONTROLS": "wiser_climate_controls",
             "WISER_CLIMATE_CONTROLS_MIN_HA_VERSION": (2026, 7),
             "CONF_NAME": "name",
             "DATA": "data",
             "DOMAIN": "wiser",
+            "loaded_wiser_entries": lambda hass: hass.config_entries.async_entries("wiser"),
             "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
             "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
             "DEFAULT_PASSIVE_TYPE": "internal",
@@ -1977,6 +1980,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
         for enabled in (False, True):
             flow = SimpleNamespace(
+                hass=SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda domain: [object()])),
                 config_entry=SimpleNamespace(options={"scan_interval": 30}),
                 async_create_entry=lambda **kwargs: kwargs,
             )
@@ -1984,6 +1988,8 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 "legacy_naming": enabled,
                 "show_wiser_sidebar": enabled,
                 "wiser_climate_controls": enabled,
+                "pre_cache_resource_images": enabled,
+                "load_dashboard_cards": enabled,
             }
             result = await functions.async_step_ui_options(flow, preferences)
             self.assertEqual(result["data"], {"scan_interval": 30} | preferences)
@@ -1996,14 +2002,24 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
         for enabled in (False, True):
             flow = SimpleNamespace(
+                hass=SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda domain: [object()])),
                 config_entry=SimpleNamespace(options={
                     "legacy_naming": enabled,
                     "show_wiser_sidebar": enabled,
                     "wiser_climate_controls": enabled,
+                    "pre_cache_resource_images": enabled,
+                    "load_dashboard_cards": enabled,
                 }),
                 async_show_form=lambda **kwargs: kwargs,
             )
             result = await functions.async_step_ui_options(flow)
+            self.assertIn(("load_dashboard_cards", enabled), result["data_schema"])
+            self.assertEqual(
+                [key for key, default in result["data_schema"]],
+                ["legacy_naming", "show_wiser_sidebar", "load_dashboard_cards",
+                 "wiser_climate_controls", "pre_cache_resource_images"],
+            )
+            self.assertIn(("pre_cache_resource_images", enabled), result["data_schema"])
             self.assertIn(("legacy_naming", enabled), result["data_schema"])
             self.assertIn(("show_wiser_sidebar", enabled), result["data_schema"])
             self.assertIn(
@@ -2018,11 +2034,18 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
         flow = SimpleNamespace(
+            hass=SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda domain: [object()])),
             config_entry=SimpleNamespace(options={"wiser_climate_controls": True}),
             async_show_form=lambda **kwargs: kwargs,
             async_create_entry=lambda **kwargs: kwargs,
         )
         form = await functions.async_step_ui_options(flow)
+        self.assertIn(("load_dashboard_cards", True), form["data_schema"])
+        self.assertIn(("pre_cache_resource_images", False), form["data_schema"])
+        self.assertEqual(
+            [key for key, default in form["data_schema"]][-2:],
+            ["load_dashboard_cards", "pre_cache_resource_images"],
+        )
         self.assertNotIn(("wiser_climate_controls", True), form["data_schema"])
         result = await functions.async_step_ui_options(
             flow, {"wiser_climate_controls": False, "show_wiser_sidebar": True}
@@ -2033,3 +2056,69 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         self.namespace["MINOR_VERSION"] = 7
         form = await functions.async_step_ui_options(flow)
         self.assertIn(("wiser_climate_controls", True), form["data_schema"])
+
+
+    async def test_ui_descriptions_follow_configured_hub_count(self):
+        self.namespace.update(
+            vol=SimpleNamespace(Optional=lambda key, default: (key, default), Schema=lambda data: data),
+            BooleanSelector=lambda: bool,
+        )
+        functions = load_functions("config_flow.py", {"async_step_ui_options", "async_step_ui_options_multi_hub"}, self.namespace)
+        for count in (1, 2, 3):
+            entries = [SimpleNamespace(options={}) for _ in range(count)]
+            flow = SimpleNamespace(
+                hass=SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda domain: entries)),
+                config_entry=entries[0],
+                async_show_form=lambda **kwargs: kwargs,
+                async_create_entry=lambda **kwargs: kwargs,
+            )
+            flow.async_step_ui_options = lambda user_input=None: functions.async_step_ui_options(flow, user_input)
+            form = await flow.async_step_ui_options()
+            self.assertEqual(form["step_id"], "ui_options" if count == 1 else "ui_options_multi_hub")
+            self.assertEqual(
+                [key for key, default in form["data_schema"]],
+                ["legacy_naming", "show_wiser_sidebar", "load_dashboard_cards",
+                 "wiser_climate_controls", "pre_cache_resource_images"],
+            )
+            if count > 1:
+                # The alternative form ID must submit through the same save path.
+                result = await functions.async_step_ui_options_multi_hub(
+                    flow, {"load_dashboard_cards": False, "pre_cache_resource_images": False}
+                )
+                self.assertEqual(result["data"], {
+                    "load_dashboard_cards": False, "pre_cache_resource_images": False
+                })
+
+
+    async def test_ignored_discoveries_do_not_show_multihub_descriptions(self):
+        self.namespace.update(
+            vol=SimpleNamespace(Optional=lambda key, default: (key, default), Schema=lambda data: data),
+            BooleanSelector=lambda: bool,
+            loaded_wiser_entries=load_functions(
+                "helpers.py", {"loaded_wiser_entries"}, {"DOMAIN": "wiser"}
+            ).loaded_wiser_entries,
+        )
+        functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
+        hub = SimpleNamespace(entry_id="hub", disabled_by=None, options={})
+        entries = [
+            hub,
+            SimpleNamespace(entry_id="ignored-1", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="ignored-2", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="unloaded", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="disabled", disabled_by="user", options={}),
+        ]
+        loaded = {"hub": {}, "disabled": {}}
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                data={"wiser": loaded},
+                config_entries=SimpleNamespace(async_entries=lambda domain: entries),
+            ),
+            config_entry=hub,
+            async_show_form=lambda **kwargs: kwargs,
+        )
+        form = await functions.async_step_ui_options(flow)
+        self.assertEqual(form["step_id"], "ui_options")
+        self.assertIn(("pre_cache_resource_images", False), form["data_schema"])
+        loaded["unloaded"] = {}
+        form = await functions.async_step_ui_options(flow)
+        self.assertEqual(form["step_id"], "ui_options_multi_hub")

@@ -457,6 +457,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "HomeAssistant": object, "LovelaceData": object, "Path": Path,
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "dashboard_cards_enabled": lambda hass: True,
             "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
             "get_manifest": lambda hass: [{"filename": "wiser-zigbee-card.js", "name": "Zigbee"}],
             "async_card_resource": AsyncMock(return_value=(None, active, "2.0.0")),
@@ -489,6 +490,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "HomeAssistant": object, "LovelaceData": object, "Path": Path,
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "dashboard_cards_enabled": lambda hass: True,
             "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
             "get_manifest": lambda hass: [{
                 "filename": "wiser-hub-panel.js", "name": "Hub", "card": False,
@@ -521,6 +523,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "HomeAssistant": object, "LovelaceData": object, "Path": Path,
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "dashboard_cards_enabled": lambda hass: True,
             "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
             "get_manifest": lambda hass: [{
                 "filename": "wiser-controls-card.js", "name": "Controls",
@@ -549,6 +552,7 @@ class CardUpdatesTest(unittest.IsolatedAsyncioTestCase):
             "HomeAssistant": object, "LovelaceData": object, "Path": Path,
             "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser",
+            "dashboard_cards_enabled": lambda hass: True,
             "CARD_CACHE_URL": "/wiser/cards", "_LOGGER": Mock(),
             "get_manifest": lambda hass: [{
                 "filename": "wiser-controls-card.js",
