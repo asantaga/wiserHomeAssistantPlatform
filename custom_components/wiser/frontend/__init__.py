@@ -21,19 +21,19 @@ from .registry import async_load_registry, get_manifest
 
 from ..const import (  # noqa: TID252
     CONF_LOAD_DASHBOARD_CARDS,
-    DOMAIN,
     URL_BASE,
     WISER_CLIMATE_CONTROLS_MIN_HA_VERSION,
 )
+from ..helpers import loaded_wiser_entries  # noqa: TID252
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def dashboard_cards_enabled(hass: HomeAssistant) -> bool:
-    """Load shared dashboard resources if any Wiser hub requests them."""
+    """Load shared dashboard resources if any active Wiser hub requests them."""
     return any(
         entry.options.get(CONF_LOAD_DASHBOARD_CARDS, True)
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in loaded_wiser_entries(hass)
     )
 
 

@@ -143,6 +143,7 @@ from .opentherm_detection import (
 from .helpers import (
     active_wiser_rooms,
     external_climates_assigned_to_other_hubs,
+    loaded_wiser_entries,
     room_has_climate,
     room_supports_external_temperature_feedback,
     room_supports_temperature_control,
@@ -1122,11 +1123,11 @@ class WiserOptionsFlowHandler(config_entries.OptionsFlow):
             vol.Optional(
                 CONF_PRE_CACHE_RESOURCE_IMAGES,
                 default=self.config_entry.options.get(
-                    CONF_PRE_CACHE_RESOURCE_IMAGES, True
+                    CONF_PRE_CACHE_RESOURCE_IMAGES, False
                 ),
             )
         ] = BooleanSelector()
-        multiple_hubs = len(self.hass.config_entries.async_entries(DOMAIN)) > 1
+        multiple_hubs = len(loaded_wiser_entries(self.hass)) > 1
         return self.async_show_form(
             step_id="ui_options_multi_hub" if multiple_hubs else "ui_options",
             data_schema=vol.Schema(schema),

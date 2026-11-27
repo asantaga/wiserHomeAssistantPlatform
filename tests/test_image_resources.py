@@ -8,6 +8,12 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
+from test_ui_options import load_functions
+
+loaded_wiser_entries = load_functions(
+    "helpers.py", {"loaded_wiser_entries"}, {"DOMAIN": "wiser"}
+).loaded_wiser_entries
+
 FRONTEND = Path(__file__).resolve().parents[1] / "custom_components/wiser/frontend"
 
 
@@ -17,6 +23,7 @@ class ImageResourcesTest(unittest.IsolatedAsyncioTestCase):
         self.namespace = {
             "__file__": str(FRONTEND / "image_resources.py"),
             "Path": Path, "sha256": sha256,
+            "loaded_wiser_entries": loaded_wiser_entries,
             "CONF_PRE_CACHE_RESOURCE_IMAGES": "pre_cache_resource_images",
             "DOMAIN": "wiser", "URL_BASE": "/wiser",
             "PRECACHE_URL_KEY": "wiser_image_precache_url",
@@ -32,16 +39,38 @@ class ImageResourcesTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def update(self, *options):
-        self.entries = [SimpleNamespace(options=entry) for entry in options]
+        self.entries = [
+            SimpleNamespace(entry_id=str(index), disabled_by=None, options=entry)
+            for index, entry in enumerate(options)
+        ]
+        self.hass.data["wiser"] = {entry.entry_id: {} for entry in self.entries}
         await self.namespace["async_update_image_precache"](self.hass)
 
-    async def test_defaults_on_and_registers_once_across_hubs(self):
-        await self.update({})
+    async def test_registers_once_when_explicitly_enabled_across_hubs(self):
+        await self.update({"pre_cache_resource_images": True})
         url = self.hass.data["wiser_image_precache_url"]
         self.assertTrue(url.startswith("/wiser/wiser-image-preload.js?v="))
-        await self.update({}, {})
+        await self.update({"pre_cache_resource_images": True}, {"pre_cache_resource_images": True})
         self.namespace["add_extra_js_url"].assert_called_once_with(self.hass, url)
         self.namespace["remove_extra_js_url"].assert_not_called()
+
+    async def test_precache_defaults_off(self):
+        await self.update({})
+        self.namespace["add_extra_js_url"].assert_not_called()
+        self.hass.async_add_executor_job.assert_not_awaited()
+
+    async def test_ignored_unloaded_and_disabled_hubs_cannot_enable_precache(self):
+        await self.update({"pre_cache_resource_images": False})
+        self.entries.extend([
+            SimpleNamespace(entry_id="ignored-1", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="ignored-2", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="unloaded", disabled_by=None, options={"pre_cache_resource_images": True}),
+            SimpleNamespace(entry_id="disabled", disabled_by="user", options={"pre_cache_resource_images": True}),
+        ])
+        self.hass.data["wiser"]["disabled"] = {}
+        await self.namespace["async_update_image_precache"](self.hass)
+        self.namespace["add_extra_js_url"].assert_not_called()
+        self.hass.async_add_executor_job.assert_not_awaited()
 
     async def test_disabled_does_not_register_or_read_assets(self):
         await self.update({"pre_cache_resource_images": False})
@@ -49,7 +78,7 @@ class ImageResourcesTest(unittest.IsolatedAsyncioTestCase):
         self.hass.async_add_executor_job.assert_not_awaited()
 
     async def test_disable_removes_previous_loader_and_reenable_restores_it(self):
-        await self.update({})
+        await self.update({"pre_cache_resource_images": True})
         url = self.hass.data["wiser_image_precache_url"]
         await self.update({"pre_cache_resource_images": False})
         self.namespace["remove_extra_js_url"].assert_called_once_with(self.hass, url)
@@ -58,16 +87,16 @@ class ImageResourcesTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.namespace["add_extra_js_url"].call_count, 2)
 
     async def test_any_enabled_hub_requests_shared_precache(self):
-        await self.update({"pre_cache_resource_images": False}, {})
+        await self.update({"pre_cache_resource_images": False}, {"pre_cache_resource_images": True})
         self.namespace["add_extra_js_url"].assert_called_once()
         await self.update({"pre_cache_resource_images": False}, {"pre_cache_resource_images": False})
         self.namespace["remove_extra_js_url"].assert_called_once()
 
     async def test_new_catalogue_replaces_old_loader_url(self):
-        await self.update({})
+        await self.update({"pre_cache_resource_images": True})
         previous = self.hass.data["wiser_image_precache_url"]
         self.namespace["image_precache_version"] = lambda: "new-images"
-        await self.update({})
+        await self.update({"pre_cache_resource_images": True})
         self.namespace["remove_extra_js_url"].assert_called_once_with(self.hass, previous)
         self.namespace["add_extra_js_url"].assert_called_with(self.hass, "/wiser/wiser-image-preload.js?v=new-images")
 

@@ -120,6 +120,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
             "CONF_NAME": "name",
             "DATA": "data",
             "DOMAIN": "wiser",
+            "loaded_wiser_entries": lambda hass: hass.config_entries.async_entries("wiser"),
             "DEFAULT_PASSIVE_CONTROL_STRATEGY": "modulating",
             "CONTROL_STRATEGY_TEMPERATURE_LIMITER": "temperature_limiter",
             "DEFAULT_PASSIVE_TYPE": "internal",
@@ -2040,7 +2041,7 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
         )
         form = await functions.async_step_ui_options(flow)
         self.assertIn(("load_dashboard_cards", True), form["data_schema"])
-        self.assertIn(("pre_cache_resource_images", True), form["data_schema"])
+        self.assertIn(("pre_cache_resource_images", False), form["data_schema"])
         self.assertEqual(
             [key for key, default in form["data_schema"]][-2:],
             ["load_dashboard_cards", "pre_cache_resource_images"],
@@ -2087,3 +2088,37 @@ class UIOptionsTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result["data"], {
                     "load_dashboard_cards": False, "pre_cache_resource_images": False
                 })
+
+
+    async def test_ignored_discoveries_do_not_show_multihub_descriptions(self):
+        self.namespace.update(
+            vol=SimpleNamespace(Optional=lambda key, default: (key, default), Schema=lambda data: data),
+            BooleanSelector=lambda: bool,
+            loaded_wiser_entries=load_functions(
+                "helpers.py", {"loaded_wiser_entries"}, {"DOMAIN": "wiser"}
+            ).loaded_wiser_entries,
+        )
+        functions = load_functions("config_flow.py", {"async_step_ui_options"}, self.namespace)
+        hub = SimpleNamespace(entry_id="hub", disabled_by=None, options={})
+        entries = [
+            hub,
+            SimpleNamespace(entry_id="ignored-1", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="ignored-2", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="unloaded", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="disabled", disabled_by="user", options={}),
+        ]
+        loaded = {"hub": {}, "disabled": {}}
+        flow = SimpleNamespace(
+            hass=SimpleNamespace(
+                data={"wiser": loaded},
+                config_entries=SimpleNamespace(async_entries=lambda domain: entries),
+            ),
+            config_entry=hub,
+            async_show_form=lambda **kwargs: kwargs,
+        )
+        form = await functions.async_step_ui_options(flow)
+        self.assertEqual(form["step_id"], "ui_options")
+        self.assertIn(("pre_cache_resource_images", False), form["data_schema"])
+        loaded["unloaded"] = {}
+        form = await functions.async_step_ui_options(flow)
+        self.assertEqual(form["step_id"], "ui_options_multi_hub")

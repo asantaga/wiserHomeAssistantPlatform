@@ -35,6 +35,20 @@ LIGHT_BINARY_SENSOR_TYPES = (
 ENTITY_UNIQUE_ID_NAMESPACE = UUID("8d42a4e1-b77b-4dda-a964-137b67c6257f")
 
 
+def loaded_wiser_entries(hass):
+    """Return enabled hubs with runtime data, excluding ignored discoveries.
+
+    Runtime data is registered before frontend setup, so the hub currently
+    completing setup participates without counting unrelated discovery entries.
+    """
+    loaded = hass.data.get(DOMAIN, {})
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.entry_id in loaded and entry.disabled_by is None
+    ]
+
+
 def active_wiser_rooms(data):
     """Return rooms the hub still considers actively assigned."""
     return [

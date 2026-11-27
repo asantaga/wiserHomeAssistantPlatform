@@ -142,6 +142,13 @@ After the definition has shipped, normal frontend releases require no further in
 
 ## Sidebar panel contract
 
+The shared shell imports and creates only the selected panel. Other panels load
+when their tabs are first opened, and visited panel instances are retained when
+switching tabs. Only the visible panel receives ongoing `hass` updates. Settings
+for unopened panels remain available for export and import. Dashboard resource
+registration is independent: disable **Load dashboard cards** on all hubs to
+avoid those bundles being loaded globally by Lovelace.
+
 Each registered panel receives `hass` and `panel.config`. The configuration includes `panel_id`, `hubs`, `hub_ids`, per-hub `card_configs`, and `card_url`. Use the supplied `panel_id` when saving settings.
 
 Panel preferences use the administrator-only shared WebSocket command:
@@ -186,9 +193,10 @@ browsers cannot load an external image nested inside an SVG image. Cache that
 conversion across card instances.
 
 **UI options → Pre-cache resource images** downloads the shared artwork in
-advance and defaults to enabled. With multiple hubs, any hub enabling it enables
-the shared pre-cache loader. Disable it on every hub to load images only when
-needed, then reload the browser. This setting controls image downloads independently of dashboard card loading.
+advance when enabled and defaults to disabled. With multiple active hubs, any
+hub enabling it enables the shared pre-cache loader. Disable it on every active
+hub to load images only when needed, then reload the browser. This setting
+controls image downloads independently of dashboard card loading.
 
 Publish an integration release containing new artwork before publishing cards
 that depend on its URLs. The image catalogue is part of the integration package,
@@ -199,8 +207,10 @@ including builds made with `--without-frontend`.
 
 **UI options → Load dashboard cards** defaults to enabled and controls automatic
 Lovelace resource registration. The dashboard-loading and image-pre-cache
-descriptions show multi-hub guidance only when more than one Wiser hub is configured. Disable it on every Wiser hub to remove existing
-Wiser card resources, including legacy names and independently updated cached
+descriptions show multi-hub guidance only when more than one Wiser hub is active.
+Ignored discoveries, disabled entries and hubs without runtime data do not count.
+Disable it on every active Wiser hub to remove existing Wiser card resources,
+including legacy names and independently updated cached
 bundles. They remain disabled after restarts and card updates. Re-enable it on
 any hub to restore the shared resources. Reload the browser after changing it.
 

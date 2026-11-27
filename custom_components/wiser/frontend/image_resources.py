@@ -5,7 +5,8 @@ from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
 
-from ..const import CONF_PRE_CACHE_RESOURCE_IMAGES, DOMAIN, URL_BASE
+from ..const import CONF_PRE_CACHE_RESOURCE_IMAGES, URL_BASE
+from ..helpers import loaded_wiser_entries
 
 PRECACHE_URL_KEY = "wiser_image_precache_url"
 
@@ -20,10 +21,10 @@ def image_precache_version() -> str:
 
 
 async def async_update_image_precache(hass) -> None:
-    """Enable shared pre-caching if any configured Wiser hub requests it."""
+    """Enable shared pre-caching if any active Wiser hub requests it."""
     enabled = any(
-        entry.options.get(CONF_PRE_CACHE_RESOURCE_IMAGES, True)
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        entry.options.get(CONF_PRE_CACHE_RESOURCE_IMAGES, False)
+        for entry in loaded_wiser_entries(hass)
     )
     url = None
     if enabled:

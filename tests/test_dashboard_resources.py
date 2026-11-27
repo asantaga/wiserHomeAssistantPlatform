@@ -7,12 +7,18 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock
 
+from test_ui_options import load_functions
+
+loaded_wiser_entries = load_functions(
+    "helpers.py", {"loaded_wiser_entries"}, {"DOMAIN": "wiser"}
+).loaded_wiser_entries
+
 FRONTEND = Path(__file__).resolve().parents[1] / "custom_components/wiser/frontend"
 
 
 class DashboardResourcesTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.entries = [SimpleNamespace(options={})]
+        self.entries = [SimpleNamespace(entry_id="hub", disabled_by=None, options={})]
         self.items = [
             {"id": "legacy", "url": "/wiser/wiser-rooms-card.js?v=old"},
             {"id": "cached", "url": "/wiser/cards/wiser-controls-card-abc.js?v=old"},
@@ -35,7 +41,7 @@ class DashboardResourcesTest(unittest.IsolatedAsyncioTestCase):
             async_update_item=AsyncMock(),
         )
         self.hass = SimpleNamespace(
-            data={"lovelace": SimpleNamespace(mode="storage", resources=self.resources)},
+            data={"lovelace": SimpleNamespace(mode="storage", resources=self.resources), "wiser": {"hub": {}}},
             config_entries=SimpleNamespace(async_entries=lambda domain: self.entries),
         )
         self.manifest = [
@@ -45,6 +51,7 @@ class DashboardResourcesTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.resolve = AsyncMock(side_effect=lambda hass, name: (None, f"/wiser/{name}?v=new", "new"))
         namespace = {
+            "loaded_wiser_entries": loaded_wiser_entries,
             "asyncio": asyncio, "HomeAssistant": object, "LovelaceData": object,
             "Path": Path, "MAJOR_VERSION": 2025, "MINOR_VERSION": 5,
             "MODE_STORAGE": "storage", "URL_BASE": "/wiser", "DOMAIN": "wiser",
@@ -64,7 +71,8 @@ class DashboardResourcesTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.enabled(self.hass))
         self.entries[0].options["load_dashboard_cards"] = False
         self.assertFalse(self.enabled(self.hass))
-        self.entries.append(SimpleNamespace(options={}))
+        self.entries.append(SimpleNamespace(entry_id="other", disabled_by=None, options={}))
+        self.hass.data["wiser"]["other"] = {}
         self.assertTrue(self.enabled(self.hass))
         self.entries[1].options["load_dashboard_cards"] = False
         self.assertFalse(self.enabled(self.hass))
@@ -95,9 +103,31 @@ class DashboardResourcesTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_another_enabled_hub_prevents_unregistration(self):
         self.entries[0].options["load_dashboard_cards"] = False
-        self.entries.append(SimpleNamespace(options={"load_dashboard_cards": True}))
+        self.entries.append(SimpleNamespace(entry_id="other", disabled_by=None, options={"load_dashboard_cards": True}))
+        self.hass.data["wiser"]["other"] = {}
         await self.registration._async_register_modules()
         self.assertEqual(self.resolve.await_count, 2)
         # Only a duplicate controls resource is removed during normal registration.
         self.assertEqual(self.resources.async_delete_item.await_count, 1)
         self.assertIn("schedule", {item["id"] for item in self.items})
+
+
+    async def test_ignored_discoveries_do_not_override_saved_opt_out(self):
+        self.entries[0].options["load_dashboard_cards"] = False
+        self.entries.extend([
+            SimpleNamespace(entry_id="ignored-1", source="ignore", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="ignored-2", source="ignore", disabled_by=None, options={}),
+        ])
+        self.assertFalse(self.enabled(self.hass))
+        await self.registration._async_register_modules()
+        self.assertEqual({item["id"] for item in self.items}, {"panel", "custom", "other"})
+        self.resolve.assert_not_awaited()
+
+    def test_unloaded_and_disabled_hubs_do_not_override_saved_opt_out(self):
+        self.entries[0].options["load_dashboard_cards"] = False
+        self.entries.extend([
+            SimpleNamespace(entry_id="unloaded", disabled_by=None, options={}),
+            SimpleNamespace(entry_id="disabled", disabled_by="user", options={}),
+        ])
+        self.hass.data["wiser"]["disabled"] = {}
+        self.assertFalse(self.enabled(self.hass))
