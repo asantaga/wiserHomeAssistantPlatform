@@ -767,7 +767,7 @@
         "name": "Target temperature"
       },
       "external_temperature_delta": {
-        "name": "Secondary sensor delta"
+        "name": "Temperature delta"
       },
       "current_schedule_temperature": {
         "name": "Current schedule temperature"

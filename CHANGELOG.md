@@ -10,7 +10,7 @@ For releases before v3.3.5, see the [Full Change Log](https://github.com/asantag
 
 ### Added
 
-- Room climates now identify their assigned external temperature feedback source and its availability. Eligible rooms also get an Secondary sensor delta diagnostic sensor (external measurement minus Wiser room measurement), with history, stale-reading handling and stable identity across source reassignment - issue [#839](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/839).
+- Room climates now identify their assigned external temperature feedback source and its availability. Eligible rooms also get an Temperature delta diagnostic sensor (external measurement minus Wiser room measurement), with history, stale-reading handling and stable identity across source reassignment - issue [#839](https://github.com/asantaga/wiserHomeAssistantPlatform/issues/839).
 
 ### Fixed
 

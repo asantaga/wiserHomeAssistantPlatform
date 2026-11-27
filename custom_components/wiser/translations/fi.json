@@ -867,7 +867,7 @@
         "name": "Laitteisto"
       },
       "external_temperature_delta": {
-        "name": "Toissijaisen anturin erotus"
+        "name": "Lämpötilaero"
       },
       "current_schedule_temperature": {
         "name": "Nykyinen aikataulutettu lämpötila"

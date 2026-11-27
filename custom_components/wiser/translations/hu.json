@@ -867,7 +867,7 @@
         "name": "Berendezés teljesítménye"
       },
       "external_temperature_delta": {
-        "name": "Másodlagos érzékelő eltérése"
+        "name": "Hőmérséklet-különbség"
       },
       "current_schedule_temperature": {
         "name": "Aktuális ütemezett hőmérséklet"

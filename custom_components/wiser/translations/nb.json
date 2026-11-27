@@ -867,7 +867,7 @@
         "name": "Utstyr"
       },
       "external_temperature_delta": {
-        "name": "Differanse for sekundær sensor"
+        "name": "Temperaturforskjell"
       },
       "current_schedule_temperature": {
         "name": "Gjeldende planlagte temperatur"
