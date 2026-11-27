@@ -766,6 +766,9 @@
       "target_temperature": {
         "name": "Target temperature"
       },
+      "temperature_delta": {
+        "name": "Temperature delta"
+      },
       "current_schedule_temperature": {
         "name": "Current schedule temperature"
       },

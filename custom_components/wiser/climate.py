@@ -5,6 +5,7 @@ Angelosantagata@gmail.com
 
 """
 
+from datetime import timedelta
 import logging
 
 from aioWiserHeatAPI.const import (
@@ -366,6 +367,33 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
             "%s Heating initialise", self._data.wiserhub.system.name
         )
 
+    async def async_added_to_hass(self):
+        """Keep feedback metadata current without waiting for a hub refresh."""
+        from homeassistant.helpers.event import async_track_time_interval
+
+        await super().async_added_to_hass()
+        source = self._data.external_room_control.temperature_sensor_entity_id(
+            self._room_id
+        )
+        if source:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, [source], self._async_external_temperature_changed
+                )
+            )
+            self.async_on_remove(
+                async_track_time_interval(
+                    self.hass,
+                    self._async_external_temperature_changed,
+                    timedelta(seconds=30),
+                )
+            )
+
+    @callback
+    def _async_external_temperature_changed(self, _event=None):
+        """Publish changed feedback availability without changing heat demand."""
+        self.async_write_ha_state()
+
     async def async_force_update(self):
         """Force update form hub."""
         _LOGGER.debug("Hub update initiated by heating")
@@ -533,6 +561,33 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         """Return state."""
         return HVAC_MODE_WISER_TO_HASS[self._room.mode]
 
+    def _external_temperature_attributes(self):
+        """Identify feedback separately from external actuator control."""
+        from homeassistant.helpers import entity_registry as er
+
+        controller = self._data.external_room_control
+        assigned = controller.has_temperature_sensor(self._room_id)
+        delta_entity_id = None
+        if assigned:
+            delta_entity_id = er.async_get(self.hass).async_get_entity_id(
+                "sensor",
+                DOMAIN,
+                get_room_entity_unique_id(
+                    self._data, self._room_id, "temperature_delta"
+                ),
+            )
+        return {
+            "external_temperature_sensor": controller.temperature_sensor_entity_id(
+                self._room_id
+            ),
+            "is_external_temperature_feedback": assigned,
+            "external_temperature_available": (
+                assigned
+                and controller.external_temperature(self._room_id) is not None
+            ),
+            "external_temperature_delta_entity_id": delta_entity_id,
+        }
+
     @property
     def extra_state_attributes(self):
         """Return state attributes."""
@@ -559,6 +614,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
         attrs["is_external_room_control"] = self._data.external_room_control.is_active(
             self._room
         )
+        attrs.update(self._external_temperature_attributes())
         if self._data.external_room_control.has_assignment(self._room_id):
             attrs["external_climate_entities"] = (
                 self._data.external_room_control.assigned_entity_ids(self._room_id)

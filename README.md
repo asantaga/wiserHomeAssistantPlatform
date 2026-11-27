@@ -1,4 +1,4 @@
-# Wiser Home Assistant Integration v4.1.1
+# Wiser Home Assistant Integration v4.2.0
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![downloads](https://shields.io/github/downloads/asantaga/wiserHomeAssistantPlatform/latest/total?style=for-the-badge)](https://github.com/asantaga/wiserHomeAssistantPlatform)
@@ -18,7 +18,11 @@ Detailed information about this integration has now been moved to our [Wiki page
 For more information checkout the AMAZING community thread available on
 [https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965](https://community.home-assistant.io/t/drayton-wiser-home-assistant-integration/80965)
 
-## What's New in 4.1.1?
+## What's New in 4.2.0?
+
+Rooms configured with an eligible **external temperature sensor** also get an **Temperature delta** diagnostic sensor on their room device. Its value is **external measured temperature minus Wiser measured room temperature**: a positive value means the external sensor reads warmer. It compares measurements, never the target or boosted setpoint, and supports History and long-term statistics. It becomes unavailable when either measurement is invalid, the external reading exceeds the configured stale timeout, or the hub is unavailable. Readings and freshness follow the same rules used by external temperature feedback; stale values expire within 30 seconds of that timeout. Modern Home Assistant versions convert the temperature difference correctly between °C and °F; versions without the temperature-delta device class retain °C.
+
+The room climate exposes `external_temperature_sensor` (assigned source entity ID or `null`), `is_external_temperature_feedback` (an eligible feedback assignment), `external_temperature_available` (a usable external reading), and `external_temperature_delta_entity_id` (the registered difference sensor ID or `null`). These are separate from `external_climate_entities`, which identifies controlled actuators. Assigning an external climate device does not use its `current_temperature` as feedback or create a difference sensor. Changing external-temperature options reloads the integration: reassigning the source keeps the room's difference sensor identity and history; a configured sensor remains registered but unavailable if the room becomes ineligible for feedback; removing the assignment disables that sensor without deleting its registry entry, and reassigning a source restores the same entry. Sensors manually disabled by the user remain disabled. Existing recorded history remains subject to Home Assistant's retention settings.
 
 ## What's New in 4.1.0?
 

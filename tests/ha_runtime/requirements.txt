@@ -1,0 +1,2 @@
+# Keep the real-HA conversion checks separate from the lightweight unit suite.
+homeassistant==2026.11.2

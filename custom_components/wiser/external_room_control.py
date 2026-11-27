@@ -1650,6 +1650,12 @@ class ExternalRoomControlController:
                 continue
             await self._async_set_external_climates(room.id, target_temperature)
 
+    def external_temperature(self, room_id) -> float | None:
+        """Return the usable feedback measurement in Celsius, never a setpoint."""
+        if not self.has_temperature_sensor(room_id):
+            return None
+        return self._external_temperature(room_id)
+
     def _external_temperature(self, room_id) -> float | None:
         """Return a fresh assigned sensor temperature converted to Celsius."""
         entity_id = self.temperature_sensor_entity_id(room_id)

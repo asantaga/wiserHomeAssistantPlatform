@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Apparatuur"
       },
+      "temperature_delta": {
+        "name": "Temperatuurdelta"
+      },
       "current_schedule_temperature": {
         "name": "Huidige schematemperatuur"
       },

@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Udstyr"
       },
+      "temperature_delta": {
+        "name": "Temperaturforskel"
+      },
       "current_schedule_temperature": {
         "name": "Aktuel plantemperatur"
       },

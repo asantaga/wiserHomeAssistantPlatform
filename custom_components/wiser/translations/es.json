@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Equipo"
       },
+      "temperature_delta": {
+        "name": "Delta de temperatura"
+      },
       "current_schedule_temperature": {
         "name": "Temperatura actual programada"
       },

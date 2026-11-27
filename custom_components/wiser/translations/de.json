@@ -766,6 +766,9 @@
       "target_temperature": {
         "name": "Zieltemperatur"
       },
+      "temperature_delta": {
+        "name": "Temperaturdelta"
+      },
       "current_schedule_temperature": {
         "name": "Aktuelle Zeitplantemperatur"
       },

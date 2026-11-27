@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Berendezés teljesítménye"
       },
+      "temperature_delta": {
+        "name": "Hőmérséklet-különbség"
+      },
       "current_schedule_temperature": {
         "name": "Aktuális ütemezett hőmérséklet"
       },

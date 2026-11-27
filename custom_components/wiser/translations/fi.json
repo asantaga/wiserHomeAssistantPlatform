@@ -866,6 +866,9 @@
       "equipment_power": {
         "name": "Laitteisto"
       },
+      "temperature_delta": {
+        "name": "Lämpötilaero"
+      },
       "current_schedule_temperature": {
         "name": "Nykyinen aikataulutettu lämpötila"
       },
