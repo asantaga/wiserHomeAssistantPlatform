@@ -22,7 +22,7 @@ class ExternalTemperatureDeltaLifecycleTest(unittest.IsolatedAsyncioTestCase):
         await dr.async_load(self.hass, load_empty=True)
         await er.async_load(self.hass, load_empty=True)
         self.registry = er.async_get(self.hass)
-        self.unique_id = "room-1-external-temperature-delta"
+        self.unique_id = "room-1-temperature-delta"
         self.entry = self.registry.async_get_or_create(
             "sensor", "wiser", self.unique_id,
             suggested_object_id="test_external_temperature_delta",

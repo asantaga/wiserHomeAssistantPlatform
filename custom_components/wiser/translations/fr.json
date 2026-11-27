@@ -766,7 +766,7 @@
       "target_temperature": {
         "name": "Température cible"
       },
-      "external_temperature_delta": {
+      "temperature_delta": {
         "name": "Delta de température"
       },
       "current_schedule_temperature": {

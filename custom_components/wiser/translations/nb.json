@@ -866,7 +866,7 @@
       "equipment_power": {
         "name": "Utstyr"
       },
-      "external_temperature_delta": {
+      "temperature_delta": {
         "name": "Temperaturforskjell"
       },
       "current_schedule_temperature": {

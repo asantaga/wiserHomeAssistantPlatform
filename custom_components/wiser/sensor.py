@@ -175,7 +175,7 @@ def _external_temperature_delta_sensors(hass, config_entry, data):
         entity_id = registry.async_get_entity_id(
             "sensor",
             DOMAIN,
-            get_room_entity_unique_id(data, room.id, "external_temperature_delta"),
+            get_room_entity_unique_id(data, room.id, "temperature_delta"),
         )
         entry = registry.async_get(entity_id) if entity_id else None
         owned_entry = entry is not None and entry.config_entry_id == config_entry.entry_id
@@ -1552,7 +1552,7 @@ class WiserExternalTemperatureDeltaSensor(
     """External feedback minus the hub's original measured room temperature."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "external_temperature_delta"
+    _attr_translation_key = "temperature_delta"
     _attr_icon = "mdi:delta"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     # Older HA versions have no delta class: keep Celsius without applying an
@@ -1572,7 +1572,7 @@ class WiserExternalTemperatureDeltaSensor(
     def unique_id(self):
         """Retain history when the room or source is renamed or reassigned."""
         return get_room_entity_unique_id(
-            self._data, self._room_id, "external_temperature_delta"
+            self._data, self._room_id, "temperature_delta"
         )
 
     @property

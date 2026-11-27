@@ -866,7 +866,7 @@
       "equipment_power": {
         "name": "Equipo"
       },
-      "external_temperature_delta": {
+      "temperature_delta": {
         "name": "Delta de temperatura"
       },
       "current_schedule_temperature": {

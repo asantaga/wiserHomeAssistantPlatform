@@ -866,7 +866,7 @@
       "equipment_power": {
         "name": "Laitteisto"
       },
-      "external_temperature_delta": {
+      "temperature_delta": {
         "name": "Lämpötilaero"
       },
       "current_schedule_temperature": {

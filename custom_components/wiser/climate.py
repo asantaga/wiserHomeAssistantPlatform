@@ -573,7 +573,7 @@ class WiserRoom(WiserEntityMixin, CoordinatorEntity, ClimateEntity, WiserSchedul
                 "sensor",
                 DOMAIN,
                 get_room_entity_unique_id(
-                    self._data, self._room_id, "external_temperature_delta"
+                    self._data, self._room_id, "temperature_delta"
                 ),
             )
         return {
